@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -17,68 +17,39 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import {
+  getDepartments,
+  updateDepartmentStatus,
+} from '../api/department-service.js';
 
 function RoleDepartmentManagementPage({
   LayoutComponent,
   activeMenu,
   theme,
 }) {
-  const [departments, setDepartments] = useState([
-    {
-      id: 1,
-      departmentName: 'Information Technology',
-      description:
-        'Responsible for software development, infrastructure and technical support.',
-      employeeCount: 12,
-      activeEmployeeCount: 11,
-      status: 'Active',
-      updatedAt: '20 Jul 2026, 15:30',
-    },
-    {
-      id: 2,
-      departmentName: 'Human Resources',
-      description:
-        'Responsible for employee information, leave policy and personnel management.',
-      employeeCount: 8,
-      activeEmployeeCount: 8,
-      status: 'Active',
-      updatedAt: '18 Jul 2026, 10:20',
-    },
-    {
-      id: 3,
-      departmentName: 'Finance',
-      description:
-        'Responsible for accounting, budgeting and financial operations.',
-      employeeCount: 10,
-      activeEmployeeCount: 9,
-      status: 'Active',
-      updatedAt: '16 Jul 2026, 13:45',
-    },
-    {
-      id: 4,
-      departmentName: 'Marketing',
-      description:
-        'Responsible for marketing campaigns and corporate communication.',
-      employeeCount: 7,
-      activeEmployeeCount: 7,
-      status: 'Active',
-      updatedAt: '12 Jul 2026, 09:15',
-    },
-    {
-      id: 5,
-      departmentName: 'Operations',
-      description:
-        'Responsible for organization operations and internal coordination.',
-      employeeCount: 0,
-      activeEmployeeCount: 0,
-      status: 'Inactive',
-      updatedAt: '05 Jul 2026, 11:40',
-    },
-  ]);
+  const navigate = useNavigate();
+  const [departments, setDepartments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [updatingId, setUpdatingId] = useState(null);
 
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [actionMessage, setActionMessage] = useState('');
+
+  const loadDepartments = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const rows = await getDepartments();
+      setDepartments(rows.map((item) => ({ ...item, id: item.departmentId })));
+    } catch (error) {
+      setLoadError(error.response?.data?.message || 'Unable to load departments.');
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { loadDepartments(); }, [loadDepartments]);
 
   const filteredDepartments = useMemo(() => {
     const keyword = searchText.trim().toLowerCase();
@@ -126,53 +97,27 @@ function RoleDepartmentManagementPage({
   };
 
   const handleAddDepartment = () => {
-    setActionMessage(
-      'The Add Department button will open the Department Form after routing is connected.',
-    );
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    navigate('/admin/department-management/add');
   };
 
   const handleEditDepartment = (department) => {
-    setActionMessage(
-      `Selected ${department.departmentName} for editing. The Department Form will open after routing is connected.`,
-    );
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    navigate(`/admin/department-management/${department.id}/edit`);
   };
 
-  const handleStatusChange = (selectedDepartment) => {
+  const handleStatusChange = async (selectedDepartment) => {
     const nextStatus =
       selectedDepartment.status === 'Active'
         ? 'Inactive'
         : 'Active';
 
-    setDepartments((previousDepartments) =>
-      previousDepartments.map((department) =>
-        department.id === selectedDepartment.id
-          ? {
-              ...department,
-              status: nextStatus,
-              updatedAt: '21 Jul 2026, 10:30',
-            }
-          : department,
-      ),
-    );
-
-    setActionMessage(
-      `${selectedDepartment.departmentName} was changed to ${nextStatus} in the frontend preview.`,
-    );
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    setUpdatingId(selectedDepartment.id);
+    try {
+      await updateDepartmentStatus(selectedDepartment.id, nextStatus);
+      await loadDepartments();
+      setActionMessage(`${selectedDepartment.departmentName} was changed to ${nextStatus}.`);
+    } catch (error) {
+      setLoadError(error.response?.data?.message || 'Unable to update department status.');
+    } finally { setUpdatingId(null); }
   };
 
   const summaryCards = [
@@ -282,6 +227,12 @@ function RoleDepartmentManagementPage({
           }}
         >
           {actionMessage}
+        </Alert>
+      )}
+
+      {(loading || loadError) && (
+        <Alert severity={loadError ? 'error' : 'info'} action={loadError ? <Button onClick={loadDepartments}>Retry</Button> : null} sx={{ marginBottom: '24px' }}>
+          {loadError || 'Loading departments...'}
         </Alert>
       )}
 
@@ -680,6 +631,7 @@ function RoleDepartmentManagementPage({
                           <Button
                             type="button"
                             variant="outlined"
+                            disabled={updatingId === department.id}
                             onClick={() =>
                               handleStatusChange(
                                 department,

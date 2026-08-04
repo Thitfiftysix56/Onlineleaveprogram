@@ -27,10 +27,11 @@ import {
 import HRLayout from '../../layouts/hrlayout.jsx';
 
 import {
+  createHoliday,
+  deleteHoliday,
   getHolidays,
-  holidayStorageKey,
-  saveHolidays,
-} from '../../utils/holidaystorage.js';
+  updateHoliday,
+} from '../../api/holiday-service.js';
 
 import {
   createAuditLog,
@@ -159,93 +160,6 @@ const normalizeHolidays = (
             ),
         )
     : [];
-
-const createStorageHoliday = (
-  holiday,
-) => {
-  const now =
-    new Date().toISOString();
-
-  const year =
-    Number(
-      String(
-        holiday.date || '',
-      ).slice(0, 4),
-    ) || null;
-
-  const isActive =
-    holiday.status === 'Active';
-
-  return {
-    ...holiday,
-
-    id:
-      Number(holiday.id) ||
-      null,
-
-    holidayId:
-      Number(holiday.id) ||
-      null,
-
-    holiday_id:
-      Number(holiday.id) ||
-      null,
-
-    name:
-      holiday.name,
-
-    holidayName:
-      holiday.name,
-
-    holiday_name:
-      holiday.name,
-
-    date:
-      holiday.date,
-
-    holidayDate:
-      holiday.date,
-
-    holiday_date:
-      holiday.date,
-
-    year,
-
-    type:
-      holiday.type,
-
-    holidayType:
-      holiday.type,
-
-    holiday_type:
-      holiday.type,
-
-    description:
-      holiday.description,
-
-    status:
-      holiday.status,
-
-    isActive,
-
-    is_active:
-      isActive,
-
-    createdAt:
-      holiday.createdAt ||
-      now,
-
-    created_at:
-      holiday.createdAt ||
-      now,
-
-    updatedAt:
-      now,
-
-    updated_at:
-      now,
-  };
-};
 
 const formatHolidayDate = (
   dateString,
@@ -401,70 +315,26 @@ function HolidayManagementPage() {
     selectedDeleteHoliday,
     setSelectedDeleteHoliday,
   ] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const loadHolidayData =
-    useCallback(() => {
-      const storedHolidays =
-        normalizeHolidays(
-          getHolidays(),
-        );
-
-      setHolidays(
-        storedHolidays,
-      );
+    useCallback(async () => {
+      setLoading(true); setLoadError('');
+      try {
+        const rows = await getHolidays();
+        setHolidays(normalizeHolidays(rows));
+      } catch (error) {
+        setLoadError(error.response?.data?.message || 'Unable to load holidays.');
+      } finally {
+        setLoading(false);
+      }
     }, []);
 
   useEffect(() => {
     loadHolidayData();
-
-    const handleStorageChange = (
-      event,
-    ) => {
-      if (
-        !event.key ||
-        event.key ===
-          holidayStorageKey
-      ) {
-        loadHolidayData();
-      }
-    };
-
-    window.addEventListener(
-      'storage',
-      handleStorageChange,
-    );
-
-    window.addEventListener(
-      'focus',
-      loadHolidayData,
-    );
-
-    return () => {
-      window.removeEventListener(
-        'storage',
-        handleStorageChange,
-      );
-
-      window.removeEventListener(
-        'focus',
-        loadHolidayData,
-      );
-    };
   }, [loadHolidayData]);
-
-  const persistHolidays =
-    useCallback(
-      (nextHolidays) => {
-        saveHolidays(
-          nextHolidays.map(
-            createStorageHoliday,
-          ),
-        );
-
-        loadHolidayData();
-      },
-      [loadHolidayData],
-    );
 
   const availableYears =
     useMemo(() => {
@@ -807,7 +677,7 @@ function HolidayManagementPage() {
     };
 
   const handleSaveHoliday =
-    () => {
+    async () => {
       if (
         !validateHolidayForm()
       ) {
@@ -867,30 +737,12 @@ function HolidayManagementPage() {
         updatedAt: now,
       };
 
-      const nextHolidays =
-        dialogMode === 'edit'
-          ? holidays.map(
-              (holiday) =>
-                Number(
-                  holiday.id,
-                ) ===
-                Number(
-                  selectedHolidayId,
-                )
-                  ? {
-                      ...holiday,
-                      ...preparedHoliday,
-                    }
-                  : holiday,
-            )
-          : [
-              ...holidays,
-              preparedHoliday,
-            ];
-
-      persistHolidays(
-        nextHolidays,
-      );
+      setSaving(true);
+      try {
+        const result = dialogMode === 'edit'
+          ? await updateHoliday(selectedHolidayId, preparedHoliday)
+          : await createHoliday(preparedHoliday);
+        const savedHoliday = normalizeHoliday(result.data.holiday, 0);
 
       createHolidayAuditLog({
         action:
@@ -898,22 +750,21 @@ function HolidayManagementPage() {
             ? 'update_holiday'
             : 'create_holiday',
 
-        holiday:
-          preparedHoliday,
+        holiday: savedHoliday,
 
         detail:
           `${
             dialogMode === 'edit'
               ? 'Updated'
               : 'Created'
-          } holiday "${preparedHoliday.name}" on ${preparedHoliday.date}. Status: ${preparedHoliday.status}.`,
+          } holiday "${savedHoliday.name}" on ${savedHoliday.date}. Status: ${savedHoliday.status}.`,
       });
 
       setActionMessage({
         severity: 'success',
 
         text:
-          `${preparedHoliday.name} was ${
+          `${savedHoliday.name} was ${
             dialogMode === 'edit'
               ? 'updated'
               : 'added'
@@ -921,7 +772,7 @@ function HolidayManagementPage() {
       });
 
       setYearFilter(
-        preparedHoliday.date.slice(
+        savedHoliday.date.slice(
           0,
           4,
         ),
@@ -929,10 +780,15 @@ function HolidayManagementPage() {
 
       handleCloseDialog();
 
+      await loadHolidayData();
+
       window.scrollTo({
         top: 0,
         behavior: 'smooth',
       });
+      } catch (error) {
+        setErrors({ form: error.response?.data?.message || 'Unable to save holiday.' });
+      } finally { setSaving(false); }
     };
 
   const handleToggleStatus = (
@@ -957,20 +813,10 @@ function HolidayManagementPage() {
         new Date().toISOString(),
     };
 
-    const nextHolidays =
-      holidays.map(
-        (holiday) =>
-          Number(holiday.id) ===
-          Number(
-            selectedHoliday.id,
-          )
-            ? updatedHoliday
-            : holiday,
-      );
-
-    persistHolidays(
-      nextHolidays,
-    );
+    setSaving(true);
+    updateHoliday(selectedHoliday.id, updatedHoliday)
+      .then(() => loadHolidayData())
+      .then(() => {
 
     createHolidayAuditLog({
       action:
@@ -996,6 +842,9 @@ function HolidayManagementPage() {
       top: 0,
       behavior: 'smooth',
     });
+      })
+      .catch((error) => setActionMessage({ severity: 'error', text: error.response?.data?.message || 'Unable to update holiday status.' }))
+      .finally(() => setSaving(false));
   };
 
   const handleOpenDeleteDialog =
@@ -1023,25 +872,16 @@ function HolidayManagementPage() {
     };
 
   const handleConfirmDelete =
-    () => {
+    async () => {
       if (
         !selectedDeleteHoliday
       ) {
         return;
       }
 
-      const nextHolidays =
-        holidays.filter(
-          (holiday) =>
-            Number(holiday.id) !==
-            Number(
-              selectedDeleteHoliday.id,
-            ),
-        );
-
-      persistHolidays(
-        nextHolidays,
-      );
+      setSaving(true);
+      try {
+        await deleteHoliday(selectedDeleteHoliday.id);
 
       createHolidayAuditLog({
         action:
@@ -1063,10 +903,15 @@ function HolidayManagementPage() {
 
       handleCloseDeleteDialog();
 
+      await loadHolidayData();
+
       window.scrollTo({
         top: 0,
         behavior: 'smooth',
       });
+      } catch (error) {
+        setActionMessage({ severity: 'error', text: error.response?.data?.message || 'Unable to delete holiday.' });
+      } finally { setSaving(false); }
     };
 
   const summaryCards = [
@@ -1205,6 +1050,12 @@ function HolidayManagementPage() {
           }}
         >
           {actionMessage.text}
+        </Alert>
+      )}
+
+      {(loading || loadError) && (
+        <Alert severity={loadError ? 'error' : 'info'} action={loadError ? <Button onClick={loadHolidayData}>Retry</Button> : null} sx={{ marginBottom: '24px', borderRadius: '8px' }}>
+          {loadError || 'Loading holidays...'}
         </Alert>
       )}
 
@@ -2319,6 +2170,7 @@ function HolidayManagementPage() {
           <Button
             type="button"
             variant="contained"
+            disabled={saving}
             onClick={
               handleSaveHoliday
             }
@@ -2453,6 +2305,7 @@ function HolidayManagementPage() {
           <Button
             type="button"
             variant="contained"
+            disabled={saving}
             onClick={
               handleConfirmDelete
             }

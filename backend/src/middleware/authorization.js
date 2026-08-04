@@ -15,3 +15,17 @@ export function requireAdmin(request, response, next) {
   return next()
 }
 
+export function requireHrOrAdmin(request, response, next) {
+  const roleName = String(request.user?.roleName || '')
+    .trim()
+    .toLowerCase()
+
+  if (!['hr', 'admin'].includes(roleName)) {
+    return response.status(403).json({
+      status: 'error',
+      message: 'Forbidden',
+    })
+  }
+
+  return next()
+}

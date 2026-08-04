@@ -21,7 +21,38 @@ import {
 } from './controllers/admin-users-controller.js'
 import { config } from './config/environment.js'
 import { pool, verifyDatabaseConnection } from './config/database.js'
-import { requireAdmin } from './middleware/authorization.js'
+import {
+  createDepartment,
+  createEmployee,
+  createHoliday,
+  createLeaveEntitlement,
+  createLeaveType,
+  createPosition,
+  deleteHoliday,
+  getDepartment,
+  getEmployee,
+  getHoliday,
+  getLeaveEntitlement,
+  getLeaveType,
+  getPosition,
+  listDepartments,
+  listEmployees,
+  listHolidays,
+  listLeaveEntitlements,
+  listLeaveTypes,
+  listPositions,
+  updateDepartment,
+  updateDepartmentStatus,
+  updateEmployee,
+  updateEmployeeStatus,
+  updateHoliday,
+  updateLeaveEntitlement,
+  updateLeaveType,
+  updateLeaveTypeStatus,
+  updatePosition,
+  updatePositionStatus,
+} from './controllers/hr-management-controller.js'
+import { requireAdmin, requireHrOrAdmin } from './middleware/authorization.js'
 
 export const expressApp = express()
 
@@ -114,6 +145,42 @@ expressApp.post(
   requireAdmin,
   resetAdminUserPassword,
 )
+
+const hrRoutes = [
+  ['get', '/api/hr/employees', listEmployees],
+  ['get', '/api/hr/employees/:employeeId', getEmployee],
+  ['post', '/api/hr/employees', createEmployee],
+  ['put', '/api/hr/employees/:employeeId', updateEmployee],
+  ['patch', '/api/hr/employees/:employeeId/status', updateEmployeeStatus],
+  ['get', '/api/hr/departments', listDepartments],
+  ['get', '/api/hr/departments/:departmentId', getDepartment],
+  ['post', '/api/hr/departments', createDepartment],
+  ['put', '/api/hr/departments/:departmentId', updateDepartment],
+  ['patch', '/api/hr/departments/:departmentId/status', updateDepartmentStatus],
+  ['get', '/api/hr/positions', listPositions],
+  ['get', '/api/hr/positions/:positionId', getPosition],
+  ['post', '/api/hr/positions', createPosition],
+  ['put', '/api/hr/positions/:positionId', updatePosition],
+  ['patch', '/api/hr/positions/:positionId/status', updatePositionStatus],
+  ['get', '/api/hr/leave-types', listLeaveTypes],
+  ['get', '/api/hr/leave-types/:leaveTypeId', getLeaveType],
+  ['post', '/api/hr/leave-types', createLeaveType],
+  ['put', '/api/hr/leave-types/:leaveTypeId', updateLeaveType],
+  ['patch', '/api/hr/leave-types/:leaveTypeId/status', updateLeaveTypeStatus],
+  ['get', '/api/hr/holidays', listHolidays],
+  ['get', '/api/hr/holidays/:holidayId', getHoliday],
+  ['post', '/api/hr/holidays', createHoliday],
+  ['put', '/api/hr/holidays/:holidayId', updateHoliday],
+  ['delete', '/api/hr/holidays/:holidayId', deleteHoliday],
+  ['get', '/api/hr/leave-entitlements', listLeaveEntitlements],
+  ['get', '/api/hr/leave-entitlements/:entitlementId', getLeaveEntitlement],
+  ['post', '/api/hr/leave-entitlements', createLeaveEntitlement],
+  ['put', '/api/hr/leave-entitlements/:entitlementId', updateLeaveEntitlement],
+]
+
+for (const [method, path, handler] of hrRoutes) {
+  expressApp[method](path, requireAuthentication, requireHrOrAdmin, handler)
+}
 
 expressApp.use((request, response) => {
   response.status(404).json({

@@ -13,6 +13,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { useNavigate, useParams } from 'react-router-dom';
+import { createPosition, getPosition, updatePosition } from '../api/position-service.js';
 
 const emptyPositionData = {
   positionName: '',
@@ -31,6 +33,8 @@ function RolePositionFormPage({
   mode = 'add',
 }) {
   const isEditMode = mode === 'edit';
+  const navigate = useNavigate();
+  const { positionId } = useParams();
 
   const [formData, setFormData] = useState(
     isEditMode
@@ -42,27 +46,23 @@ function RolePositionFormPage({
   const [successMessage, setSuccessMessage] = useState('');
   const [informationMessage, setInformationMessage] =
     useState('');
-
-  const existingPositionNames = [
-    'Developer',
-    'Supervisor',
-    'Human Resource Officer',
-    'System Administrator',
-    'Accountant',
-    'Marketing Officer',
-  ];
+  const [loading, setLoading] = useState(isEditMode);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setFormData(
-      isEditMode
-        ? { ...editPositionData }
-        : { ...emptyPositionData },
-    );
-
-    setErrors({});
-    setSuccessMessage('');
-    setInformationMessage('');
-  }, [isEditMode]);
+    let active = true;
+    const load = async () => {
+      setErrors({}); setSuccessMessage(''); setInformationMessage('');
+      if (!isEditMode) { setFormData({ ...emptyPositionData }); setLoading(false); return; }
+      setLoading(true);
+      try {
+        const position = await getPosition(positionId);
+        if (active) setFormData({ positionName: position.positionName, status: position.status });
+      } catch (error) { if (active) setInformationMessage(error.response?.data?.message || 'Unable to load position.'); }
+      finally { if (active) setLoading(false); }
+    };
+    load(); return () => { active = false; };
+  }, [isEditMode, positionId]);
 
   const pageTitle = isEditMode
     ? 'Edit Position'
@@ -101,26 +101,6 @@ function RolePositionFormPage({
     } else if (normalizedPositionName.length > 100) {
       validationErrors.positionName =
         'Position name must not exceed 100 characters';
-    } else {
-      const positionAlreadyExists =
-        existingPositionNames.some(
-          (positionName) =>
-            positionName.toLowerCase() ===
-            normalizedPositionName.toLowerCase(),
-        );
-
-      const isCurrentPosition =
-        isEditMode &&
-        normalizedPositionName.toLowerCase() ===
-          editPositionData.positionName.toLowerCase();
-
-      if (
-        positionAlreadyExists &&
-        !isCurrentPosition
-      ) {
-        validationErrors.positionName =
-          'This position name is already in use';
-      }
     }
 
     if (!formData.status) {
@@ -133,7 +113,7 @@ function RolePositionFormPage({
     return Object.keys(validationErrors).length === 0;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     setSuccessMessage('');
@@ -148,21 +128,13 @@ function RolePositionFormPage({
       status: formData.status,
     };
 
-    console.log({
-      mode,
-      submittedPosition,
-    });
-
-    setSuccessMessage(
-      isEditMode
-        ? 'Position information is valid. The changes will be saved after this page is connected to the backend.'
-        : 'Position information is valid. The position will be created after this page is connected to the backend.',
-    );
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    setSaving(true);
+    try {
+      const result = isEditMode ? await updatePosition(positionId, submittedPosition) : await createPosition(submittedPosition);
+      setSuccessMessage(result.message);
+      window.setTimeout(() => navigate('/admin/position-management'), 500);
+    } catch (error) { setInformationMessage(error.response?.data?.message || 'Unable to save position.'); }
+    finally { setSaving(false); }
   };
 
   const handleReset = () => {
@@ -178,16 +150,7 @@ function RolePositionFormPage({
   };
 
   const handleBack = () => {
-    setInformationMessage(
-      'Back navigation to Position Management will be connected when routing is added.',
-    );
-
-    setSuccessMessage('');
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    navigate('/admin/position-management');
   };
 
   const isActive = formData.status === 'Active';
@@ -275,6 +238,8 @@ function RolePositionFormPage({
           {successMessage}
         </Alert>
       )}
+
+      {loading && <Alert severity="info" sx={{ marginBottom: '24px' }}>Loading position...</Alert>}
 
       <Box
         component="form"
@@ -465,6 +430,7 @@ function RolePositionFormPage({
             <Button
               type="submit"
               variant="contained"
+              disabled={saving || loading}
               sx={{
                 minWidth: '155px',
                 height: '44px',

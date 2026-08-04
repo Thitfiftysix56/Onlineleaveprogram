@@ -32,22 +32,11 @@ import {
 import HRLayout from '../../layouts/hrlayout.jsx';
 
 import {
+  createLeaveType,
   getLeaveTypes,
-  leaveTypeStorageKey,
-  saveLeaveType,
-  setLeaveTypeStatus,
-} from '../../utils/leavetypestorage.js';
-
-import {
-  getLeaveRequests,
-  leaveRequestStorageKey,
-} from '../../utils/leaverequeststorage.js';
-
-import {
-  getLeaveEntitlements,
-  leaveEntitlementStorageKey,
-  saveLeaveEntitlements,
-} from '../../utils/leaveentitlementstorage.js';
+  updateLeaveType,
+  updateLeaveTypeStatus,
+} from '../../api/leave-type-service.js';
 
 import {
   createAuditLog,
@@ -212,91 +201,27 @@ function LeaveTypeManagementPage() {
     setErrors,
   ] = useState({});
 
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [saving, setSaving] = useState(false);
+
   const loadData =
-    useCallback(() => {
-      const storedLeaveTypes =
-        getLeaveTypes();
-
-      const usage =
-        getLeaveRequests().reduce(
-          (
-            result,
-            request,
-          ) => {
-            const leaveTypeId =
-              Number(
-                request.leaveTypeId,
-              );
-
-            if (!leaveTypeId) {
-              return result;
-            }
-
-            return {
-              ...result,
-
-              [leaveTypeId]:
-                (
-                  result[leaveTypeId] ||
-                  0
-                ) + 1,
-            };
-          },
-          {},
-        );
-
-      setLeaveTypes(
-        storedLeaveTypes,
-      );
-
-      setRequestUsage(
-        usage,
-      );
+    useCallback(async () => {
+      setLoading(true);
+      setLoadError('');
+      try {
+        const rows = await getLeaveTypes();
+        setLeaveTypes(rows.map((item) => ({ ...item, id: item.leaveTypeId })));
+        setRequestUsage({});
+      } catch (error) {
+        setLoadError(error.response?.data?.message || 'Unable to load leave types.');
+      } finally {
+        setLoading(false);
+      }
     }, []);
 
   useEffect(() => {
     loadData();
-
-    const handleStorage = (
-      event,
-    ) => {
-      const watchedKeys = [
-        leaveTypeStorageKey,
-        leaveRequestStorageKey,
-        leaveEntitlementStorageKey,
-      ];
-
-      if (
-        !event.key ||
-        watchedKeys.includes(
-          event.key,
-        )
-      ) {
-        loadData();
-      }
-    };
-
-    window.addEventListener(
-      'storage',
-      handleStorage,
-    );
-
-    window.addEventListener(
-      'focus',
-      loadData,
-    );
-
-    return () => {
-      window.removeEventListener(
-        'storage',
-        handleStorage,
-      );
-
-      window.removeEventListener(
-        'focus',
-        loadData,
-      );
-    };
   }, [loadData]);
 
   const filteredLeaveTypes =
@@ -652,43 +577,14 @@ function LeaveTypeManagementPage() {
     );
   };
 
-  const synchronizeEntitlementName = (
-    leaveType,
-  ) => {
-    const entitlements =
-      getLeaveEntitlements();
-
-    saveLeaveEntitlements(
-      entitlements.map(
-        (item) =>
-          Number(
-            item.leaveTypeId,
-          ) ===
-          Number(
-            leaveType.id,
-          )
-            ? {
-                ...item,
-
-                leaveType:
-                  leaveType.name,
-
-                updatedAt:
-                  new Date()
-                    .toISOString(),
-              }
-            : item,
-      ),
-    );
-  };
-
-  const saveForm = () => {
+  const saveForm = async () => {
     if (!validateForm()) {
       return;
     }
 
-    const savedLeaveType =
-      saveLeaveType({
+    setSaving(true);
+    try {
+      const payload = {
         id:
           dialogMode ===
           'edit'
@@ -734,20 +630,11 @@ function LeaveTypeManagementPage() {
 
         description:
           form.description,
-      });
-
-    if (!savedLeaveType) {
-      setErrors({
-        form:
-          'Could not save. Check for a duplicate code or name.',
-      });
-
-      return;
-    }
-
-    synchronizeEntitlementName(
-      savedLeaveType,
-    );
+      };
+      const result = dialogMode === 'edit'
+        ? await updateLeaveType(selectedLeaveType.id, payload)
+        : await createLeaveType(payload);
+      const savedLeaveType = { ...result.data.leaveType, id: result.data.leaveType.leaveTypeId };
 
     createLeaveTypeAuditLog({
       action:
@@ -778,12 +665,16 @@ function LeaveTypeManagementPage() {
         } successfully.`,
     });
 
-    closeDialog();
-
-    loadData();
+      closeDialog();
+      await loadData();
+    } catch (error) {
+      setErrors({ form: error.response?.data?.message || 'Could not save the leave type.' });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const toggleStatus = (
+  const toggleStatus = async (
     leaveType,
   ) => {
     const nextStatus =
@@ -792,47 +683,28 @@ function LeaveTypeManagementPage() {
         ? 'Inactive'
         : 'Active';
 
-    const updatedLeaveType =
-      setLeaveTypeStatus(
-        leaveType.id,
-        nextStatus,
-      );
-
-    if (!updatedLeaveType) {
+    setSaving(true);
+    try {
+      await updateLeaveTypeStatus(leaveType.id, nextStatus);
+      const updatedLeaveType = { ...leaveType, status: nextStatus };
+      createLeaveTypeAuditLog({
+        action: nextStatus === 'Active' ? 'activate_leave_type' : 'deactivate_leave_type',
+        leaveType: updatedLeaveType,
+        detail: `Changed ${updatedLeaveType.code} - ${updatedLeaveType.name} to ${nextStatus}.`,
+      });
+      setMessage({ severity: 'success', text: `${updatedLeaveType.name} was changed to ${nextStatus}.` });
+      await loadData();
+    } catch (error) {
       setMessage({
         severity:
           'error',
 
         text:
-          'Could not update the leave type status.',
+          error.response?.data?.message || 'Could not update the leave type status.',
       });
-
-      return;
+    } finally {
+      setSaving(false);
     }
-
-    createLeaveTypeAuditLog({
-      action:
-        nextStatus ===
-        'Active'
-          ? 'activate_leave_type'
-          : 'deactivate_leave_type',
-
-      leaveType:
-        updatedLeaveType,
-
-      detail:
-        `Changed ${updatedLeaveType.code} - ${updatedLeaveType.name} to ${nextStatus}.`,
-    });
-
-    setMessage({
-      severity:
-        'success',
-
-      text:
-        `${updatedLeaveType.name} was changed to ${nextStatus}.`,
-    });
-
-    loadData();
   };
 
   const summaryCards = [
@@ -1010,6 +882,12 @@ function LeaveTypeManagementPage() {
           }}
         >
           {message.text}
+        </Alert>
+      )}
+
+      {(loading || loadError) && (
+        <Alert severity={loadError ? 'error' : 'info'} action={loadError ? <Button onClick={loadData}>Retry</Button> : null} sx={{ marginBottom: '24px', borderRadius: '8px' }}>
+          {loadError || 'Loading leave types...'}
         </Alert>
       )}
 
@@ -2013,6 +1891,7 @@ function LeaveTypeManagementPage() {
 
           <Button
             variant="contained"
+            disabled={saving}
             onClick={
               saveForm
             }

@@ -13,6 +13,12 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  createDepartment,
+  getDepartment,
+  updateDepartment,
+} from '../api/department-service.js';
 
 const emptyDepartmentData = {
   departmentName: '',
@@ -34,6 +40,8 @@ function RoleDepartmentFormPage({
   mode = 'add',
 }) {
   const isEditMode = mode === 'edit';
+  const navigate = useNavigate();
+  const { departmentId } = useParams();
 
   const [formData, setFormData] = useState(
     isEditMode
@@ -47,25 +55,25 @@ function RoleDepartmentFormPage({
 
   const [informationMessage, setInformationMessage] =
     useState('');
-
-  const existingDepartmentNames = [
-    'Information Technology',
-    'Human Resources',
-    'Finance',
-    'Marketing',
-  ];
+  const [loading, setLoading] = useState(isEditMode);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setFormData(
-      isEditMode
-        ? { ...editDepartmentData }
-        : { ...emptyDepartmentData },
-    );
-
-    setErrors({});
-    setSuccessMessage('');
-    setInformationMessage('');
-  }, [isEditMode]);
+    let active = true;
+    const load = async () => {
+      setErrors({}); setSuccessMessage(''); setInformationMessage('');
+      if (!isEditMode) { setFormData({ ...emptyDepartmentData }); setLoading(false); return; }
+      setLoading(true);
+      try {
+        const department = await getDepartment(departmentId);
+        if (active) setFormData({ departmentName: department.departmentName, description: department.description || '', status: department.status });
+      } catch (error) {
+        if (active) setInformationMessage(error.response?.data?.message || 'Unable to load department.');
+      } finally { if (active) setLoading(false); }
+    };
+    load();
+    return () => { active = false; };
+  }, [departmentId, isEditMode]);
 
   const pageTitle = isEditMode
     ? 'Edit Department'
@@ -109,26 +117,6 @@ function RoleDepartmentFormPage({
     ) {
       validationErrors.departmentName =
         'Department name must not exceed 100 characters';
-    } else {
-      const departmentAlreadyExists =
-        existingDepartmentNames.some(
-          (departmentName) =>
-            departmentName.toLowerCase() ===
-            normalizedDepartmentName.toLowerCase(),
-        );
-
-      const isCurrentDepartment =
-        isEditMode &&
-        normalizedDepartmentName.toLowerCase() ===
-          editDepartmentData.departmentName.toLowerCase();
-
-      if (
-        departmentAlreadyExists &&
-        !isCurrentDepartment
-      ) {
-        validationErrors.departmentName =
-          'This department name is already in use';
-      }
     }
 
     if (!formData.status) {
@@ -143,7 +131,7 @@ function RoleDepartmentFormPage({
     );
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     setSuccessMessage('');
@@ -153,32 +141,14 @@ function RoleDepartmentFormPage({
       return;
     }
 
-    const submittedDepartment = {
-      department_name:
-        formData.departmentName.trim(),
-
-      description:
-        formData.description.trim() || null,
-
-      is_active:
-        formData.status === 'Active' ? 1 : 0,
-    };
-
-    console.log({
-      mode,
-      submittedDepartment,
-    });
-
-    setSuccessMessage(
-      isEditMode
-        ? 'Department information is valid. The changes will be saved after this page is connected to the backend.'
-        : 'Department information is valid. The department will be created after this page is connected to the backend.',
-    );
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    const submittedDepartment = { departmentName: formData.departmentName.trim(), description: formData.description.trim() || null, status: formData.status };
+    setSaving(true);
+    try {
+      const result = isEditMode ? await updateDepartment(departmentId, submittedDepartment) : await createDepartment(submittedDepartment);
+      setSuccessMessage(result.message);
+      window.setTimeout(() => navigate('/admin/department-management'), 500);
+    } catch (error) { setInformationMessage(error.response?.data?.message || 'Unable to save department.'); }
+    finally { setSaving(false); }
   };
 
   const handleReset = () => {
@@ -194,16 +164,7 @@ function RoleDepartmentFormPage({
   };
 
   const handleBack = () => {
-    setInformationMessage(
-      'Back navigation to Department Management will work after routing is connected.',
-    );
-
-    setSuccessMessage('');
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    navigate('/admin/department-management');
   };
 
   const isActive =
@@ -302,6 +263,8 @@ function RoleDepartmentFormPage({
           {successMessage}
         </Alert>
       )}
+
+      {loading && <Alert severity="info" sx={{ marginBottom: '24px' }}>Loading department...</Alert>}
 
       <Box
         component="form"
@@ -532,6 +495,7 @@ function RoleDepartmentFormPage({
             <Button
               type="submit"
               variant="contained"
+              disabled={saving || loading}
               sx={{
                 minWidth: '170px',
                 height: '44px',

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -13,8 +13,20 @@ import {
   Typography,
 } from '@mui/material';
 import HRLayout from '../../layouts/hrlayout.jsx';
+import { useNavigate, useParams } from 'react-router-dom';
+import { getDepartments } from '../../api/department-service.js';
+import { getPositions } from '../../api/position-service.js';
+import {
+  createEmployee,
+  getEmployee,
+  getEmployees,
+  updateEmployee,
+} from '../../api/employee-service.js';
 
-function EmployeeFormPage() {
+function EmployeeFormPage({ mode = 'add' }) {
+  const navigate = useNavigate();
+  const { employeeId } = useParams();
+  const isEditMode = mode === 'edit';
   const [formData, setFormData] = useState({
     employeeId: '',
     firstName: '',
@@ -31,28 +43,13 @@ function EmployeeFormPage() {
 
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(isEditMode);
+  const [saving, setSaving] = useState(false);
 
-  const departments = [
-    'Information Technology',
-    'Human Resources',
-    'Finance',
-    'Marketing',
-  ];
-
-  const positions = [
-    'Developer',
-    'Supervisor',
-    'Human Resource Officer',
-    'System Administrator',
-    'Accountant',
-    'Marketing Officer',
-  ];
-
-  const supervisors = [
-    'Supervisor User',
-    'Nattapong Srisuk',
-    'Sasithorn Kanya',
-  ];
+  const [departments, setDepartments] = useState([]);
+  const [positions, setPositions] = useState([]);
+  const [supervisors, setSupervisors] = useState([]);
 
   const roles = [
     'Employee',
@@ -60,6 +57,47 @@ function EmployeeFormPage() {
     'HR',
     'Admin',
   ];
+
+  useEffect(() => {
+    let active = true;
+    const loadForm = async () => {
+      setLoading(true);
+      setErrorMessage('');
+      try {
+        const [departmentRows, positionRows, employeeRows, employee] = await Promise.all([
+          getDepartments(),
+          getPositions(),
+          getEmployees({ status: 'active' }),
+          isEditMode ? getEmployee(employeeId) : Promise.resolve(null),
+        ]);
+        if (!active) return;
+        setDepartments(departmentRows.filter((item) => item.isActive));
+        setPositions(positionRows.filter((item) => item.isActive));
+        setSupervisors(employeeRows.filter((item) => Number(item.employeeId) !== Number(employeeId)));
+        if (employee) {
+          setFormData({
+            employeeId: employee.employeeCode,
+            firstName: employee.firstName,
+            lastName: employee.lastName,
+            email: employee.email,
+            phone: employee.phone || '',
+            department: employee.departmentId,
+            position: employee.positionId,
+            supervisor: employee.supervisorId || '',
+            role: employee.roleName || 'Employee',
+            employmentDate: String(employee.hireDate).slice(0, 10),
+            status: employee.status.charAt(0).toUpperCase() + employee.status.slice(1),
+          });
+        }
+      } catch (error) {
+        if (active) setErrorMessage(error.response?.data?.message || 'Unable to load employee form data.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    loadForm();
+    return () => { active = false; };
+  }, [employeeId, isEditMode]);
 
   const handleInputChange = (fieldName, value) => {
     setFormData((previousData) => ({
@@ -147,36 +185,40 @@ function EmployeeFormPage() {
     return Object.keys(validationErrors).length === 0;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     setSuccessMessage('');
+    setErrorMessage('');
 
     if (!validateForm()) {
       return;
     }
 
     const employeeData = {
-      ...formData,
-      employeeId: formData.employeeId.trim(),
+      employeeCode: formData.employeeId.trim(),
       firstName: formData.firstName.trim(),
       lastName: formData.lastName.trim(),
       email: formData.email.trim(),
-      phone: formData.phone.trim(),
+      phone: formData.phone.trim() || null,
+      departmentId: Number(formData.department),
+      positionId: Number(formData.position),
+      supervisorId: formData.supervisor ? Number(formData.supervisor) : null,
+      hireDate: formData.employmentDate,
+      status: formData.status,
     };
-
-    console.log({
-      employeeData,
-    });
-
-    setSuccessMessage(
-      'Employee information is complete. The employee account and initial password will be created after connecting this form to the backend.',
-    );
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    setSaving(true);
+    try {
+      const result = isEditMode
+        ? await updateEmployee(employeeId, employeeData)
+        : await createEmployee(employeeData);
+      setSuccessMessage(result.message || `Employee ${isEditMode ? 'updated' : 'created'} successfully.`);
+      window.setTimeout(() => navigate('/hr/employee-management'), 500);
+    } catch (error) {
+      setErrorMessage(error.response?.data?.message || 'Unable to save employee.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleReset = () => {
@@ -238,6 +280,7 @@ function EmployeeFormPage() {
 <Button
   type="button"
   variant="outlined"
+  onClick={() => navigate('/hr/employee-management')}
   sx={{
     minWidth: '100px',
     height: '42px',
@@ -271,6 +314,12 @@ function EmployeeFormPage() {
           }}
         >
           {successMessage}
+        </Alert>
+      )}
+
+      {(errorMessage || loading) && (
+        <Alert severity={errorMessage ? 'error' : 'info'} sx={{ marginBottom: '24px', borderRadius: '8px' }}>
+          {errorMessage || 'Loading employee data...'}
         </Alert>
       )}
 
@@ -526,10 +575,10 @@ function EmployeeFormPage() {
               >
                 {departments.map((department) => (
                   <MenuItem
-                    key={department}
-                    value={department}
+                    key={department.departmentId}
+                    value={department.departmentId}
                   >
-                    {department}
+                    {department.departmentName}
                   </MenuItem>
                 ))}
               </Select>
@@ -566,10 +615,10 @@ function EmployeeFormPage() {
               >
                 {positions.map((position) => (
                   <MenuItem
-                    key={position}
-                    value={position}
+                    key={position.positionId}
+                    value={position.positionId}
                   >
-                    {position}
+                    {position.positionName}
                   </MenuItem>
                 ))}
               </Select>
@@ -606,10 +655,10 @@ function EmployeeFormPage() {
 
                 {supervisors.map((supervisor) => (
                   <MenuItem
-                    key={supervisor}
-                    value={supervisor}
+                    key={supervisor.employeeId}
+                    value={supervisor.employeeId}
                   >
-                    {supervisor}
+                    {supervisor.fullName}
                   </MenuItem>
                 ))}
               </Select>
@@ -936,6 +985,7 @@ function EmployeeFormPage() {
             <Button
               type="submit"
               variant="contained"
+              disabled={saving || loading}
               sx={{
                 minWidth: '150px',
                 height: '44px',
@@ -954,7 +1004,7 @@ function EmployeeFormPage() {
                 },
               }}
             >
-              Save Employee
+              {saving ? 'Saving...' : 'Save Employee'}
             </Button>
           </Box>
         </Paper>

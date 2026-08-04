@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -13,84 +13,50 @@ import {
   Typography,
 } from '@mui/material';
 import HRLayout from '../../layouts/hrlayout.jsx';
+import { useNavigate } from 'react-router-dom';
+import {
+  getEmployees,
+  updateEmployeeStatus,
+} from '../../api/employee-service.js';
 
 function EmployeeManagementPage() {
+  const navigate = useNavigate();
   const [searchText, setSearchText] = useState('');
   const [departmentFilter, setDepartmentFilter] =
     useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [actionMessage, setActionMessage] = useState('');
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [updatingId, setUpdatingId] = useState(null);
 
-  const employees = useMemo(() => [
-    {
-      id: 1,
-      employeeId: 'EMP001',
-      name: 'Employee User',
-      email: 'employee001@organization.co.th',
-      department: 'Information Technology',
-      position: 'Developer',
-      role: 'Employee',
-      status: 'Active',
-    },
-    {
-      id: 2,
-      employeeId: 'EMP002',
-      name: 'Narin Chaiyasit',
-      email: 'narin@organization.co.th',
-      department: 'Information Technology',
-      position: 'Developer',
-      role: 'Employee',
-      status: 'Active',
-    },
-    {
-      id: 3,
-      employeeId: 'EMP003',
-      name: 'Krit Sombatdee',
-      email: 'krit@organization.co.th',
-      department: 'Finance',
-      position: 'Accountant',
-      role: 'Employee',
-      status: 'Active',
-    },
-    {
-      id: 4,
-      employeeId: 'EMP004',
-      name: 'Suda Rattanapong',
-      email: 'suda@organization.co.th',
-      department: 'Human Resources',
-      position: 'Human Resource Officer',
-      role: 'HR',
-      status: 'Active',
-    },
-    {
-      id: 5,
-      employeeId: 'EMP005',
-      name: 'Pimchanok Dee',
-      email: 'pimchanok@organization.co.th',
-      department: 'Marketing',
-      position: 'Marketing Officer',
-      role: 'Employee',
-      status: 'Inactive',
-    },
-    {
-      id: 6,
-      employeeId: 'SUP001',
-      name: 'Supervisor User',
-      email: 'supervisor001@organization.co.th',
-      department: 'Information Technology',
-      position: 'Supervisor',
-      role: 'Supervisor',
-      status: 'Active',
-    },
-  ], []);
+  const loadEmployees = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const rows = await getEmployees();
+      setEmployees(rows.map((employee) => ({
+        ...employee,
+        id: employee.employeeId,
+        employeeId: employee.employeeCode,
+        name: employee.fullName,
+        role: employee.roleName,
+        status: employee.status.charAt(0).toUpperCase() + employee.status.slice(1),
+      })));
+    } catch (error) {
+      setLoadError(error.response?.data?.message || 'Unable to load employees.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const departments = [
+  useEffect(() => { loadEmployees(); }, [loadEmployees]);
+
+  const departments = useMemo(() => [
     'All',
-    'Information Technology',
-    'Human Resources',
-    'Finance',
-    'Marketing',
-  ];
+    ...new Set(employees.map((employee) => employee.department)),
+  ], [employees]);
 
   const filteredEmployees = useMemo(() => {
     const keyword = searchText.trim().toLowerCase();
@@ -128,14 +94,7 @@ function EmployeeManagementPage() {
   ).length;
 
   const handleAddEmployee = () => {
-    setActionMessage(
-      'Add Employee selected. This button will open the Employee Form after routing is connected.',
-    );
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    navigate('/hr/employee-management/add');
   };
 
   const handleViewEmployee = (employee) => {
@@ -150,14 +109,22 @@ function EmployeeManagementPage() {
   };
 
   const handleEditEmployee = (employee) => {
-    setActionMessage(
-      `Edit selected for ${employee.name}. The Employee Form will be connected during routing.`,
-    );
+    navigate(`/hr/employee-management/${employee.id}/edit`);
+  };
 
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+  const handleStatusChange = async (employee) => {
+    const nextStatus = employee.status === 'Active' ? 'Inactive' : 'Active';
+    if (!window.confirm(`Change ${employee.name} to ${nextStatus}?`)) return;
+    setUpdatingId(employee.id);
+    try {
+      await updateEmployeeStatus(employee.id, nextStatus);
+      await loadEmployees();
+      setActionMessage(`${employee.name} was changed to ${nextStatus}.`);
+    } catch (error) {
+      setActionMessage(error.response?.data?.message || 'Unable to update employee status.');
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   const handleClearFilters = () => {
@@ -248,6 +215,12 @@ function EmployeeManagementPage() {
           }}
         >
           {actionMessage}
+        </Alert>
+      )}
+
+      {loadError && (
+        <Alert severity="error" action={<Button onClick={loadEmployees}>Retry</Button>} sx={{ marginBottom: '24px' }}>
+          {loadError}
         </Alert>
       )}
 
@@ -509,7 +482,11 @@ function EmployeeManagementPage() {
           </Box>
         </Box>
 
-        {filteredEmployees.length > 0 ? (
+        {loading ? (
+          <Box sx={{ minHeight: '300px', display: 'grid', placeItems: 'center' }}>
+            <Typography sx={{ color: '#6B7280' }}>Loading employees...</Typography>
+          </Box>
+        ) : filteredEmployees.length > 0 ? (
           <Box
             sx={{
               overflowX: 'auto',
@@ -670,6 +647,8 @@ function EmployeeManagementPage() {
                     >
                       <Chip
                         label={employee.status}
+                        disabled={updatingId === employee.id}
+                        onClick={() => handleStatusChange(employee)}
                         size="small"
                         sx={{
                           minWidth: '78px',

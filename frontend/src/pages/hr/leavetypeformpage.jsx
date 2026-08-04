@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -13,8 +13,13 @@ import {
   Typography,
 } from '@mui/material';
 import HRLayout from '../../layouts/hrlayout.jsx';
+import { useNavigate, useParams } from 'react-router-dom';
+import { createLeaveType, getLeaveType, updateLeaveType } from '../../api/leave-type-service.js';
 
-function LeaveTypeFormPage() {
+function LeaveTypeFormPage({ mode = 'add' }) {
+  const isEditMode = mode === 'edit';
+  const navigate = useNavigate();
+  const { leaveTypeId } = useParams();
   const initialFormData = {
     code: '',
     name: '',
@@ -29,6 +34,28 @@ function LeaveTypeFormPage() {
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(isEditMode);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!isEditMode) return undefined;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const item = await getLeaveType(leaveTypeId);
+        if (active) setFormData({
+          code: item.code, name: item.name, description: item.description,
+          defaultDays: String(item.defaultDays), minimumDays: String(item.minimumDays),
+          maximumDaysPerRequest: String(item.maximumDaysPerRequest),
+          attachmentRequired: item.attachmentRequired ? 'Yes' : 'No', status: item.status,
+        });
+      } catch (error) { if (active) setErrorMessage(error.response?.data?.message || 'Unable to load leave type.'); }
+      finally { if (active) setLoading(false); }
+    };
+    load(); return () => { active = false; };
+  }, [isEditMode, leaveTypeId]);
 
   const handleInputChange = (fieldName, value) => {
     setFormData((previousData) => ({
@@ -135,7 +162,7 @@ function LeaveTypeFormPage() {
     return Object.keys(validationErrors).length === 0;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     setSuccessMessage('');
@@ -163,18 +190,13 @@ function LeaveTypeFormPage() {
       status: formData.status,
     };
 
-    console.log({
-      leaveTypeData,
-    });
-
-    setSuccessMessage(
-      'Leave type information is complete. It will be saved after this form is connected to the backend.',
-    );
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    setSaving(true); setErrorMessage('');
+    try {
+      const result = isEditMode ? await updateLeaveType(leaveTypeId, leaveTypeData) : await createLeaveType(leaveTypeData);
+      setSuccessMessage(result.message);
+      window.setTimeout(() => navigate('/hr/leave-types'), 500);
+    } catch (error) { setErrorMessage(error.response?.data?.message || 'Unable to save leave type.'); }
+    finally { setSaving(false); }
   };
 
   const handleReset = () => {
@@ -223,6 +245,7 @@ function LeaveTypeFormPage() {
 <Button
   type="button"
   variant="outlined"
+  onClick={() => navigate('/hr/leave-types')}
   sx={{
     minWidth: '100px',
     height: '42px',
@@ -258,6 +281,8 @@ function LeaveTypeFormPage() {
           {successMessage}
         </Alert>
       )}
+
+      {(errorMessage || loading) && <Alert severity={errorMessage ? 'error' : 'info'} sx={{ marginBottom: '24px' }}>{errorMessage || 'Loading leave type...'}</Alert>}
 
       <Box
         component="form"
@@ -819,6 +844,7 @@ function LeaveTypeFormPage() {
             <Button
               type="submit"
               variant="contained"
+              disabled={saving || loading}
               sx={{
                 minWidth: '160px',
                 height: '44px',

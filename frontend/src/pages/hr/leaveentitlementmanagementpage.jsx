@@ -26,71 +26,16 @@ import {
 import HRLayout from '../../layouts/hrlayout.jsx';
 
 import {
+  createLeaveEntitlement,
   getLeaveEntitlements,
-  leaveEntitlementStorageKey,
-  upsertLeaveEntitlement,
-} from '../../utils/leaveentitlementstorage.js';
-
-import {
-  getLeaveRequests,
-  leaveRequestStorageKey,
-} from '../../utils/leaverequeststorage.js';
+  updateLeaveEntitlement,
+} from '../../api/leave-entitlement-service.js';
+import { getEmployees } from '../../api/employee-service.js';
+import { getLeaveTypes } from '../../api/leave-type-service.js';
 
 import {
   createAuditLog,
 } from '../../utils/auditlogstorage.js';
-
-const employeeProfiles = {
-  employee: {
-    employeeId: 'EMP001',
-    employeeName: 'Employee User',
-    department: 'Information Technology',
-    roleLabel: 'Employee',
-  },
-
-  supervisor: {
-    employeeId: 'EMP002',
-    employeeName: 'Supervisor User',
-    department: 'Information Technology',
-    roleLabel: 'Supervisor',
-  },
-
-  hr: {
-    employeeId: 'EMP003',
-    employeeName: 'HR User',
-    department: 'Human Resources',
-    roleLabel: 'HR',
-  },
-
-  admin: {
-    employeeId: 'EMP004',
-    employeeName: 'Admin User',
-    department: 'Information Technology',
-    roleLabel: 'Admin',
-  },
-};
-
-const leaveTypeOptions = [
-  {
-    id: 1,
-    name: 'Annual Leave',
-  },
-  {
-    id: 2,
-    name: 'Sick Leave',
-  },
-  {
-    id: 3,
-    name: 'Personal Leave',
-  },
-];
-
-const roleOptions = [
-  'employee',
-  'supervisor',
-  'hr',
-  'admin',
-];
 
 const emptyDialogForm = {
   role: 'employee',
@@ -179,15 +124,6 @@ const getRequestYear = (
     : date.getFullYear();
 };
 
-const getLeaveTypeName = (
-  leaveTypeId,
-) =>
-  leaveTypeOptions.find(
-    (leaveType) =>
-      Number(leaveType.id) ===
-      Number(leaveTypeId),
-  )?.name || 'Leave';
-
 function LeaveEntitlementManagementPage() {
   const currentYear =
     new Date().getFullYear();
@@ -246,19 +182,54 @@ function LeaveEntitlementManagementPage() {
     actionMessage,
     setActionMessage,
   ] = useState(null);
+  const [employeeProfileOptions, setEmployeeProfileOptions] = useState({});
+  const [employeeOptionIds, setEmployeeOptionIds] = useState([]);
+  const [leaveTypeApiOptions, setLeaveTypeApiOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const loadEntitlementData =
-    useCallback(() => {
+    useCallback(async () => {
       /*
        * เรียกคำขอลาก่อน เพื่อให้ระบบอัปเดต
        * Used Days จากคำขอ Approved เดิม
        * ก่อนอ่านข้อมูล Leave Entitlement
        */
-      const requests =
-        getLeaveRequests();
-
-      const storedEntitlements =
-        getLeaveEntitlements();
+      setLoading(true);
+      setLoadError('');
+      const requests = [];
+      let storedEntitlements = [];
+      let employeeProfiles = {};
+      try {
+        const [rows, employees, leaveTypes] = await Promise.all([
+          getLeaveEntitlements(),
+          getEmployees(),
+          getLeaveTypes(),
+        ]);
+        employeeProfiles = Object.fromEntries(employees.map((employee) => [
+          String(employee.employeeId),
+          {
+            employeeId: employee.employeeCode,
+            employeeName: employee.fullName,
+            department: employee.department,
+            roleLabel: employee.roleName,
+          },
+        ]));
+        storedEntitlements = rows.map((item) => ({
+          ...item,
+          id: item.entitlementId,
+          role: String(item.employeeId),
+          employeeId: item.employeeCode,
+        }));
+        setEmployeeProfileOptions(employeeProfiles);
+        setEmployeeOptionIds(employees.map((employee) => String(employee.employeeId)));
+        setLeaveTypeApiOptions(leaveTypes.filter((item) => item.isActive).map((item) => ({ id: item.leaveTypeId, name: item.name })));
+      } catch (error) {
+        setLoadError(error.response?.data?.message || 'Unable to load leave entitlements.');
+      } finally {
+        setLoading(false);
+      }
 
       const managementRows =
         storedEntitlements.map(
@@ -361,9 +332,7 @@ function LeaveEntitlementManagementPage() {
 
               leaveType:
                 entitlement.leaveType ||
-                getLeaveTypeName(
-                  leaveTypeId,
-                ),
+                'Leave',
 
               year,
 
@@ -424,42 +393,6 @@ function LeaveEntitlementManagementPage() {
 
   useEffect(() => {
     loadEntitlementData();
-
-    const handleStorageChange = (
-      event,
-    ) => {
-      if (
-        !event.key ||
-        event.key ===
-          leaveEntitlementStorageKey ||
-        event.key ===
-          leaveRequestStorageKey
-      ) {
-        loadEntitlementData();
-      }
-    };
-
-    window.addEventListener(
-      'storage',
-      handleStorageChange,
-    );
-
-    window.addEventListener(
-      'focus',
-      loadEntitlementData,
-    );
-
-    return () => {
-      window.removeEventListener(
-        'storage',
-        handleStorageChange,
-      );
-
-      window.removeEventListener(
-        'focus',
-        loadEntitlementData,
-      );
-    };
   }, [loadEntitlementData]);
 
   const availableYears =
@@ -503,14 +436,14 @@ function LeaveEntitlementManagementPage() {
 
         ...new Set(
           Object.values(
-            employeeProfiles,
+            employeeProfileOptions,
           ).map(
             (profile) =>
               profile.department,
           ),
         ),
       ],
-      [],
+      [employeeProfileOptions],
     );
 
   const filteredEntitlements =
@@ -640,6 +573,10 @@ function LeaveEntitlementManagementPage() {
       setDialogForm({
         ...emptyDialogForm,
 
+        role: employeeOptionIds[0] || '',
+
+        leaveTypeId: leaveTypeApiOptions[0]?.id || '',
+
         year: Number(
           selectedYear,
         ),
@@ -727,7 +664,7 @@ function LeaveEntitlementManagementPage() {
   };
 
   const handleSaveEntitlement =
-    () => {
+    async () => {
       const totalDays =
         Number(
           dialogForm.totalDays,
@@ -870,45 +807,21 @@ function LeaveEntitlementManagementPage() {
         return;
       }
 
-      const savedEntitlement =
-        upsertLeaveEntitlement({
-          id:
-            selectedEntitlement
-              ?.id || null,
-
-          role:
-            dialogForm.role,
-
+      setSaving(true);
+      try {
+        const payload = {
+          employeeId: Number(dialogForm.role),
           leaveTypeId,
-
-          leaveType:
-            getLeaveTypeName(
-              leaveTypeId,
-            ),
-
           year,
-
           totalDays,
-
           usedDays,
-        });
-
-      if (
-        !savedEntitlement
-      ) {
-        setDialogError(
-          'The leave entitlement could not be saved.',
-        );
-
-        return;
-      }
-
-      const profile =
-        employeeProfiles[
-          dialogForm.role
-        ] ||
-        employeeProfiles
-          .employee;
+        };
+        const result = dialogMode === 'edit'
+          ? await updateLeaveEntitlement(selectedEntitlement.id, payload)
+          : await createLeaveEntitlement(payload);
+        const savedEntitlement = result.data.leaveEntitlement;
+        const profile = employeeProfileOptions[dialogForm.role];
+        const leaveTypeName = leaveTypeApiOptions.find((item) => Number(item.id) === leaveTypeId)?.name || 'Leave';
 
       createAuditLog({
         userId: 3,
@@ -932,9 +845,7 @@ function LeaveEntitlementManagementPage() {
           savedEntitlement.id,
 
         detail:
-          `${dialogMode === 'add' ? 'Created' : 'Updated'} ${profile.employeeId} ${getLeaveTypeName(
-            leaveTypeId,
-          )} entitlement for ${year}: total ${totalDays} day(s), used ${usedDays} day(s).`,
+          `${dialogMode === 'add' ? 'Created' : 'Updated'} ${profile.employeeId} ${leaveTypeName} entitlement for ${year}: total ${totalDays} day(s), used ${usedDays} day(s).`,
 
         ipAddress:
           '127.0.0.1',
@@ -945,20 +856,23 @@ function LeaveEntitlementManagementPage() {
           'success',
 
         text:
-          `${profile.employeeName}'s ${getLeaveTypeName(
-            leaveTypeId,
-          )} entitlement for ${year} was saved successfully.`,
+          `${profile.employeeName}'s ${leaveTypeName} entitlement for ${year} was saved successfully.`,
       });
 
       handleCloseDialog();
 
-      loadEntitlementData();
+      await loadEntitlementData();
 
       window.scrollTo({
         top: 0,
         behavior:
           'smooth',
       });
+      } catch (error) {
+        setDialogError(error.response?.data?.message || 'The leave entitlement could not be saved.');
+      } finally {
+        setSaving(false);
+      }
     };
 
   return (
@@ -1104,6 +1018,12 @@ function LeaveEntitlementManagementPage() {
           }}
         >
           {actionMessage.text}
+        </Alert>
+      )}
+
+      {(loading || loadError) && (
+        <Alert severity={loadError ? 'error' : 'info'} action={loadError ? <Button onClick={loadEntitlementData}>Retry</Button> : null} sx={{ marginBottom: '24px', borderRadius: '8px' }}>
+          {loadError || 'Loading leave entitlements...'}
         </Alert>
       )}
 
@@ -1469,7 +1389,7 @@ function LeaveEntitlementManagementPage() {
                   All Leave Types
                 </MenuItem>
 
-                {leaveTypeOptions.map(
+                {leaveTypeApiOptions.map(
                   (
                     leaveType,
                   ) => (
@@ -2098,10 +2018,10 @@ function LeaveEntitlementManagementPage() {
                     '8px',
                 }}
               >
-                {roleOptions.map(
+                {employeeOptionIds.map(
                   (role) => {
                     const profile =
-                      employeeProfiles[
+                      employeeProfileOptions[
                         role
                       ];
 
@@ -2161,7 +2081,7 @@ function LeaveEntitlementManagementPage() {
                     '8px',
                 }}
               >
-                {leaveTypeOptions.map(
+                {leaveTypeApiOptions.map(
                   (
                     leaveType,
                   ) => (
@@ -2343,6 +2263,7 @@ function LeaveEntitlementManagementPage() {
           <Button
             type="button"
             variant="contained"
+            disabled={saving}
             onClick={
               handleSaveEntitlement
             }

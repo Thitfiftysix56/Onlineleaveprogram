@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -17,74 +17,33 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { getPositions, updatePositionStatus } from '../api/position-service.js';
 
 function RolePositionManagementPage({
   LayoutComponent,
   activeMenu,
   theme,
 }) {
-  const [positions, setPositions] = useState([
-    {
-      id: 1,
-      positionName: 'Developer',
-      employeeCount: 6,
-      activeEmployeeCount: 6,
-      status: 'Active',
-      updatedAt: '20 Jul 2026, 14:30',
-    },
-    {
-      id: 2,
-      positionName: 'Supervisor',
-      employeeCount: 4,
-      activeEmployeeCount: 4,
-      status: 'Active',
-      updatedAt: '19 Jul 2026, 10:15',
-    },
-    {
-      id: 3,
-      positionName: 'Human Resource Officer',
-      employeeCount: 3,
-      activeEmployeeCount: 3,
-      status: 'Active',
-      updatedAt: '18 Jul 2026, 13:40',
-    },
-    {
-      id: 4,
-      positionName: 'System Administrator',
-      employeeCount: 2,
-      activeEmployeeCount: 2,
-      status: 'Active',
-      updatedAt: '16 Jul 2026, 09:25',
-    },
-    {
-      id: 5,
-      positionName: 'Accountant',
-      employeeCount: 5,
-      activeEmployeeCount: 4,
-      status: 'Active',
-      updatedAt: '14 Jul 2026, 11:50',
-    },
-    {
-      id: 6,
-      positionName: 'Marketing Officer',
-      employeeCount: 4,
-      activeEmployeeCount: 4,
-      status: 'Active',
-      updatedAt: '12 Jul 2026, 15:20',
-    },
-    {
-      id: 7,
-      positionName: 'Operations Coordinator',
-      employeeCount: 0,
-      activeEmployeeCount: 0,
-      status: 'Inactive',
-      updatedAt: '05 Jul 2026, 10:10',
-    },
-  ]);
+  const navigate = useNavigate();
+  const [positions, setPositions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [updatingId, setUpdatingId] = useState(null);
 
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [actionMessage, setActionMessage] = useState('');
+
+  const loadPositions = useCallback(async () => {
+    setLoading(true); setLoadError('');
+    try {
+      const rows = await getPositions();
+      setPositions(rows.map((item) => ({ ...item, id: item.positionId, activeEmployeeCount: item.employeeCount })));
+    } catch (error) { setLoadError(error.response?.data?.message || 'Unable to load positions.'); }
+    finally { setLoading(false); }
+  }, []);
+  useEffect(() => { loadPositions(); }, [loadPositions]);
 
   const filteredPositions = useMemo(() => {
     const keyword = searchText.trim().toLowerCase();
@@ -129,53 +88,26 @@ function RolePositionManagementPage({
   };
 
   const handleAddPosition = () => {
-    setActionMessage(
-      'The Add Position button will open the Position Form after routing is connected.',
-    );
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    navigate('/admin/position-management/add');
   };
 
   const handleEditPosition = (position) => {
-    setActionMessage(
-      `Selected ${position.positionName} for editing. The Position Form will open after routing is connected.`,
-    );
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    navigate(`/admin/position-management/${position.id}/edit`);
   };
 
-  const handleStatusChange = (selectedPosition) => {
+  const handleStatusChange = async (selectedPosition) => {
     const nextStatus =
       selectedPosition.status === 'Active'
         ? 'Inactive'
         : 'Active';
 
-    setPositions((previousPositions) =>
-      previousPositions.map((position) =>
-        position.id === selectedPosition.id
-          ? {
-              ...position,
-              status: nextStatus,
-              updatedAt: '21 Jul 2026, 11:00',
-            }
-          : position,
-      ),
-    );
-
-    setActionMessage(
-      `${selectedPosition.positionName} was changed to ${nextStatus} in the frontend preview.`,
-    );
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
+    setUpdatingId(selectedPosition.id);
+    try {
+      await updatePositionStatus(selectedPosition.id, nextStatus);
+      await loadPositions();
+      setActionMessage(`${selectedPosition.positionName} was changed to ${nextStatus}.`);
+    } catch (error) { setLoadError(error.response?.data?.message || 'Unable to update position status.'); }
+    finally { setUpdatingId(null); }
   };
 
   const summaryCards = [
@@ -285,6 +217,12 @@ function RolePositionManagementPage({
           }}
         >
           {actionMessage}
+        </Alert>
+      )}
+
+      {(loading || loadError) && (
+        <Alert severity={loadError ? 'error' : 'info'} action={loadError ? <Button onClick={loadPositions}>Retry</Button> : null} sx={{ marginBottom: '24px' }}>
+          {loadError || 'Loading positions...'}
         </Alert>
       )}
 
@@ -667,6 +605,7 @@ function RolePositionManagementPage({
                           <Button
                             type="button"
                             variant="outlined"
+                            disabled={updatingId === position.id}
                             onClick={() =>
                               handleStatusChange(position)
                             }
