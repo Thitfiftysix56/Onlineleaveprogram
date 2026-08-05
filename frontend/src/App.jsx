@@ -10,10 +10,14 @@ import {
 } from 'react-router-dom';
 
 import ProtectedRoute from './components/protectedroute.jsx';
+import PasswordResetFlowProvider from './auth/passwordresetflow.jsx';
 
 const LoginPage = lazy(() =>
   import('./pages/loginpage.jsx')
 );
+const ForgotPasswordPage = lazy(() => import('./pages/forgotpasswordpage.jsx'));
+const VerifyOtpPage = lazy(() => import('./pages/verifyotppage.jsx'));
+const ResetPasswordPage = lazy(() => import('./pages/resetpasswordpage.jsx'));
 
 import {
   getCurrentUser,
@@ -131,6 +135,7 @@ function App() {
         </div>
       }
     >
+      <PasswordResetFlowProvider>
       <Routes>
       <Route
         path="/"
@@ -145,6 +150,10 @@ function App() {
           <LoginPage />
         }
       />
+
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/forgot-password/verify" element={<VerifyOtpPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* =====================
           Employee Routes
@@ -614,6 +623,7 @@ function App() {
         }
       />
       </Routes>
+      </PasswordResetFlowProvider>
     </Suspense>
   );
 }

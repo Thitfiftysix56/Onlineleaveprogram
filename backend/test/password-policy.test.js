@@ -8,10 +8,21 @@ test('accepts a password that satisfies every rule', () => {
 })
 
 test('rejects passwords that miss a required character class', () => {
-  assert.match(validateNewPassword('Short1!'), /at least 8/)
+  assert.match(validateNewPassword('Short1!'), /at least 10/)
   assert.match(validateNewPassword('UPPERCASE1!'), /lowercase/)
   assert.match(validateNewPassword('lowercase1!'), /uppercase/)
   assert.match(validateNewPassword('NoNumbers!'), /number/)
   assert.match(validateNewPassword('NoSpecial123'), /special/)
+  assert.match(validateNewPassword('Has Space1!'), /spaces/)
 })
 
+test('rejects passwords equal to username or email', () => {
+  assert.match(
+    validateNewPassword('Secure123!', { username: 'secure123!' }),
+    /username/,
+  )
+  assert.match(
+    validateNewPassword('Secure123!', { email: 'secure123!' }),
+    /email address/,
+  )
+})

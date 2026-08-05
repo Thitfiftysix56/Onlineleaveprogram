@@ -9,6 +9,10 @@ import {
   Box,
   Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   InputLabel,
   MenuItem,
@@ -29,6 +33,7 @@ import {
 
 import AdminLayout from '../../layouts/adminlayout.jsx';
 import api from '../../api/axios.js';
+import TemporaryPasswordDialog from '../../components/temporarypassworddialog.jsx';
 
 import {
   updateAuthUserRole,
@@ -218,6 +223,16 @@ function UserManagementPage() {
   const [
     resettingPasswordUserId,
     setResettingPasswordUserId,
+  ] = useState(null);
+
+  const [
+    resetConfirmationUser,
+    setResetConfirmationUser,
+  ] = useState(null);
+
+  const [
+    temporaryPasswordResult,
+    setTemporaryPasswordResult,
   ] = useState(null);
 
   const [
@@ -526,17 +541,22 @@ function UserManagementPage() {
     }
   };
 
-  const handleResetPassword = async (
+  const handleOpenResetConfirmation = (
     selectedUser,
   ) => {
-    const confirmed =
-      window.confirm(
-        `Reset the password for ${selectedUser.username}?`,
-      );
+    if (resettingPasswordUserId !== null) return;
 
-    if (!confirmed) {
-      return;
-    }
+    setActionMessage('');
+    setResetConfirmationUser(selectedUser);
+  };
+
+  const handleResetPassword = async () => {
+    const selectedUser = resetConfirmationUser;
+
+    if (
+      !selectedUser ||
+      resettingPasswordUserId !== null
+    ) return;
 
     setResettingPasswordUserId(
       selectedUser.id,
@@ -551,16 +571,26 @@ function UserManagementPage() {
         response.data?.status !==
           'ok' ||
         !response.data
-          ?.initialPassword
+          ?.temporaryPassword
       ) {
         throw new Error(
           response.data?.message ||
-            'Unable to reset the password.',
+            'Password reset response did not include a temporary password.',
         );
       }
 
+      setResetConfirmationUser(null);
+      setTemporaryPasswordResult({
+        username:
+          response.data.username ||
+          selectedUser.username,
+        temporaryPassword:
+          response.data.temporaryPassword,
+      });
+
       showMessage(
-        `${selectedUser.username} password was reset. Initial password: ${response.data.initialPassword}`,
+        response.data?.message ||
+          'Password reset successfully.',
         'success',
       );
     } catch (error) {
@@ -576,6 +606,10 @@ function UserManagementPage() {
         null,
       );
     }
+  };
+
+  const handleCloseTemporaryPassword = () => {
+    setTemporaryPasswordResult(null);
   };
 
   const summaryCards = [
@@ -1468,8 +1502,11 @@ function UserManagementPage() {
                             <Button
                               type="button"
                               variant="outlined"
+                              disabled={
+                                resettingPasswordUserId !== null
+                              }
                               onClick={() =>
-                                handleResetPassword(
+                                handleOpenResetConfirmation(
                                   user,
                                 )
                               }
@@ -1511,7 +1548,11 @@ function UserManagementPage() {
                                   },
                               }}
                             >
-                              Reset Password
+                              {Number(
+                                resettingPasswordUserId,
+                              ) === Number(user.id)
+                                ? 'Resetting...'
+                                : 'Reset Password'}
                             </Button>
                           </Box>
                         </TableCell>
@@ -1666,6 +1707,102 @@ function UserManagementPage() {
           </Box>
         )}
       </Paper>
+
+      <Dialog
+        open={Boolean(resetConfirmationUser)}
+        fullWidth
+        maxWidth="sm"
+        onClose={() => {
+          if (resettingPasswordUserId === null) {
+            setResetConfirmationUser(null);
+          }
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800 }}>
+          Confirm Password Reset
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography
+            sx={{
+              color: '#374151',
+              fontSize: '14px',
+              lineHeight: 1.7,
+            }}
+          >
+            You are resetting the password for:
+          </Typography>
+          <Box
+            sx={{
+              padding: '16px',
+              marginTop: '14px',
+              backgroundColor: '#F9FAFB',
+              border: '1px solid #E5E7EB',
+              borderRadius: '8px',
+            }}
+          >
+            <Typography sx={{ fontWeight: 800 }}>
+              {resetConfirmationUser?.username}
+            </Typography>
+            <Typography
+              sx={{
+                color: '#6B7280',
+                fontSize: '13px',
+                marginTop: '4px',
+              }}
+            >
+              {resetConfirmationUser?.employeeName}
+            </Typography>
+            <Typography
+              sx={{
+                color: '#6B7280',
+                fontSize: '13px',
+                marginTop: '4px',
+              }}
+            >
+              Role: {resetConfirmationUser?.role || '-'}
+            </Typography>
+          </Box>
+          <Alert
+            severity="warning"
+            sx={{ marginTop: '18px' }}
+          >
+            The current password will stop working immediately. The user must sign in with the new temporary password and change it before accessing the system.
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ padding: '16px 24px' }}>
+          <Button
+            type="button"
+            onClick={() =>
+              setResetConfirmationUser(null)
+            }
+            disabled={resettingPasswordUserId !== null}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="contained"
+            onClick={handleResetPassword}
+            disabled={resettingPasswordUserId !== null}
+            sx={{
+              backgroundColor: '#7C3AED',
+              textTransform: 'none',
+              fontWeight: 700,
+            }}
+          >
+            {resettingPasswordUserId !== null
+              ? 'Resetting...'
+              : 'Confirm Reset'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <TemporaryPasswordDialog
+        open={Boolean(temporaryPasswordResult)}
+        username={temporaryPasswordResult?.username || ''}
+        temporaryPassword={temporaryPasswordResult?.temporaryPassword || ''}
+        onClose={handleCloseTemporaryPassword}
+      />
     </AdminLayout>
   );
 }

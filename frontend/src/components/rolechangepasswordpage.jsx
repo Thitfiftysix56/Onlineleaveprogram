@@ -10,10 +10,16 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { IconButton, InputAdornment } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
+
+import { clearAuthSession, getCurrentUser } from '../utils/authstorage.js';
+import PasswordPolicyList from './passwordpolicylist.jsx';
+import { passwordMeetsPolicy } from '../utils/passwordpolicy.js';
 
 import {
-  getCurrentUser,
-} from '../utils/authstorage.js';
+  useNavigate,
+} from 'react-router-dom';
 
 import api from '../api/axios.js';
 
@@ -27,6 +33,9 @@ function RoleChangePasswordPage({
   LayoutComponent,
   theme,
 }) {
+  const navigate =
+    useNavigate();
+
   const currentUser =
     getCurrentUser();
 
@@ -74,6 +83,8 @@ function RoleChangePasswordPage({
     setIsSubmitting,
   ] = useState(false);
 
+  const [showPasswords, setShowPasswords] = useState(false);
+
   const handleInputChange = (
     fieldName,
     value,
@@ -114,40 +125,9 @@ function RoleChangePasswordPage({
     ) {
       nextErrors.newPassword =
         'Please enter a new password.';
-    } else if (
-      formData.newPassword.length <
-      8
-    ) {
+    } else if (!passwordMeetsPolicy(formData.newPassword, currentUser || {})) {
       nextErrors.newPassword =
-        'The new password must contain at least 8 characters.';
-    } else if (
-      !/[a-z]/.test(
-        formData.newPassword,
-      )
-    ) {
-      nextErrors.newPassword =
-        'The new password must contain a lowercase letter.';
-    } else if (
-      !/[A-Z]/.test(
-        formData.newPassword,
-      )
-    ) {
-      nextErrors.newPassword =
-        'The new password must contain an uppercase letter.';
-    } else if (
-      !/[0-9]/.test(
-        formData.newPassword,
-      )
-    ) {
-      nextErrors.newPassword =
-        'The new password must contain a number.';
-    } else if (
-      !/[^A-Za-z0-9]/.test(
-        formData.newPassword,
-      )
-    ) {
-      nextErrors.newPassword =
-        'The new password must contain a special character.';
+        'The new password does not meet the password policy.';
     }
 
     if (
@@ -233,6 +213,14 @@ function RoleChangePasswordPage({
         text:
           response.data?.message ||
           'Your password was changed successfully.',
+      });
+
+      clearAuthSession();
+      navigate('/login', {
+        replace: true,
+        state: {
+          successMessage: response.data?.message || 'Your password was changed successfully. Please sign in again.',
+        },
       });
     } catch (error) {
       setMessage({
@@ -409,7 +397,7 @@ function RoleChangePasswordPage({
           <TextField
             fullWidth
             required
-            type="password"
+            type={showPasswords ? 'text' : 'password'}
             label="Current Password"
             value={
               formData.currentPassword
@@ -431,6 +419,17 @@ function RoleChangePasswordPage({
               errors.currentPassword
             }
             autoComplete="current-password"
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton aria-label={showPasswords ? 'Hide passwords' : 'Show passwords'} onClick={() => setShowPasswords((value) => !value)} edge="end">
+                      {showPasswords ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
             sx={{
               '& .MuiOutlinedInput-root':
                 {
@@ -443,7 +442,7 @@ function RoleChangePasswordPage({
           <TextField
             fullWidth
             required
-            type="password"
+            type={showPasswords ? 'text' : 'password'}
             label="New Password"
             value={
               formData.newPassword
@@ -480,7 +479,7 @@ function RoleChangePasswordPage({
           <TextField
             fullWidth
             required
-            type="password"
+            type={showPasswords ? 'text' : 'password'}
             label="Confirm New Password"
             value={
               formData.confirmPassword
@@ -789,49 +788,11 @@ function RoleChangePasswordPage({
               Password Requirements
             </Typography>
 
-            <Box
-              component="ul"
-              sx={{
-                paddingLeft:
-                  '20px',
-
-                marginTop:
-                  '14px',
-
-                marginBottom:
-                  0,
-
-                color:
-                  resolvedTheme.text,
-              }}
-            >
-              {[
-                'At least 8 characters',
-                'At least one uppercase letter',
-                'At least one lowercase letter',
-                'At least one number',
-                'At least one special character',
-                'Different from the current password',
-              ].map(
-                (requirement) => (
-                  <Typography
-                    component="li"
-                    key={
-                      requirement
-                    }
-                    sx={{
-                      fontSize:
-                        '13px',
-
-                      lineHeight:
-                        1.9,
-                    }}
-                  >
-                    {requirement}
-                  </Typography>
-                ),
-              )}
-            </Box>
+            <PasswordPolicyList
+              password={formData.newPassword}
+              username={currentUser?.username || ''}
+              email={currentUser?.email || ''}
+            />
           </Paper>
         </Box>
       </Box>

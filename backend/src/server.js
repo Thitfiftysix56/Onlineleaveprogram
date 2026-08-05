@@ -9,7 +9,13 @@ import {
   login,
   logout,
   requireAuthentication,
+  requirePasswordChangeCompleted,
 } from './controllers/auth-controller.js'
+import {
+  requestPasswordResetOtp,
+  resetForgottenPassword,
+  verifyPasswordResetOtp,
+} from './controllers/password-reset-controller.js'
 import {
   createAdminUser,
   getAdminUser,
@@ -53,8 +59,19 @@ import {
   updatePositionStatus,
 } from './controllers/hr-management-controller.js'
 import { requireAdmin, requireHrOrAdmin } from './middleware/authorization.js'
+import {
+  getProfile,
+  profileImagesDirectory,
+  updateProfile,
+} from './controllers/profile-controller.js'
+import { uploadProfileImage } from './middleware/profile-upload.js'
 
 export const expressApp = express()
+const adminAccess = [
+  requireAuthentication,
+  requirePasswordChangeCompleted,
+  requireAdmin,
+]
 
 expressApp.disable('x-powered-by')
 expressApp.set('trust proxy', 1)
@@ -71,6 +88,15 @@ expressApp.use(cors({
 expressApp.use(express.json({ limit: '1mb' }))
 expressApp.use(express.urlencoded({ extended: false }))
 expressApp.use(cookieParser())
+expressApp.use(
+  '/api/profile-images',
+  requireAuthentication,
+  requirePasswordChangeCompleted,
+  express.static(profileImagesDirectory, {
+    immutable: true,
+    maxAge: '1d',
+  }),
+)
 
 async function health(_request, response) {
   const database = await verifyDatabaseConnection()
@@ -96,6 +122,9 @@ expressApp.get('/api', (_request, response) => {
 })
 expressApp.get('/api/health', health)
 expressApp.post('/api/auth/login', login)
+expressApp.post('/api/auth/forgot-password/request-otp', requestPasswordResetOtp)
+expressApp.post('/api/auth/forgot-password/verify-otp', verifyPasswordResetOtp)
+expressApp.post('/api/auth/reset-password', resetForgottenPassword)
 expressApp.get('/api/auth/me', requireAuthentication, currentUser)
 expressApp.post(
   '/api/auth/change-password',
@@ -103,46 +132,47 @@ expressApp.post(
   changePassword,
 )
 expressApp.post('/api/auth/logout', logout)
+expressApp.get('/api/profile', requireAuthentication, requirePasswordChangeCompleted, getProfile)
+expressApp.put(
+  '/api/profile',
+  requireAuthentication,
+  requirePasswordChangeCompleted,
+  uploadProfileImage,
+  updateProfile,
+)
 expressApp.get(
   '/api/admin/users',
-  requireAuthentication,
-  requireAdmin,
+  ...adminAccess,
   listAdminUsers,
 )
 expressApp.get(
   '/api/admin/employees/available-for-account',
-  requireAuthentication,
-  requireAdmin,
+  ...adminAccess,
   listAvailableEmployees,
 )
 expressApp.get(
   '/api/admin/users/:userId',
-  requireAuthentication,
-  requireAdmin,
+  ...adminAccess,
   getAdminUser,
 )
 expressApp.post(
   '/api/admin/users',
-  requireAuthentication,
-  requireAdmin,
+  ...adminAccess,
   createAdminUser,
 )
 expressApp.put(
   '/api/admin/users/:userId',
-  requireAuthentication,
-  requireAdmin,
+  ...adminAccess,
   updateAdminUser,
 )
 expressApp.patch(
   '/api/admin/users/:userId/status',
-  requireAuthentication,
-  requireAdmin,
+  ...adminAccess,
   updateAdminUserStatus,
 )
 expressApp.post(
   '/api/admin/users/:userId/reset-password',
-  requireAuthentication,
-  requireAdmin,
+  ...adminAccess,
   resetAdminUserPassword,
 )
 
@@ -179,7 +209,13 @@ const hrRoutes = [
 ]
 
 for (const [method, path, handler] of hrRoutes) {
-  expressApp[method](path, requireAuthentication, requireHrOrAdmin, handler)
+  expressApp[method](
+    path,
+    requireAuthentication,
+    requirePasswordChangeCompleted,
+    requireHrOrAdmin,
+    handler,
+  )
 }
 
 expressApp.use((request, response) => {

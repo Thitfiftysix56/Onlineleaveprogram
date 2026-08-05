@@ -92,6 +92,7 @@ test('GET /api/admin/users returns sanitized users for an admin', async () => {
         role_name: 'Admin',
         status: 'active',
         last_login_at: '2026-08-03T01:00:00.000Z',
+        must_change_password: 0,
         created_at: '2026-01-01T00:00:00.000Z',
         updated_at: '2026-08-01T00:00:00.000Z',
       },
@@ -117,6 +118,7 @@ test('GET /api/admin/users returns sanitized users for an admin', async () => {
     roleName: 'Admin',
     status: 'active',
     lastLoginAt: '2026-08-03T01:00:00.000Z',
+    mustChangePassword: false,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-08-01T00:00:00.000Z',
   })
@@ -179,7 +181,7 @@ test('available employees returns only employees without an account', async () =
   })
 })
 
-test('POST /api/admin/users creates a hashed account and returns the initial password once', async () => {
+test('POST /api/admin/users creates a hashed account and returns the temporary password once', async () => {
   const queries = []
   const results = [
     [[{ employee_id: 10, user_id: null }]],
@@ -201,6 +203,7 @@ test('POST /api/admin/users creates a hashed account and returns the initial pas
       role_name: 'Employee',
       status: 'active',
       last_login_at: null,
+      must_change_password: 1,
       created_at: '2026-08-03T00:00:00.000Z',
       updated_at: '2026-08-03T00:00:00.000Z',
     }]],
@@ -227,13 +230,16 @@ test('POST /api/admin/users creates a hashed account and returns the initial pas
 
   assert.equal(response.status, 201)
   assert.equal(body.status, 'ok')
-  assert.match(body.initialPassword, /[a-z]/)
-  assert.match(body.initialPassword, /[A-Z]/)
-  assert.match(body.initialPassword, /[0-9]/)
-  assert.match(body.initialPassword, /[^A-Za-z0-9]/)
+  assert.equal(body.username, 'employee010')
+  assert.equal(body.mustChangePassword, true)
+  assert.match(body.temporaryPassword, /[a-z]/)
+  assert.match(body.temporaryPassword, /[A-Z]/)
+  assert.match(body.temporaryPassword, /[0-9]/)
+  assert.match(body.temporaryPassword, /[^A-Za-z0-9]/)
   assert.equal(JSON.stringify(body).includes('password_hash'), false)
   assert.match(queries[3].sql, /INSERT INTO users/)
-  assert.notEqual(queries[3].parameters[3], body.initialPassword)
+  assert.match(queries[3].sql, /must_change_password/)
+  assert.notEqual(queries[3].parameters[3], body.temporaryPassword)
   assert.match(queries[3].parameters[3], /^\$2[aby]\$/)
 })
 
@@ -452,11 +458,29 @@ test('POST /api/admin/users/:userId/reset-password returns 404 when user does no
   assert.equal(body.status, 'error')
 })
 
+test('POST /api/admin/users/:userId/reset-password rejects an inactive account', async () => {
+  pool.execute = async () => [[{
+    user_id: 7,
+    username: 'inactive-user',
+    status: 'inactive',
+  }]]
+
+  const response = await fetch(`${baseUrl}/api/admin/users/7/reset-password`, {
+    method: 'POST',
+    headers: authorizationHeader('Admin'),
+  })
+  const body = await response.json()
+
+  assert.equal(response.status, 409)
+  assert.equal(body.status, 'error')
+})
+
 test('POST /api/admin/users/:userId/reset-password replaces only the password', async () => {
   const queries = []
   const results = [
-    [[{ user_id: 7 }]],
+    [[{ user_id: 7, username: 'employee007', status: 'active' }]],
     [{ affectedRows: 1 }],
+    [{ insertId: 12 }],
   ]
   pool.execute = async (sql, parameters) => {
     queries.push({ sql, parameters })
@@ -472,14 +496,48 @@ test('POST /api/admin/users/:userId/reset-password replaces only the password', 
 
   assert.equal(response.status, 200)
   assert.equal(body.status, 'ok')
-  assert.equal(body.message, 'Password reset successfully')
-  assert.equal(typeof body.initialPassword, 'string')
+  assert.equal(body.message, 'Password reset successfully.')
+  assert.equal(body.username, 'employee007')
+  assert.equal(body.mustChangePassword, true)
+  assert.equal(typeof body.temporaryPassword, 'string')
   assert.equal(JSON.stringify(body).includes('password_hash'), false)
   assert.match(queries[1].sql, /SET password_hash = \?/) 
   assert.match(queries[1].sql, /password_changed_at = NOW\(\)/)
+  assert.match(queries[1].sql, /must_change_password = 1/)
+  assert.match(queries[1].sql, /token_version = token_version \+ 1/)
   assert.doesNotMatch(queries[1].sql, /username|role_id|status/)
   assert.deepEqual(queries[1].parameters.slice(1), [7])
   assert.equal(bcrypt.getRounds(storedHash), 12)
-  assert.equal(await bcrypt.compare(body.initialPassword, storedHash), true)
+  assert.equal(await bcrypt.compare(body.temporaryPassword, storedHash), true)
   assert.equal(await bcrypt.compare('OldPassword123!', storedHash), false)
+  assert.match(queries[2].sql, /INSERT INTO audit_logs/)
+  assert.equal(queries[2].parameters[0], 99)
+  assert.equal(queries[2].parameters[3], 7)
+  assert.match(queries[2].parameters[4], /employee007/)
+  assert.equal(queries[2].parameters.join(' ').includes(body.temporaryPassword), false)
+  assert.equal(queries[2].parameters.join(' ').includes(storedHash), false)
+})
+
+test('each password reset generates a different temporary password', async () => {
+  pool.execute = async (sql) => {
+    if (sql.includes('SELECT user_id, username, status')) {
+      return [[{ user_id: 7, username: 'employee007', status: 'active' }]]
+    }
+    return [{ affectedRows: 1 }]
+  }
+
+  const firstResponse = await fetch(`${baseUrl}/api/admin/users/7/reset-password`, {
+    method: 'POST',
+    headers: authorizationHeader('Admin'),
+  })
+  const firstBody = await firstResponse.json()
+  const secondResponse = await fetch(`${baseUrl}/api/admin/users/7/reset-password`, {
+    method: 'POST',
+    headers: authorizationHeader('Admin'),
+  })
+  const secondBody = await secondResponse.json()
+
+  assert.equal(firstResponse.status, 200)
+  assert.equal(secondResponse.status, 200)
+  assert.notEqual(firstBody.temporaryPassword, secondBody.temporaryPassword)
 })

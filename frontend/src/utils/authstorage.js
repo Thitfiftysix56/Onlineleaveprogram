@@ -1590,11 +1590,102 @@ export const saveBackendAuthSession = (
       backendUser?.passwordChangedAt ||
       backendUser?.password_changed_at ||
       null,
+
+    mustChangePassword:
+      Boolean(
+        backendUser?.mustChangePassword ??
+        backendUser?.must_change_password ??
+        false,
+      ),
+
+    employeeId:
+      backendUser?.employeeId ||
+      backendUser?.employee_id ||
+      null,
+
+    employeeCode:
+      backendUser?.employeeCode ||
+      backendUser?.employee_code ||
+      '',
+
+    email:
+      backendUser?.email ||
+      '',
+
+    phone:
+      backendUser?.phone ||
+      '',
+
+    profileImageUrl:
+      backendUser?.profileImageUrl ||
+      backendUser?.profile_image_url ||
+      null,
+
+    department:
+      backendUser?.department ||
+      backendUser?.departmentName ||
+      backendUser?.department_name ||
+      '',
+
+    position:
+      backendUser?.position ||
+      backendUser?.positionName ||
+      backendUser?.position_name ||
+      '',
   };
 
   saveAuthSession(session);
 
   return session;
+};
+
+export const updateCurrentUserProfileSession = (
+  profile,
+) => {
+  const currentSession =
+    getAuthSession();
+
+  if (!currentSession) {
+    return null;
+  }
+
+  return saveAuthSession({
+    ...currentSession,
+
+    displayName:
+      profile?.fullName ||
+      currentSession.displayName,
+
+    email:
+      profile?.email || '',
+
+    phone:
+      profile?.phone || '',
+
+    profileImageUrl:
+      profile?.profileImageUrl ||
+      null,
+
+    employeeId:
+      profile?.employeeId ||
+      currentSession.employeeId ||
+      null,
+
+    employeeCode:
+      profile?.employeeCode ||
+      currentSession.employeeCode ||
+      '',
+
+    department:
+      profile?.department ||
+      currentSession.department ||
+      '',
+
+    position:
+      profile?.position ||
+      currentSession.position ||
+      '',
+  });
 };
 
 export const clearAuthSession =

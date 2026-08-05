@@ -54,6 +54,8 @@ function LoginPage() {
     ),
   );
 
+  const successMessage = String(location.state?.successMessage || '');
+
   const [
     isSubmitting,
     setIsSubmitting,
@@ -163,7 +165,9 @@ function LoginPage() {
           currentUserRole;
 
       const targetPath =
-        canReturnToRequestedPath
+        session.mustChangePassword
+          ? `/${currentUserRole}/change-password`
+          : canReturnToRequestedPath
           ? requestedPath
           : getDashboardPathByRole(
               session.role,
@@ -176,11 +180,6 @@ function LoginPage() {
         },
       );
     } catch (error) {
-      console.error(
-        'Login error:',
-        error,
-      );
-
       setErrorMessage(
         error.response?.data?.message ||
           error.message ||
@@ -487,6 +486,12 @@ function LoginPage() {
             </Alert>
           )}
 
+          {successMessage && !errorMessage && (
+            <Alert severity="success" sx={{ marginBottom: '20px', borderRadius: '8px' }}>
+              {successMessage}
+            </Alert>
+          )}
+
           <TextField
             fullWidth
             required
@@ -579,6 +584,15 @@ function LoginPage() {
                 },
             }}
           />
+
+          <Button
+            type="button"
+            disabled={isSubmitting}
+            onClick={() => navigate('/forgot-password')}
+            sx={{ alignSelf: 'flex-end', marginTop: '8px', padding: 0, minWidth: 0, textTransform: 'none', fontWeight: 700 }}
+          >
+            Forgot Password?
+          </Button>
 
           <Button
             fullWidth

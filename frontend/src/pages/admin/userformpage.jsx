@@ -26,6 +26,7 @@ import {
 
 import AdminLayout from '../../layouts/adminlayout.jsx';
 import api from '../../api/axios.js';
+import TemporaryPasswordDialog from '../../components/temporarypassworddialog.jsx';
 
 const roleOptions = [
   'Employee',
@@ -177,6 +178,11 @@ function UserFormPage({
     isSubmitting,
     setIsSubmitting,
   ] = useState(false);
+
+  const [
+    temporaryPasswordResult,
+    setTemporaryPasswordResult,
+  ] = useState(null);
 
   const [
     editUser,
@@ -707,18 +713,28 @@ function UserFormPage({
           response.data?.message ||
             'User account updated successfully.',
         );
-      } else {
-        window.alert(
-          `User account created successfully.\nInitial password: ${response.data.initialPassword}`,
-        );
-      }
 
-      navigate(
-        '/admin/user-management',
-        {
-          replace: true,
-        },
-      );
+        navigate(
+          '/admin/user-management',
+          {
+            replace: true,
+          },
+        );
+      } else {
+        if (!response.data?.temporaryPassword) {
+          throw new Error(
+            'User was created but the response did not include a temporary password.',
+          );
+        }
+
+        setTemporaryPasswordResult({
+          username:
+            response.data.username ||
+            submittedData.username,
+          temporaryPassword:
+            response.data.temporaryPassword,
+        });
+      }
     } catch (error) {
       setMessage({
         severity: 'error',
@@ -742,6 +758,14 @@ function UserFormPage({
   const handleBack = () => {
     navigate(
       '/admin/user-management',
+    );
+  };
+
+  const handleCloseTemporaryPassword = () => {
+    setTemporaryPasswordResult(null);
+    navigate(
+      '/admin/user-management',
+      { replace: true },
     );
   };
 
@@ -1806,6 +1830,14 @@ function UserFormPage({
           </Paper>
         </Box>
       </Box>
+
+      <TemporaryPasswordDialog
+        open={Boolean(temporaryPasswordResult)}
+        title="User Account Created"
+        username={temporaryPasswordResult?.username || ''}
+        temporaryPassword={temporaryPasswordResult?.temporaryPassword || ''}
+        onClose={handleCloseTemporaryPassword}
+      />
     </AdminLayout>
   );
 }

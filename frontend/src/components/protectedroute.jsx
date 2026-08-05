@@ -80,11 +80,6 @@ function ProtectedRoute({
             );
           }
         } catch (error) {
-          console.error(
-            'Session verification error:',
-            error,
-          );
-
           clearAuthSession();
 
           if (isActive) {
@@ -182,6 +177,22 @@ function ProtectedRoute({
     normalizedAllowedRoles.includes(
       currentRole,
     );
+
+  const changePasswordPath =
+    `/${currentRole}/change-password`;
+
+  if (
+    session.mustChangePassword &&
+    location.pathname !==
+      changePasswordPath
+  ) {
+    return (
+      <Navigate
+        to={changePasswordPath}
+        replace
+      />
+    );
+  }
 
   if (!hasPermission) {
     return (

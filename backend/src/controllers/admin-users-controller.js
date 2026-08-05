@@ -1,9 +1,9 @@
-import { randomBytes } from 'node:crypto'
-
 import bcrypt from 'bcryptjs'
 
 import { pool } from '../config/database.js'
 import { config } from '../config/environment.js'
+import { generateTemporaryPassword } from '../auth/password-security.js'
+import { writeAuditLog } from '../services/audit-service.js'
 
 const allowedStatuses = new Set([
   'active',
@@ -25,6 +25,7 @@ const userDetailQuery = `SELECT
   r.role_name,
   u.status,
   u.last_login_at,
+  u.must_change_password,
   u.created_at,
   u.updated_at
 FROM users AS u
@@ -50,6 +51,7 @@ function publicAdminUser(user) {
     roleName: user.role_name,
     status: user.status,
     lastLoginAt: user.last_login_at,
+    mustChangePassword: Boolean(user.must_change_password),
     createdAt: user.created_at,
     updatedAt: user.updated_at,
   }
@@ -93,10 +95,6 @@ function validateUsername(username) {
 
 function normalizeStatus(status) {
   return String(status || '').trim().toLowerCase()
-}
-
-function generateInitialPassword() {
-  return `Ol!${randomBytes(9).toString('base64url')}9aA`
 }
 
 async function findRole(role) {
@@ -298,21 +296,35 @@ export async function createAdminUser(request, response) {
       })
     }
 
-    const initialPassword = generateInitialPassword()
-    const passwordHash = await bcrypt.hash(initialPassword, 12)
+    const temporaryPassword = generateTemporaryPassword()
+    const passwordHash = await bcrypt.hash(temporaryPassword, 12)
     const [result] = await pool.execute(
       `INSERT INTO users
-         (employee_id, role_id, username, password_hash, status)
-       VALUES (?, ?, ?, ?, ?)`,
+         (employee_id, role_id, username, password_hash, status, must_change_password)
+       VALUES (?, ?, ?, ?, ?, 1)`,
       [employeeId, role.role_id, username, passwordHash, status],
     )
     const createdUser = await findUserById(result.insertId)
+
+    await writeAuditLog(pool, {
+      userId: request.user.userId,
+      action: 'user_created',
+      tableName: 'users',
+      recordId: result.insertId,
+      result: 'success',
+      username,
+      adminUserId: request.user.userId,
+      ipAddress: request.ip || null,
+      userAgent: request.get('user-agent') || '',
+    })
 
     return response.status(201).json({
       status: 'ok',
       message: 'User account created successfully.',
       user: publicAdminUserDetail(createdUser),
-      initialPassword,
+      username,
+      temporaryPassword,
+      mustChangePassword: true,
     })
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
@@ -436,7 +448,7 @@ export async function updateAdminUserStatus(request, response) {
     }
 
     const [users] = await pool.execute(
-      `SELECT user_id
+      `SELECT user_id, username, status
        FROM users
        WHERE user_id = ?
        LIMIT 1`,
@@ -478,7 +490,7 @@ export async function resetAdminUserPassword(request, response) {
     }
 
     const [users] = await pool.execute(
-      `SELECT user_id
+      `SELECT user_id, username, status
        FROM users
        WHERE user_id = ?
        LIMIT 1`,
@@ -492,21 +504,46 @@ export async function resetAdminUserPassword(request, response) {
       })
     }
 
-    const initialPassword = generateInitialPassword()
-    const passwordHash = await bcrypt.hash(initialPassword, 12)
+    const user = users[0]
+
+    if (String(user.status || '').toLowerCase() === 'inactive') {
+      return response.status(409).json({
+        status: 'error',
+        message: 'The user account is inactive and cannot be reset.',
+      })
+    }
+
+    const temporaryPassword = generateTemporaryPassword()
+    const passwordHash = await bcrypt.hash(temporaryPassword, 12)
 
     await pool.execute(
       `UPDATE users
        SET password_hash = ?,
-           password_changed_at = NOW()
+           password_changed_at = NOW(),
+           must_change_password = 1,
+           token_version = token_version + 1
        WHERE user_id = ?`,
       [passwordHash, userId],
     )
 
+    await writeAuditLog(pool, {
+      userId: request.user.userId,
+      action: 'admin_password_reset',
+      tableName: 'users',
+      recordId: userId,
+      result: 'success',
+      username: user.username,
+      adminUserId: request.user.userId,
+      ipAddress: request.ip || null,
+      userAgent: request.get('user-agent') || '',
+    })
+
     return response.status(200).json({
       status: 'ok',
-      message: 'Password reset successfully',
-      initialPassword,
+      message: 'Password reset successfully.',
+      username: user.username,
+      temporaryPassword,
+      mustChangePassword: true,
     })
   } catch (error) {
     return internalError(response, 'Reset user password error:', error)

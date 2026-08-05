@@ -1,8 +1,14 @@
 import {
+  Avatar,
   Box,
   Button,
   Typography,
 } from '@mui/material';
+
+import {
+  useEffect,
+  useState,
+} from 'react';
 
 import {
   useLocation,
@@ -145,12 +151,27 @@ const roleRoutes = {
   },
 };
 
+const getInitials = (name) =>
+  String(name || 'User')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) =>
+      part.charAt(0).toUpperCase(),
+    )
+    .join('') || 'U';
+
 function RoleLayout({
   children,
   activeMenu = '',
   menuItems = [],
   theme,
 }) {
+  const [currentUser, setCurrentUser] =
+    useState(() =>
+      getCurrentUser(),
+    );
+
   const navigate =
     useNavigate();
 
@@ -168,6 +189,28 @@ function RoleLayout({
   ].includes(pathSegments[1])
     ? pathSegments[1]
     : 'employee';
+
+  useEffect(() => {
+    const handleAuthChanged =
+      (event) => {
+        setCurrentUser(
+          event.detail ||
+            getCurrentUser(),
+        );
+      };
+
+    window.addEventListener(
+      'auth-session-changed',
+      handleAuthChanged,
+    );
+
+    return () => {
+      window.removeEventListener(
+        'auth-session-changed',
+        handleAuthChanged,
+      );
+    };
+  }, []);
 
   const handleLogout = () => {
     const currentUser =
@@ -327,8 +370,11 @@ function RoleLayout({
             display:
               'flex',
 
-            alignItems:
-              'center',
+          alignItems:
+            'center',
+
+          justifyContent:
+            'space-between',
 
             borderBottom:
               '1px solid #E5E7EB',
@@ -348,6 +394,52 @@ function RoleLayout({
           >
             Leave Approval
           </Typography>
+
+          <Button
+            type="button"
+            aria-label="Open profile"
+            onClick={() =>
+              handleMenuClick(
+                'Profile',
+              )
+            }
+            sx={{
+              minWidth: 0,
+              padding: 0,
+              borderRadius:
+                '50%',
+            }}
+          >
+            <Avatar
+              src={
+                currentUser
+                  ?.profileImageUrl ||
+                undefined
+              }
+              alt={
+                currentUser
+                  ?.displayName ||
+                'Profile'
+              }
+              sx={{
+                width: '42px',
+                height: '42px',
+                backgroundColor:
+                  theme.soft,
+                color:
+                  theme.primary,
+                border:
+                  `1px solid ${theme.primary}`,
+                fontSize: '14px',
+                fontWeight: 800,
+              }}
+            >
+              {getInitials(
+                currentUser
+                  ?.displayName,
+              )}
+            </Avatar>
+          </Button>
         </Box>
 
         <Box

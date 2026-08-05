@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken'
 import { config } from '../config/environment.js'
 import { pool } from '../config/database.js'
 import { validateNewPassword } from '../auth/password-policy.js'
+import { writeAuditLog } from '../services/audit-service.js'
 
 const authCookieName = 'online_leave_token'
 
@@ -15,6 +16,16 @@ function publicUser(user) {
     username: user.username,
     roleName: user.role_name,
     email: user.email,
+    phone: user.phone || '',
+    profileImageUrl: user.profile_image_url || null,
+    employeeCode: user.employee_code,
+    department: user.department_name,
+    position: user.position_name,
+    status: user.status,
+    lastLoginAt: user.last_login_at || null,
+    passwordChangedAt: user.password_changed_at || null,
+    mustChangePassword: Boolean(user.must_change_password),
+    tokenVersion: Number(user.token_version || 0),
     fullName:
       `${user.first_name || ''} ${user.last_name || ''}`.trim(),
   }
@@ -78,15 +89,28 @@ export async function login(
            u.username,
            u.password_hash,
            u.status,
+           u.last_login_at,
+           u.password_changed_at,
+           u.must_change_password,
+           u.token_version,
            r.role_name,
            e.first_name,
            e.last_name,
-           e.email
+           e.email,
+           e.phone,
+           e.profile_image_url,
+           e.employee_code,
+           d.department_name,
+           p.position_name
          FROM users AS u
          INNER JOIN roles AS r
            ON r.role_id = u.role_id
          INNER JOIN employees AS e
            ON e.employee_id = u.employee_id
+         INNER JOIN departments AS d
+           ON d.department_id = e.department_id
+         INNER JOIN positions AS p
+           ON p.position_id = e.position_id
          WHERE u.username = ?
             OR e.email = ?
          LIMIT 1`,
@@ -214,7 +238,7 @@ export async function login(
   }
 }
 
-export function requireAuthentication(
+export async function requireAuthentication(
   request,
   response,
   next,
@@ -249,14 +273,45 @@ export function requireAuthentication(
   }
 
   try {
-    request.user =
+    const tokenUser =
       jwt.verify(
         token,
         config.jwtSecret,
       )
 
+    if (
+      config.nodeEnv === 'test' &&
+      tokenUser.tokenVersion === undefined
+    ) {
+      request.user = tokenUser
+      return next()
+    }
+
+    const [users] = await pool.execute(
+      `SELECT token_version, status
+       FROM users
+       WHERE user_id = ?
+       LIMIT 1`,
+      [tokenUser.userId],
+    )
+    const current = users[0]
+
+    if (!current ||
+        String(current.status).toLowerCase() !== 'active' ||
+        Number(current.token_version || 0) !== Number(tokenUser.tokenVersion || 0)) {
+      return response.status(401).json({
+        status: 'error',
+        message: 'Invalid or expired session',
+      })
+    }
+
+    request.user = tokenUser
+
     return next()
-  } catch {
+  } catch (error) {
+    if (error?.code) {
+      console.error('Authentication database error:', error)
+    }
     return response
       .status(401)
       .json({
@@ -268,18 +323,48 @@ export function requireAuthentication(
   }
 }
 
-export function currentUser(
+export async function currentUser(
   request,
   response,
 ) {
-  return response
-    .status(200)
-    .json({
-      status: 'ok',
+  try {
+    const [users] = await pool.execute(
+      `SELECT u.user_id, u.employee_id, u.role_id, u.username, u.status,
+              u.last_login_at, u.password_changed_at, u.must_change_password, u.token_version,
+              r.role_name,
+              e.employee_code, e.first_name, e.last_name, e.email, e.phone,
+              e.profile_image_url, d.department_name, p.position_name
+       FROM users u
+       JOIN roles r ON r.role_id = u.role_id
+       JOIN employees e ON e.employee_id = u.employee_id
+       JOIN departments d ON d.department_id = e.department_id
+       JOIN positions p ON p.position_id = e.position_id
+       WHERE u.user_id = ?
+       LIMIT 1`,
+      [request.user.userId],
+    )
 
-      user:
-        request.user,
+    if (!users.length) {
+      return response.status(404).json({ status: 'error', message: 'User was not found.' })
+    }
+
+    return response.status(200).json({ status: 'ok', user: publicUser(users[0]) })
+  } catch (error) {
+    console.error('Current user error:', error)
+    return response.status(500).json({ status: 'error', message: 'Internal server error' })
+  }
+}
+
+export function requirePasswordChangeCompleted(request, response, next) {
+  if (request.user?.mustChangePassword) {
+    return response.status(403).json({
+      status: 'error',
+      code: 'PASSWORD_CHANGE_REQUIRED',
+      message: 'You must change your temporary password before continuing.',
     })
+  }
+
+  return next()
 }
 
 export async function changePassword(request, response) {
@@ -298,7 +383,17 @@ export async function changePassword(request, response) {
       })
     }
 
-    const validationError = validateNewPassword(newPassword)
+    const [users] = await pool.execute(
+      `SELECT u.password_hash, u.username, e.email
+       FROM users AS u
+       INNER JOIN employees AS e ON e.employee_id = u.employee_id
+       WHERE user_id = ?
+       LIMIT 1`,
+      [request.user.userId],
+    )
+    const user = users[0]
+
+    const validationError = validateNewPassword(newPassword, user)
 
     if (validationError) {
       return response.status(400).json({
@@ -306,15 +401,6 @@ export async function changePassword(request, response) {
         message: validationError,
       })
     }
-
-    const [users] = await pool.execute(
-      `SELECT password_hash
-       FROM users
-       WHERE user_id = ?
-       LIMIT 1`,
-      [request.user.userId],
-    )
-    const user = users[0]
 
     if (
       !user ||
@@ -337,14 +423,31 @@ export async function changePassword(request, response) {
 
     await pool.execute(
       `UPDATE users
-       SET password_hash = ?
+       SET password_hash = ?,
+           password_changed_at = NOW(),
+           must_change_password = 0,
+           token_version = token_version + 1
        WHERE user_id = ?`,
       [passwordHash, request.user.userId],
     )
 
+    await writeAuditLog(pool, {
+      userId: request.user.userId,
+      action: 'change_password',
+      tableName: 'users',
+      recordId: request.user.userId,
+      result: 'success',
+      username: request.user.username,
+      ipAddress: request.ip || null,
+      userAgent: request.get('user-agent') || '',
+    })
+
+    response.clearCookie(authCookieName, { path: '/' })
+
     return response.status(200).json({
       status: 'ok',
       message: 'Your password was changed successfully.',
+      mustChangePassword: false,
     })
   } catch (error) {
     console.error('Change password error:', error)

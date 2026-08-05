@@ -2,5 +2,5 @@
 frontend/dist/
 frontend/node_modules/
 backend/node_modules/
+backend/uploads/profile-images/
 npm-debug.log*
-
