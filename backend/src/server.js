@@ -58,7 +58,16 @@ import {
   updatePosition,
   updatePositionStatus,
 } from './controllers/hr-management-controller.js'
-import { requireAdmin, requireHrOrAdmin } from './middleware/authorization.js'
+import { requireAdmin, requireHrOrAdmin, requireSupervisor } from './middleware/authorization.js'
+import {
+  balance, cancelOwn, decide, deleteAttachment, deleteDraft, downloadAttachment,
+  getOwn, leaveAttachmentsDirectory, listOwn, options, saveDraft, submit,
+  supervisorDetail, supervisorList, teamReport,
+} from './controllers/leave-controller.js'
+import {
+  deleteNotification, listNotifications, markAllNotificationsRead, markNotificationRead,
+} from './controllers/notification-controller.js'
+import { uploadLeaveAttachments } from './middleware/leave-upload.js'
 import {
   getProfile,
   profileImagesDirectory,
@@ -140,6 +149,27 @@ expressApp.put(
   uploadProfileImage,
   updateProfile,
 )
+const authenticated = [requireAuthentication, requirePasswordChangeCompleted]
+expressApp.get('/api/leave/options', ...authenticated, options)
+expressApp.get('/api/leave/requests', ...authenticated, listOwn)
+expressApp.get('/api/leave/requests/:requestId', ...authenticated, getOwn)
+expressApp.post('/api/leave/requests/drafts', ...authenticated, uploadLeaveAttachments, saveDraft)
+expressApp.put('/api/leave/requests/:requestId/draft', ...authenticated, uploadLeaveAttachments, saveDraft)
+expressApp.post('/api/leave/requests/submit', ...authenticated, uploadLeaveAttachments, submit)
+expressApp.post('/api/leave/requests/:requestId/submit', ...authenticated, uploadLeaveAttachments, submit)
+expressApp.delete('/api/leave/requests/:requestId/draft', ...authenticated, deleteDraft)
+expressApp.patch('/api/leave/requests/:requestId/cancel', ...authenticated, cancelOwn)
+expressApp.get('/api/leave/balance', ...authenticated, balance)
+expressApp.get('/api/leave-attachments/:attachmentId', ...authenticated, downloadAttachment)
+expressApp.delete('/api/leave-attachments/:attachmentId', ...authenticated, deleteAttachment)
+expressApp.get('/api/supervisor/approvals', ...authenticated, requireSupervisor, supervisorList)
+expressApp.get('/api/supervisor/approvals/:requestId', ...authenticated, requireSupervisor, supervisorDetail)
+expressApp.post('/api/supervisor/approvals/:requestId/decision', ...authenticated, requireSupervisor, decide)
+expressApp.get('/api/supervisor/team-report', ...authenticated, requireSupervisor, teamReport)
+expressApp.get('/api/notifications', ...authenticated, listNotifications)
+expressApp.patch('/api/notifications/read-all', ...authenticated, markAllNotificationsRead)
+expressApp.patch('/api/notifications/:notificationId/read', ...authenticated, markNotificationRead)
+expressApp.delete('/api/notifications/:notificationId', ...authenticated, deleteNotification)
 expressApp.get(
   '/api/admin/users',
   ...adminAccess,

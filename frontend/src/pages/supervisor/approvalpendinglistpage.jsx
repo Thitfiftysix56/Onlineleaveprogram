@@ -29,10 +29,7 @@ import { useNavigate } from 'react-router-dom';
 
 import RoleLayout from '../../components/rolelayout.jsx';
 
-import {
-  getLeaveRequests,
-  leaveRequestStorageKey,
-} from '../../utils/leaverequeststorage.js';
+import { getSupervisorApprovals } from '../../api/leave-service.js';
 
 const supervisorMenuItems = [
   'Dashboard',
@@ -138,116 +135,14 @@ function ApprovalPendingListPage() {
     setRowsPerPage,
   ] = useState(5);
 
-  const loadPendingRequests =
-    useCallback(() => {
-      const pendingRequests =
-        getLeaveRequests()
-          .filter(
-            (request) =>
-              String(
-                request.status || '',
-              ).toLowerCase() ===
-              'pending',
-          )
-          .map(
-            (request) => ({
-              ...request,
-
-              employeeCode:
-                request.employeeCode ||
-                `EMP${String(
-                  request.id,
-                ).padStart(
-                  3,
-                  '0',
-                )}`,
-
-              employeeName:
-                request.employeeName ||
-                'Employee User',
-
-              department:
-                request.department ||
-                'Information Technology',
-
-              position:
-                request.position ||
-                'Developer',
-            }),
-          )
-          .sort(
-            (
-              firstRequest,
-              secondRequest,
-            ) => {
-              const firstDate =
-                new Date(
-                  firstRequest
-                    .submittedAt ||
-                    firstRequest
-                      .createdAt ||
-                    0,
-                ).getTime();
-
-              const secondDate =
-                new Date(
-                  secondRequest
-                    .submittedAt ||
-                    secondRequest
-                      .createdAt ||
-                    0,
-                ).getTime();
-
-              return (
-                secondDate -
-                firstDate
-              );
-            },
-          );
-
-      setRequests(
-        pendingRequests,
-      );
-
-      setPage(0);
-    }, []);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const loadPendingRequests = useCallback(async () => { setLoading(true); setLoadError(''); try { setRequests(await getSupervisorApprovals()); setPage(0); } catch (error) { setLoadError(error.response?.data?.message || 'Unable to load pending approvals.'); } finally { setLoading(false); } }, []);
 
   useEffect(() => {
     loadPendingRequests();
 
-    const handleStorageChange = (
-      event,
-    ) => {
-      if (
-        !event.key ||
-        event.key ===
-          leaveRequestStorageKey
-      ) {
-        loadPendingRequests();
-      }
-    };
-
-    window.addEventListener(
-      'storage',
-      handleStorageChange,
-    );
-
-    window.addEventListener(
-      'focus',
-      loadPendingRequests,
-    );
-
-    return () => {
-      window.removeEventListener(
-        'storage',
-        handleStorageChange,
-      );
-
-      window.removeEventListener(
-        'focus',
-        loadPendingRequests,
-      );
-    };
+    return undefined;
   }, [loadPendingRequests]);
 
   const leaveTypeOptions =
@@ -465,6 +360,7 @@ function ApprovalPendingListPage() {
         supervisorTheme
       }
     >
+      {(loading || loadError) && <Typography sx={{ marginBottom:'16px', color:loadError?'#B91C1C':'#6B7280' }}>{loadError || 'Loading pending approvals...'}</Typography>}
       <Box
         sx={{
           marginBottom:

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -19,8 +19,10 @@ import {
   Typography,
 } from '@mui/material';
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
+import { getTeamReport } from '../../api/leave-service.js';
 
-const teamLeaveRequests = [
+/* Legacy demo rows are intentionally disabled; production data comes from getTeamReport().
+const legacyTeamLeaveRequests = [
   {
     id: 1,
     requestNo: 'LR-20260720-0013',
@@ -112,7 +114,7 @@ const teamLeaveRequests = [
     status: 'rejected',
     submittedAt: '2026-06-20T15:25:00',
   },
-];
+]; */
 
 const statusStyles = {
   pending: {
@@ -134,6 +136,9 @@ const statusStyles = {
 };
 
 function SupervisorReportsPage() {
+  const [teamLeaveRequests, setTeamLeaveRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [leaveTypeFilter, setLeaveTypeFilter] =
@@ -146,6 +151,8 @@ function SupervisorReportsPage() {
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  useEffect(() => { let active=true; setLoading(true); setLoadError(''); getTeamReport({ status:statusFilter, startDate:startDateFilter||undefined, endDate:endDateFilter||undefined }).then((data)=>{if(active)setTeamLeaveRequests(data?.leaveRequests||[])}).catch((error)=>{if(active)setLoadError(error.response?.data?.message||'Unable to load team report.')}).finally(()=>{if(active)setLoading(false)}); return()=>{active=false}; }, [statusFilter,startDateFilter,endDateFilter]);
 
   const filteredRequests = useMemo(() => {
     const keyword = searchText.trim().toLowerCase();
@@ -192,6 +199,7 @@ function SupervisorReportsPage() {
     leaveTypeFilter,
     startDateFilter,
     endDateFilter,
+    teamLeaveRequests,
   ]);
 
   const paginatedRequests = useMemo(() => {
@@ -236,7 +244,7 @@ function SupervisorReportsPage() {
         ),
       ),
     ],
-    [],
+    [teamLeaveRequests],
   );
 
   const formatStatus = (status) =>
@@ -383,6 +391,7 @@ function SupervisorReportsPage() {
 
   return (
     <SupervisorLayout activeMenu="Team Reports">
+      {(loading || loadError) && <Alert severity={loadError ? 'error' : 'info'} sx={{ marginBottom:'16px' }}>{loadError || 'Loading team report...'}</Alert>}
       <Box
         sx={{
           display: 'flex',

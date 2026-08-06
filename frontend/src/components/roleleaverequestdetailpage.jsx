@@ -24,13 +24,7 @@ import {
   useParams,
 } from 'react-router-dom';
 
-import {
-  approveLeaveRequest,
-  cancelLeaveRequest,
-  deleteLeaveRequest,
-  getLeaveRequestById,
-  rejectLeaveRequest,
-} from '../utils/leaverequeststorage.js';
+import { cancelLeaveRequest, decideLeaveRequest, deleteLeaveDraft, getMyLeaveRequest, getSupervisorApproval } from '../api/leave-service.js';
 
 function RoleLeaveRequestDetailPage({
   LayoutComponent,
@@ -244,6 +238,8 @@ function RoleLeaveRequestDetailPage({
   };
 
   useEffect(() => {
+    let active = true;
+    const load = async () => {
     let storedRequest = null;
 
     if (
@@ -252,10 +248,7 @@ function RoleLeaveRequestDetailPage({
       ) &&
       numericRequestId > 0
     ) {
-      storedRequest =
-        getLeaveRequestById(
-          numericRequestId,
-        );
+      storedRequest = isSupervisor ? await getSupervisorApproval(numericRequestId) : await getMyLeaveRequest(numericRequestId);
     }
 
     if (
@@ -298,6 +291,9 @@ function RoleLeaveRequestDetailPage({
     }
 
     setMessage(null);
+    };
+    load().catch((error) => { if (active) setMessage({severity:'error',text:error.response?.data?.message||`Leave request #${requestId || '-'} was not found.`}); });
+    return () => { active = false; };
   }, [
     currentRole,
     isOwner,
@@ -555,7 +551,7 @@ function RoleLeaveRequestDetailPage({
     );
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (
       !selectedAction ||
       !request
@@ -587,11 +583,7 @@ function RoleLeaveRequestDetailPage({
         return;
       }
 
-      const updatedRequest =
-        rejectLeaveRequest(
-          request.id,
-          normalizedReason,
-        );
+      let updatedRequest; try { await decideLeaveRequest(request.id, 'rejected', normalizedReason); updatedRequest={...request,status:'rejected',rejectionReason:normalizedReason,reviewedAt:new Date().toISOString()}; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'The request could not be rejected.'}); }
 
       if (!updatedRequest) {
         setMessage({
@@ -620,10 +612,7 @@ function RoleLeaveRequestDetailPage({
     if (
       selectedAction === 'approve'
     ) {
-      const updatedRequest =
-        approveLeaveRequest(
-          request.id,
-        );
+      let updatedRequest; try { await decideLeaveRequest(request.id, 'approved'); updatedRequest={...request,status:'approved',reviewedAt:new Date().toISOString()}; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'The request could not be approved.'}); }
 
       if (!updatedRequest) {
         setMessage({
@@ -651,10 +640,7 @@ function RoleLeaveRequestDetailPage({
     if (
       selectedAction === 'cancel'
     ) {
-      const updatedRequest =
-        cancelLeaveRequest(
-          request.id,
-        );
+      let updatedRequest; try { await cancelLeaveRequest(request.id); updatedRequest={...request,status:'cancelled',cancelledAt:new Date().toISOString()}; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'The request could not be cancelled.'}); }
 
       if (!updatedRequest) {
         setMessage({
@@ -682,10 +668,7 @@ function RoleLeaveRequestDetailPage({
     if (
       selectedAction === 'delete'
     ) {
-      const wasDeleted =
-        deleteLeaveRequest(
-          request.id,
-        );
+      let wasDeleted=false; try { await deleteLeaveDraft(request.id); wasDeleted=true; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'The draft could not be deleted.'}); }
 
       if (!wasDeleted) {
         setMessage({

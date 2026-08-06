@@ -33,11 +33,7 @@ import {
   useNavigate,
 } from 'react-router-dom';
 
-import {
-  cancelLeaveRequest,
-  deleteLeaveRequest,
-  getLeaveRequests,
-} from '../utils/leaverequeststorage.js';
+import { cancelLeaveRequest, deleteLeaveDraft, getMyLeaveRequests } from '../api/leave-service.js';
 
 function RoleMyRequestsPage({
   LayoutComponent,
@@ -72,6 +68,7 @@ function RoleMyRequestsPage({
 
   const [message, setMessage] =
     useState(null);
+  const [loading, setLoading] = useState(true);
 
   const [
     selectedRequest,
@@ -91,25 +88,9 @@ function RoleMyRequestsPage({
     setRowsPerPage,
   ] = useState(5);
 
-  useEffect(() => {
-    const storedRequests =
-      getLeaveRequests({
-        role: currentRole,
-      });
+  useEffect(() => { reloadRequests(); }, [currentRole]);
 
-    setRequests(storedRequests);
-    setPage(0);
-    setMessage(null);
-  }, [currentRole]);
-
-  const reloadRequests = () => {
-    const storedRequests =
-      getLeaveRequests({
-        role: currentRole,
-      });
-
-    setRequests(storedRequests);
-  };
+  async function reloadRequests() { setLoading(true); try { setRequests(await getMyLeaveRequests()); setPage(0); } catch (error) { setMessage({ severity:'error', text:error.response?.data?.message || 'Unable to load leave requests.' }); } finally { setLoading(false); } }
 
   const availableYears =
     useMemo(() => {
@@ -423,7 +404,7 @@ function RoleMyRequestsPage({
   };
 
   const handleConfirmAction =
-    () => {
+    async () => {
       if (
         !selectedRequest ||
         !confirmAction
@@ -437,10 +418,7 @@ function RoleMyRequestsPage({
         selectedRequest.status ===
           'draft'
       ) {
-        const wasDeleted =
-          deleteLeaveRequest(
-            selectedRequest.id,
-          );
+        let wasDeleted = false; try { await deleteLeaveDraft(selectedRequest.id); wasDeleted = true; } catch (error) { setMessage({severity:'error',text:error.response?.data?.message||'Unable to delete draft.'}); }
 
         if (wasDeleted) {
           reloadRequests();
@@ -465,10 +443,7 @@ function RoleMyRequestsPage({
         selectedRequest.status ===
           'pending'
       ) {
-        const cancelledRequest =
-          cancelLeaveRequest(
-            selectedRequest.id,
-          );
+        let cancelledRequest = null; try { cancelledRequest = await cancelLeaveRequest(selectedRequest.id); } catch (error) { setMessage({severity:'error',text:error.response?.data?.message||'Unable to cancel request.'}); }
 
         if (cancelledRequest) {
           reloadRequests();
@@ -568,6 +543,7 @@ function RoleMyRequestsPage({
 
   return (
     <LayoutComponent activeMenu="My Requests">
+      {loading && <Alert severity="info" sx={{ marginBottom: '16px' }}>Loading leave requests...</Alert>}
       <Box
         sx={{
           marginBottom: '28px',

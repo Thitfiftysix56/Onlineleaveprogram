@@ -21,14 +21,7 @@ import {
 
 import { useLocation } from 'react-router-dom';
 
-import {
-  getNotifications,
-  initializeNotifications,
-  markAllNotificationsAsRead,
-  markNotificationAsRead,
-  notificationStorageKey,
-  saveNotifications,
-} from '../utils/notificationstorage.js';
+import { getNotifications, markAllNotificationsRead, markNotificationRead } from '../api/notification-service.js';
 
 const getCategoryFromType = (type) => {
   const normalizedType = String(
@@ -170,6 +163,7 @@ function RoleNotificationPage({
     useCallback(
       (notification) => ({
         ...notification,
+        isRead: notification.isRead ?? notification.read,
 
         category:
           notification.category ||
@@ -180,104 +174,9 @@ function RoleNotificationPage({
       [],
     );
 
-  const loadNotifications = useCallback(() => {
-    const storedNotifications =
-      getNotifications({
-        role: currentRole,
-      }).map(normalizeForPage);
-
-    setNotifications(
-      storedNotifications,
-    );
-  }, [currentRole, normalizeForPage]);
-
-  const seedInitialNotifications =
-    useCallback(() => {
-      const storedRoleNotifications =
-        getNotifications({
-          role: currentRole,
-        });
-
-      if (
-        storedRoleNotifications.length >
-          0 ||
-        !Array.isArray(
-          initialNotifications,
-        ) ||
-        initialNotifications.length ===
-          0
-      ) {
-        return;
-      }
-
-      const allNotifications =
-        initializeNotifications();
-
-      const highestId =
-        allNotifications.length > 0
-          ? Math.max(
-              ...allNotifications.map(
-                (notification) =>
-                  Number(
-                    notification.id,
-                  ) || 0,
-              ),
-            )
-          : 0;
-
-      const seededNotifications =
-        initialNotifications.map(
-          (
-            notification,
-            index,
-          ) => ({
-            id:
-              highestId +
-              index +
-              1,
-
-            role: currentRole,
-
-            title:
-              notification.title ||
-              'Notification',
-
-            message:
-              notification.message ||
-              '',
-
-            type:
-              notification.type ||
-              getTypeFromCategory(
-                notification.category,
-              ),
-
-            referenceId:
-              notification.referenceId ??
-              null,
-
-            path:
-              notification.path ||
-              null,
-
-            isRead: Boolean(
-              notification.isRead,
-            ),
-
-            createdAt:
-              notification.createdAt ||
-              new Date().toISOString(),
-          }),
-        );
-
-      saveNotifications([
-        ...allNotifications,
-        ...seededNotifications,
-      ]);
-    }, [currentRole, initialNotifications]);
+  const loadNotifications = useCallback(async () => { try { const data=await getNotifications(); setNotifications((data?.notifications||[]).map(normalizeForPage)); } catch(error) { setActionMessage(error.response?.data?.message||'Unable to load notifications.'); } }, [normalizeForPage]);
 
   useEffect(() => {
-    seedInitialNotifications();
     loadNotifications();
 
     setSearchText('');
@@ -285,46 +184,9 @@ function RoleNotificationPage({
     setCategoryFilter('All');
     setActionMessage('');
 
-    const handleStorageChange = (
-      event,
-    ) => {
-      if (
-        !event.key ||
-        event.key ===
-          notificationStorageKey
-      ) {
-        loadNotifications();
-      }
-    };
-
-    const handleWindowFocus = () => {
-      loadNotifications();
-    };
-
-    window.addEventListener(
-      'storage',
-      handleStorageChange,
-    );
-
-    window.addEventListener(
-      'focus',
-      handleWindowFocus,
-    );
-
-    return () => {
-      window.removeEventListener(
-        'storage',
-        handleStorageChange,
-      );
-
-      window.removeEventListener(
-        'focus',
-        handleWindowFocus,
-      );
-    };
+    return undefined;
   }, [
     loadNotifications,
-    seedInitialNotifications,
   ]);
 
   const categories = useMemo(
@@ -564,10 +426,8 @@ function RoleNotificationPage({
       return;
     }
 
-    const updatedNotification =
-      markNotificationAsRead(
-        notificationId,
-      );
+    markNotificationRead(notificationId).then(loadNotifications).then(()=>setActionMessage(`"${selectedNotification.title}" was marked as read.`)).catch((error)=>setActionMessage(error.response?.data?.message||'The notification could not be marked as read.'));
+    const updatedNotification = true;
 
     if (!updatedNotification) {
       setActionMessage(
@@ -590,7 +450,7 @@ function RoleNotificationPage({
   };
 
   const handleMarkAllAsRead =
-    () => {
+    async () => {
       if (unreadCount === 0) {
         setActionMessage(
           'All notifications are already marked as read.',
@@ -599,12 +459,9 @@ function RoleNotificationPage({
         return;
       }
 
-      const updatedCount =
-        markAllNotificationsAsRead(
-          currentRole,
-        );
-
-      loadNotifications();
+      await markAllNotificationsRead();
+      await loadNotifications();
+      const updatedCount = unreadCount;
 
       setActionMessage(
         `${updatedCount} notification(s) were marked as read.`,

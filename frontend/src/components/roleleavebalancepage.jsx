@@ -24,15 +24,7 @@ import {
 
 import { useLocation } from 'react-router-dom';
 
-import {
-  getLeaveEntitlements,
-  leaveEntitlementStorageKey,
-} from '../utils/leaveentitlementstorage.js';
-
-import {
-  getLeaveRequests,
-  leaveRequestStorageKey,
-} from '../utils/leaverequeststorage.js';
+import { getLeaveBalance } from '../api/leave-service.js';
 
 const EMPTY_BALANCES = [];
 
@@ -1333,105 +1325,26 @@ function RoleLeaveBalancePage({
     ? pathRole
     : 'employee';
 
-  const createBalances =
-    useCallback(
-      () =>
-        buildLeaveBalances({
-          role:
-            currentRole,
-
-          fallbackBalances:
-            initialBalances,
-        }),
-      [
-        currentRole,
-        initialBalances,
-      ],
-    );
-
   const [
     leaveBalances,
     setLeaveBalances,
-  ] = useState(
-    createBalances,
-  );
+  ] = useState([]);
 
   const [
     selectedYear,
     setSelectedYear,
   ] = useState(() => {
-    const years =
-      createBalances()
-        .map(
-          (balance) =>
-            Number(
-              balance.year,
-            ),
-        )
-        .filter(
-          Number.isInteger,
-        )
-        .sort(
-          (
-            first,
-            second,
-          ) =>
-            second -
-            first,
-        );
-
-    return String(
-      years[0] ||
-        new Date()
-          .getFullYear(),
-    );
+    return String(new Date().getFullYear());
   });
+  const [loadError, setLoadError] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const loadBalanceData =
-    useCallback(() => {
-      setLeaveBalances(
-        createBalances(),
-      );
-    }, [createBalances]);
+  const loadBalanceData = useCallback(async () => { setLoading(true); setLoadError(''); try { const data = await getLeaveBalance(selectedYear); setLeaveBalances((data?.balances || []).map((item) => ({ ...item, year:data.year, totalDays:item.total, usedDays:item.used, pendingDays:item.pending, remainingDays:item.remaining, availableDays:item.remaining }))); } catch (error) { setLoadError(error.response?.data?.message || 'Unable to load leave balance.'); } finally { setLoading(false); } }, [selectedYear]);
 
   useEffect(() => {
     loadBalanceData();
 
-    const handleStorageChange = (
-      event,
-    ) => {
-      if (
-        !event.key ||
-        event.key ===
-          leaveEntitlementStorageKey ||
-        event.key ===
-          leaveRequestStorageKey
-      ) {
-        loadBalanceData();
-      }
-    };
-
-    window.addEventListener(
-      'storage',
-      handleStorageChange,
-    );
-
-    window.addEventListener(
-      'focus',
-      loadBalanceData,
-    );
-
-    return () => {
-      window.removeEventListener(
-        'storage',
-        handleStorageChange,
-      );
-
-      window.removeEventListener(
-        'focus',
-        loadBalanceData,
-      );
-    };
+    return undefined;
   }, [loadBalanceData]);
 
   const availableYears =
@@ -1610,6 +1523,7 @@ function RoleLeaveBalancePage({
     <LayoutComponent
       activeMenu="Leave Balance"
     >
+      {(loading || loadError) && <Typography sx={{ marginBottom:'16px', color:loadError?'#B91C1C':'#6B7280' }}>{loadError || 'Loading leave balance...'}</Typography>}
       <Box
         sx={{
           display:

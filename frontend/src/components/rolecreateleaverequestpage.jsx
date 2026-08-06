@@ -17,29 +17,7 @@ import {
 
 import { useLocation, useNavigate } from 'react-router-dom';
 
-import {
-  getLeaveRequestById,
-  getLeaveRequests,
-  leaveRequestStorageKey,
-  saveLeaveRequestDraft,
-  submitLeaveRequest,
-} from '../utils/leaverequeststorage.js';
-
-import {
-  getLeaveEntitlement,
-  leaveEntitlementStorageKey,
-} from '../utils/leaveentitlementstorage.js';
-
-import {
-  getActiveHolidayDates,
-  holidayStorageKey,
-} from '../utils/holidaystorage.js';
-
-import {
-  getActiveLeaveTypes,
-  getLeaveTypeById,
-  leaveTypeStorageKey,
-} from '../utils/leavetypestorage.js';
+import { getLeaveOptions, getMyLeaveRequest, saveLeaveDraft, submitLeaveDraft, submitLeaveRequest as submitLeaveRequestApi, updateLeaveDraft } from '../api/leave-service.js';
 
 const emptyFormData = {
   leaveTypeId: '',
@@ -299,65 +277,14 @@ function RoleCreateLeaveRequestPage({
     setMessage,
   ] = useState(null);
 
-  const [
-    storageRevision,
-    setStorageRevision,
-  ] = useState(0);
+  const [leaveOptions, setLeaveOptions] = useState({ leaveTypes: [], holidays: [] });
+  const entitlementYear = getYearFromDate(formData.startDate) || new Date().getFullYear();
 
   useEffect(() => {
-    const refreshStorageData =
-      () => {
-        setStorageRevision(
-          (
-            previousRevision,
-          ) =>
-            previousRevision +
-            1,
-        );
-      };
-
-    const handleStorageChange =
-      (event) => {
-        const watchedStorageKeys =
-          [
-            leaveRequestStorageKey,
-            leaveEntitlementStorageKey,
-            holidayStorageKey,
-            leaveTypeStorageKey,
-          ];
-
-        if (
-          !event.key ||
-          watchedStorageKeys.includes(
-            event.key,
-          )
-        ) {
-          refreshStorageData();
-        }
-      };
-
-    window.addEventListener(
-      'storage',
-      handleStorageChange,
-    );
-
-    window.addEventListener(
-      'focus',
-      refreshStorageData,
-    );
-
-    return () => {
-      window.removeEventListener(
-        'storage',
-        handleStorageChange,
-      );
-
-      window.removeEventListener(
-        'focus',
-        refreshStorageData,
-      );
-    };
-  }, []);
+    let active = true;
+    getLeaveOptions(entitlementYear).then((data) => { if (active) setLeaveOptions(data || { leaveTypes: [], holidays: [] }); }).catch((error) => { if (active) setMessage({ severity: 'error', text: error.response?.data?.message || 'Unable to load leave options.' }); });
+    return () => { active = false; };
+  }, [entitlementYear]);
 
   useEffect(() => {
     setErrors({});
@@ -376,10 +303,7 @@ function RoleCreateLeaveRequestPage({
       return;
     }
 
-    const storedRequest =
-      getLeaveRequestById(
-        editRequestId,
-      );
+    getMyLeaveRequest(editRequestId).then((storedRequest) => {
 
     const belongsToCurrentRole =
       !storedRequest?.role ||
@@ -452,6 +376,7 @@ function RoleCreateLeaveRequestPage({
       text:
         `Draft #${storedRequest.id} is open for editing.`,
     });
+    }).catch((error) => setMessage({ severity: 'error', text: error.response?.data?.message || `Draft #${editRequestId} was not found.` }));
   }, [
     currentRole,
     editRequestId,
@@ -459,42 +384,13 @@ function RoleCreateLeaveRequestPage({
     location.search,
   ]);
 
-  const entitlementYear =
-    useMemo(
-      () =>
-        getYearFromDate(
-          formData.startDate,
-        ) ||
-        new Date()
-          .getFullYear(),
-      [formData.startDate],
-    );
-
-  const roleRequests =
-    useMemo(() => {
-      void storageRevision;
-
-      return getLeaveRequests({
-          role:
-            currentRole,
-        });
-    },
-      [
-        currentRole,
-        storageRevision,
-      ],
-    );
+  const roleRequests = [];
 
   const activeLeaveTypes =
     useMemo(() => {
-      void storageRevision;
-
-      return getActiveLeaveTypes()
-          .map(
-            normalizeLeaveType,
-          );
+      return (leaveOptions.leaveTypes || []).map(normalizeLeaveType);
     },
-      [storageRevision],
+      [leaveOptions],
     );
 
   const inactiveSelectedLeaveType =
@@ -521,21 +417,7 @@ function RoleCreateLeaveRequestPage({
         return null;
       }
 
-      const storedLeaveType =
-        getLeaveTypeById(
-          formData.leaveTypeId,
-        );
-
-      return storedLeaveType
-        ? {
-            ...normalizeLeaveType(
-              storedLeaveType,
-            ),
-
-            status:
-              'Inactive',
-          }
-        : null;
+      return null;
     }, [
       activeLeaveTypes,
       formData.leaveTypeId,
@@ -566,56 +448,8 @@ function RoleCreateLeaveRequestPage({
                 leaveType.id,
               );
 
-            const entitlement =
-              getLeaveEntitlement({
-                role:
-                  currentRole,
-
-                leaveTypeId,
-
-                year:
-                  entitlementYear,
-              });
-
-            const pendingDays =
-              roleRequests
-                .filter(
-                  (request) => {
-                    const status =
-                      String(
-                        request.status ||
-                          '',
-                      ).toLowerCase();
-
-                    return (
-                      status ===
-                        'pending' &&
-                      Number(
-                        request
-                          .leaveTypeId,
-                      ) ===
-                        leaveTypeId &&
-                      getYearFromDate(
-                        request
-                          .startDate,
-                      ) ===
-                        entitlementYear
-                    );
-                  },
-                )
-                .reduce(
-                  (
-                    total,
-                    request,
-                  ) =>
-                    total +
-                    Number(
-                      request
-                        .leaveDays ||
-                        0,
-                    ),
-                  0,
-                );
+            const entitlement = leaveType.hasEntitlement ? leaveType : null;
+            const pendingDays = Number(leaveType.pendingDays || 0);
 
             const totalDays =
               Number(
@@ -698,10 +532,7 @@ function RoleCreateLeaveRequestPage({
 
   const activeHolidayDates =
     useMemo(() => {
-      void storageRevision;
-
-      const storedHolidayDates =
-        getActiveHolidayDates();
+      const storedHolidayDates = (leaveOptions.holidays || []).map((holiday) => holiday.date);
 
       const propHolidayDates =
         organizationHolidays
@@ -718,7 +549,7 @@ function RoleCreateLeaveRequestPage({
       );
     }, [
       organizationHolidays,
-      storageRevision,
+      leaveOptions,
     ]);
 
   const activeHolidayDateSet =
@@ -1370,7 +1201,7 @@ function RoleCreateLeaveRequestPage({
     });
 
   const handleSaveDraft =
-    () => {
+    async () => {
       const hasEnteredData =
         formData.leaveTypeId ||
         formData.startDate ||
@@ -1417,10 +1248,9 @@ function RoleCreateLeaveRequestPage({
         return;
       }
 
-      const savedDraft =
-        saveLeaveRequestDraft(
-          createStorageData(),
-        );
+      try {
+      const payload = createStorageData();
+      const savedDraft = isEditMode ? await updateLeaveDraft(editRequestId, payload, attachments) : await saveLeaveDraft(payload, attachments);
 
       if (!savedDraft) {
         setMessage({
@@ -1443,6 +1273,7 @@ function RoleCreateLeaveRequestPage({
       navigate(
         `/${currentRole}/my-requests`,
       );
+      } catch (error) { setMessage({ severity: 'error', text: error.response?.data?.message || 'The draft could not be saved.' }); }
     };
 
   const handleSubmit = (
@@ -1491,10 +1322,9 @@ function RoleCreateLeaveRequestPage({
       return;
     }
 
-    const submittedRequest =
-      submitLeaveRequest(
-        createStorageData(),
-      );
+    const submitAsync = async () => { try {
+    const payload = createStorageData();
+    const submittedRequest = isEditMode ? await submitLeaveDraft(editRequestId, payload, attachments) : await submitLeaveRequestApi(payload, attachments);
 
     if (!submittedRequest) {
       setMessage({
@@ -1517,6 +1347,8 @@ function RoleCreateLeaveRequestPage({
     navigate(
       `/${currentRole}/my-requests`,
     );
+    } catch (error) { setMessage({ severity: 'error', text: error.response?.data?.message || 'The leave request could not be submitted.' }); } };
+    submitAsync();
   };
 
   const handleReset =
