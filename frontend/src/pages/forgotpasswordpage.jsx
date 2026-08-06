@@ -74,7 +74,7 @@ function ForgotPasswordPage() {
     if (!normalizedIdentifier) {
       setMessage({
         severity: 'error',
-        text: 'Please enter your username or email.',
+        text: 'กรุณากรอก Username หรือ Email',
       });
 
       return;
@@ -113,7 +113,7 @@ function ForgotPasswordPage() {
         severity: 'error',
         text:
           error.response?.data?.message ||
-          'Unable to request a verification code.',
+          'ไม่สามารถขอรหัสยืนยันได้',
       });
     } finally {
       setIsSubmitting(false);
@@ -123,7 +123,7 @@ function ForgotPasswordPage() {
   return (
     <PasswordRecoveryLayout
       title="Forgot Password"
-      description="Enter your username or registered email to receive a verification code."
+      description="กรอก Username หรือ Email ที่ลงทะเบียนไว้เพื่อรับรหัสยืนยัน"
     >
       {message && (
         <Alert
@@ -164,7 +164,7 @@ function ForgotPasswordPage() {
           fullWidth
           required
           name="identifier"
-          placeholder="Enter your username or email"
+          placeholder="กรอก Username หรือ Email"
           value={identifier}
           disabled={isSubmitting}
           autoFocus
@@ -272,10 +272,10 @@ function ForgotPasswordPage() {
                 }}
               />
 
-              Sending...
+              กำลังส่ง...
             </Box>
           ) : (
-            'Send Verification Code'
+            'ส่งรหัสยืนยัน'
           )}
         </Button>
 
@@ -296,8 +296,7 @@ function ForgotPasswordPage() {
               textAlign: 'center',
             }}
           >
-            The verification code will be sent only to the email
-            registered with your account.
+            ระบบจะส่งรหัสยืนยันไปยัง Email ที่ลงทะเบียนไว้กับบัญชีเท่านั้น
           </Typography>
         </Box>
       </Box>

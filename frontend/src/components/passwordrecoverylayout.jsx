@@ -158,7 +158,7 @@ function PasswordRecoveryLayout({
                 letterSpacing: '-0.7px',
               }}
             >
-              Secure password recovery.
+              กู้คืนรหัสผ่านอย่างปลอดภัย
             </Typography>
 
             <Typography
@@ -170,8 +170,7 @@ function PasswordRecoveryLayout({
                 color: 'rgba(255, 255, 255, 0.88)',
               }}
             >
-              Receive a verification code through the email address
-              registered with your employee account.
+              รับรหัสยืนยันทาง Email ที่ลงทะเบียนไว้กับบัญชีพนักงาน
             </Typography>
           </Box>
 
@@ -326,8 +325,7 @@ function PasswordRecoveryLayout({
                 color: 'rgba(255, 255, 255, 0.90)',
               }}
             >
-              Verification codes expire after a short period and can
-              only be used once.
+              รหัสยืนยันมีอายุการใช้งานจำกัดและใช้ได้เพียงครั้งเดียว
             </Typography>
           </Box>
         </Box>

@@ -68,7 +68,7 @@ function ResetPasswordPage() {
     ) {
       setMessage({
         severity: 'error',
-        text: 'The new password does not meet the password policy.',
+        text: 'Password ใหม่ไม่เป็นไปตามเงื่อนไขที่กำหนด',
       });
       return;
     }
@@ -76,7 +76,7 @@ function ResetPasswordPage() {
     if (newPassword !== confirmPassword) {
       setMessage({
         severity: 'error',
-        text: 'The confirmation password does not match.',
+        text: 'Password ที่ยืนยันไม่ตรงกัน',
       });
       return;
     }
@@ -92,7 +92,7 @@ function ResetPasswordPage() {
 
       const successMessage =
         response.data?.message
-        || 'Password reset successfully.';
+        || 'รีเซ็ตรหัสผ่านสำเร็จ';
 
       /*
        * ป้องกันหน้า Reset Password เด้งกลับไป Forgot Password
@@ -121,7 +121,7 @@ function ResetPasswordPage() {
         severity: 'error',
         text:
           error.response?.data?.message
-          || 'Unable to reset the password.',
+          || 'ไม่สามารถรีเซ็ตรหัสผ่านได้',
       });
     } finally {
       setIsSubmitting(false);
@@ -151,7 +151,7 @@ function ResetPasswordPage() {
   return (
     <PasswordRecoveryLayout
       title="Reset Password"
-      description="Create a new password for your account."
+      description="สร้าง Password ใหม่สำหรับบัญชีของคุณ"
     >
       {message && (
         <Alert
@@ -211,7 +211,7 @@ function ResetPasswordPage() {
           helperText={
             confirmPassword
             && confirmPassword !== newPassword
-              ? 'The confirmation password does not match.'
+              ? 'Password ที่ยืนยันไม่ตรงกัน'
               : ''
           }
           onChange={(event) => {
@@ -233,7 +233,7 @@ function ResetPasswordPage() {
           }}
         >
           {isSubmitting
-            ? 'Resetting Password...'
+            ? 'กำลังรีเซ็ตรหัสผ่าน...'
             : 'Reset Password'}
         </Button>
 

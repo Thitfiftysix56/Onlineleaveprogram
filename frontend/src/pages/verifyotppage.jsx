@@ -31,24 +31,24 @@ function VerifyOtpPage() {
   }, [flow.resendAvailableAt]);
 
   if (!identifier) {
-    return <Navigate to="/forgot-password" replace state={{ passwordResetMessage: 'Password reset session has expired. Please start again.' }} />;
+    return <Navigate to="/forgot-password" replace state={{ passwordResetMessage: 'ขั้นตอนรีเซ็ตรหัสผ่านหมดอายุ กรุณาเริ่มใหม่อีกครั้ง' }} />;
   }
 
   const handleVerify = async (event) => {
     event.preventDefault();
     if (!/^\d{6}$/.test(otp)) {
-      setMessage({ severity: 'error', text: 'Enter the 6-digit verification code.' });
+      setMessage({ severity: 'error', text: 'กรุณากรอกรหัสยืนยัน 6 หลัก' });
       return;
     }
     setIsVerifying(true);
     setMessage(null);
     try {
       const response = await api.post('/auth/forgot-password/verify-otp', { identifier, otp });
-      if (!response.data?.resetToken) throw new Error('Unable to verify the code.');
+      if (!response.data?.resetToken) throw new Error('ไม่สามารถยืนยันรหัสได้');
       flow.verify(response.data.resetToken);
       navigate('/reset-password');
     } catch (error) {
-      setMessage({ severity: 'error', text: error.response?.data?.message || error.message || 'Unable to verify the code.' });
+      setMessage({ severity: 'error', text: error.response?.data?.message || error.message || 'ไม่สามารถยืนยันรหัสได้' });
     } finally {
       setIsVerifying(false);
     }
@@ -58,7 +58,7 @@ function VerifyOtpPage() {
     if (resendInFlight.current || isResending || secondsUntilResend > 0) return;
     if (!identifier) {
       flow.clearFlow();
-      navigate('/forgot-password', { replace: true, state: { passwordResetMessage: 'Password reset session has expired. Please start again.' } });
+      navigate('/forgot-password', { replace: true, state: { passwordResetMessage: 'ขั้นตอนรีเซ็ตรหัสผ่านหมดอายุ กรุณาเริ่มใหม่อีกครั้ง' } });
       return;
     }
 
@@ -71,15 +71,15 @@ function VerifyOtpPage() {
       flow.markResent(retryAfterSeconds);
       setOtp('');
       setSecondsUntilResend(retryAfterSeconds);
-      setMessage({ severity: 'success', text: 'Verification code was sent again.' });
+      setMessage({ severity: 'success', text: 'ส่งรหัสยืนยันอีกครั้งแล้ว' });
     } catch (error) {
       const retryAfterSeconds = Number(error.response?.data?.retryAfterSeconds || 0);
       if (error.response?.status === 429 && retryAfterSeconds > 0) {
         flow.applyRetryAfter(retryAfterSeconds);
         setSecondsUntilResend(retryAfterSeconds);
-        setMessage({ severity: 'error', text: `Please wait ${retryAfterSeconds} seconds before requesting another code.` });
+        setMessage({ severity: 'error', text: `กรุณารอ ${retryAfterSeconds} วินาทีก่อนขอรหัสใหม่` });
       } else {
-        setMessage({ severity: 'error', text: error.response?.data?.message || 'Unable to resend the verification code.' });
+        setMessage({ severity: 'error', text: error.response?.data?.message || 'ไม่สามารถส่งรหัสยืนยันอีกครั้งได้' });
       }
     } finally {
       resendInFlight.current = false;
@@ -88,16 +88,16 @@ function VerifyOtpPage() {
   };
 
   return (
-    <PasswordRecoveryLayout title="Verify Code" description="Enter the 6-digit code sent to your registered email. The code expires in 5 minutes.">
+    <PasswordRecoveryLayout title="ยืนยันรหัส" description="กรอกรหัส 6 หลักที่ส่งไปยัง Email ที่ลงทะเบียนไว้ รหัสจะหมดอายุภายใน 5 นาที">
       {message && <Alert severity={message.severity} sx={{ mb: 2 }}>{message.text}</Alert>}
       <form onSubmit={handleVerify}>
         <TextField fullWidth required label="Verification Code" value={otp} disabled={isVerifying || isResending} autoFocus inputMode="numeric" autoComplete="one-time-code" slotProps={{ htmlInput: { maxLength: 6, pattern: '[0-9]*' } }} onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} />
-        <Typography sx={{ color: '#6B7280', fontSize: 13, mt: 1.5 }}>Code expires 5 minutes after it was sent.</Typography>
+        <Typography sx={{ color: '#6B7280', fontSize: 13, mt: 1.5 }}>รหัสจะหมดอายุภายใน 5 นาทีหลังจากส่ง</Typography>
         <Button fullWidth type="submit" variant="contained" disabled={isVerifying || isResending || otp.length !== 6} sx={{ height: 48, mt: 3, textTransform: 'none', fontWeight: 800 }}>
-          {isVerifying ? 'Verifying...' : 'Verify Code'}
+          {isVerifying ? 'กำลังยืนยัน...' : 'ยืนยันรหัส'}
         </Button>
         <Button fullWidth type="button" disabled={isVerifying || isResending || secondsUntilResend > 0} onClick={handleResend} sx={{ mt: 1, textTransform: 'none' }}>
-          {isResending ? 'Resending...' : secondsUntilResend > 0 ? `Resend Code (${secondsUntilResend}s)` : 'Resend Code'}
+          {isResending ? 'กำลังส่งอีกครั้ง...' : secondsUntilResend > 0 ? `ส่งรหัสอีกครั้ง (${secondsUntilResend} วินาที)` : 'ส่งรหัสอีกครั้ง'}
         </Button>
         <Button fullWidth type="button" disabled={isVerifying || isResending} onClick={() => { flow.clearFlow(); navigate('/forgot-password'); }} sx={{ mt: 0.5, textTransform: 'none' }}>
           Back

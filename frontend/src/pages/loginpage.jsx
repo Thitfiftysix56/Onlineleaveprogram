@@ -99,7 +99,7 @@ function LoginPage() {
       !enteredPassword
     ) {
       setErrorMessage(
-        'Please enter your username and password.',
+        'กรุณากรอก Username และ Password',
       )
 
       return
@@ -173,7 +173,7 @@ function LoginPage() {
       setErrorMessage(
         error.response?.data?.message ||
           error.message ||
-          'An error occurred while signing in. Please try again.',
+          'เกิดข้อผิดพลาดขณะเข้าสู่ระบบ กรุณาลองอีกครั้ง',
       )
     } finally {
       setIsSubmitting(false)
@@ -303,7 +303,7 @@ function LoginPage() {
                 'rgba(255, 255, 255, 0.88)',
             }}
           >
-            Manage leave requests easily and securely
+            จัดการคำขอลาได้ง่ายและปลอดภัย
           </Typography>
         </Box>
 
@@ -513,7 +513,7 @@ function LoginPage() {
               marginBottom: '24px',
             }}
           >
-            Enter your username and password to access the system.
+            กรอก Username และ Password เพื่อเข้าใช้งานระบบ
           </Typography>
 
           {errorMessage && (
@@ -564,7 +564,7 @@ function LoginPage() {
             id="username"
             fullWidth
             required
-            placeholder="Enter your username"
+            placeholder="กรอก Username"
             value={formData.username}
             onChange={(event) =>
               handleInputChange(
@@ -636,7 +636,7 @@ function LoginPage() {
                 ? 'text'
                 : 'password'
             }
-            placeholder="Enter your password"
+            placeholder="กรอก Password"
             value={formData.password}
             onChange={(event) =>
               handleInputChange(
@@ -861,8 +861,8 @@ function LoginPage() {
                 lineHeight: 1.7,
               }}
             >
-              The system identifies your Role from the user account.
-              You do not need to select a Role manually.
+              ระบบจะตรวจสอบ Role จากบัญชีผู้ใช้โดยอัตโนมัติ
+              โดยไม่ต้องเลือก Role ด้วยตนเอง
             </Typography>
           </Box>
 
@@ -874,7 +874,7 @@ function LoginPage() {
               textAlign: 'center',
             }}
           >
-            Secure role-based access for Employee, Supervisor, HR and Admin
+            เข้าใช้งานอย่างปลอดภัยตาม Role สำหรับ Employee, Supervisor, HR และ Admin
           </Typography>
         </Box>
       </Paper>

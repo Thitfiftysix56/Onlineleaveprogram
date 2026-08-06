@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { translateThai } from '../i18n/thai.js';
 
 const ACCESS_TOKEN_KEY =
   'online_leave_approval_access_token';
@@ -44,10 +45,17 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-  (response) =>
-    response,
+  (response) => {
+    if (typeof response.data?.message === 'string') {
+      response.data.message = translateThai(response.data.message);
+    }
+    return response;
+  },
 
   (error) => {
+    if (typeof error.response?.data?.message === 'string') {
+      error.response.data.message = translateThai(error.response.data.message);
+    }
     const status =
       error.response?.status;
 
