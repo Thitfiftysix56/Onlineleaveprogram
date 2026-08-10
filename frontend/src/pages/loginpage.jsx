@@ -19,7 +19,6 @@ import {
   CalendarMonthRounded,
   CheckCircleRounded,
   DescriptionRounded,
-  LockRounded,
   VisibilityOffRounded,
   VisibilityRounded,
 } from '@mui/icons-material'
@@ -303,7 +302,7 @@ function LoginPage() {
                 'rgba(255, 255, 255, 0.88)',
             }}
           >
-            จัดการคำขอลาได้ง่ายและปลอดภัย
+            ระบบอนุมัติใบลาออนไลน์
           </Typography>
         </Box>
 
@@ -500,7 +499,7 @@ function LoginPage() {
               letterSpacing: '-0.3px',
             }}
           >
-            Sign In
+            Login
           </Typography>
 
           <Typography
@@ -513,7 +512,7 @@ function LoginPage() {
               marginBottom: '24px',
             }}
           >
-            กรอก Username และ Password เพื่อเข้าใช้งานระบบ
+            กรุณากรอก Username และ Password เพื่อเข้าใช้งานระบบ
           </Typography>
 
           {errorMessage && (
@@ -564,7 +563,7 @@ function LoginPage() {
             id="username"
             fullWidth
             required
-            placeholder="กรอก Username"
+            placeholder="Enter Username"
             value={formData.username}
             onChange={(event) =>
               handleInputChange(
@@ -636,7 +635,7 @@ function LoginPage() {
                 ? 'text'
                 : 'password'
             }
-            placeholder="กรอก Password"
+            placeholder="Enter Password"
             value={formData.password}
             onChange={(event) =>
               handleInputChange(
@@ -648,18 +647,6 @@ function LoginPage() {
             autoComplete="current-password"
             slotProps={{
               input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <LockRounded
-                      sx={{
-                        color:
-                          '#94A3B8',
-                        fontSize: '20px',
-                      }}
-                    />
-                  </InputAdornment>
-                ),
-
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton

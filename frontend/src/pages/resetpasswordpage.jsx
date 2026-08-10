@@ -1,4 +1,5 @@
 import { useState } from 'react';
+
 import {
   Alert,
   Button,
@@ -6,10 +7,12 @@ import {
   InputAdornment,
   TextField,
 } from '@mui/material';
+
 import {
   Visibility,
   VisibilityOff,
 } from '@mui/icons-material';
+
 import {
   Navigate,
   useNavigate,
@@ -25,6 +28,7 @@ const passwordFieldSx = {
   '& input::-ms-reveal': {
     display: 'none',
   },
+
   '& input::-ms-clear': {
     display: 'none',
   },
@@ -42,14 +46,21 @@ function ResetPasswordPage() {
   const [resetCompleted, setResetCompleted] = useState(false);
 
   if (
-    !resetCompleted
-    && (!flow.identifier || !flow.resetToken)
+    !resetCompleted &&
+    (!flow.identifier || !flow.resetToken)
   ) {
-    return <Navigate to="/forgot-password" replace />;
+    return (
+      <Navigate
+        to="/forgot-password"
+        replace
+      />
+    );
   }
 
   const handleTogglePasswordVisibility = () => {
-    setShowPassword((previousValue) => !previousValue);
+    setShowPassword(
+      (previousValue) => !previousValue,
+    );
   };
 
   const handlePasswordIconMouseDown = (event) => {
@@ -70,6 +81,7 @@ function ResetPasswordPage() {
         severity: 'error',
         text: 'Password ใหม่ไม่เป็นไปตามเงื่อนไขที่กำหนด',
       });
+
       return;
     }
 
@@ -78,26 +90,26 @@ function ResetPasswordPage() {
         severity: 'error',
         text: 'Password ที่ยืนยันไม่ตรงกัน',
       });
+
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const response = await api.post('/auth/reset-password', {
-        resetToken: flow.resetToken,
-        newPassword,
-        confirmPassword,
-      });
+      const response = await api.post(
+        '/auth/reset-password',
+        {
+          resetToken: flow.resetToken,
+          newPassword,
+          confirmPassword,
+        },
+      );
 
       const successMessage =
-        response.data?.message
-        || 'รีเซ็ตรหัสผ่านสำเร็จ';
+        response.data?.message ||
+        'รีเซ็ตรหัสผ่านสำเร็จ';
 
-      /*
-       * ป้องกันหน้า Reset Password เด้งกลับไป Forgot Password
-       * ระหว่างที่กำลังล้างข้อมูล Reset Flow
-       */
       setResetCompleted(true);
       setNewPassword('');
       setConfirmPassword('');
@@ -109,10 +121,6 @@ function ResetPasswordPage() {
         },
       });
 
-      /*
-       * รอให้เปลี่ยนไปหน้า Login ก่อน
-       * แล้วจึงล้าง Identifier และ Reset Token
-       */
       window.setTimeout(() => {
         flow.clearFlow();
       }, 0);
@@ -120,8 +128,8 @@ function ResetPasswordPage() {
       setMessage({
         severity: 'error',
         text:
-          error.response?.data?.message
-          || 'ไม่สามารถรีเซ็ตรหัสผ่านได้',
+          error.response?.data?.message ||
+          'ไม่สามารถรีเซ็ตรหัสผ่านได้',
       });
     } finally {
       setIsSubmitting(false);
@@ -135,15 +143,17 @@ function ResetPasswordPage() {
         edge="end"
         aria-label={
           showPassword
-            ? 'Hide password'
-            : 'Show password'
+            ? 'ซ่อน Password'
+            : 'แสดง Password'
         }
         onClick={handleTogglePasswordVisibility}
         onMouseDown={handlePasswordIconMouseDown}
       >
-        {showPassword
-          ? <VisibilityOff />
-          : <Visibility />}
+        {showPassword ? (
+          <VisibilityOff />
+        ) : (
+          <Visibility />
+        )}
       </IconButton>
     </InputAdornment>
   );
@@ -156,7 +166,9 @@ function ResetPasswordPage() {
       {message && (
         <Alert
           severity={message.severity}
-          sx={{ mb: 2 }}
+          sx={{
+            mb: 2,
+          }}
         >
           {message.text}
         </Alert>
@@ -167,7 +179,11 @@ function ResetPasswordPage() {
           fullWidth
           required
           autoFocus
-          type={showPassword ? 'text' : 'password'}
+          type={
+            showPassword
+              ? 'text'
+              : 'password'
+          }
           label="New Password"
           value={newPassword}
           disabled={isSubmitting}
@@ -175,11 +191,15 @@ function ResetPasswordPage() {
           sx={passwordFieldSx}
           slotProps={{
             input: {
-              endAdornment: passwordAdornment,
+              endAdornment:
+                passwordAdornment,
             },
           }}
           onChange={(event) => {
-            setNewPassword(event.target.value);
+            setNewPassword(
+              event.target.value,
+            );
+
             setMessage(null);
           }}
         />
@@ -193,7 +213,11 @@ function ResetPasswordPage() {
         <TextField
           fullWidth
           required
-          type={showPassword ? 'text' : 'password'}
+          type={
+            showPassword
+              ? 'text'
+              : 'password'
+          }
           label="Confirm New Password"
           value={confirmPassword}
           disabled={isSubmitting}
@@ -201,21 +225,25 @@ function ResetPasswordPage() {
           sx={passwordFieldSx}
           slotProps={{
             input: {
-              endAdornment: passwordAdornment,
+              endAdornment:
+                passwordAdornment,
             },
           }}
           error={Boolean(
-            confirmPassword
-            && confirmPassword !== newPassword
+            confirmPassword &&
+              confirmPassword !== newPassword,
           )}
           helperText={
-            confirmPassword
-            && confirmPassword !== newPassword
+            confirmPassword &&
+            confirmPassword !== newPassword
               ? 'Password ที่ยืนยันไม่ตรงกัน'
               : ''
           }
           onChange={(event) => {
-            setConfirmPassword(event.target.value);
+            setConfirmPassword(
+              event.target.value,
+            );
+
             setMessage(null);
           }}
         />
@@ -235,27 +263,6 @@ function ResetPasswordPage() {
           {isSubmitting
             ? 'กำลังรีเซ็ตรหัสผ่าน...'
             : 'Reset Password'}
-        </Button>
-
-        <Button
-          fullWidth
-          type="button"
-          disabled={isSubmitting}
-          onClick={() => {
-            navigate('/login', {
-              replace: true,
-            });
-
-            window.setTimeout(() => {
-              flow.clearFlow();
-            }, 0);
-          }}
-          sx={{
-            mt: 1.5,
-            textTransform: 'none',
-          }}
-        >
-          Back to Login
         </Button>
       </form>
     </PasswordRecoveryLayout>

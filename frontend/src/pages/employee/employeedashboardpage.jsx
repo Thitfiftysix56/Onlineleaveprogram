@@ -14,6 +14,13 @@ import {
 } from '@mui/material';
 
 import {
+  BeachAccessRounded,
+  HourglassTopRounded,
+  MedicalServicesRounded,
+  TaskAltRounded,
+} from '@mui/icons-material';
+
+import {
   useNavigate,
 } from 'react-router-dom';
 
@@ -345,15 +352,10 @@ const calculateLeaveBalances = ({
 
       return {
         ...entitlement,
-
         totalDays,
-
         usedDays,
-
         pendingDays,
-
         remainingDays,
-
         availableDays,
       };
     },
@@ -383,11 +385,6 @@ function EmployeeDashboardPage() {
 
   const loadDashboardData =
     useCallback(() => {
-      /*
-       * เรียกคำขอลาก่อน เพราะฟังก์ชันนี้จะทำให้
-       * Entitlement Storage อัปเดตยอด Used จาก
-       * รายการ Approved เดิมก่อนอ่าน Balance
-       */
       const employeeRequests =
         getLeaveRequests({
           role: 'employee',
@@ -582,6 +579,18 @@ function EmployeeDashboardPage() {
         0
           ? `${annualBalance.pendingDays} day(s) pending`
           : 'Available balance',
+
+      backgroundColor:
+        '#EFF6FF',
+
+      borderColor:
+        '#BFDBFE',
+
+      accentColor:
+        '#2563EB',
+
+      Icon:
+        BeachAccessRounded,
     },
     {
       title:
@@ -595,6 +604,18 @@ function EmployeeDashboardPage() {
         0
           ? `${sickBalance.pendingDays} day(s) pending`
           : 'Available balance',
+
+      backgroundColor:
+        '#FFF1F2',
+
+      borderColor:
+        '#FECDD3',
+
+      accentColor:
+        '#E11D48',
+
+      Icon:
+        MedicalServicesRounded,
     },
     {
       title:
@@ -604,7 +625,19 @@ function EmployeeDashboardPage() {
         pendingRequestCount,
 
       description:
-        'Waiting for approval',
+        'รออนุมัติ',
+
+      backgroundColor:
+        '#FFFBEB',
+
+      borderColor:
+        '#FDE68A',
+
+      accentColor:
+        '#D97706',
+
+      Icon:
+        HourglassTopRounded,
     },
     {
       title:
@@ -615,6 +648,18 @@ function EmployeeDashboardPage() {
 
       description:
         `In ${currentYear}`,
+
+      backgroundColor:
+        '#F0FDF4',
+
+      borderColor:
+        '#BBF7D0',
+
+      accentColor:
+        '#16A34A',
+
+      Icon:
+        TaskAltRounded,
     },
   ];
 
@@ -683,78 +728,29 @@ function EmployeeDashboardPage() {
     <EmployeeLayout
       activeMenu="Dashboard"
     >
-      <Box
+      <Typography
+        component="h1"
         sx={{
-          display:
-            'flex',
+          color:
+            '#111827',
 
-          alignItems: {
+          fontSize: {
             xs:
-              'flex-start',
+              '26px',
 
             sm:
-              'center',
+              '30px',
           },
 
-          justifyContent:
-            'space-between',
-
-          flexDirection: {
-            xs:
-              'column',
-
-            sm:
-              'row',
-          },
-
-          gap:
-            '16px',
+          fontWeight:
+            800,
 
           marginBottom:
             '28px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color:
-                '#111827',
-
-              fontSize: {
-                xs:
-                  '26px',
-
-                sm:
-                  '30px',
-              },
-
-              fontWeight:
-                800,
-            }}
-          >
-            Dashboard
-          </Typography>
-
-          <Typography
-            sx={{
-              color:
-                '#6B7280',
-
-              fontSize:
-                '15px',
-
-              marginTop:
-                '6px',
-            }}
-          >
-            Welcome back. Here is an overview of your
-            leave information.
-          </Typography>
-        </Box>
-
-       
-      </Box>
+        Dashboard
+      </Typography>
 
       <Box
         sx={{
@@ -780,75 +776,195 @@ function EmployeeDashboardPage() {
         }}
       >
         {summaryCards.map(
-          (card) => (
-            <Paper
-              key={
-                card.title
-              }
-              elevation={0}
-              sx={{
-                padding:
-                  '24px',
+          (card) => {
+            const CardIcon =
+              card.Icon;
 
-                backgroundColor:
-                  '#FFFFFF',
-
-                border:
-                  '1px solid #E5E7EB',
-
-                borderRadius:
-                  '12px',
-              }}
-            >
-              <Typography
+            return (
+              <Paper
+                key={
+                  card.title
+                }
+                elevation={0}
                 sx={{
-                  color:
-                    '#6B7280',
+                  minHeight:
+                    '168px',
 
-                  fontSize:
+                  padding:
+                    '22px',
+
+                  position:
+                    'relative',
+
+                  backgroundColor:
+                    card.backgroundColor,
+
+                  border:
+                    `1px solid ${card.borderColor}`,
+
+                  borderRadius:
                     '14px',
 
-                  fontWeight:
-                    500,
+                  overflow:
+                    'hidden',
+
+                  transition:
+                    'transform 0.2s ease, box-shadow 0.2s ease',
+
+                  '&:hover': {
+                    transform:
+                      'translateY(-2px)',
+
+                    boxShadow:
+                      `0 12px 26px ${card.accentColor}18`,
+                  },
+
+                  '&::after': {
+                    content:
+                      '""',
+
+                    width:
+                      '86px',
+
+                    height:
+                      '86px',
+
+                    position:
+                      'absolute',
+
+                    right:
+                      '-22px',
+
+                    bottom:
+                      '-28px',
+
+                    backgroundColor:
+                      card.accentColor,
+
+                    borderRadius:
+                      '50%',
+
+                    opacity:
+                      0.08,
+                  },
                 }}
               >
-                {card.title}
-              </Typography>
+                <Box
+                  sx={{
+                    display:
+                      'flex',
 
-              <Typography
-                sx={{
-                  color:
-                    '#111827',
+                    alignItems:
+                      'center',
 
-                  fontSize:
-                    '28px',
+                    justifyContent:
+                      'space-between',
 
-                  fontWeight:
-                    800,
+                    gap:
+                      '12px',
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      color:
+                        '#475569',
 
-                  marginTop:
-                    '8px',
-                }}
-              >
-                {card.value}
-              </Typography>
+                      fontSize:
+                        '14px',
 
-              <Typography
-                sx={{
-                  color:
-                    '#9CA3AF',
+                      fontWeight:
+                        700,
+                    }}
+                  >
+                    {card.title}
+                  </Typography>
 
-                  fontSize:
-                    '13px',
+                  <Box
+                    sx={{
+                      width:
+                        '42px',
 
-                  marginTop:
-                    '4px',
-                }}
-              >
-                {card.description}
-              </Typography>
-            </Paper>
-          ),
+                      height:
+                        '42px',
+
+                      flexShrink:
+                        0,
+
+                      display:
+                        'flex',
+
+                      alignItems:
+                        'center',
+
+                      justifyContent:
+                        'center',
+
+                      backgroundColor:
+                        '#FFFFFF',
+
+                      color:
+                        card.accentColor,
+
+                      border:
+                        `1px solid ${card.borderColor}`,
+
+                      borderRadius:
+                        '12px',
+
+                      boxShadow:
+                        '0 6px 16px rgba(15, 23, 42, 0.05)',
+                    }}
+                  >
+                    <CardIcon
+                      sx={{
+                        fontSize:
+                          '22px',
+                      }}
+                    />
+                  </Box>
+                </Box>
+
+                <Typography
+                  sx={{
+                    color:
+                      '#0F172A',
+
+                    fontSize:
+                      '30px',
+
+                    fontWeight:
+                      800,
+
+                    lineHeight:
+                      1.15,
+
+                    marginTop:
+                      '16px',
+                  }}
+                >
+                  {card.value}
+                </Typography>
+
+                <Typography
+                  sx={{
+                    color:
+                      card.accentColor,
+
+                    fontSize:
+                      '13px',
+
+                    fontWeight:
+                      600,
+
+                    marginTop:
+                      '7px',
+                  }}
+                >
+                  {card.description}
+                </Typography>
+              </Paper>
+            );
+          },
         )}
       </Box>
 

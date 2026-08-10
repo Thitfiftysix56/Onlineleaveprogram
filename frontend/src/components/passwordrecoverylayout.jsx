@@ -147,30 +147,22 @@ function PasswordRecoveryLayout({
             <Typography
               component="h1"
               sx={{
-                maxWidth: '430px',
                 marginTop: '20px',
                 fontSize: {
-                  xs: '32px',
-                  md: '42px',
+                  xs: '28px',
+                  sm: '30px',
+                  md: '32px',
                 },
                 fontWeight: 900,
-                lineHeight: 1.16,
-                letterSpacing: '-0.7px',
+                lineHeight: 1.2,
+                letterSpacing: '-0.5px',
+                whiteSpace: {
+                  xs: 'normal',
+                  sm: 'nowrap',
+                },
               }}
             >
               กู้คืนรหัสผ่านอย่างปลอดภัย
-            </Typography>
-
-            <Typography
-              sx={{
-                maxWidth: '450px',
-                marginTop: '18px',
-                fontSize: '14px',
-                lineHeight: 1.8,
-                color: 'rgba(255, 255, 255, 0.88)',
-              }}
-            >
-              รับรหัสยืนยันทาง Email ที่ลงทะเบียนไว้กับบัญชีพนักงาน
             </Typography>
           </Box>
 
