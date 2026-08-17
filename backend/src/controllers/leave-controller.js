@@ -116,13 +116,17 @@ export async function getOwn(request, response) {
 }
 export async function saveDraft(request,response) { return save(request,response,false) }
 export async function submit(request,response) { return save(request,response,true) }
+async function rollbackError(connection, response, status, message) {
+  await connection.rollback()
+  return error(response, status, message)
+}
 async function save(request,response,submitting) {
   const connection=await pool.getConnection(); try { await connection.beginTransaction(); const employeeId=await identity(connection,request); const requestId=positiveId(request.params.requestId); let existing=null
-    if(requestId){ existing=await byId(connection,requestId); if(!existing||existing.employee_id!==employeeId)return error(response,404,'Draft was not found.'); if(existing.status!=='draft')return error(response,409,'Only draft requests can be updated.') }
-    const checked=await validate(connection,employeeId,request.body,requestId||0,submitting); if(checked.error)return error(response,400,checked.error); const v=checked.value
+    if(requestId){ existing=await byId(connection,requestId); if(!existing||existing.employee_id!==employeeId)return rollbackError(connection,response,404,'Draft was not found.'); if(existing.status!=='draft')return rollbackError(connection,response,409,'Only draft requests can be updated.') }
+    const checked=await validate(connection,employeeId,request.body,requestId||0,submitting); if(checked.error)return rollbackError(connection,response,400,checked.error); const v=checked.value
     let id=requestId; if(id) await connection.execute(`UPDATE leave_requests SET leave_type_id=?,start_date=?,end_date=?,leave_days=?,reason=?,status=?,submitted_at=${submitting?'NOW()':'NULL'} WHERE leave_request_id=?`,[v.leaveTypeId,v.startDate,v.endDate,v.days||0,v.reason,submitting?'pending':'draft',id])
     else { const [result]=await connection.execute(`INSERT INTO leave_requests(employee_id,leave_type_id,start_date,end_date,leave_days,reason,status,submitted_at) VALUES(?,?,?,?,?,?,?,${submitting?'NOW()':'NULL'})`,[employeeId,v.leaveTypeId,v.startDate,v.endDate,v.days||0,v.reason,submitting?'pending':'draft']); id=result.insertId }
-    if(submitting){ const [[storedCount]]=await connection.execute('SELECT COUNT(*) attachment_count FROM leave_request_attachments WHERE leave_request_id=?',[id]); const mustAttach=Boolean(v.type.requires_attachment)&&Number(v.days)>=Number(v.type.attachment_required_after_days||0); if(mustAttach&&!request.files?.length&&!Number(storedCount.attachment_count))return error(response,400,'An attachment is required for this leave request.'); const requestNo=`LR-${new Date().toISOString().slice(0,10).replaceAll('-','')}-${String(id).padStart(6,'0')}`; await connection.execute('UPDATE leave_requests SET request_no=? WHERE leave_request_id=?',[requestNo,id]); const [supervisors]=await connection.execute(`SELECT u.user_id FROM employees e JOIN users u ON u.employee_id=e.supervisor_id WHERE e.employee_id=? LIMIT 1`,[employeeId]); if(!supervisors.length)return error(response,400,'A valid supervisor account is required before submission.'); await createNotification(connection,{userId:supervisors[0].user_id,type:'leave-submitted',title:'New leave request',message:`Leave request ${requestNo} is waiting for approval.`,leaveRequestId:id}) }
+    if(submitting){ const [[storedCount]]=await connection.execute('SELECT COUNT(*) attachment_count FROM leave_request_attachments WHERE leave_request_id=?',[id]); const mustAttach=Boolean(v.type.requires_attachment)&&Number(v.days)>=Number(v.type.attachment_required_after_days||0); if(mustAttach&&!request.files?.length&&!Number(storedCount.attachment_count))return rollbackError(connection,response,400,'An attachment is required for this leave request.'); const requestNo=`LR-${new Date().toISOString().slice(0,10).replaceAll('-','')}-${String(id).padStart(6,'0')}`; await connection.execute('UPDATE leave_requests SET request_no=? WHERE leave_request_id=?',[requestNo,id]); const [supervisors]=await connection.execute(`SELECT u.user_id FROM employees e JOIN users u ON u.employee_id=e.supervisor_id WHERE e.employee_id=? LIMIT 1`,[employeeId]); if(!supervisors.length)return rollbackError(connection,response,400,'A valid supervisor account is required before submission.'); await createNotification(connection,{userId:supervisors[0].user_id,type:'leave-submitted',title:'New leave request',message:`Leave request ${requestNo} is waiting for approval.`,leaveRequestId:id}) }
     await storeFiles(connection,id,request.files)
     const row=await byId(connection,id)
     if(!row) throw new Error('Saved leave request could not be reloaded.')
@@ -147,16 +151,16 @@ export async function decide(request, response) {
     const decision = String(request.body.decision || '').toLowerCase()
     const reason = String(request.body.reason || '').trim()
     if (!['approved', 'rejected'].includes(decision) || (decision === 'rejected' && !reason)) {
-      return error(response, 400, 'A valid decision and rejection reason are required.')
+      return rollbackError(connection, response, 400, 'A valid decision and rejection reason are required.')
     }
     const [rows] = await connection.execute(`${select} WHERE lr.leave_request_id = ? FOR UPDATE`, [requestId])
     const row = rows[0]
-    if (!row || row.status !== 'pending') return error(response, 409, 'Request is not pending or was already reviewed.')
+    if (!row || row.status !== 'pending') return rollbackError(connection, response, 409, 'Request is not pending or was already reviewed.')
     const [team] = await connection.execute(
       'SELECT employee_id FROM employees WHERE employee_id = ? AND supervisor_id = ?',
       [row.employee_id, supervisorId],
     )
-    if (!team.length || row.employee_id === supervisorId) return error(response, 403, 'Forbidden')
+    if (!team.length || row.employee_id === supervisorId) return rollbackError(connection, response, 403, 'Forbidden')
 
     if (decision === 'approved') {
       const [entitlements] = await connection.execute(
@@ -165,7 +169,7 @@ export async function decide(request, response) {
       )
       const entitlement = entitlements[0]
       if (!entitlement || Number(entitlement.used_days) + Number(row.leave_days) > Number(entitlement.total_days)) {
-        return error(response, 409, 'Insufficient leave balance.')
+        return rollbackError(connection, response, 409, 'Insufficient leave balance.')
       }
       await connection.execute(
         'UPDATE leave_entitlements SET used_days = used_days + ? WHERE entitlement_id = ?',

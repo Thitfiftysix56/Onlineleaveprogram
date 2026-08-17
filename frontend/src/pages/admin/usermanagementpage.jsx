@@ -14,7 +14,9 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
+  IconButton,
   InputLabel,
+  Menu,
   MenuItem,
   Paper,
   Select,
@@ -26,6 +28,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+
+import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
 
 import {
   useNavigate,
@@ -39,6 +43,10 @@ import {
   updateAuthUserRole,
 } from '../../utils/authstorage.js';
 
+/* =========================
+   Options
+========================= */
+
 const roleOptions = [
   'Employee',
   'Supervisor',
@@ -51,6 +59,10 @@ const statusOptions = [
   'Inactive',
   'Locked',
 ];
+
+/* =========================
+   Helpers
+========================= */
 
 const normalizeValue = (value) =>
   String(value || '')
@@ -68,8 +80,22 @@ const formatRole = (role) => {
   return (
     roleLabels[
       normalizeValue(role)
-    ] ||
-    'Employee'
+    ] || 'Employee'
+  );
+};
+
+const translateRole = (role) => {
+  const roleLabels = {
+    Employee: 'พนักงาน',
+    Supervisor: 'หัวหน้างาน',
+    HR: 'HR',
+    Admin: 'ผู้ดูแลระบบ',
+  };
+
+  return (
+    roleLabels[role] ||
+    role ||
+    '-'
   );
 };
 
@@ -105,13 +131,31 @@ const formatStatus = (status) => {
   return 'Active';
 };
 
+const translateStatus = (status) => {
+  const statusLabels = {
+    Active: 'ใช้งานอยู่',
+    Inactive: 'ไม่ใช้งาน',
+    Locked: 'ถูกล็อก',
+  };
+
+  return (
+    statusLabels[status] ||
+    status ||
+    '-'
+  );
+};
+
+/* =========================
+   Date
+========================= */
+
 const formatDateTime = (value) => {
   if (
     !value ||
     normalizeValue(value) ===
       'never'
   ) {
-    return 'Never';
+    return 'ยังไม่เคยเข้าสู่ระบบ';
   }
 
   const date =
@@ -125,45 +169,64 @@ const formatDateTime = (value) => {
     return String(value);
   }
 
-  return date.toLocaleString(
-    'en-GB',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    },
-  );
+  const pad = (number) =>
+    String(number).padStart(
+      2,
+      '0',
+    );
+
+  return `${pad(
+    date.getDate(),
+  )}/${pad(
+    date.getMonth() + 1,
+  )}/${date.getFullYear()} ${pad(
+    date.getHours(),
+  )}:${pad(
+    date.getMinutes(),
+  )}`;
 };
+
+/* =========================
+   Styles
+========================= */
 
 const getRoleStyle = (role) => {
   const roleStyles = {
     Employee: {
-      backgroundColor: '#EFF6FF',
-      color: '#1D4ED8',
+      backgroundColor:
+        '#EFF6FF',
+      color:
+        '#1D4ED8',
     },
 
     Supervisor: {
-      backgroundColor: '#F5F3FF',
-      color: '#6D28D9',
+      backgroundColor:
+        '#F5F3FF',
+      color:
+        '#6D28D9',
     },
 
     HR: {
-      backgroundColor: '#ECFDF5',
-      color: '#047857',
+      backgroundColor:
+        '#ECFDF5',
+      color:
+        '#047857',
     },
 
     Admin: {
-      backgroundColor: '#FFF7ED',
-      color: '#C2410C',
+      backgroundColor:
+        '#FFF7ED',
+      color:
+        '#C2410C',
     },
   };
 
   return (
     roleStyles[role] || {
-      backgroundColor: '#F3F4F6',
-      color: '#4B5563',
+      backgroundColor:
+        '#F3F4F6',
+      color:
+        '#4B5563',
     }
   );
 };
@@ -173,28 +236,40 @@ const getStatusStyle = (
 ) => {
   const statusStyles = {
     Active: {
-      backgroundColor: '#DCFCE7',
-      color: '#15803D',
+      backgroundColor:
+        '#DCFCE7',
+      color:
+        '#15803D',
     },
 
     Inactive: {
-      backgroundColor: '#FEF3C7',
-      color: '#B45309',
+      backgroundColor:
+        '#FEF3C7',
+      color:
+        '#B45309',
     },
 
     Locked: {
-      backgroundColor: '#FEE2E2',
-      color: '#B91C1C',
+      backgroundColor:
+        '#FEE2E2',
+      color:
+        '#B91C1C',
     },
   };
 
   return (
     statusStyles[status] || {
-      backgroundColor: '#F3F4F6',
-      color: '#4B5563',
+      backgroundColor:
+        '#F3F4F6',
+      color:
+        '#4B5563',
     }
   );
 };
+
+/* =========================
+   Component
+========================= */
 
 function UserManagementPage() {
   const navigate =
@@ -260,6 +335,20 @@ function UserManagementPage() {
     setActionSeverity,
   ] = useState('info');
 
+  const [
+    actionMenuAnchor,
+    setActionMenuAnchor,
+  ] = useState(null);
+
+  const [
+    actionMenuUser,
+    setActionMenuUser,
+  ] = useState(null);
+
+  /* =========================
+     Message
+  ========================= */
+
   const showMessage = (
     message,
     severity = 'info',
@@ -278,6 +367,10 @@ function UserManagementPage() {
     });
   };
 
+  /* =========================
+     Load Users
+  ========================= */
+
   const loadUsers = async () => {
     setIsLoadingUsers(true);
     setLoadError('');
@@ -287,6 +380,7 @@ function UserManagementPage() {
         await api.get(
           '/admin/users',
         );
+
       const responseUsers =
         response.data?.users;
 
@@ -299,41 +393,56 @@ function UserManagementPage() {
       ) {
         throw new Error(
           response.data?.message ||
-            'Unable to load user accounts.',
+            'ไม่สามารถโหลดข้อมูลผู้ใช้งานได้',
         );
       }
 
       setUsers(
         responseUsers.map(
           (user) => ({
-            id: user.userId,
+            id:
+              user.userId,
+
             employeeId:
               user.employeeId,
+
             employeeCode:
               user.employeeCode ||
-              'Not specified',
+              'ไม่ระบุ',
+
             username:
-              user.username || '',
+              user.username ||
+              '',
+
             employeeName:
               user.fullName ||
-              'Not specified',
+              'ไม่ระบุ',
+
             email:
               user.email ||
-              'Not specified',
-            roleId: user.roleId,
-            role: formatRole(
-              user.roleName,
-            ),
+              'ไม่ระบุ',
+
+            roleId:
+              user.roleId,
+
+            role:
+              formatRole(
+                user.roleName,
+              ),
+
             status:
               formatStatus(
                 user.status,
               ),
+
             lastLogin:
               formatDateTime(
                 user.lastLoginAt,
               ),
+
             createdAt:
               user.createdAt,
+
             updatedAt:
               user.updatedAt,
           }),
@@ -344,12 +453,14 @@ function UserManagementPage() {
         'Unable to load user accounts.',
         error,
       );
+
       setUsers([]);
+
       setLoadError(
         error.response?.data
           ?.message ||
           error.message ||
-          'Unable to load user accounts.',
+          'ไม่สามารถโหลดข้อมูลผู้ใช้งานได้',
       );
     } finally {
       setIsLoadingUsers(false);
@@ -359,6 +470,10 @@ function UserManagementPage() {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  /* =========================
+     Filter
+  ========================= */
 
   const filteredUsers =
     useMemo(() => {
@@ -418,6 +533,10 @@ function UserManagementPage() {
       statusFilter,
     ]);
 
+  /* =========================
+     Summary
+  ========================= */
+
   const userSummary =
     useMemo(
       () => ({
@@ -448,12 +567,78 @@ function UserManagementPage() {
       [users],
     );
 
+  const summaryCards = [
+    {
+      title:
+        'ผู้ใช้งานทั้งหมด',
+
+      value:
+        userSummary.total,
+
+      helper:
+        'บัญชีในระบบทั้งหมด',
+
+      color:
+        '#EA580C',
+    },
+
+    {
+      title:
+        'ใช้งานอยู่',
+
+      value:
+        userSummary.active,
+
+      helper:
+        'บัญชีที่พร้อมใช้งาน',
+
+      color:
+        '#059669',
+    },
+
+    {
+      title:
+        'ไม่ใช้งาน',
+
+      value:
+        userSummary.inactive,
+
+      helper:
+        'บัญชีที่ปิดการใช้งาน',
+
+      color:
+        '#D97706',
+    },
+
+    {
+      title:
+        'ถูกล็อก',
+
+      value:
+        userSummary.locked,
+
+      helper:
+        'บัญชีที่ถูกล็อก',
+
+      color:
+        '#DC2626',
+    },
+  ];
+
+  /* =========================
+     Filter Actions
+  ========================= */
+
   const handleClearFilters =
     () => {
       setSearchText('');
       setRoleFilter('All');
       setStatusFilter('All');
     };
+
+  /* =========================
+     Role
+  ========================= */
 
   const handleRoleChange = (
     selectedUser,
@@ -476,7 +661,7 @@ function UserManagementPage() {
     if (!result.success) {
       showMessage(
         result.error ||
-          'Unable to update the user role.',
+          'ไม่สามารถเปลี่ยนบทบาทผู้ใช้งานได้',
         'error',
       );
 
@@ -486,214 +671,287 @@ function UserManagementPage() {
     loadUsers();
 
     showMessage(
-      `${selectedUser.username} role was changed to ${nextRole}.`,
+      `เปลี่ยนบทบาทของ ${selectedUser.username} เป็น ${translateRole(
+        nextRole,
+      )} แล้ว`,
       'success',
     );
   };
 
-  const handleStatusChange = async (
-    selectedUser,
-    nextStatus,
-  ) => {
-    setUpdatingStatusUserId(
-      selectedUser.id,
-    );
-    setActionMessage('');
+  /* =========================
+     Status
+  ========================= */
 
-    try {
-      const response =
-        await api.patch(
-          `/admin/users/${selectedUser.id}/status`,
-          {
-            status: nextStatus,
-          },
+  const handleStatusChange =
+    async (
+      selectedUser,
+      nextStatus,
+    ) => {
+      setUpdatingStatusUserId(
+        selectedUser.id,
+      );
+
+      setActionMessage('');
+
+      try {
+        const response =
+          await api.patch(
+            `/admin/users/${selectedUser.id}/status`,
+            {
+              status:
+                nextStatus,
+            },
+          );
+
+        if (
+          response.data?.status !==
+          'ok'
+        ) {
+          throw new Error(
+            response.data?.message ||
+              'ไม่สามารถเปลี่ยนสถานะบัญชีได้',
+          );
+        }
+
+        await loadUsers();
+
+        showMessage(
+          `เปลี่ยนสถานะของ ${selectedUser.username} เป็น ${translateStatus(
+            nextStatus,
+          )} แล้ว`,
+          'success',
         );
-
-      if (
-        response.data?.status !==
-        'ok'
-      ) {
-        throw new Error(
-          response.data?.message ||
-            'Unable to update the account status.',
+      } catch (error) {
+        showMessage(
+          error.response?.data
+            ?.message ||
+            error.message ||
+            'ไม่สามารถเปลี่ยนสถานะบัญชีได้',
+          'error',
+        );
+      } finally {
+        setUpdatingStatusUserId(
+          null,
         );
       }
+    };
 
-      await loadUsers();
+  /* =========================
+     Action Menu
+  ========================= */
 
-      showMessage(
-        response.data?.message ||
-          `${selectedUser.username} status was changed to ${nextStatus}.`,
-        'success',
-      );
-    } catch (error) {
-      showMessage(
-        error.response?.data
-          ?.message ||
-          error.message ||
-          'Unable to update the account status.',
-        'error',
-      );
-    } finally {
-      setUpdatingStatusUserId(
+  const handleOpenActionMenu = (
+    event,
+    user,
+  ) => {
+    setActionMenuAnchor(
+      event.currentTarget,
+    );
+
+    setActionMenuUser(
+      user,
+    );
+  };
+
+  const handleCloseActionMenu =
+    () => {
+      setActionMenuAnchor(
         null,
       );
+
+      setActionMenuUser(
+        null,
+      );
+    };
+
+  const handleEditFromMenu = () => {
+    if (!actionMenuUser) {
+      return;
     }
+
+    const userId =
+      actionMenuUser.id;
+
+    handleCloseActionMenu();
+
+    navigate(
+      `/admin/user-management/${userId}/edit`,
+    );
   };
+
+  const handleResetFromMenu = () => {
+    if (!actionMenuUser) {
+      return;
+    }
+
+    const selectedUser =
+      actionMenuUser;
+
+    handleCloseActionMenu();
+
+    handleOpenResetConfirmation(
+      selectedUser,
+    );
+  };
+
+  /* =========================
+     Reset Password
+  ========================= */
 
   const handleOpenResetConfirmation = (
     selectedUser,
   ) => {
-    if (resettingPasswordUserId !== null) return;
+    if (
+      resettingPasswordUserId !==
+      null
+    ) {
+      return;
+    }
 
     setActionMessage('');
-    setResetConfirmationUser(selectedUser);
+
+    setResetConfirmationUser(
+      selectedUser,
+    );
   };
 
-  const handleResetPassword = async () => {
-    const selectedUser = resetConfirmationUser;
-
-    if (
-      !selectedUser ||
-      resettingPasswordUserId !== null
-    ) return;
-
-    setResettingPasswordUserId(
-      selectedUser.id,
-    );
-
-    try {
-      const response = await api.post(
-        `/admin/users/${selectedUser.id}/reset-password`,
-      );
+  const handleResetPassword =
+    async () => {
+      const selectedUser =
+        resetConfirmationUser;
 
       if (
-        response.data?.status !==
-          'ok' ||
-        !response.data
-          ?.temporaryPassword
+        !selectedUser ||
+        resettingPasswordUserId !==
+          null
       ) {
-        throw new Error(
-          response.data?.message ||
-            'Password reset response did not include a temporary password.',
-        );
+        return;
       }
 
-      setResetConfirmationUser(null);
-      setTemporaryPasswordResult({
-        username:
-          response.data.username ||
-          selectedUser.username,
-        temporaryPassword:
-          response.data.temporaryPassword,
-      });
-
-      showMessage(
-        response.data?.message ||
-          'Password reset successfully.',
-        'success',
-      );
-    } catch (error) {
-      showMessage(
-        error.response?.data
-          ?.message ||
-          error.message ||
-          'Unable to reset the password.',
-        'error',
-      );
-    } finally {
       setResettingPasswordUserId(
+        selectedUser.id,
+      );
+
+      try {
+        const response =
+          await api.post(
+            `/admin/users/${selectedUser.id}/reset-password`,
+          );
+
+        if (
+          response.data?.status !==
+            'ok' ||
+          !response.data
+            ?.temporaryPassword
+        ) {
+          throw new Error(
+            response.data?.message ||
+              'ระบบไม่ได้ส่งรหัสผ่านชั่วคราวกลับมา',
+          );
+        }
+
+        setResetConfirmationUser(
+          null,
+        );
+
+        setTemporaryPasswordResult({
+          username:
+            response.data
+              .username ||
+            selectedUser.username,
+
+          temporaryPassword:
+            response.data
+              .temporaryPassword,
+        });
+
+        showMessage(
+          'รีเซ็ตรหัสผ่านสำเร็จแล้ว',
+          'success',
+        );
+      } catch (error) {
+        showMessage(
+          error.response?.data
+            ?.message ||
+            error.message ||
+            'ไม่สามารถรีเซ็ตรหัสผ่านได้',
+          'error',
+        );
+      } finally {
+        setResettingPasswordUserId(
+          null,
+        );
+      }
+    };
+
+  const handleCloseTemporaryPassword =
+    () => {
+      setTemporaryPasswordResult(
         null,
       );
-    }
-  };
+    };
 
-  const handleCloseTemporaryPassword = () => {
-    setTemporaryPasswordResult(null);
-  };
-
-  const summaryCards = [
-    {
-      title: 'Total Users',
-      value: userSummary.total,
-      color: '#EA580C',
-      backgroundColor: '#FFF7ED',
-    },
-
-    {
-      title: 'Active Users',
-      value: userSummary.active,
-      color: '#059669',
-      backgroundColor: '#ECFDF5',
-    },
-
-    {
-      title: 'Inactive Users',
-      value: userSummary.inactive,
-      color: '#D97706',
-      backgroundColor: '#FFFBEB',
-    },
-
-    {
-      title: 'Locked Users',
-      value: userSummary.locked,
-      color: '#DC2626',
-      backgroundColor: '#FEF2F2',
-    },
-  ];
+  /* =========================
+     UI
+  ========================= */
 
   return (
-    <AdminLayout activeMenu="User Management">
+    <AdminLayout
+      activeMenu="User Management"
+    >
+      {/* Header */}
+
       <Box
         sx={{
-          display: 'flex',
+          display:
+            'flex',
 
           alignItems: {
-            xs: 'flex-start',
-            sm: 'center',
+            xs:
+              'flex-start',
+
+            sm:
+              'center',
           },
 
           justifyContent:
             'space-between',
 
           flexDirection: {
-            xs: 'column',
-            sm: 'row',
+            xs:
+              'column',
+
+            sm:
+              'row',
           },
 
-          gap: '16px',
+          gap:
+            '16px',
 
           marginBottom:
-            '28px',
+            '24px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color: '#111827',
+        <Typography
+          component="h1"
+          sx={{
+            color:
+              '#111827',
 
-              fontSize: {
-                xs: '26px',
-                sm: '30px',
-              },
+            fontSize: {
+              xs:
+                '26px',
 
-              fontWeight: 800,
-            }}
-          >
-            User Management
-          </Typography>
+              sm:
+                '30px',
+            },
 
-          <Typography
-            sx={{
-              color: '#6B7280',
-              fontSize: '15px',
-              marginTop: '6px',
-            }}
-          >
-            Create, review and manage system user accounts.
-          </Typography>
-        </Box>
+            fontWeight:
+              800,
+          }}
+        >
+          จัดการผู้ใช้งาน
+        </Typography>
 
         <Button
           type="button"
@@ -704,26 +962,50 @@ function UserManagementPage() {
             )
           }
           sx={{
-            minWidth: '130px',
-            height: '44px',
-            padding: '0 20px',
-            backgroundColor: '#EA580C',
-            color: '#FFFFFF',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: 700,
-            textTransform: 'none',
-            boxShadow: 'none',
+            minWidth:
+              '145px',
+
+            height:
+              '42px',
+
+            padding:
+              '0 18px',
+
+            backgroundColor:
+              '#EA580C',
+
+            color:
+              '#FFFFFF',
+
+            borderRadius:
+              '9px',
+
+            fontSize:
+              '12px',
+
+            fontWeight:
+              700,
+
+            textTransform:
+              'none',
+
+            boxShadow:
+              'none',
 
             '&:hover': {
-              backgroundColor: '#C2410C',
-              boxShadow: 'none',
+              backgroundColor:
+                '#C2410C',
+
+              boxShadow:
+                'none',
             },
           }}
         >
-          + Add User
+          + เพิ่มผู้ใช้งาน
         </Button>
       </Box>
+
+      {/* Message */}
 
       {actionMessage && (
         <Alert
@@ -734,13 +1016,18 @@ function UserManagementPage() {
             setActionMessage('')
           }
           sx={{
-            marginBottom: '24px',
-            borderRadius: '8px',
+            marginBottom:
+              '20px',
+
+            borderRadius:
+              '10px',
           }}
         >
           {actionMessage}
         </Alert>
       )}
+
+      {/* Error */}
 
       {loadError && (
         <Alert
@@ -749,26 +1036,35 @@ function UserManagementPage() {
             <Button
               color="inherit"
               size="small"
-              onClick={loadUsers}
+              onClick={
+                loadUsers
+              }
             >
-              Retry
+              ลองอีกครั้ง
             </Button>
           }
           sx={{
-            marginBottom: '24px',
-            borderRadius: '8px',
+            marginBottom:
+              '20px',
+
+            borderRadius:
+              '10px',
           }}
         >
           {loadError}
         </Alert>
       )}
 
+      {/* Summary Cards */}
+
       <Box
         sx={{
-          display: 'grid',
+          display:
+            'grid',
 
           gridTemplateColumns: {
-            xs: '1fr',
+            xs:
+              '1fr',
 
             sm:
               'repeat(2, minmax(0, 1fr))',
@@ -777,17 +1073,26 @@ function UserManagementPage() {
               'repeat(4, minmax(0, 1fr))',
           },
 
-          gap: '20px',
-          marginBottom: '24px',
+          gap:
+            '18px',
+
+          marginBottom:
+            '24px',
         }}
       >
         {summaryCards.map(
           (card) => (
             <Paper
-              key={card.title}
+              key={
+                card.title
+              }
               elevation={0}
               sx={{
-                padding: '20px',
+                minHeight:
+                  '142px',
+
+                padding:
+                  '20px',
 
                 backgroundColor:
                   '#FFFFFF',
@@ -796,59 +1101,119 @@ function UserManagementPage() {
                   '1px solid #E5E7EB',
 
                 borderRadius:
-                  '12px',
+                  '14px',
+
+                boxSizing:
+                  'border-box',
               }}
             >
               <Box
                 sx={{
-                  width: '44px',
-                  height: '44px',
-
-                  display: 'flex',
+                  display:
+                    'flex',
 
                   alignItems:
                     'center',
 
                   justifyContent:
-                    'center',
+                    'space-between',
 
-                  backgroundColor:
-                    card.backgroundColor,
-
-                  color:
-                    card.color,
-
-                  borderRadius:
+                  gap:
                     '12px',
-
-                  fontSize:
-                    '18px',
-
-                  fontWeight:
-                    800,
                 }}
               >
-                {card.value}
+                <Typography
+                  sx={{
+                    color:
+                      '#64748B',
+
+                    fontSize:
+                      '12px',
+
+                    fontWeight:
+                      700,
+                  }}
+                >
+                  {card.title}
+                </Typography>
+
+                <Box
+                  sx={{
+                    width:
+                      '9px',
+
+                    height:
+                      '9px',
+
+                    flexShrink:
+                      0,
+
+                    backgroundColor:
+                      card.color,
+
+                    borderRadius:
+                      '50%',
+
+                    boxShadow:
+                      `0 0 0 4px ${card.color}14`,
+                  }}
+                />
               </Box>
 
               <Typography
                 sx={{
-                  color: '#111827',
-                  fontSize: '15px',
-                  fontWeight: 800,
-                  marginTop: '14px',
+                  color:
+                    '#111827',
+
+                  fontSize:
+                    '32px',
+
+                  fontWeight:
+                    800,
+
+                  lineHeight:
+                    1.2,
+
+                  marginTop:
+                    '14px',
                 }}
               >
-                {card.title}
+                {card.value}
+              </Typography>
+
+              <Typography
+                sx={{
+                  color:
+                    '#94A3B8',
+
+                  fontSize:
+                    '11px',
+
+                  marginTop:
+                    '13px',
+                }}
+              >
+                {card.helper}
               </Typography>
             </Paper>
           ),
         )}
       </Box>
 
+      {/* User List */}
+
       <Paper
         elevation={0}
         sx={{
+          width:
+            '100%',
+
+          maxWidth:
+            '100%',
+
+          boxSizing:
+            'border-box',
+
           backgroundColor:
             '#FFFFFF',
 
@@ -856,18 +1221,18 @@ function UserManagementPage() {
             '1px solid #E5E7EB',
 
           borderRadius:
-            '12px',
+            '14px',
 
           overflow:
             'hidden',
         }}
       >
+        {/* Filters */}
+
         <Box
           sx={{
-            padding: {
-              xs: '20px',
-              sm: '24px',
-            },
+            padding:
+              '20px 22px',
 
             borderBottom:
               '1px solid #E5E7EB',
@@ -875,45 +1240,69 @@ function UserManagementPage() {
         >
           <Typography
             sx={{
-              color: '#111827',
-              fontSize: '18px',
-              fontWeight: 800,
+              color:
+                '#111827',
+
+              fontSize:
+                '17px',
+
+              fontWeight:
+                800,
             }}
           >
-            User Account List
+            รายการผู้ใช้งาน
           </Typography>
 
           <Typography
             sx={{
-              color: '#6B7280',
-              fontSize: '14px',
-              marginTop: '4px',
+              color:
+                '#64748B',
+
+              fontSize:
+                '12px',
+
+              marginTop:
+                '4px',
             }}
           >
-            Showing {filteredUsers.length} of {users.length}{' '}
-            accounts
+            แสดง{' '}
+            {
+              filteredUsers.length
+            }{' '}
+            จาก{' '}
+            {
+              users.length
+            }{' '}
+            บัญชี
           </Typography>
 
           <Box
             sx={{
-              display: 'grid',
+              display:
+                'grid',
 
               gridTemplateColumns: {
-                xs: '1fr',
+                xs:
+                  '1fr',
 
-                lg:
-                  'minmax(300px, 2fr) minmax(180px, 1fr) minmax(180px, 1fr) auto',
+                md:
+                  'minmax(220px, 1.5fr) minmax(130px, 0.7fr) minmax(130px, 0.7fr) auto',
               },
 
-              gap: '16px',
-              marginTop: '22px',
+              gap:
+                '12px',
+
+              marginTop:
+                '18px',
             }}
           >
             <TextField
               fullWidth
-              label="Search User"
-              placeholder="Username, employee, code or email"
-              value={searchText}
+              label="ค้นหาผู้ใช้งาน"
+              placeholder="ชื่อผู้ใช้ ชื่อพนักงาน รหัส หรืออีเมล"
+              value={
+                searchText
+              }
               onChange={(
                 event,
               ) =>
@@ -924,8 +1313,11 @@ function UserManagementPage() {
               sx={{
                 '& .MuiOutlinedInput-root':
                   {
-                    height: '48px',
-                    borderRadius: '8px',
+                    height:
+                      '46px',
+
+                    borderRadius:
+                      '9px',
 
                     '&.Mui-focused fieldset':
                       {
@@ -936,20 +1328,25 @@ function UserManagementPage() {
 
                 '& .MuiInputLabel-root.Mui-focused':
                   {
-                    color: '#EA580C',
+                    color:
+                      '#EA580C',
                   },
               }}
             />
 
             <FormControl fullWidth>
-              <InputLabel id="user-role-filter-label">
-                Role
+              <InputLabel
+                id="user-role-filter-label"
+              >
+                บทบาท
               </InputLabel>
 
               <Select
                 labelId="user-role-filter-label"
-                value={roleFilter}
-                label="Role"
+                value={
+                  roleFilter
+                }
+                label="บทบาท"
                 onChange={(
                   event,
                 ) =>
@@ -958,21 +1355,30 @@ function UserManagementPage() {
                   )
                 }
                 sx={{
-                  height: '48px',
-                  borderRadius: '8px',
+                  height:
+                    '46px',
+
+                  borderRadius:
+                    '9px',
                 }}
               >
                 <MenuItem value="All">
-                  All Roles
+                  ทุกบทบาท
                 </MenuItem>
 
                 {roleOptions.map(
                   (role) => (
                     <MenuItem
-                      key={role}
-                      value={role}
+                      key={
+                        role
+                      }
+                      value={
+                        role
+                      }
                     >
-                      {role}
+                      {translateRole(
+                        role,
+                      )}
                     </MenuItem>
                   ),
                 )}
@@ -980,14 +1386,18 @@ function UserManagementPage() {
             </FormControl>
 
             <FormControl fullWidth>
-              <InputLabel id="user-status-filter-label">
-                Status
+              <InputLabel
+                id="user-status-filter-label"
+              >
+                สถานะ
               </InputLabel>
 
               <Select
                 labelId="user-status-filter-label"
-                value={statusFilter}
-                label="Status"
+                value={
+                  statusFilter
+                }
+                label="สถานะ"
                 onChange={(
                   event,
                 ) =>
@@ -996,21 +1406,30 @@ function UserManagementPage() {
                   )
                 }
                 sx={{
-                  height: '48px',
-                  borderRadius: '8px',
+                  height:
+                    '46px',
+
+                  borderRadius:
+                    '9px',
                 }}
               >
                 <MenuItem value="All">
-                  All Statuses
+                  ทุกสถานะ
                 </MenuItem>
 
                 {statusOptions.map(
                   (status) => (
                     <MenuItem
-                      key={status}
-                      value={status}
+                      key={
+                        status
+                      }
+                      value={
+                        status
+                      }
                     >
-                      {status}
+                      {translateStatus(
+                        status,
+                      )}
                     </MenuItem>
                   ),
                 )}
@@ -1024,117 +1443,219 @@ function UserManagementPage() {
                 handleClearFilters
               }
               sx={{
-                minWidth: '110px',
-                height: '48px',
-                padding: '0 18px',
-                color: '#374151',
-                borderColor: '#D1D5DB',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 700,
-                textTransform: 'none',
+                minWidth:
+                  '100px',
+
+                height:
+                  '46px',
+
+                padding:
+                  '0 14px',
+
+                color:
+                  '#475569',
+
+                borderColor:
+                  '#CBD5E1',
+
+                borderRadius:
+                  '9px',
+
+                fontSize:
+                  '11px',
+
+                fontWeight:
+                  700,
+
+                whiteSpace:
+                  'nowrap',
+
+                textTransform:
+                  'none',
 
                 '&:hover': {
                   backgroundColor:
-                    '#F9FAFB',
+                    '#F8FAFC',
 
                   borderColor:
-                    '#9CA3AF',
+                    '#94A3B8',
                 },
               }}
             >
-              Clear
+              ล้างตัวกรอง
             </Button>
           </Box>
         </Box>
 
+        {/* Loading */}
+
         {isLoadingUsers ? (
           <Box
             sx={{
-              minHeight: '300px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '14px',
-              color: '#6B7280',
+              minHeight:
+                '300px',
+
+              display:
+                'flex',
+
+              flexDirection:
+                'column',
+
+              alignItems:
+                'center',
+
+              justifyContent:
+                'center',
+
+              gap:
+                '14px',
+
+              color:
+                '#64748B',
             }}
           >
             <CircularProgress
               size={32}
               sx={{
-                color: '#EA580C',
+                color:
+                  '#EA580C',
               }}
             />
 
             <Typography
               sx={{
-                fontSize: '14px',
-                fontWeight: 700,
+                fontSize:
+                  '13px',
+
+                fontWeight:
+                  700,
               }}
             >
-              Loading user accounts...
+              กำลังโหลดข้อมูลผู้ใช้งาน...
             </Typography>
           </Box>
         ) : filteredUsers.length >
-        0 ? (
+          0 ? (
           <Box
             sx={{
-              width: '100%',
-              overflowX: 'auto',
+              width:
+                '100%',
+
+              maxWidth:
+                '100%',
+
+              overflow:
+                'hidden',
             }}
           >
             <Table
+              size="small"
               sx={{
-                minWidth:
-                  '1450px',
+                width:
+                  '100%',
+
+                tableLayout:
+                  'fixed',
               }}
             >
+              <colgroup>
+                <col
+                  style={{
+                    width:
+                      '13%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '17%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '22%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '13%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '13%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '16%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '6%',
+                  }}
+                />
+              </colgroup>
+
               <TableHead>
                 <TableRow
                   sx={{
                     backgroundColor:
-                      '#F9FAFB',
+                      '#F8FAFC',
                   }}
                 >
                   {[
-                    'Username',
-                    'Employee',
-                    'Email',
-                    'Role',
-                    'Status',
-                    'Last Login',
-                    'Actions',
+                    'ชื่อผู้ใช้',
+                    'พนักงาน',
+                    'อีเมล',
+                    'บทบาท',
+                    'สถานะ',
+                    'เข้าสู่ระบบล่าสุด',
+                    'จัดการ',
                   ].map(
-                    (heading) => (
+                    (
+                      heading,
+                    ) => (
                       <TableCell
                         key={
                           heading
                         }
                         align={
                           heading ===
-                          'Actions'
-                            ? 'right'
+                          'จัดการ'
+                            ? 'center'
                             : 'left'
                         }
                         sx={{
+                          padding:
+                            '12px 10px',
+
                           color:
-                            '#6B7280',
+                            '#64748B',
 
                           fontSize:
-                            '12px',
+                            '10.5px',
 
                           fontWeight:
                             800,
 
-                          textTransform:
-                            'uppercase',
-
-                          letterSpacing:
-                            '0.4px',
+                          lineHeight:
+                            1.4,
 
                           whiteSpace:
-                            'nowrap',
+                            'normal',
 
                           borderBottom:
                             '1px solid #E5E7EB',
@@ -1162,7 +1683,9 @@ function UserManagementPage() {
 
                     return (
                       <TableRow
-                        key={user.id}
+                        key={
+                          user.id
+                        }
                         hover
                         sx={{
                           '&:last-child td':
@@ -1172,16 +1695,27 @@ function UserManagementPage() {
                             },
                         }}
                       >
+                        {/* Username */}
+
                         <TableCell
                           sx={{
+                            padding:
+                              '13px 10px',
+
                             color:
                               '#111827',
 
                             fontSize:
-                              '14px',
+                              '11.5px',
 
                             fontWeight:
                               800,
+
+                            wordBreak:
+                              'break-word',
+
+                            overflowWrap:
+                              'anywhere',
 
                             borderBottom:
                               '1px solid #E5E7EB',
@@ -1190,8 +1724,13 @@ function UserManagementPage() {
                           {user.username}
                         </TableCell>
 
+                        {/* Employee */}
+
                         <TableCell
                           sx={{
+                            padding:
+                              '13px 10px',
+
                             borderBottom:
                               '1px solid #E5E7EB',
                           }}
@@ -1202,10 +1741,16 @@ function UserManagementPage() {
                                 '#111827',
 
                               fontSize:
-                                '14px',
+                                '11.5px',
 
                               fontWeight:
                                 700,
+
+                              lineHeight:
+                                1.4,
+
+                              wordBreak:
+                                'break-word',
                             }}
                           >
                             {user.employeeName}
@@ -1214,10 +1759,10 @@ function UserManagementPage() {
                           <Typography
                             sx={{
                               color:
-                                '#9CA3AF',
+                                '#94A3B8',
 
                               fontSize:
-                                '12px',
+                                '10px',
 
                               marginTop:
                                 '3px',
@@ -1227,13 +1772,27 @@ function UserManagementPage() {
                           </Typography>
                         </TableCell>
 
+                        {/* Email */}
+
                         <TableCell
                           sx={{
+                            padding:
+                              '13px 10px',
+
                             color:
-                              '#4B5563',
+                              '#475569',
 
                             fontSize:
-                              '13px',
+                              '10.5px',
+
+                            lineHeight:
+                              1.45,
+
+                            wordBreak:
+                              'break-word',
+
+                            overflowWrap:
+                              'anywhere',
 
                             borderBottom:
                               '1px solid #E5E7EB',
@@ -1242,18 +1801,20 @@ function UserManagementPage() {
                           {user.email}
                         </TableCell>
 
+                        {/* Role */}
+
                         <TableCell
                           sx={{
+                            padding:
+                              '13px 8px',
+
                             borderBottom:
                               '1px solid #E5E7EB',
                           }}
                         >
                           <FormControl
                             size="small"
-                            sx={{
-                              minWidth:
-                                '130px',
-                            }}
+                            fullWidth
                           >
                             <Select
                               value={
@@ -1264,37 +1825,57 @@ function UserManagementPage() {
                               ) =>
                                 handleRoleChange(
                                   user,
-                                  event
-                                    .target
-                                    .value,
+                                  event.target.value,
+                                )
+                              }
+                              renderValue={(
+                                value,
+                              ) =>
+                                translateRole(
+                                  value,
                                 )
                               }
                               sx={{
+                                width:
+                                  '100%',
+
                                 height:
-                                  '36px',
+                                  '34px',
 
                                 backgroundColor:
-                                  roleStyle
-                                    .backgroundColor,
+                                  roleStyle.backgroundColor,
 
                                 color:
-                                  roleStyle
-                                    .color,
+                                  roleStyle.color,
 
                                 borderRadius:
                                   '8px',
 
                                 fontSize:
-                                  '12px',
+                                  '10.5px',
 
                                 fontWeight:
                                   700,
 
+                                '& .MuiSelect-select':
+                                  {
+                                    paddingLeft:
+                                      '9px',
+
+                                    paddingRight:
+                                      '25px !important',
+
+                                    overflow:
+                                      'hidden',
+
+                                    textOverflow:
+                                      'ellipsis',
+                                  },
+
                                 '& .MuiOutlinedInput-notchedOutline':
                                   {
                                     borderColor:
-                                      roleStyle
-                                        .color,
+                                      `${roleStyle.color}55`,
                                   },
                               }}
                             >
@@ -1310,7 +1891,9 @@ function UserManagementPage() {
                                       role
                                     }
                                   >
-                                    {role}
+                                    {translateRole(
+                                      role,
+                                    )}
                                   </MenuItem>
                                 ),
                               )}
@@ -1318,18 +1901,20 @@ function UserManagementPage() {
                           </FormControl>
                         </TableCell>
 
+                        {/* Status */}
+
                         <TableCell
                           sx={{
+                            padding:
+                              '13px 8px',
+
                             borderBottom:
                               '1px solid #E5E7EB',
                           }}
                         >
                           <FormControl
                             size="small"
-                            sx={{
-                              minWidth:
-                                '120px',
-                            }}
+                            fullWidth
                           >
                             <Select
                               disabled={
@@ -1348,37 +1933,57 @@ function UserManagementPage() {
                               ) =>
                                 handleStatusChange(
                                   user,
-                                  event
-                                    .target
-                                    .value,
+                                  event.target.value,
+                                )
+                              }
+                              renderValue={(
+                                value,
+                              ) =>
+                                translateStatus(
+                                  value,
                                 )
                               }
                               sx={{
+                                width:
+                                  '100%',
+
                                 height:
-                                  '36px',
+                                  '34px',
 
                                 backgroundColor:
-                                  statusStyle
-                                    .backgroundColor,
+                                  statusStyle.backgroundColor,
 
                                 color:
-                                  statusStyle
-                                    .color,
+                                  statusStyle.color,
 
                                 borderRadius:
                                   '8px',
 
                                 fontSize:
-                                  '12px',
+                                  '10.5px',
 
                                 fontWeight:
                                   700,
 
+                                '& .MuiSelect-select':
+                                  {
+                                    paddingLeft:
+                                      '9px',
+
+                                    paddingRight:
+                                      '25px !important',
+
+                                    overflow:
+                                      'hidden',
+
+                                    textOverflow:
+                                      'ellipsis',
+                                  },
+
                                 '& .MuiOutlinedInput-notchedOutline':
                                   {
                                     borderColor:
-                                      statusStyle
-                                        .color,
+                                      `${statusStyle.color}55`,
                                   },
                               }}
                             >
@@ -1394,7 +1999,9 @@ function UserManagementPage() {
                                       status
                                     }
                                   >
-                                    {status}
+                                    {translateStatus(
+                                      status,
+                                    )}
                                   </MenuItem>
                                 ),
                               )}
@@ -1402,16 +2009,24 @@ function UserManagementPage() {
                           </FormControl>
                         </TableCell>
 
+                        {/* Last Login */}
+
                         <TableCell
                           sx={{
+                            padding:
+                              '13px 10px',
+
                             color:
-                              '#6B7280',
+                              '#64748B',
 
                             fontSize:
-                              '13px',
+                              '10.5px',
+
+                            lineHeight:
+                              1.45,
 
                             whiteSpace:
-                              'nowrap',
+                              'normal',
 
                             borderBottom:
                               '1px solid #E5E7EB',
@@ -1420,141 +2035,63 @@ function UserManagementPage() {
                           {user.lastLogin}
                         </TableCell>
 
+                        {/* Action */}
+
                         <TableCell
-                          align="right"
+                          align="center"
                           sx={{
-                            whiteSpace:
-                              'nowrap',
+                            padding:
+                              '10px 4px',
 
                             borderBottom:
                               '1px solid #E5E7EB',
                           }}
                         >
-                          <Box
+                          <IconButton
+                            type="button"
+                            aria-label="เปิดเมนูจัดการผู้ใช้งาน"
+                            onClick={(
+                              event,
+                            ) =>
+                              handleOpenActionMenu(
+                                event,
+                                user,
+                              )
+                            }
+                            disabled={
+                              resettingPasswordUserId !==
+                              null
+                            }
                             sx={{
-                              display:
-                                'flex',
+                              width:
+                                '34px',
 
-                              justifyContent:
-                                'flex-end',
+                              height:
+                                '34px',
 
-                              gap:
+                              color:
+                                '#64748B',
+
+                              borderRadius:
                                 '8px',
+
+                              '&:hover':
+                                {
+                                  color:
+                                    '#EA580C',
+
+                                  backgroundColor:
+                                    '#FFF7ED',
+                                },
                             }}
                           >
-                            <Button
-                              type="button"
-                              variant="outlined"
-                              disabled={
-                                Number(
-                                  resettingPasswordUserId,
-                                ) ===
-                                Number(
-                                  user.id,
-                                )
-                              }
-                              onClick={() =>
-                                navigate(
-                                  `/admin/user-management/${user.id}/edit`,
-                                )
-                              }
+                            <MoreVertRoundedIcon
                               sx={{
-                                minWidth:
-                                  '68px',
-
-                                height:
-                                  '36px',
-
-                                padding:
-                                  '0 12px',
-
-                                color:
-                                  '#EA580C',
-
-                                borderColor:
-                                  '#EA580C',
-
-                                borderRadius:
-                                  '8px',
-
                                 fontSize:
-                                  '12px',
-
-                                fontWeight:
-                                  700,
-
-                                textTransform:
-                                  'none',
-
-                                '&:hover':
-                                  {
-                                    backgroundColor:
-                                      '#FFF7ED',
-
-                                    borderColor:
-                                      '#C2410C',
-                                  },
+                                  '20px',
                               }}
-                            >
-                              Edit
-                            </Button>
-
-                            <Button
-                              type="button"
-                              variant="outlined"
-                              disabled={
-                                resettingPasswordUserId !== null
-                              }
-                              onClick={() =>
-                                handleOpenResetConfirmation(
-                                  user,
-                                )
-                              }
-                              sx={{
-                                minWidth:
-                                  '118px',
-
-                                height:
-                                  '36px',
-
-                                padding:
-                                  '0 12px',
-
-                                color:
-                                  '#7C3AED',
-
-                                borderColor:
-                                  '#7C3AED',
-
-                                borderRadius:
-                                  '8px',
-
-                                fontSize:
-                                  '12px',
-
-                                fontWeight:
-                                  700,
-
-                                textTransform:
-                                  'none',
-
-                                '&:hover':
-                                  {
-                                    backgroundColor:
-                                      '#F5F3FF',
-
-                                    borderColor:
-                                      '#6D28D9',
-                                  },
-                              }}
-                            >
-                              {Number(
-                                resettingPasswordUserId,
-                              ) === Number(user.id)
-                                ? 'Resetting...'
-                                : 'Reset Password'}
-                            </Button>
-                          </Box>
+                            />
+                          </IconButton>
                         </TableCell>
                       </TableRow>
                     );
@@ -1564,6 +2101,8 @@ function UserManagementPage() {
             </Table>
           </Box>
         ) : (
+          /* Empty */
+
           <Box
             sx={{
               minHeight:
@@ -1591,10 +2130,10 @@ function UserManagementPage() {
             <Box
               sx={{
                 width:
-                  '64px',
+                  '56px',
 
                 height:
-                  '64px',
+                  '56px',
 
                 display:
                   'flex',
@@ -1615,7 +2154,7 @@ function UserManagementPage() {
                   '50%',
 
                 fontSize:
-                  '24px',
+                  '20px',
 
                 fontWeight:
                   800,
@@ -1630,178 +2169,399 @@ function UserManagementPage() {
                   '#111827',
 
                 fontSize:
-                  '18px',
+                  '15px',
 
                 fontWeight:
                   800,
 
                 marginTop:
-                  '16px',
+                  '14px',
               }}
             >
-              No user accounts found
+              ไม่พบข้อมูลผู้ใช้งาน
             </Typography>
 
             <Typography
               sx={{
                 color:
-                  '#6B7280',
+                  '#64748B',
 
                 fontSize:
-                  '14px',
+                  '12px',
 
                 marginTop:
-                  '6px',
+                  '5px',
               }}
             >
-              {users.length === 0
-                ? 'No user accounts are available in the database.'
-                : 'Try changing or clearing the selected filters.'}
+              {users.length ===
+              0
+                ? 'ยังไม่มีบัญชีผู้ใช้งานในระบบ'
+                : 'ลองเปลี่ยนหรือล้างตัวกรอง'}
             </Typography>
+          </Box>
+        )}
+      </Paper>
 
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={
-                handleClearFilters
-              }
+      {/* Action Menu */}
+
+      <Menu
+        anchorEl={
+          actionMenuAnchor
+        }
+        open={Boolean(
+          actionMenuAnchor,
+        )}
+        onClose={
+          handleCloseActionMenu
+        }
+        anchorOrigin={{
+          vertical:
+            'bottom',
+          horizontal:
+            'right',
+        }}
+        transformOrigin={{
+          vertical:
+            'top',
+          horizontal:
+            'right',
+        }}
+        slotProps={{
+          paper: {
+            sx: {
+              minWidth:
+                '175px',
+
+              marginTop:
+                '4px',
+
+              padding:
+                '5px',
+
+              border:
+                '1px solid #E5E7EB',
+
+              borderRadius:
+                '10px',
+
+              boxShadow:
+                '0 12px 30px rgba(15, 23, 42, 0.12)',
+            },
+          },
+        }}
+      >
+        <MenuItem
+          onClick={
+            handleEditFromMenu
+          }
+          sx={{
+            minHeight:
+              '40px',
+
+            borderRadius:
+              '7px',
+
+            color:
+              '#374151',
+
+            fontSize:
+              '12px',
+
+            fontWeight:
+              700,
+
+            '&:hover': {
+              color:
+                '#EA580C',
+
+              backgroundColor:
+                '#FFF7ED',
+            },
+          }}
+        >
+          แก้ไข
+        </MenuItem>
+
+        <MenuItem
+          onClick={
+            handleResetFromMenu
+          }
+          sx={{
+            minHeight:
+              '40px',
+
+            borderRadius:
+              '7px',
+
+            color:
+              '#374151',
+
+            fontSize:
+              '12px',
+
+            fontWeight:
+              700,
+
+            '&:hover': {
+              color:
+                '#7C3AED',
+
+              backgroundColor:
+                '#F5F3FF',
+            },
+          }}
+        >
+          รีเซ็ตรหัสผ่าน
+        </MenuItem>
+      </Menu>
+
+      {/* Reset Password Confirmation */}
+
+      <Dialog
+        open={Boolean(
+          resetConfirmationUser,
+        )}
+        fullWidth
+        maxWidth="sm"
+        onClose={() => {
+          if (
+            resettingPasswordUserId ===
+            null
+          ) {
+            setResetConfirmationUser(
+              null,
+            );
+          }
+        }}
+        PaperProps={{
+          sx: {
+            borderRadius:
+              '14px',
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            color:
+              '#111827',
+
+            fontSize:
+              '20px',
+
+            fontWeight:
+              800,
+          }}
+        >
+          ยืนยันการรีเซ็ตรหัสผ่าน
+        </DialogTitle>
+
+        <DialogContent
+          dividers
+        >
+          <Typography
+            sx={{
+              color:
+                '#475569',
+
+              fontSize:
+                '13px',
+
+              lineHeight:
+                1.7,
+            }}
+          >
+            กำลังรีเซ็ตรหัสผ่านของบัญชีต่อไปนี้
+          </Typography>
+
+          <Box
+            sx={{
+              padding:
+                '16px',
+
+              marginTop:
+                '14px',
+
+              backgroundColor:
+                '#F8FAFC',
+
+              border:
+                '1px solid #E5E7EB',
+
+              borderRadius:
+                '10px',
+            }}
+          >
+            <Typography
               sx={{
-                height:
-                  '42px',
-
-                marginTop:
-                  '20px',
-
-                padding:
-                  '0 18px',
-
                 color:
-                  '#EA580C',
-
-                borderColor:
-                  '#EA580C',
-
-                borderRadius:
-                  '8px',
+                  '#111827',
 
                 fontSize:
                   '14px',
 
                 fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
-
-                '&:hover': {
-                  backgroundColor:
-                    '#FFF7ED',
-
-                  borderColor:
-                    '#C2410C',
-                },
+                  800,
               }}
             >
-              Clear Filters
-            </Button>
-          </Box>
-        )}
-      </Paper>
-
-      <Dialog
-        open={Boolean(resetConfirmationUser)}
-        fullWidth
-        maxWidth="sm"
-        onClose={() => {
-          if (resettingPasswordUserId === null) {
-            setResetConfirmationUser(null);
-          }
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 800 }}>
-          Confirm Password Reset
-        </DialogTitle>
-        <DialogContent dividers>
-          <Typography
-            sx={{
-              color: '#374151',
-              fontSize: '14px',
-              lineHeight: 1.7,
-            }}
-          >
-            You are resetting the password for:
-          </Typography>
-          <Box
-            sx={{
-              padding: '16px',
-              marginTop: '14px',
-              backgroundColor: '#F9FAFB',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-            }}
-          >
-            <Typography sx={{ fontWeight: 800 }}>
-              {resetConfirmationUser?.username}
+              {
+                resetConfirmationUser
+                  ?.username
+              }
             </Typography>
+
             <Typography
               sx={{
-                color: '#6B7280',
-                fontSize: '13px',
-                marginTop: '4px',
+                color:
+                  '#64748B',
+
+                fontSize:
+                  '12px',
+
+                marginTop:
+                  '5px',
               }}
             >
-              {resetConfirmationUser?.employeeName}
+              {
+                resetConfirmationUser
+                  ?.employeeName
+              }
             </Typography>
+
             <Typography
               sx={{
-                color: '#6B7280',
-                fontSize: '13px',
-                marginTop: '4px',
+                color:
+                  '#64748B',
+
+                fontSize:
+                  '12px',
+
+                marginTop:
+                  '4px',
               }}
             >
-              Role: {resetConfirmationUser?.role || '-'}
+              บทบาท:{' '}
+              {translateRole(
+                resetConfirmationUser
+                  ?.role,
+              )}
             </Typography>
           </Box>
+
           <Alert
             severity="warning"
-            sx={{ marginTop: '18px' }}
+            sx={{
+              marginTop:
+                '18px',
+
+              borderRadius:
+                '10px',
+            }}
           >
-            The current password will stop working immediately. The user must sign in with the new temporary password and change it before accessing the system.
+            รหัสผ่านเดิมจะไม่สามารถใช้งานได้ทันที
+            ผู้ใช้งานต้องเข้าสู่ระบบด้วยรหัสผ่านชั่วคราวใหม่
+            และเปลี่ยนรหัสผ่านก่อนเข้าใช้งานระบบ
           </Alert>
         </DialogContent>
-        <DialogActions sx={{ padding: '16px 24px' }}>
+
+        <DialogActions
+          sx={{
+            padding:
+              '16px 24px',
+          }}
+        >
           <Button
             type="button"
             onClick={() =>
-              setResetConfirmationUser(null)
+              setResetConfirmationUser(
+                null,
+              )
             }
-            disabled={resettingPasswordUserId !== null}
+            disabled={
+              resettingPasswordUserId !==
+              null
+            }
+            sx={{
+              color:
+                '#64748B',
+
+              fontWeight:
+                700,
+
+              textTransform:
+                'none',
+            }}
           >
-            Cancel
+            ยกเลิก
           </Button>
+
           <Button
             type="button"
             variant="contained"
-            onClick={handleResetPassword}
-            disabled={resettingPasswordUserId !== null}
+            onClick={
+              handleResetPassword
+            }
+            disabled={
+              resettingPasswordUserId !==
+              null
+            }
             sx={{
-              backgroundColor: '#7C3AED',
-              textTransform: 'none',
-              fontWeight: 700,
+              minWidth:
+                '130px',
+
+              backgroundColor:
+                '#7C3AED',
+
+              borderRadius:
+                '8px',
+
+              fontSize:
+                '12px',
+
+              fontWeight:
+                700,
+
+              textTransform:
+                'none',
+
+              boxShadow:
+                'none',
+
+              '&:hover': {
+                backgroundColor:
+                  '#6D28D9',
+
+                boxShadow:
+                  'none',
+              },
             }}
           >
-            {resettingPasswordUserId !== null
-              ? 'Resetting...'
-              : 'Confirm Reset'}
+            {resettingPasswordUserId !==
+            null
+              ? 'กำลังรีเซ็ต...'
+              : 'ยืนยันการรีเซ็ต'}
           </Button>
         </DialogActions>
       </Dialog>
 
+      {/* Temporary Password */}
+
       <TemporaryPasswordDialog
-        open={Boolean(temporaryPasswordResult)}
-        username={temporaryPasswordResult?.username || ''}
-        temporaryPassword={temporaryPasswordResult?.temporaryPassword || ''}
-        onClose={handleCloseTemporaryPassword}
+        open={Boolean(
+          temporaryPasswordResult,
+        )}
+        username={
+          temporaryPasswordResult
+            ?.username ||
+          ''
+        }
+        temporaryPassword={
+          temporaryPasswordResult
+            ?.temporaryPassword ||
+          ''
+        }
+        onClose={
+          handleCloseTemporaryPassword
+        }
       />
     </AdminLayout>
   );

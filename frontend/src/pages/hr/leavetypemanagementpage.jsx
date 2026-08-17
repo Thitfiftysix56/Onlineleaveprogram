@@ -1,5 +1,4 @@
 import {
-  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -10,10 +9,7 @@ import {
   Box,
   Button,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
+  CircularProgress,
   FormControl,
   InputLabel,
   MenuItem,
@@ -22,142 +18,213 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
   Typography,
 } from '@mui/material';
 
+import {
+  useNavigate,
+} from 'react-router-dom';
+
 import HRLayout from '../../layouts/hrlayout.jsx';
+import api from '../../api/axios.js';
 
-import {
-  createLeaveType,
-  getLeaveTypes,
-  updateLeaveType,
-  updateLeaveTypeStatus,
-} from '../../api/leave-type-service.js';
-
-import {
-  createAuditLog,
-} from '../../utils/auditlogstorage.js';
-
-const emptyForm = {
-  code: '',
-  name: '',
-  defaultDays: '',
-  minimumDays: '1',
-  maximumDaysPerRequest: '1',
-  attachmentRule: 'none',
-  attachmentRequiredAfterDays: '',
-  status: 'Active',
-  description: '',
+const theme = {
+  primary: '#059669',
+  dark: '#047857',
+  soft: '#ECFDF5',
+  border: '#A7F3D0',
 };
 
-const fieldSx = {
-  '& .MuiOutlinedInput-root': {
-    borderRadius: '8px',
-  },
-};
+/* =========================
+   Helpers
+========================= */
 
-const actionButtonSx = {
-  minWidth: 0,
-  padding: 0,
-  fontSize: '13px',
-  fontWeight: 700,
-  textTransform: 'none',
-};
-
-const toNumber = (value) => {
-  const numericValue = Number(value);
-
-  return Number.isFinite(numericValue)
-    ? numericValue
-    : 0;
-};
-
-const formatDays = (value) => {
-  const numericValue =
-    toNumber(value);
-
-  return Number.isInteger(numericValue)
-    ? String(numericValue)
-    : numericValue
-        .toFixed(2)
-        .replace(/\.?0+$/, '');
-};
-
-const getAttachmentRule = (
+const normalizeLeaveType = (
   leaveType,
 ) => {
-  if (leaveType.attachmentRequired) {
-    return 'always';
+  const rawActive =
+    leaveType.isActive ??
+    leaveType.is_active;
+
+  let status =
+    leaveType.status;
+
+  if (!status) {
+    status =
+      rawActive === false ||
+      rawActive === 0
+        ? 'Inactive'
+        : 'Active';
   }
 
-  return Number(
-    leaveType.attachmentRequiredAfterDays,
-  ) > 0
-    ? 'threshold'
-    : 'none';
+  status =
+    String(status)
+      .trim()
+      .toLowerCase() ===
+    'inactive'
+      ? 'Inactive'
+      : 'Active';
+
+  const requiresAttachment =
+    Boolean(
+      leaveType.requiresAttachment ??
+        leaveType
+          .requires_attachment ??
+        leaveType
+          .attachmentRequired,
+    );
+
+  return {
+    id:
+      leaveType.id ??
+      leaveType.leaveTypeId ??
+      leaveType.leave_type_id,
+
+    code:
+      leaveType.code ||
+      leaveType.leaveTypeCode ||
+      leaveType.leave_type_code ||
+      '-',
+
+    name:
+      leaveType.name ||
+      leaveType.leaveType ||
+      leaveType.leaveTypeName ||
+      leaveType.leave_type_name ||
+      '-',
+
+    description:
+      leaveType.description ||
+      '',
+
+    defaultDays:
+      Number(
+        leaveType.defaultDays ??
+          leaveType.annualQuotaDays ??
+          leaveType.annual_quota_days ??
+          0,
+      ) || 0,
+
+    minimumDays:
+      Number(
+        leaveType.minimumDays ??
+          leaveType.minimum_days ??
+          0,
+      ) || 0,
+
+    maximumDaysPerRequest:
+      Number(
+        leaveType.maximumDaysPerRequest ??
+          leaveType
+            .maximum_days_per_request ??
+          0,
+      ) || 0,
+
+    requiresAttachment,
+
+    attachmentRequiredAfterDays:
+      Number(
+        leaveType
+          .attachmentRequiredAfterDays ??
+          leaveType
+            .attachment_required_after_days ??
+          0,
+      ) || 0,
+
+    status,
+  };
 };
 
-const getAttachmentLabel = (
-  leaveType,
+const translateLeaveType = (
+  value,
 ) => {
-  const rule =
-    getAttachmentRule(leaveType);
+  const labels = {
+    'Annual Leave':
+      'ลาพักร้อน',
 
-  if (rule === 'always') {
-    return 'Always Required';
-  }
+    'Sick Leave':
+      'ลาป่วย',
 
-  if (rule === 'threshold') {
-    return `From ${formatDays(
-      leaveType.attachmentRequiredAfterDays,
-    )} Day(s)`;
-  }
+    'Personal Leave':
+      'ลากิจ',
 
-  return 'Not Required';
+    'Maternity Leave':
+      'ลาคลอด',
+
+    'Paternity Leave':
+      'ลาเพื่อดูแลบุตร',
+
+    'Ordination Leave':
+      'ลาอุปสมบท',
+
+    'Military Leave':
+      'ลาเพื่อรับราชการทหาร',
+
+    'Other Leave':
+      'ลาอื่น ๆ',
+  };
+
+  return (
+    labels[value] ||
+    value ||
+    '-'
+  );
 };
 
-const createLeaveTypeAuditLog = ({
-  action,
-  leaveType,
-  detail,
-}) =>
-  createAuditLog({
-    userId: 3,
+const formatDays = (
+  value,
+) => {
+  const number =
+    Number(value) || 0;
 
-    username:
-      'hr001',
+  if (
+    Number.isInteger(
+      number,
+    )
+  ) {
+    return String(number);
+  }
 
-    role:
-      'hr',
+  return number
+    .toFixed(2)
+    .replace(/\.?0+$/, '');
+};
 
-    action,
-
-    tableName:
-      'leave_types',
-
-    recordId:
-      leaveType?.id || null,
-
-    detail,
-
-    ipAddress:
-      '127.0.0.1',
-  });
+/* =========================
+   Component
+========================= */
 
 function LeaveTypeManagementPage() {
+  const navigate =
+    useNavigate();
+
   const [
     leaveTypes,
     setLeaveTypes,
   ] = useState([]);
 
   const [
-    requestUsage,
-    setRequestUsage,
-  ] = useState({});
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    updatingId,
+    setUpdatingId,
+  ] = useState(null);
+
+  const [
+    error,
+    setError,
+  ] = useState('');
+
+  const [
+    actionMessage,
+    setActionMessage,
+  ] = useState('');
 
   const [
     searchText,
@@ -167,681 +234,372 @@ function LeaveTypeManagementPage() {
   const [
     statusFilter,
     setStatusFilter,
-  ] = useState('All');
+  ] = useState('all');
 
-  const [
-    message,
-    setMessage,
-  ] = useState(null);
+  /* =========================
+     Load Data
+  ========================= */
 
-  const [
-    dialogOpen,
-    setDialogOpen,
-  ] = useState(false);
-
-  const [
-    dialogMode,
-    setDialogMode,
-  ] = useState('add');
-
-  const [
-    selectedLeaveType,
-    setSelectedLeaveType,
-  ] = useState(null);
-
-  const [
-    form,
-    setForm,
-  ] = useState({
-    ...emptyForm,
-  });
-
-  const [
-    errors,
-    setErrors,
-  ] = useState({});
-
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const loadData =
-    useCallback(async () => {
+  const loadLeaveTypes =
+    async () => {
       setLoading(true);
-      setLoadError('');
+      setError('');
+
       try {
-        const rows = await getLeaveTypes();
-        setLeaveTypes(rows.map((item) => ({ ...item, id: item.leaveTypeId })));
-        setRequestUsage({});
-      } catch (error) {
-        setLoadError(error.response?.data?.message || 'Unable to load leave types.');
+        const response =
+          await api.get(
+            '/hr/leave-types',
+          );
+
+        const data =
+          response.data?.data;
+
+        const list =
+          Array.isArray(
+            data?.leaveTypes,
+          )
+            ? data.leaveTypes
+            : Array.isArray(data)
+              ? data
+              : [];
+
+        setLeaveTypes(
+          list.map(
+            normalizeLeaveType,
+          ),
+        );
+      } catch (loadError) {
+        setError(
+          loadError.response?.data
+            ?.message ||
+            'ไม่สามารถโหลดข้อมูลประเภทการลาได้',
+        );
       } finally {
         setLoading(false);
       }
-    }, []);
+    };
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadLeaveTypes();
+  }, []);
+
+  /* =========================
+     Filter
+  ========================= */
 
   const filteredLeaveTypes =
-    useMemo(
-      () => {
-        const keyword =
-          searchText
-            .trim()
-            .toLowerCase();
+    useMemo(() => {
+      const keyword =
+        searchText
+          .trim()
+          .toLowerCase();
 
-        return leaveTypes.filter(
-          (leaveType) => {
-            const matchesSearch =
-              !keyword ||
-              leaveType.code
-                .toLowerCase()
-                .includes(keyword) ||
-              leaveType.name
-                .toLowerCase()
-                .includes(keyword) ||
-              leaveType.description
-                .toLowerCase()
-                .includes(keyword);
+      return leaveTypes.filter(
+        (leaveType) => {
+          const translatedName =
+            translateLeaveType(
+              leaveType.name,
+            ).toLowerCase();
 
-            const matchesStatus =
-              statusFilter ===
-                'All' ||
-              leaveType.status ===
-                statusFilter;
+          const matchesSearch =
+            !keyword ||
+            leaveType.code
+              .toLowerCase()
+              .includes(
+                keyword,
+              ) ||
+            leaveType.name
+              .toLowerCase()
+              .includes(
+                keyword,
+              ) ||
+            translatedName.includes(
+              keyword,
+            ) ||
+            leaveType.description
+              .toLowerCase()
+              .includes(
+                keyword,
+              );
 
-            return (
-              matchesSearch &&
-              matchesStatus
-            );
-          },
-        );
-      },
-      [
-        leaveTypes,
-        searchText,
-        statusFilter,
-      ],
-    );
+          const matchesStatus =
+            statusFilter ===
+              'all' ||
+            leaveType.status
+              .toLowerCase() ===
+              statusFilter;
 
-  const summary =
-    useMemo(
-      () => ({
-        total:
-          leaveTypes.length,
-
-        active:
-          leaveTypes.filter(
-            (item) =>
-              item.status ===
-              'Active',
-          ).length,
-
-        inactive:
-          leaveTypes.filter(
-            (item) =>
-              item.status ===
-              'Inactive',
-          ).length,
-
-        attachment:
-          leaveTypes.filter(
-            (item) =>
-              getAttachmentRule(
-                item,
-              ) !== 'none',
-          ).length,
-      }),
-      [leaveTypes],
-    );
-
-  const updateForm = (
-    fieldName,
-    value,
-  ) => {
-    setForm(
-      (
-        previousForm,
-      ) => ({
-        ...previousForm,
-
-        [fieldName]:
-          value,
-      }),
-    );
-
-    setErrors(
-      (
-        previousErrors,
-      ) => ({
-        ...previousErrors,
-
-        [fieldName]: '',
-
-        form: '',
-      }),
-    );
-  };
-
-  const closeDialog = () => {
-    setDialogOpen(false);
-
-    setDialogMode('add');
-
-    setSelectedLeaveType(
-      null,
-    );
-
-    setForm({
-      ...emptyForm,
-    });
-
-    setErrors({});
-  };
-
-  const openAddDialog = () => {
-    setDialogMode('add');
-
-    setSelectedLeaveType(
-      null,
-    );
-
-    setForm({
-      ...emptyForm,
-    });
-
-    setErrors({});
-
-    setMessage(null);
-
-    setDialogOpen(true);
-  };
-
-  const openEditDialog = (
-    leaveType,
-  ) => {
-    const attachmentRule =
-      getAttachmentRule(
-        leaveType,
+          return (
+            matchesSearch &&
+            matchesStatus
+          );
+        },
       );
+    }, [
+      leaveTypes,
+      searchText,
+      statusFilter,
+    ]);
 
-    setDialogMode('edit');
+  /* =========================
+     Summary
+  ========================= */
 
-    setSelectedLeaveType(
-      leaveType,
-    );
+  const activeCount =
+    leaveTypes.filter(
+      (leaveType) =>
+        leaveType.status ===
+        'Active',
+    ).length;
 
-    setForm({
-      code:
-        leaveType.code,
+  const inactiveCount =
+    leaveTypes.filter(
+      (leaveType) =>
+        leaveType.status ===
+        'Inactive',
+    ).length;
 
-      name:
-        leaveType.name,
-
-      defaultDays:
-        String(
-          leaveType.defaultDays,
-        ),
-
-      minimumDays:
-        String(
-          leaveType.minimumDays,
-        ),
-
-      maximumDaysPerRequest:
-        String(
-          leaveType.maximumDaysPerRequest,
-        ),
-
-      attachmentRule,
-
-      attachmentRequiredAfterDays:
-        attachmentRule ===
-        'threshold'
-          ? String(
-              leaveType.attachmentRequiredAfterDays,
-            )
-          : '',
-
-      status:
-        leaveType.status,
-
-      description:
-        leaveType.description,
-    });
-
-    setErrors({});
-
-    setMessage(null);
-
-    setDialogOpen(true);
-  };
-
-  const validateForm = () => {
-    const nextErrors = {};
-
-    const code =
-      form.code
-        .trim()
-        .toUpperCase();
-
-    const name =
-      form.name.trim();
-
-    const description =
-      form.description.trim();
-
-    const defaultDays =
-      Number(
-        form.defaultDays,
-      );
-
-    const minimumDays =
-      Number(
-        form.minimumDays,
-      );
-
-    const maximumDays =
-      Number(
-        form.maximumDaysPerRequest,
-      );
-
-    const attachmentDays =
-      Number(
-        form.attachmentRequiredAfterDays,
-      );
-
-    if (
-      !/^[A-Z0-9_-]{2,10}$/.test(
-        code,
-      )
-    ) {
-      nextErrors.code =
-        'Use 2–10 uppercase letters, numbers, _ or -.';
-    }
-
-    if (
-      name.length < 3 ||
-      name.length > 100
-    ) {
-      nextErrors.name =
-        'Name must contain 3–100 characters.';
-    }
-
-    const duplicateCode =
-      leaveTypes.some(
-        (item) =>
-          Number(item.id) !==
-            Number(
-              selectedLeaveType
-                ?.id,
-            ) &&
-          item.code === code,
-      );
-
-    const duplicateName =
-      leaveTypes.some(
-        (item) =>
-          Number(item.id) !==
-            Number(
-              selectedLeaveType
-                ?.id,
-            ) &&
-          item.name.toLowerCase() ===
-            name.toLowerCase(),
-      );
-
-    if (duplicateCode) {
-      nextErrors.code =
-        'This code already exists.';
-    }
-
-    if (duplicateName) {
-      nextErrors.name =
-        'This name already exists.';
-    }
-
-    if (
-      form.defaultDays === '' ||
-      !Number.isFinite(
-        defaultDays,
-      ) ||
-      defaultDays < 0 ||
-      defaultDays > 365
-    ) {
-      nextErrors.defaultDays =
-        'Enter a value from 0 to 365.';
-    }
-
-    if (
-      form.minimumDays === '' ||
-      !Number.isFinite(
-        minimumDays,
-      ) ||
-      minimumDays < 0.5 ||
-      minimumDays > 365
-    ) {
-      nextErrors.minimumDays =
-        'Enter a value from 0.5 to 365.';
-    }
-
-    if (
-      form.maximumDaysPerRequest ===
-        '' ||
-      !Number.isFinite(
-        maximumDays,
-      ) ||
-      maximumDays <
-        minimumDays ||
-      maximumDays > 365
-    ) {
-      nextErrors.maximumDaysPerRequest =
-        'Maximum must be at least Minimum and no more than 365.';
-    }
-
-    if (
-      form.attachmentRule ===
-        'threshold' &&
-      (
-        form.attachmentRequiredAfterDays ===
-          '' ||
-        !Number.isFinite(
-          attachmentDays,
-        ) ||
-        attachmentDays < 1 ||
-        attachmentDays >
-          maximumDays
-      )
-    ) {
-      nextErrors.attachmentRequiredAfterDays =
-        'Enter 1 day or more, not exceeding Maximum Days.';
-    }
-
-    if (
-      description.length < 5 ||
-      description.length > 300
-    ) {
-      nextErrors.description =
-        'Description must contain 5–300 characters.';
-    }
-
-    setErrors(
-      nextErrors,
-    );
-
-    return (
-      Object.keys(nextErrors)
-        .length === 0
-    );
-  };
-
-  const saveForm = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const payload = {
-        id:
-          dialogMode ===
-          'edit'
-            ? selectedLeaveType
-                ?.id
-            : null,
-
-        code:
-          form.code,
-
-        name:
-          form.name,
-
-        defaultDays:
-          Number(
-            form.defaultDays,
-          ),
-
-        minimumDays:
-          Number(
-            form.minimumDays,
-          ),
-
-        maximumDaysPerRequest:
-          Number(
-            form.maximumDaysPerRequest,
-          ),
-
-        attachmentRequired:
-          form.attachmentRule ===
-          'always',
-
-        attachmentRequiredAfterDays:
-          form.attachmentRule ===
-          'threshold'
-            ? Number(
-                form.attachmentRequiredAfterDays,
-              )
-            : null,
-
-        status:
-          form.status,
-
-        description:
-          form.description,
-      };
-      const result = dialogMode === 'edit'
-        ? await updateLeaveType(selectedLeaveType.id, payload)
-        : await createLeaveType(payload);
-      const savedLeaveType = { ...result.data.leaveType, id: result.data.leaveType.leaveTypeId };
-
-    createLeaveTypeAuditLog({
-      action:
-        dialogMode === 'edit'
-          ? 'update_leave_type'
-          : 'create_leave_type',
-
-      leaveType:
-        savedLeaveType,
-
-      detail:
-        `${
-          dialogMode === 'edit'
-            ? 'Updated'
-            : 'Created'
-        } ${savedLeaveType.code} - ${savedLeaveType.name}. Status: ${savedLeaveType.status}.`,
-    });
-
-    setMessage({
-      severity:
-        'success',
-
-      text:
-        `${savedLeaveType.name} was ${
-          dialogMode === 'edit'
-            ? 'updated'
-            : 'added'
-        } successfully.`,
-    });
-
-      closeDialog();
-      await loadData();
-    } catch (error) {
-      setErrors({ form: error.response?.data?.message || 'Could not save the leave type.' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const toggleStatus = async (
-    leaveType,
-  ) => {
-    const nextStatus =
-      leaveType.status ===
-      'Active'
-        ? 'Inactive'
-        : 'Active';
-
-    setSaving(true);
-    try {
-      await updateLeaveTypeStatus(leaveType.id, nextStatus);
-      const updatedLeaveType = { ...leaveType, status: nextStatus };
-      createLeaveTypeAuditLog({
-        action: nextStatus === 'Active' ? 'activate_leave_type' : 'deactivate_leave_type',
-        leaveType: updatedLeaveType,
-        detail: `Changed ${updatedLeaveType.code} - ${updatedLeaveType.name} to ${nextStatus}.`,
-      });
-      setMessage({ severity: 'success', text: `${updatedLeaveType.name} was changed to ${nextStatus}.` });
-      await loadData();
-    } catch (error) {
-      setMessage({
-        severity:
-          'error',
-
-        text:
-          error.response?.data?.message || 'Could not update the leave type status.',
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
+  const attachmentCount =
+    leaveTypes.filter(
+      (leaveType) =>
+        leaveType
+          .requiresAttachment,
+    ).length;
 
   const summaryCards = [
     {
       title:
-        'Total Leave Types',
+        'ประเภทการลาทั้งหมด',
 
       value:
-        summary.total,
+        leaveTypes.length,
+
+      backgroundColor:
+        theme.soft,
 
       color:
-        '#2563EB',
+        theme.primary,
     },
+
     {
       title:
-        'Active Leave Types',
+        'ใช้งานอยู่',
 
       value:
-        summary.active,
+        activeCount,
+
+      backgroundColor:
+        '#DCFCE7',
 
       color:
-        '#059669',
+        '#15803D',
     },
+
     {
       title:
-        'Inactive Leave Types',
+        'ไม่ใช้งาน',
 
       value:
-        summary.inactive,
+        inactiveCount,
+
+      backgroundColor:
+        '#FEE2E2',
 
       color:
         '#DC2626',
     },
+
     {
       title:
-        'Attachment Rules',
+        'ต้องแนบเอกสาร',
 
       value:
-        summary.attachment,
+        attachmentCount,
+
+      backgroundColor:
+        '#F3E8FF',
 
       color:
         '#7C3AED',
     },
   ];
 
+  /* =========================
+     Actions
+  ========================= */
+
+  const handleClearFilters =
+    () => {
+      setSearchText('');
+      setStatusFilter('all');
+    };
+
+  const handleAddLeaveType =
+    () => {
+      navigate(
+        '/hr/leave-types/add',
+      );
+    };
+
+  const handleEditLeaveType =
+    (leaveType) => {
+      navigate(
+        `/hr/leave-types/${leaveType.id}/edit`,
+      );
+    };
+
+  const handleToggleStatus =
+    async (leaveType) => {
+      if (!leaveType.id) {
+        return;
+      }
+
+      const nextStatus =
+        leaveType.status ===
+        'Active'
+          ? 'Inactive'
+          : 'Active';
+
+      setUpdatingId(
+        leaveType.id,
+      );
+
+      setError('');
+      setActionMessage('');
+
+      try {
+        await api.patch(
+          `/hr/leave-types/${leaveType.id}/status`,
+          {
+            status:
+              nextStatus.toLowerCase(),
+
+            isActive:
+              nextStatus ===
+              'Active',
+          },
+        );
+
+        setLeaveTypes(
+          (
+            previousLeaveTypes,
+          ) =>
+            previousLeaveTypes.map(
+              (item) =>
+                item.id ===
+                leaveType.id
+                  ? {
+                      ...item,
+
+                      status:
+                        nextStatus,
+                    }
+                  : item,
+            ),
+        );
+
+        setActionMessage(
+          nextStatus ===
+            'Active'
+            ? `เปิดใช้งาน ${translateLeaveType(
+                leaveType.name,
+              )} แล้ว`
+            : `ปิดใช้งาน ${translateLeaveType(
+                leaveType.name,
+              )} แล้ว`,
+        );
+      } catch (
+        updateError
+      ) {
+        setError(
+          updateError.response
+            ?.data?.message ||
+            'ไม่สามารถเปลี่ยนสถานะประเภทการลาได้',
+        );
+      } finally {
+        setUpdatingId(null);
+      }
+    };
+
+  /* =========================
+     UI
+  ========================= */
+
   return (
-    <HRLayout
-      activeMenu="Leave Type"
-    >
+    <HRLayout activeMenu="Leave Type">
+      {/* Header */}
+
       <Box
         sx={{
-          display:
-            'flex',
+          display: 'flex',
 
           alignItems: {
-            xs:
-              'flex-start',
-
-            sm:
-              'center',
+            xs: 'flex-start',
+            sm: 'center',
           },
 
           justifyContent:
             'space-between',
 
           flexDirection: {
-            xs:
-              'column',
-
-            sm:
-              'row',
+            xs: 'column',
+            sm: 'row',
           },
 
-          gap:
-            '16px',
+          gap: '16px',
 
           marginBottom:
-            '28px',
+            '22px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color:
-                '#111827',
+        <Typography
+          component="h1"
+          sx={{
+            color:
+              '#111827',
 
-              fontSize: {
-                xs:
-                  '26px',
+            fontSize: {
+              xs:
+                '26px',
 
-                sm:
-                  '30px',
-              },
+              sm:
+                '30px',
+            },
 
-              fontWeight:
-                800,
-            }}
-          >
-            Leave Type Management
-          </Typography>
-
-          <Typography
-            sx={{
-              color:
-                '#6B7280',
-
-              fontSize:
-                '15px',
-
-              marginTop:
-                '6px',
-            }}
-          >
-            Manage leave types, request limits and
-            supporting-document rules.
-          </Typography>
-        </Box>
+            fontWeight:
+              800,
+          }}
+        >
+          จัดการประเภทการลา
+        </Typography>
 
         <Button
           type="button"
           variant="contained"
           onClick={
-            openAddDialog
+            handleAddLeaveType
           }
           sx={{
             minWidth:
-              '160px',
+              '150px',
 
             height:
-              '44px',
+              '42px',
+
+            padding:
+              '0 18px',
 
             backgroundColor:
-              '#059669',
+              theme.primary,
+
+            color:
+              '#FFFFFF',
 
             borderRadius:
               '8px',
+
+            fontSize:
+              '12px',
 
             fontWeight:
               700,
@@ -854,42 +612,58 @@ function LeaveTypeManagementPage() {
 
             '&:hover': {
               backgroundColor:
-                '#047857',
+                theme.dark,
 
               boxShadow:
                 'none',
             },
           }}
         >
-          Add Leave Type
+          + เพิ่มประเภทการลา
         </Button>
       </Box>
 
-      {message && (
+      {/* Messages */}
+
+      {error && (
         <Alert
-          severity={
-            message.severity
-          }
+          severity="error"
           onClose={() =>
-            setMessage(null)
+            setError('')
           }
           sx={{
             marginBottom:
-              '24px',
+              '20px',
 
             borderRadius:
-              '8px',
+              '10px',
           }}
         >
-          {message.text}
+          {error}
         </Alert>
       )}
 
-      {(loading || loadError) && (
-        <Alert severity={loadError ? 'error' : 'info'} action={loadError ? <Button onClick={loadData}>Retry</Button> : null} sx={{ marginBottom: '24px', borderRadius: '8px' }}>
-          {loadError || 'Loading leave types...'}
+      {actionMessage && (
+        <Alert
+          severity="success"
+          onClose={() =>
+            setActionMessage(
+              '',
+            )
+          }
+          sx={{
+            marginBottom:
+              '20px',
+
+            borderRadius:
+              '10px',
+          }}
+        >
+          {actionMessage}
         </Alert>
       )}
+
+      {/* Summary Cards */}
 
       <Box
         sx={{
@@ -901,14 +675,14 @@ function LeaveTypeManagementPage() {
               '1fr',
 
             sm:
-              'repeat(2, minmax(0, 1fr))',
+              'repeat(2, 1fr)',
 
             xl:
-              'repeat(4, minmax(0, 1fr))',
+              'repeat(4, 1fr)',
           },
 
           gap:
-            '20px',
+            '18px',
 
           marginBottom:
             '24px',
@@ -922,70 +696,104 @@ function LeaveTypeManagementPage() {
               }
               elevation={0}
               sx={{
+                minHeight:
+                  '140px',
+
                 padding:
                   '20px',
+
+                backgroundColor:
+                  '#FFFFFF',
 
                 border:
                   '1px solid #E5E7EB',
 
                 borderRadius:
-                  '12px',
+                  '14px',
               }}
             >
+              <Box
+                sx={{
+                  width:
+                    '50px',
+
+                  height:
+                    '50px',
+
+                  display:
+                    'flex',
+
+                  alignItems:
+                    'center',
+
+                  justifyContent:
+                    'center',
+
+                  backgroundColor:
+                    card.backgroundColor,
+
+                  color:
+                    card.color,
+
+                  borderRadius:
+                    '11px',
+
+                  fontSize:
+                    '20px',
+
+                  fontWeight:
+                    800,
+                }}
+              >
+                {card.value}
+              </Box>
+
               <Typography
                 sx={{
                   color:
-                    '#6B7280',
+                    '#111827',
 
                   fontSize:
                     '14px',
 
                   fontWeight:
-                    600,
-                }}
-              >
-                {card.title}
-              </Typography>
-
-              <Typography
-                sx={{
-                  color:
-                    card.color,
-
-                  fontSize:
-                    '30px',
-
-                  fontWeight:
                     800,
 
                   marginTop:
-                    '8px',
+                    '13px',
                 }}
               >
-                {card.value}
+                {card.title}
               </Typography>
             </Paper>
           ),
         )}
       </Box>
 
+      {/* Main Card */}
+
       <Paper
         elevation={0}
         sx={{
+          backgroundColor:
+            '#FFFFFF',
+
           border:
             '1px solid #E5E7EB',
 
           borderRadius:
-            '12px',
+            '14px',
 
           overflow:
             'hidden',
         }}
       >
+        {/* Filters */}
+
         <Box
           sx={{
             padding:
-              '24px',
+              '20px 24px',
 
             borderBottom:
               '1px solid #E5E7EB',
@@ -1003,23 +811,30 @@ function LeaveTypeManagementPage() {
                 800,
             }}
           >
-            Leave Type List
+            รายการประเภทการลา
           </Typography>
 
           <Typography
             sx={{
               color:
-                '#6B7280',
+                '#64748B',
 
               fontSize:
-                '14px',
+                '12px',
 
               marginTop:
                 '4px',
             }}
           >
-            Showing {filteredLeaveTypes.length} of{' '}
-            {leaveTypes.length} leave types
+            แสดง{' '}
+            {
+              filteredLeaveTypes.length
+            }{' '}
+            จาก{' '}
+            {
+              leaveTypes.length
+            }{' '}
+            รายการ
           </Typography>
 
           <Box
@@ -1032,19 +847,22 @@ function LeaveTypeManagementPage() {
                   '1fr',
 
                 md:
-                  'minmax(280px, 2fr) minmax(180px, 1fr) auto',
+                  'minmax(280px, 1.5fr) minmax(180px, 0.7fr) auto',
               },
 
               gap:
-                '16px',
+                '14px',
 
               marginTop:
-                '22px',
+                '20px',
             }}
           >
+            {/* Search */}
+
             <TextField
               fullWidth
-              label="Search Leave Type"
+              label="ค้นหาประเภทการลา"
+              placeholder="รหัสหรือชื่อประเภทการลา"
               value={
                 searchText
               }
@@ -1056,24 +874,44 @@ function LeaveTypeManagementPage() {
                     .value,
                 )
               }
-              sx={
-                fieldSx
-              }
+              sx={{
+                '& .MuiOutlinedInput-root':
+                  {
+                    height:
+                      '48px',
+
+                    borderRadius:
+                      '9px',
+
+                    '&.Mui-focused fieldset':
+                      {
+                        borderColor:
+                          theme.primary,
+                      },
+                  },
+
+                '& .MuiInputLabel-root.Mui-focused':
+                  {
+                    color:
+                      theme.primary,
+                  },
+              }}
             />
+
+            {/* Status */}
 
             <FormControl
               fullWidth
             >
-              <InputLabel id="leave-type-status-filter">
-                Status
+              <InputLabel>
+                สถานะ
               </InputLabel>
 
               <Select
-                labelId="leave-type-status-filter"
                 value={
                   statusFilter
                 }
-                label="Status"
+                label="สถานะ"
                 onChange={(
                   event,
                 ) =>
@@ -1084,849 +922,614 @@ function LeaveTypeManagementPage() {
                 }
                 sx={{
                   height:
-                    '56px',
+                    '48px',
 
                   borderRadius:
-                    '8px',
+                    '9px',
                 }}
               >
-                <MenuItem value="All">
-                  All Statuses
+                <MenuItem value="all">
+                  ทุกสถานะ
                 </MenuItem>
 
-                <MenuItem value="Active">
-                  Active
+                <MenuItem value="active">
+                  ใช้งานอยู่
                 </MenuItem>
 
-                <MenuItem value="Inactive">
-                  Inactive
+                <MenuItem value="inactive">
+                  ไม่ใช้งาน
                 </MenuItem>
               </Select>
             </FormControl>
 
-            <Button
-              variant="outlined"
-              onClick={() => {
-                setSearchText('');
+            {/* Clear */}
 
-                setStatusFilter(
-                  'All',
-                );
-              }}
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={
+                handleClearFilters
+              }
               sx={{
                 minWidth:
-                  '110px',
+                  '120px',
 
-                borderColor:
-                  '#D1D5DB',
+                height:
+                  '48px',
+
+                padding:
+                  '0 18px',
 
                 color:
-                  '#374151',
+                  '#475569',
+
+                borderColor:
+                  '#CBD5E1',
 
                 borderRadius:
-                  '8px',
+                  '9px',
+
+                fontSize:
+                  '12px',
 
                 fontWeight:
                   700,
 
                 textTransform:
                   'none',
+
+                '&:hover': {
+                  backgroundColor:
+                    '#F8FAFC',
+
+                  borderColor:
+                    '#94A3B8',
+                },
               }}
             >
-              Clear
+              ล้างตัวกรอง
             </Button>
           </Box>
         </Box>
 
-        <TableContainer>
-          <Table
+        {/* Loading */}
+
+        {loading ? (
+          <Box
             sx={{
-              minWidth:
-                1250,
+              minHeight:
+                '300px',
+
+              display:
+                'flex',
+
+              alignItems:
+                'center',
+
+              justifyContent:
+                'center',
             }}
           >
-            <TableHead>
-              <TableRow
-                sx={{
-                  backgroundColor:
-                    '#F9FAFB',
-                }}
-              >
-                {[
-                  'Code',
-                  'Leave Type',
-                  'Default',
-                  'Minimum',
-                  'Maximum',
-                  'Attachment',
-                  'Requests',
-                  'Status',
-                  'Action',
-                ].map(
-                  (
-                    heading,
-                  ) => (
-                    <TableCell
-                      key={
-                        heading
-                      }
-                      sx={{
-                        color:
-                          '#6B7280',
+            <CircularProgress
+              sx={{
+                color:
+                  theme.primary,
+              }}
+            />
+          </Box>
+        ) : filteredLeaveTypes.length >
+          0 ? (
+          /* Table */
 
-                        fontSize:
-                          '12px',
-
-                        fontWeight:
-                          700,
-
-                        whiteSpace:
-                          'nowrap',
-                      }}
-                    >
-                      {heading}
-                    </TableCell>
-                  ),
-                )}
-              </TableRow>
-            </TableHead>
-
-            <TableBody>
-              {filteredLeaveTypes.map(
-                (
-                  leaveType,
-                ) => (
-                  <TableRow
-                    key={
-                      leaveType.id
-                    }
-                    hover
-                  >
-                    <TableCell
-                      sx={{
-                        color:
-                          '#059669',
-
-                        fontWeight:
-                          800,
-                      }}
-                    >
-                      {leaveType.code}
-                    </TableCell>
-
-                    <TableCell
-                      sx={{
-                        minWidth:
-                          270,
-                      }}
-                    >
-                      <Typography
+          <Box
+            sx={{
+              overflowX:
+                'auto',
+            }}
+          >
+            <Table
+              sx={{
+                minWidth:
+                  '1050px',
+              }}
+            >
+              <TableHead>
+                <TableRow
+                  sx={{
+                    backgroundColor:
+                      '#F8FAFC',
+                  }}
+                >
+                  {[
+                    'รหัส',
+                    'ประเภทการลา',
+                    'สิทธิ์ต่อปี',
+                    'ขั้นต่ำ',
+                    'สูงสุดต่อครั้ง',
+                    'เอกสารแนบ',
+                    'สถานะ',
+                    'การดำเนินการ',
+                  ].map(
+                    (
+                      heading,
+                    ) => (
+                      <TableCell
+                        key={
+                          heading
+                        }
                         sx={{
                           color:
-                            '#111827',
+                            '#64748B',
 
                           fontSize:
-                            '14px',
+                            '11px',
 
                           fontWeight:
                             700,
+
+                          whiteSpace:
+                            'nowrap',
+
+                          borderBottom:
+                            '1px solid #E5E7EB',
                         }}
                       >
-                        {leaveType.name}
-                      </Typography>
+                        {
+                          heading
+                        }
+                      </TableCell>
+                    ),
+                  )}
+                </TableRow>
+              </TableHead>
 
-                      <Typography
+              <TableBody>
+                {filteredLeaveTypes.map(
+                  (
+                    leaveType,
+                  ) => (
+                    <TableRow
+                      key={
+                        leaveType.id
+                      }
+                      hover
+                    >
+                      {/* Code */}
+
+                      <TableCell>
+                        <Typography
+                          sx={{
+                            color:
+                              theme.primary,
+
+                            fontSize:
+                              '12px',
+
+                            fontWeight:
+                              800,
+
+                            whiteSpace:
+                              'nowrap',
+                          }}
+                        >
+                          {
+                            leaveType.code
+                          }
+                        </Typography>
+                      </TableCell>
+
+                      {/* Name */}
+
+                      <TableCell>
+                        <Typography
+                          sx={{
+                            color:
+                              '#111827',
+
+                            fontSize:
+                              '12px',
+
+                            fontWeight:
+                              700,
+
+                            whiteSpace:
+                              'nowrap',
+                          }}
+                        >
+                          {translateLeaveType(
+                            leaveType.name,
+                          )}
+                        </Typography>
+
+                        {leaveType.description && (
+                          <Typography
+                            sx={{
+                              maxWidth:
+                                '260px',
+
+                              color:
+                                '#94A3B8',
+
+                              fontSize:
+                                '10px',
+
+                              marginTop:
+                                '3px',
+
+                              overflow:
+                                'hidden',
+
+                              textOverflow:
+                                'ellipsis',
+
+                              whiteSpace:
+                                'nowrap',
+                            }}
+                          >
+                            {
+                              leaveType.description
+                            }
+                          </Typography>
+                        )}
+                      </TableCell>
+
+                      {/* Default Days */}
+
+                      <TableCell
                         sx={{
                           color:
-                            '#6B7280',
+                            '#475569',
 
                           fontSize:
                             '12px',
 
-                          marginTop:
-                            '4px',
-                        }}
-                      >
-                        {leaveType.description}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell
-                      align="center"
-                    >
-                      {formatDays(
-                        leaveType.defaultDays,
-                      )}
-                    </TableCell>
-
-                    <TableCell
-                      align="center"
-                    >
-                      {formatDays(
-                        leaveType.minimumDays,
-                      )}
-                    </TableCell>
-
-                    <TableCell
-                      align="center"
-                    >
-                      {formatDays(
-                        leaveType.maximumDaysPerRequest,
-                      )}
-                    </TableCell>
-
-                    <TableCell>
-                      <Chip
-                        label={getAttachmentLabel(
-                          leaveType,
-                        )}
-                        size="small"
-                        sx={{
-                          backgroundColor:
-                            getAttachmentRule(
-                              leaveType,
-                            ) ===
-                            'none'
-                              ? '#F3F4F6'
-                              : '#F5F3FF',
-
-                          color:
-                            getAttachmentRule(
-                              leaveType,
-                            ) ===
-                            'none'
-                              ? '#6B7280'
-                              : '#7C3AED',
-
                           fontWeight:
                             700,
-                        }}
-                      />
-                    </TableCell>
 
-                    <TableCell
-                      align="center"
-                    >
-                      {requestUsage[
-                        leaveType.id
-                      ] || 0}
-                    </TableCell>
-
-                    <TableCell>
-                      <Chip
-                        label={
-                          leaveType.status
-                        }
-                        size="small"
-                        sx={{
-                          backgroundColor:
-                            leaveType.status ===
-                            'Active'
-                              ? '#DCFCE7'
-                              : '#FEE2E2',
-
-                          color:
-                            leaveType.status ===
-                            'Active'
-                              ? '#15803D'
-                              : '#B91C1C',
-
-                          fontWeight:
-                            700,
-                        }}
-                      />
-                    </TableCell>
-
-                    <TableCell>
-                      <Box
-                        sx={{
-                          display:
-                            'flex',
-
-                          gap:
-                            '14px',
+                          whiteSpace:
+                            'nowrap',
                         }}
                       >
-                        <Button
-                          onClick={() =>
-                            openEditDialog(
-                              leaveType,
-                            )
+                        {formatDays(
+                          leaveType.defaultDays,
+                        )}{' '}
+                        วัน
+                      </TableCell>
+
+                      {/* Minimum */}
+
+                      <TableCell
+                        sx={{
+                          color:
+                            '#475569',
+
+                          fontSize:
+                            '12px',
+
+                          whiteSpace:
+                            'nowrap',
+                        }}
+                      >
+                        {formatDays(
+                          leaveType.minimumDays,
+                        )}{' '}
+                        วัน
+                      </TableCell>
+
+                      {/* Maximum */}
+
+                      <TableCell
+                        sx={{
+                          color:
+                            '#475569',
+
+                          fontSize:
+                            '12px',
+
+                          whiteSpace:
+                            'nowrap',
+                        }}
+                      >
+                        {formatDays(
+                          leaveType.maximumDaysPerRequest,
+                        )}{' '}
+                        วัน
+                      </TableCell>
+
+                      {/* Attachment */}
+
+                      <TableCell>
+                        <Chip
+                          label={
+                            leaveType.requiresAttachment
+                              ? leaveType.attachmentRequiredAfterDays >
+                                0
+                                ? `ต้องแนบเมื่อ ${formatDays(
+                                    leaveType.attachmentRequiredAfterDays,
+                                  )} วันขึ้นไป`
+                                : 'ต้องแนบ'
+                              : 'ไม่ต้องแนบ'
                           }
+                          size="small"
                           sx={{
-                            ...actionButtonSx,
+                            backgroundColor:
+                              leaveType.requiresAttachment
+                                ? '#F3E8FF'
+                                : '#F1F5F9',
 
                             color:
-                              '#059669',
-                          }}
-                        >
-                          Edit
-                        </Button>
+                              leaveType.requiresAttachment
+                                ? '#7C3AED'
+                                : '#64748B',
 
-                        <Button
-                          onClick={() =>
-                            toggleStatus(
-                              leaveType,
-                            )
+                            borderRadius:
+                              '999px',
+
+                            fontSize:
+                              '10px',
+
+                            fontWeight:
+                              700,
+
+                            whiteSpace:
+                              'nowrap',
+                          }}
+                        />
+                      </TableCell>
+
+                      {/* Status */}
+
+                      <TableCell>
+                        <Chip
+                          label={
+                            leaveType.status ===
+                            'Active'
+                              ? 'ใช้งานอยู่'
+                              : 'ไม่ใช้งาน'
                           }
+                          size="small"
                           sx={{
-                            ...actionButtonSx,
+                            minWidth:
+                              '78px',
+
+                            backgroundColor:
+                              leaveType.status ===
+                              'Active'
+                                ? '#DCFCE7'
+                                : '#FEE2E2',
 
                             color:
                               leaveType.status ===
                               'Active'
-                                ? '#DC2626'
-                                : '#2563EB',
+                                ? '#15803D'
+                                : '#B91C1C',
+
+                            borderRadius:
+                              '999px',
+
+                            fontSize:
+                              '10px',
+
+                            fontWeight:
+                              700,
+                          }}
+                        />
+                      </TableCell>
+
+                      {/* Actions */}
+
+                      <TableCell>
+                        <Box
+                          sx={{
+                            display:
+                              'flex',
+
+                            alignItems:
+                              'center',
+
+                            gap:
+                              '14px',
+
+                            whiteSpace:
+                              'nowrap',
                           }}
                         >
-                          {leaveType.status ===
-                          'Active'
-                            ? 'Deactivate'
-                            : 'Activate'}
-                        </Button>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ),
-              )}
+                          <Button
+                            type="button"
+                            onClick={() =>
+                              handleEditLeaveType(
+                                leaveType,
+                              )
+                            }
+                            sx={{
+                              minWidth:
+                                0,
 
-              {filteredLeaveTypes.length ===
-                0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={9}
-                    align="center"
-                    sx={{
-                      padding:
-                        '48px',
+                              padding:
+                                0,
 
-                      color:
-                        '#6B7280',
-                    }}
-                  >
-                    No leave types found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+                              color:
+                                theme.primary,
 
-      <Dialog
-        open={
-          dialogOpen
-        }
-        onClose={
-          closeDialog
-        }
-        fullWidth
-        maxWidth="md"
-        PaperProps={{
-          sx: {
-            borderRadius:
-              '14px',
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            borderBottom:
-              '1px solid #E5E7EB',
-          }}
-        >
-          <Typography
-            component="div"
-            sx={{
-              color:
-                '#111827',
+                              fontSize:
+                                '11px',
 
-              fontSize:
-                '20px',
+                              fontWeight:
+                                700,
 
-              fontWeight:
-                800,
-            }}
-          >
-            {dialogMode ===
-            'edit'
-              ? 'Edit Leave Type'
-              : 'Add Leave Type'}
-          </Typography>
-        </DialogTitle>
+                              textTransform:
+                                'none',
 
-        <DialogContent
-          sx={{
-            paddingTop:
-              '24px !important',
-          }}
-        >
-          {errors.form && (
-            <Alert
-              severity="error"
-              sx={{
-                marginBottom:
-                  '20px',
-              }}
-            >
-              {errors.form}
-            </Alert>
-          )}
+                              '&:hover':
+                                {
+                                  backgroundColor:
+                                    'transparent',
+
+                                  textDecoration:
+                                    'underline',
+                                },
+                            }}
+                          >
+                            แก้ไข
+                          </Button>
+
+                          <Button
+                            type="button"
+                            disabled={
+                              updatingId ===
+                              leaveType.id
+                            }
+                            onClick={() =>
+                              handleToggleStatus(
+                                leaveType,
+                              )
+                            }
+                            sx={{
+                              minWidth:
+                                0,
+
+                              padding:
+                                0,
+
+                              color:
+                                leaveType.status ===
+                                'Active'
+                                  ? '#DC2626'
+                                  : '#2563EB',
+
+                              fontSize:
+                                '11px',
+
+                              fontWeight:
+                                700,
+
+                              textTransform:
+                                'none',
+
+                              '&:hover':
+                                {
+                                  backgroundColor:
+                                    'transparent',
+
+                                  textDecoration:
+                                    'underline',
+                                },
+                            }}
+                          >
+                            {updatingId ===
+                            leaveType.id
+                              ? 'กำลังบันทึก...'
+                              : leaveType.status ===
+                                  'Active'
+                                ? 'ปิดใช้งาน'
+                                : 'เปิดใช้งาน'}
+                          </Button>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ),
+                )}
+              </TableBody>
+            </Table>
+          </Box>
+        ) : (
+          /* Empty */
 
           <Box
             sx={{
+              minHeight:
+                '280px',
+
+              padding:
+                '40px 24px',
+
               display:
-                'grid',
+                'flex',
 
-              gridTemplateColumns: {
-                xs:
-                  '1fr',
+              flexDirection:
+                'column',
 
-                sm:
-                  'repeat(2, minmax(0, 1fr))',
-              },
+              alignItems:
+                'center',
 
-              gap:
-                '18px',
+              justifyContent:
+                'center',
+
+              textAlign:
+                'center',
             }}
           >
-            <TextField
-              required
-              label="Leave Type Code"
-              value={
-                form.code
-              }
-              onChange={(
-                event,
-              ) =>
-                updateForm(
-                  'code',
-
-                  event.target
-                    .value
-                    .toUpperCase()
-                    .slice(
-                      0,
-                      10,
-                    ),
-                )
-              }
-              error={
-                Boolean(
-                  errors.code,
-                )
-              }
-              helperText={
-                errors.code
-              }
-              sx={
-                fieldSx
-              }
-            />
-
-            <TextField
-              required
-              label="Leave Type Name"
-              value={
-                form.name
-              }
-              onChange={(
-                event,
-              ) =>
-                updateForm(
-                  'name',
-
-                  event.target
-                    .value,
-                )
-              }
-              error={
-                Boolean(
-                  errors.name,
-                )
-              }
-              helperText={
-                errors.name
-              }
-              sx={
-                fieldSx
-              }
-            />
-
-            <TextField
-              required
-              type="number"
-              label="Default Entitlement Days"
-              value={
-                form.defaultDays
-              }
-              onChange={(
-                event,
-              ) =>
-                updateForm(
-                  'defaultDays',
-
-                  event.target
-                    .value,
-                )
-              }
-              error={
-                Boolean(
-                  errors.defaultDays,
-                )
-              }
-              helperText={
-                errors.defaultDays ||
-                'Used as a reference when assigning new entitlement'
-              }
-              inputProps={{
-                min: 0,
-                max: 365,
-                step: 0.5,
-              }}
-              sx={
-                fieldSx
-              }
-            />
-
-            <FormControl
-              fullWidth
-            >
-              <InputLabel id="leave-type-form-status">
-                Status
-              </InputLabel>
-
-              <Select
-                labelId="leave-type-form-status"
-                value={
-                  form.status
-                }
-                label="Status"
-                onChange={(
-                  event,
-                ) =>
-                  updateForm(
-                    'status',
-
-                    event.target
-                      .value,
-                  )
-                }
-                sx={{
-                  borderRadius:
-                    '8px',
-                }}
-              >
-                <MenuItem value="Active">
-                  Active
-                </MenuItem>
-
-                <MenuItem value="Inactive">
-                  Inactive
-                </MenuItem>
-              </Select>
-            </FormControl>
-
-            <TextField
-              required
-              type="number"
-              label="Minimum Days per Request"
-              value={
-                form.minimumDays
-              }
-              onChange={(
-                event,
-              ) =>
-                updateForm(
-                  'minimumDays',
-
-                  event.target
-                    .value,
-                )
-              }
-              error={
-                Boolean(
-                  errors.minimumDays,
-                )
-              }
-              helperText={
-                errors.minimumDays
-              }
-              inputProps={{
-                min: 0.5,
-                max: 365,
-                step: 0.5,
-              }}
-              sx={
-                fieldSx
-              }
-            />
-
-            <TextField
-              required
-              type="number"
-              label="Maximum Days per Request"
-              value={
-                form.maximumDaysPerRequest
-              }
-              onChange={(
-                event,
-              ) =>
-                updateForm(
-                  'maximumDaysPerRequest',
-
-                  event.target
-                    .value,
-                )
-              }
-              error={
-                Boolean(
-                  errors.maximumDaysPerRequest,
-                )
-              }
-              helperText={
-                errors.maximumDaysPerRequest
-              }
-              inputProps={{
-                min: 0.5,
-                max: 365,
-                step: 0.5,
-              }}
-              sx={
-                fieldSx
-              }
-            />
-
-            <FormControl
-              fullWidth
-            >
-              <InputLabel id="attachment-rule-label">
-                Attachment Rule
-              </InputLabel>
-
-              <Select
-                labelId="attachment-rule-label"
-                value={
-                  form.attachmentRule
-                }
-                label="Attachment Rule"
-                onChange={(
-                  event,
-                ) => {
-                  updateForm(
-                    'attachmentRule',
-
-                    event.target
-                      .value,
-                  );
-
-                  if (
-                    event.target
-                      .value !==
-                    'threshold'
-                  ) {
-                    updateForm(
-                      'attachmentRequiredAfterDays',
-
-                      '',
-                    );
-                  }
-                }}
-                sx={{
-                  borderRadius:
-                    '8px',
-                }}
-              >
-                <MenuItem value="none">
-                  Not Required
-                </MenuItem>
-
-                <MenuItem value="always">
-                  Always Required
-                </MenuItem>
-
-                <MenuItem value="threshold">
-                  Required From Selected Days
-                </MenuItem>
-              </Select>
-            </FormControl>
-
-            <TextField
-              required={
-                form.attachmentRule ===
-                'threshold'
-              }
-              disabled={
-                form.attachmentRule !==
-                'threshold'
-              }
-              type="number"
-              label="Attachment Required From"
-              value={
-                form.attachmentRequiredAfterDays
-              }
-              onChange={(
-                event,
-              ) =>
-                updateForm(
-                  'attachmentRequiredAfterDays',
-
-                  event.target
-                    .value,
-                )
-              }
-              error={
-                Boolean(
-                  errors.attachmentRequiredAfterDays,
-                )
-              }
-              helperText={
-                errors.attachmentRequiredAfterDays ||
-                'Example: 3 means 3 working days or more'
-              }
-              inputProps={{
-                min: 1,
-                max: 365,
-                step: 0.5,
-              }}
-              sx={
-                fieldSx
-              }
-            />
-
-            <TextField
-              required
-              multiline
-              minRows={4}
-              label="Description"
-              value={
-                form.description
-              }
-              onChange={(
-                event,
-              ) =>
-                updateForm(
-                  'description',
-
-                  event.target
-                    .value,
-                )
-              }
-              error={
-                Boolean(
-                  errors.description,
-                )
-              }
-              helperText={
-                errors.description ||
-                `${form.description.length}/300 characters`
-              }
-              inputProps={{
-                maxLength:
-                  300,
-              }}
+            <Box
               sx={{
-                ...fieldSx,
+                width:
+                  '58px',
 
-                gridColumn: {
-                  xs:
-                    'auto',
+                height:
+                  '58px',
 
-                  sm:
-                    '1 / -1',
-                },
-              }}
-            />
-          </Box>
+                display:
+                  'flex',
 
-          {dialogMode ===
-            'add' && (
-            <Alert
-              severity="info"
-              sx={{
-                marginTop:
-                  '20px',
-              }}
-            >
-              Adding a type does not automatically grant
-              days. Assign it later in Leave Entitlement
-              Management.
-            </Alert>
-          )}
-        </DialogContent>
+                alignItems:
+                  'center',
 
-        <DialogActions
-          sx={{
-            padding:
-              '16px 24px 24px',
+                justifyContent:
+                  'center',
 
-            borderTop:
-              '1px solid #E5E7EB',
-          }}
-        >
-          <Button
-            variant="outlined"
-            onClick={
-              closeDialog
-            }
-            sx={{
-              borderColor:
-                '#D1D5DB',
-
-              color:
-                '#374151',
-
-              borderRadius:
-                '8px',
-
-              fontWeight:
-                700,
-
-              textTransform:
-                'none',
-            }}
-          >
-            Cancel
-          </Button>
-
-          <Button
-            variant="contained"
-            disabled={saving}
-            onClick={
-              saveForm
-            }
-            sx={{
-              backgroundColor:
-                '#059669',
-
-              borderRadius:
-                '8px',
-
-              fontWeight:
-                700,
-
-              textTransform:
-                'none',
-
-              boxShadow:
-                'none',
-
-              '&:hover': {
                 backgroundColor:
-                  '#047857',
+                  theme.soft,
 
-                boxShadow:
-                  'none',
-              },
-            }}
-          >
-            {dialogMode ===
-            'edit'
-              ? 'Save Changes'
-              : 'Save Leave Type'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+                color:
+                  theme.primary,
+
+                borderRadius:
+                  '50%',
+
+                fontSize:
+                  '20px',
+
+                fontWeight:
+                  800,
+              }}
+            >
+              0
+            </Box>
+
+            <Typography
+              sx={{
+                color:
+                  '#111827',
+
+                fontSize:
+                  '16px',
+
+                fontWeight:
+                  800,
+
+                marginTop:
+                  '14px',
+              }}
+            >
+              ไม่พบประเภทการลา
+            </Typography>
+
+            <Typography
+              sx={{
+                color:
+                  '#64748B',
+
+                fontSize:
+                  '12px',
+
+                marginTop:
+                  '5px',
+              }}
+            >
+              ลองเปลี่ยนหรือล้างตัวกรอง
+            </Typography>
+          </Box>
+        )}
+      </Paper>
     </HRLayout>
   );
 }

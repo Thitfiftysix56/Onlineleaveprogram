@@ -21,12 +21,19 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 import AdminLayout from '../../layouts/adminlayout.jsx';
+import api from '../../api/axios.js';
 
 import {
   auditLogStorageKey,
-  formatAuditAction,
-  getAuditLogs,
 } from '../../utils/auditlogstorage.js';
+import {
+  formatAuditActivity,
+  formatAuditDetail,
+} from '../../utils/presentationformatter.js';
+
+/* =========================
+   Storage Keys
+========================= */
 
 const userStorageKeys = [
   'online_leave_approval_users',
@@ -49,7 +56,11 @@ const positionStorageKeys = [
   'positions',
 ];
 
-const defaultUsers = [
+/* =========================
+   Default Data
+========================= */
+
+const _defaultUsers = [
   {
     id: 1,
     username: 'employee001',
@@ -88,7 +99,7 @@ const defaultUsers = [
   },
 ];
 
-const defaultDepartments = [
+const _defaultDepartments = [
   {
     id: 1,
     name: 'Information Technology',
@@ -111,7 +122,7 @@ const defaultDepartments = [
   },
 ];
 
-const defaultPositions = [
+const _defaultPositions = [
   {
     id: 1,
     name: 'Developer',
@@ -144,6 +155,10 @@ const defaultPositions = [
   },
 ];
 
+/* =========================
+   Storage Helpers
+========================= */
+
 const extractArrayFromValue = (
   value,
   preferredFields = [],
@@ -162,28 +177,31 @@ const extractArrayFromValue = (
     }
   }
 
-  const nestedArray = Object.values(value).find(
-    (item) => Array.isArray(item),
-  );
+  const nestedArray =
+    Object.values(value).find(
+      (item) => Array.isArray(item),
+    );
 
   return Array.isArray(nestedArray)
     ? nestedArray
     : [];
 };
 
-const readStorageCollection = (
+const _readStorageCollection = (
   keys,
   preferredFields = [],
 ) => {
   for (const key of keys) {
-    const storedValue = localStorage.getItem(key);
+    const storedValue =
+      localStorage.getItem(key);
 
     if (storedValue === null) {
       continue;
     }
 
     try {
-      const parsedValue = JSON.parse(storedValue);
+      const parsedValue =
+        JSON.parse(storedValue);
 
       return {
         found: true,
@@ -206,36 +224,76 @@ const readStorageCollection = (
   };
 };
 
+/* =========================
+   Date Helpers
+========================= */
+
 const parseDate = (dateValue) => {
   if (!dateValue) {
     return null;
   }
 
-  const normalizedValue = String(dateValue);
+  const normalizedValue =
+    String(dateValue);
 
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(
-    normalizedValue,
-  )
-    ? new Date(`${normalizedValue}T00:00:00`)
-    : new Date(normalizedValue);
+  const date =
+    /^\d{4}-\d{2}-\d{2}$/.test(
+      normalizedValue,
+    )
+      ? new Date(
+          `${normalizedValue}T00:00:00`,
+        )
+      : new Date(normalizedValue);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
     return null;
   }
 
   return date;
 };
 
-const formatAccountStatus = (status) => {
-  if (typeof status === 'boolean') {
-    return status ? 'Active' : 'Inactive';
+const formatDateTime = (dateValue) => {
+  const date = parseDate(dateValue);
+
+  if (!date) {
+    return '-';
   }
 
-  const normalizedStatus = String(
-    status || 'active',
-  )
-    .trim()
-    .toLowerCase();
+  const pad = (value) =>
+    String(value).padStart(2, '0');
+
+  return `${pad(
+    date.getDate(),
+  )}/${pad(
+    date.getMonth() + 1,
+  )}/${date.getFullYear()} ${pad(
+    date.getHours(),
+  )}:${pad(
+    date.getMinutes(),
+  )}`;
+};
+
+/* =========================
+   User Helpers
+========================= */
+
+const formatAccountStatus = (
+  status,
+) => {
+  if (typeof status === 'boolean') {
+    return status
+      ? 'Active'
+      : 'Inactive';
+  }
+
+  const normalizedStatus =
+    String(status || 'active')
+      .trim()
+      .toLowerCase();
 
   if (
     [
@@ -261,12 +319,21 @@ const formatAccountStatus = (status) => {
   return 'Active';
 };
 
+const translateStatus = (status) => {
+  const labels = {
+    Active: 'ใช้งานอยู่',
+    Inactive: 'ไม่ใช้งาน',
+    Locked: 'ถูกล็อก',
+  };
+
+  return labels[status] || status;
+};
+
 const formatRole = (role) => {
-  const normalizedRole = String(
-    role || 'Employee',
-  )
-    .trim()
-    .toLowerCase();
+  const normalizedRole =
+    String(role || 'Employee')
+      .trim()
+      .toLowerCase();
 
   const roleLabels = {
     employee: 'Employee',
@@ -281,7 +348,21 @@ const formatRole = (role) => {
   );
 };
 
-const normalizeUser = (user, index) => {
+const translateRole = (role) => {
+  const labels = {
+    Employee: 'พนักงาน',
+    Supervisor: 'หัวหน้างาน',
+    HR: 'HR',
+    Admin: 'ผู้ดูแลระบบ',
+  };
+
+  return labels[role] || role;
+};
+
+const normalizeUser = (
+  user,
+  index,
+) => {
   const firstName =
     user.firstName ||
     user.first_name ||
@@ -306,7 +387,9 @@ const normalizeUser = (user, index) => {
       user.username ||
       user.userName ||
       user.user_name ||
-      `user${String(index + 1).padStart(3, '0')}`,
+      `user${String(
+        index + 1,
+      ).padStart(3, '0')}`,
 
     employeeName:
       user.employeeName ||
@@ -314,7 +397,7 @@ const normalizeUser = (user, index) => {
       user.fullName ||
       user.full_name ||
       combinedName ||
-      'Not specified',
+      'ไม่ระบุ',
 
     role: formatRole(
       user.role ||
@@ -349,6 +432,10 @@ const normalizeUser = (user, index) => {
   };
 };
 
+/* =========================
+   Organization Helpers
+========================= */
+
 const normalizeOrganizationItem = (
   item,
   index,
@@ -367,7 +454,9 @@ const normalizeOrganizationItem = (
           'disabled',
           'false',
           '0',
-        ].includes(activeValue.toLowerCase())
+        ].includes(
+          activeValue.toLowerCase(),
+        )
       : Boolean(activeValue);
 
   const isDepartment =
@@ -388,9 +477,11 @@ const normalizeOrganizationItem = (
       item.department_name ||
       item.positionName ||
       item.position_name ||
-      `${isDepartment ? 'Department' : 'Position'} ${
-        index + 1
-      }`,
+      `${
+        isDepartment
+          ? 'Department'
+          : 'Position'
+      } ${index + 1}`,
 
     isActive,
   };
@@ -402,22 +493,159 @@ const getUserDateValue = (user) => {
     parseDate(user.createdAt) ||
     parseDate(user.lastLoginAt);
 
-  return date ? date.getTime() : 0;
+  return date
+    ? date.getTime()
+    : 0;
 };
 
-const getAuditDateValue = (auditLog) => {
+const getAuditDateValue = (
+  auditLog,
+) => {
   const date = parseDate(
     auditLog.createdAt ||
       auditLog.created_at,
   );
 
-  return date ? date.getTime() : 0;
+  return date
+    ? date.getTime()
+    : 0;
 };
 
-function AdminDashboardPage() {
-  const navigate = useNavigate();
+/* =========================
+   Audit Translation
+========================= */
 
-  const [users, setUsers] = useState([]);
+const _translateAuditTitle = (
+  value,
+) => {
+  const text = String(
+    value || '',
+  ).trim();
+
+  const normalized =
+    text.toLowerCase();
+
+  const labels = {
+    login:
+      'เข้าสู่ระบบ',
+
+    logout:
+      'ออกจากระบบ',
+
+    create_user:
+      'สร้างบัญชีผู้ใช้',
+
+    user_created:
+      'สร้างบัญชีผู้ใช้',
+
+    update_user:
+      'อัปเดตบัญชีผู้ใช้',
+
+    update_user_status:
+      'เปลี่ยนสถานะบัญชีผู้ใช้',
+
+    change_password:
+      'เปลี่ยนรหัสผ่าน',
+
+    reset_password:
+      'รีเซ็ตรหัสผ่าน',
+
+    create_department:
+      'เพิ่มแผนก',
+
+    update_department:
+      'อัปเดตแผนก',
+
+    create_position:
+      'เพิ่มตำแหน่ง',
+
+    update_position:
+      'อัปเดตตำแหน่ง',
+  };
+
+  if (labels[normalized]) {
+    return labels[normalized];
+  }
+
+  if (
+    normalized.includes('login')
+  ) {
+    return 'เข้าสู่ระบบ';
+  }
+
+  if (
+    normalized.includes('logout')
+  ) {
+    return 'ออกจากระบบ';
+  }
+
+  if (
+    normalized.includes('password')
+  ) {
+    return 'ดำเนินการเกี่ยวกับรหัสผ่าน';
+  }
+
+  if (
+    normalized.includes('department')
+  ) {
+    return 'ดำเนินการเกี่ยวกับแผนก';
+  }
+
+  if (
+    normalized.includes('position')
+  ) {
+    return 'ดำเนินการเกี่ยวกับตำแหน่ง';
+  }
+
+  if (
+    normalized.includes('user')
+  ) {
+    return 'ดำเนินการเกี่ยวกับบัญชีผู้ใช้';
+  }
+
+  return text || 'กิจกรรมระบบ';
+};
+
+const _translateAuditDetail = (
+  value,
+) => {
+  let text = String(
+    value || '',
+  ).trim();
+
+  if (!text) {
+    return 'มีการบันทึกกิจกรรมในระบบ';
+  }
+
+  text = text
+    .replace(
+      /\blogged in to the system\.?/gi,
+      'เข้าสู่ระบบ',
+    )
+    .replace(
+      /\blogged out of the system\.?/gi,
+      'ออกจากระบบ',
+    )
+    .replace(
+      /\bchanged their account password\.?/gi,
+      'เปลี่ยนรหัสผ่านของบัญชี',
+    );
+
+  return text;
+};
+
+/* =========================
+   Component
+========================= */
+
+function AdminDashboardPage() {
+  const navigate =
+    useNavigate();
+
+  const [
+    users,
+    setUsers,
+  ] = useState([]);
 
   const [
     departments,
@@ -435,58 +663,15 @@ function AdminDashboardPage() {
   ] = useState([]);
 
   const loadDashboardData =
-    useCallback(() => {
-      const storedUserResult =
-        readStorageCollection(
-          userStorageKeys,
-          [
-            'users',
-            'accounts',
-            'items',
-            'data',
-            'records',
-          ],
-        );
-
-      const storedDepartmentResult =
-        readStorageCollection(
-          departmentStorageKeys,
-          [
-            'departments',
-            'items',
-            'data',
-            'records',
-          ],
-        );
-
-      const storedPositionResult =
-        readStorageCollection(
-          positionStorageKeys,
-          [
-            'positions',
-            'items',
-            'data',
-            'records',
-          ],
-        );
-
-      const sourceUsers =
-        storedUserResult.found
-          ? storedUserResult.items
-          : defaultUsers;
-
-      const sourceDepartments =
-        storedDepartmentResult.found
-          ? storedDepartmentResult.items
-          : defaultDepartments;
-
-      const sourcePositions =
-        storedPositionResult.found
-          ? storedPositionResult.items
-          : defaultPositions;
-
+    useCallback(async () => {
+      const [userResponse, departmentResponse, positionResponse, auditResponse] = await Promise.all([
+        api.get('/admin/users'),
+        api.get('/hr/departments'),
+        api.get('/hr/positions'),
+        api.get('/admin/audit-logs'),
+      ]);
       const normalizedUsers =
-        sourceUsers
+        (userResponse.data?.users || [])
           .map(normalizeUser)
           .sort(
             (
@@ -502,7 +687,7 @@ function AdminDashboardPage() {
           );
 
       const normalizedDepartments =
-        sourceDepartments.map(
+        (departmentResponse.data?.data?.departments || []).map(
           (
             department,
             index,
@@ -515,7 +700,7 @@ function AdminDashboardPage() {
         );
 
       const normalizedPositions =
-        sourcePositions.map(
+        (positionResponse.data?.data?.positions || []).map(
           (
             position,
             index,
@@ -528,7 +713,7 @@ function AdminDashboardPage() {
         );
 
       const storedAuditLogs =
-        getAuditLogs()
+        (auditResponse.data?.data?.auditLogs || [])
           .slice()
           .sort(
             (
@@ -543,9 +728,7 @@ function AdminDashboardPage() {
               ),
           );
 
-      setUsers(
-        normalizedUsers,
-      );
+      setUsers(normalizedUsers);
 
       setDepartments(
         normalizedDepartments,
@@ -614,168 +797,134 @@ function AdminDashboardPage() {
     () =>
       users.filter(
         (user) =>
-          user.status === 'Active',
+          user.status ===
+          'Active',
       ),
     [users],
   );
 
-  const inactiveUsers = useMemo(
-    () =>
-      users.filter(
-        (user) =>
-          user.status === 'Inactive',
-      ),
-    [users],
-  );
+  const activeDepartments =
+    useMemo(
+      () =>
+        departments.filter(
+          (department) =>
+            department.isActive,
+        ),
+      [departments],
+    );
 
-  const lockedUsers = useMemo(
-    () =>
-      users.filter(
-        (user) =>
-          user.status === 'Locked',
-      ),
-    [users],
-  );
-
-  const activeDepartments = useMemo(
-    () =>
-      departments.filter(
-        (department) =>
-          department.isActive,
-      ),
-    [departments],
-  );
-
-  const activePositions = useMemo(
-    () =>
-      positions.filter(
-        (position) =>
-          position.isActive,
-      ),
-    [positions],
-  );
+  const activePositions =
+    useMemo(
+      () =>
+        positions.filter(
+          (position) =>
+            position.isActive,
+        ),
+      [positions],
+    );
 
   const recentUsers = useMemo(
     () => users.slice(0, 5),
     [users],
   );
 
-  const recentActivities = useMemo(
-    () => auditLogs.slice(0, 5),
-    [auditLogs],
-  );
+  const recentActivities =
+    useMemo(
+      () => auditLogs.slice(0, 5),
+      [auditLogs],
+    );
 
   const summaryCards = [
     {
-      title: 'Total Users',
-      value: users.length,
-      description: 'All user accounts',
-      color: '#EA580C',
-      backgroundColor: '#FFF7ED',
+      title:
+        'บัญชีผู้ใช้ทั้งหมด',
+
+      value:
+        users.length,
+
+      helper:
+        'บัญชีในระบบทั้งหมด',
+
+      color:
+        '#EA580C',
     },
     {
-      title: 'Active Users',
-      value: activeUsers.length,
-      description:
-        'Accounts ready to use',
-      color: '#059669',
-      backgroundColor: '#ECFDF5',
+      title:
+        'บัญชีที่ใช้งานอยู่',
+
+      value:
+        activeUsers.length,
+
+      helper:
+        'บัญชีที่พร้อมใช้งาน',
+
+      color:
+        '#059669',
     },
     {
-      title: 'Inactive Users',
-      value: inactiveUsers.length,
-      description:
-        'Temporarily disabled',
-      color: '#D97706',
-      backgroundColor: '#FFFBEB',
+      title:
+        'แผนกที่ใช้งานอยู่',
+
+      value:
+        activeDepartments.length,
+
+      helper:
+        'แผนกที่เปิดใช้งาน',
+
+      color:
+        '#2563EB',
     },
     {
-      title: 'Locked Users',
-      value: lockedUsers.length,
-      description:
-        'Accounts requiring review',
-      color: '#DC2626',
-      backgroundColor: '#FEF2F2',
+      title:
+        'ตำแหน่งที่ใช้งานอยู่',
+
+      value:
+        activePositions.length,
+
+      helper:
+        'ตำแหน่งที่เปิดใช้งาน',
+
+      color:
+        '#7C3AED',
     },
   ];
-
-  const organizationCards = [
-    {
-      title: 'Active Departments',
-      value: activeDepartments.length,
-      description:
-        'Departments currently in use',
-      buttonLabel:
-        'Manage Departments',
-      route:
-        '/admin/department-management',
-    },
-    {
-      title: 'Active Positions',
-      value: activePositions.length,
-      description:
-        'Positions currently in use',
-      buttonLabel:
-        'Manage Positions',
-      route:
-        '/admin/position-management',
-    },
-    {
-      title: 'Audit Log Records',
-      value: auditLogs.length,
-      description:
-        'Recorded system activities',
-      buttonLabel:
-        'View Audit Log',
-      route:
-        '/admin/audit-log',
-    },
-  ];
-
-  const formatDateTime = (
-    dateValue,
-  ) => {
-    const date =
-      parseDate(dateValue);
-
-    if (!date) {
-      return 'Never';
-    }
-
-    return date.toLocaleString(
-      'en-GB',
-      {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      },
-    );
-  };
 
   const getStatusStyle = (
     status,
   ) => {
-    const statusStyles = {
+    const styles = {
       Active: {
-        backgroundColor: '#DCFCE7',
-        color: '#15803D',
+        backgroundColor:
+          '#DCFCE7',
+
+        color:
+          '#15803D',
       },
+
       Inactive: {
-        backgroundColor: '#FEF3C7',
-        color: '#B45309',
+        backgroundColor:
+          '#FEF3C7',
+
+        color:
+          '#B45309',
       },
+
       Locked: {
-        backgroundColor: '#FEE2E2',
-        color: '#B91C1C',
+        backgroundColor:
+          '#FEE2E2',
+
+        color:
+          '#B91C1C',
       },
     };
 
     return (
-      statusStyles[status] || {
-        backgroundColor: '#F3F4F6',
-        color: '#4B5563',
+      styles[status] || {
+        backgroundColor:
+          '#F3F4F6',
+
+        color:
+          '#4B5563',
       }
     );
   };
@@ -783,29 +932,47 @@ function AdminDashboardPage() {
   const getRoleStyle = (
     role,
   ) => {
-    const roleStyles = {
+    const styles = {
       Employee: {
-        backgroundColor: '#EFF6FF',
-        color: '#1D4ED8',
+        backgroundColor:
+          '#EFF6FF',
+
+        color:
+          '#1D4ED8',
       },
+
       Supervisor: {
-        backgroundColor: '#F5F3FF',
-        color: '#6D28D9',
+        backgroundColor:
+          '#F5F3FF',
+
+        color:
+          '#6D28D9',
       },
+
       HR: {
-        backgroundColor: '#ECFDF5',
-        color: '#047857',
+        backgroundColor:
+          '#ECFDF5',
+
+        color:
+          '#047857',
       },
+
       Admin: {
-        backgroundColor: '#FFF7ED',
-        color: '#C2410C',
+        backgroundColor:
+          '#FFF7ED',
+
+        color:
+          '#C2410C',
       },
     };
 
     return (
-      roleStyles[role] || {
-        backgroundColor: '#F3F4F6',
-        color: '#4B5563',
+      styles[role] || {
+        backgroundColor:
+          '#F3F4F6',
+
+        color:
+          '#4B5563',
       }
     );
   };
@@ -819,160 +986,68 @@ function AdminDashboardPage() {
       activity.action_name ||
       'system_activity';
 
-    return (
-      formatAuditAction(action) ||
-      String(action)
-        .replaceAll('_', ' ')
-        .replace(
-          /\b\w/g,
-          (character) =>
-            character.toUpperCase(),
-        )
-    );
+    return formatAuditActivity(action);
   };
 
   const getActivityDetail = (
     activity,
   ) =>
-    activity.detail ||
-    activity.description ||
-    activity.message ||
-    'System activity recorded.';
+    formatAuditDetail(activity);
 
   const getActivitySymbol = (
     activity,
   ) => {
     const title =
-      getActivityTitle(activity);
+      getActivityTitle(
+        activity,
+      );
 
     return (
-      title
-        .charAt(0)
-        .toUpperCase() ||
-      'A'
+      title.charAt(0) ||
+      'ก'
     );
   };
 
   return (
-    <AdminLayout activeMenu="Dashboard">
+    <AdminLayout
+      activeMenu="Dashboard"
+    >
+      {/* Header */}
+
       <Box
         sx={{
-          display: 'flex',
-
-          alignItems: {
-            xs: 'flex-start',
-            sm: 'center',
-          },
-
-          justifyContent:
-            'space-between',
-
-          flexDirection: {
-            xs: 'column',
-            sm: 'row',
-          },
-
-          gap: '16px',
-
           marginBottom:
-            '28px',
+            '24px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color: '#111827',
-
-              fontSize: {
-                xs: '26px',
-                sm: '30px',
-              },
-
-              fontWeight: 800,
-            }}
-          >
-            Admin Dashboard
-          </Typography>
-
-          <Typography
-            sx={{
-              color: '#6B7280',
-
-              fontSize:
-                '15px',
-
-              marginTop:
-                '6px',
-            }}
-          >
-            Overview of user accounts, organization
-            structure and system activities.
-          </Typography>
-        </Box>
-
-        <Box
+        <Typography
+          component="h1"
           sx={{
-            display: 'flex',
+            color:
+              '#111827',
 
-            gap: '10px',
+            fontSize: {
+              xs:
+                '26px',
 
-            flexWrap:
-              'wrap',
+              sm:
+                '30px',
+            },
+
+            fontWeight:
+              800,
           }}
         >
-          <Button
-            type="button"
-            variant="contained"
-            onClick={() =>
-              navigate(
-                '/admin/user-management',
-              )
-            }
-            sx={{
-              height: '44px',
-
-              padding:
-                '0 20px',
-
-              backgroundColor:
-                '#EA580C',
-
-              color:
-                '#FFFFFF',
-
-              borderRadius:
-                '8px',
-
-              fontSize:
-                '14px',
-
-              fontWeight:
-                700,
-
-              textTransform:
-                'none',
-
-              boxShadow:
-                'none',
-
-              '&:hover': {
-                backgroundColor:
-                  '#C2410C',
-
-                boxShadow:
-                  'none',
-              },
-            }}
-          >
-            Manage Users
-          </Button>
-        </Box>
+          Dashboard
+        </Typography>
       </Box>
+
+      {/* Summary Cards */}
 
       <Box
         sx={{
-          display: 'grid',
+          display:
+            'grid',
 
           gridTemplateColumns: {
             xs:
@@ -986,7 +1061,7 @@ function AdminDashboardPage() {
           },
 
           gap:
-            '20px',
+            '18px',
 
           marginBottom:
             '24px',
@@ -1000,8 +1075,11 @@ function AdminDashboardPage() {
               }
               elevation={0}
               sx={{
+                minHeight:
+                  '148px',
+
                 padding:
-                  '22px',
+                  '20px',
 
                 backgroundColor:
                   '#FFFFFF',
@@ -1010,17 +1088,11 @@ function AdminDashboardPage() {
                   '1px solid #E5E7EB',
 
                 borderRadius:
-                  '12px',
+                  '14px',
               }}
             >
               <Box
                 sx={{
-                  width:
-                    '46px',
-
-                  height:
-                    '46px',
-
                   display:
                     'flex',
 
@@ -1028,25 +1100,48 @@ function AdminDashboardPage() {
                     'center',
 
                   justifyContent:
-                    'center',
+                    'space-between',
 
-                  backgroundColor:
-                    card.backgroundColor,
-
-                  color:
-                    card.color,
-
-                  borderRadius:
+                  gap:
                     '12px',
-
-                  fontSize:
-                    '20px',
-
-                  fontWeight:
-                    800,
                 }}
               >
-                {card.value}
+                <Typography
+                  sx={{
+                    color:
+                      '#64748B',
+
+                    fontSize:
+                      '12px',
+
+                    fontWeight:
+                      700,
+                  }}
+                >
+                  {card.title}
+                </Typography>
+
+                <Box
+                  sx={{
+                    width:
+                      '9px',
+
+                    height:
+                      '9px',
+
+                    flexShrink:
+                      0,
+
+                    backgroundColor:
+                      card.color,
+
+                    borderRadius:
+                      '50%',
+
+                    boxShadow:
+                      `0 0 0 4px ${card.color}14`,
+                  }}
+                />
               </Box>
 
               <Typography
@@ -1055,109 +1150,16 @@ function AdminDashboardPage() {
                     '#111827',
 
                   fontSize:
-                    '16px',
+                    '32px',
 
                   fontWeight:
                     800,
 
-                  marginTop:
-                    '16px',
-                }}
-              >
-                {card.title}
-              </Typography>
-
-              <Typography
-                sx={{
-                  color:
-                    '#6B7280',
-
-                  fontSize:
-                    '13px',
+                  lineHeight:
+                    1.2,
 
                   marginTop:
-                    '5px',
-                }}
-              >
-                {card.description}
-              </Typography>
-            </Paper>
-          ),
-        )}
-      </Box>
-
-      <Box
-        sx={{
-          display:
-            'grid',
-
-          gridTemplateColumns: {
-            xs:
-              '1fr',
-
-            lg:
-              'repeat(3, minmax(0, 1fr))',
-          },
-
-          gap:
-            '20px',
-
-          marginBottom:
-            '24px',
-        }}
-      >
-        {organizationCards.map(
-          (card) => (
-            <Paper
-              key={
-                card.title
-              }
-              elevation={0}
-              sx={{
-                padding:
-                  '22px',
-
-                backgroundColor:
-                  '#FFFFFF',
-
-                border:
-                  '1px solid #E5E7EB',
-
-                borderLeft:
-                  '4px solid #EA580C',
-
-                borderRadius:
-                  '12px',
-              }}
-            >
-              <Typography
-                sx={{
-                  color:
-                    '#6B7280',
-
-                  fontSize:
-                    '13px',
-
-                  fontWeight:
-                    700,
-                }}
-              >
-                {card.title}
-              </Typography>
-
-              <Typography
-                sx={{
-                  color:
-                    '#111827',
-
-                  fontSize:
-                    '30px',
-
-                  fontWeight:
-                    800,
-
-                  marginTop:
-                    '8px',
+                    '14px',
                 }}
               >
                 {card.value}
@@ -1166,62 +1168,23 @@ function AdminDashboardPage() {
               <Typography
                 sx={{
                   color:
-                    '#9CA3AF',
+                    '#94A3B8',
 
                   fontSize:
-                    '12px',
-
-                  marginTop:
-                    '5px',
-                }}
-              >
-                {card.description}
-              </Typography>
-
-              <Button
-                type="button"
-                onClick={() =>
-                  navigate(
-                    card.route,
-                  )
-                }
-                sx={{
-                  minWidth:
-                    0,
-
-                  padding:
-                    0,
+                    '11px',
 
                   marginTop:
                     '14px',
-
-                  color:
-                    '#EA580C',
-
-                  fontSize:
-                    '13px',
-
-                  fontWeight:
-                    700,
-
-                  textTransform:
-                    'none',
-
-                  '&:hover': {
-                    backgroundColor:
-                      'transparent',
-
-                    textDecoration:
-                      'underline',
-                  },
                 }}
               >
-                {card.buttonLabel}
-              </Button>
+                {card.helper}
+              </Typography>
             </Paper>
           ),
         )}
       </Box>
+
+      {/* Content Grid */}
 
       <Box
         sx={{
@@ -1233,16 +1196,18 @@ function AdminDashboardPage() {
               '1fr',
 
             xl:
-              'minmax(0, 1.7fr) minmax(320px, 1fr)',
+              'minmax(0, 1.65fr) minmax(320px, 1fr)',
           },
 
           gap:
-            '24px',
+            '22px',
 
           alignItems:
             'start',
         }}
       >
+        {/* Recent Users */}
+
         <Paper
           elevation={0}
           sx={{
@@ -1253,7 +1218,7 @@ function AdminDashboardPage() {
               '1px solid #E5E7EB',
 
             borderRadius:
-              '12px',
+              '14px',
 
             overflow:
               'hidden',
@@ -1261,74 +1226,42 @@ function AdminDashboardPage() {
         >
           <Box
             sx={{
-              padding: {
-                xs:
-                  '20px',
+              minHeight:
+                '76px',
 
-                sm:
-                  '24px',
-              },
-
-              borderBottom:
-                '1px solid #E5E7EB',
+              padding:
+                '18px 22px',
 
               display:
                 'flex',
 
-              alignItems: {
-                xs:
-                  'flex-start',
-
-                sm:
-                  'center',
-              },
+              alignItems:
+                'center',
 
               justifyContent:
                 'space-between',
 
-              flexDirection: {
-                xs:
-                  'column',
-
-                sm:
-                  'row',
-              },
-
               gap:
-                '12px',
+                '14px',
+
+              borderBottom:
+                '1px solid #E5E7EB',
             }}
           >
-            <Box>
-              <Typography
-                sx={{
-                  color:
-                    '#111827',
+            <Typography
+              sx={{
+                color:
+                  '#111827',
 
-                  fontSize:
-                    '18px',
+                fontSize:
+                  '17px',
 
-                  fontWeight:
-                    800,
-                }}
-              >
-                Recent User Accounts
-              </Typography>
-
-              <Typography
-                sx={{
-                  color:
-                    '#6B7280',
-
-                  fontSize:
-                    '14px',
-
-                  marginTop:
-                    '4px',
-                }}
-              >
-                Latest account information in the system.
-              </Typography>
-            </Box>
+                fontWeight:
+                  800,
+              }}
+            >
+              บัญชีผู้ใช้ล่าสุด
+            </Typography>
 
             <Button
               type="button"
@@ -1348,7 +1281,7 @@ function AdminDashboardPage() {
                   '#EA580C',
 
                 fontSize:
-                  '14px',
+                  '12px',
 
                 fontWeight:
                   700,
@@ -1365,7 +1298,7 @@ function AdminDashboardPage() {
                 },
               }}
             >
-              View All Users
+              ดูทั้งหมด
             </Button>
           </Box>
 
@@ -1383,22 +1316,22 @@ function AdminDashboardPage() {
               <Table
                 sx={{
                   minWidth:
-                    '760px',
+                    '700px',
                 }}
               >
                 <TableHead>
                   <TableRow
                     sx={{
                       backgroundColor:
-                        '#F9FAFB',
+                        '#F8FAFC',
                     }}
                   >
                     {[
-                      'Username',
-                      'Employee',
-                      'Role',
-                      'Status',
-                      'Last Login',
+                      'ชื่อผู้ใช้',
+                      'พนักงาน',
+                      'บทบาท',
+                      'สถานะ',
+                      'เข้าสู่ระบบล่าสุด',
                     ].map(
                       (
                         heading,
@@ -1408,20 +1341,20 @@ function AdminDashboardPage() {
                             heading
                           }
                           sx={{
+                            padding:
+                              '13px 18px',
+
                             color:
-                              '#6B7280',
+                              '#64748B',
 
                             fontSize:
-                              '12px',
+                              '11px',
 
                             fontWeight:
                               800,
 
-                            textTransform:
-                              'uppercase',
-
-                            letterSpacing:
-                              '0.4px',
+                            whiteSpace:
+                              'nowrap',
 
                             borderBottom:
                               '1px solid #E5E7EB',
@@ -1436,9 +1369,7 @@ function AdminDashboardPage() {
 
                 <TableBody>
                   {recentUsers.map(
-                    (
-                      user,
-                    ) => {
+                    (user) => {
                       const roleStyle =
                         getRoleStyle(
                           user.role,
@@ -1456,20 +1387,22 @@ function AdminDashboardPage() {
                           }
                           hover
                           sx={{
-                            '&:last-child td':
-                              {
-                                borderBottom:
-                                  'none',
-                              },
+                            '&:last-child td': {
+                              borderBottom:
+                                'none',
+                            },
                           }}
                         >
                           <TableCell
                             sx={{
+                              padding:
+                                '15px 18px',
+
                               color:
                                 '#111827',
 
                               fontSize:
-                                '14px',
+                                '13px',
 
                               fontWeight:
                                 700,
@@ -1483,11 +1416,14 @@ function AdminDashboardPage() {
 
                           <TableCell
                             sx={{
+                              padding:
+                                '15px 18px',
+
                               color:
                                 '#374151',
 
                               fontSize:
-                                '14px',
+                                '13px',
 
                               borderBottom:
                                 '1px solid #E5E7EB',
@@ -1498,18 +1434,21 @@ function AdminDashboardPage() {
 
                           <TableCell
                             sx={{
+                              padding:
+                                '15px 18px',
+
                               borderBottom:
                                 '1px solid #E5E7EB',
                             }}
                           >
                             <Chip
-                              label={
-                                user.role
-                              }
+                              label={translateRole(
+                                user.role,
+                              )}
                               size="small"
                               sx={{
                                 minWidth:
-                                  '84px',
+                                  '82px',
 
                                 backgroundColor:
                                   roleStyle.backgroundColor,
@@ -1521,7 +1460,7 @@ function AdminDashboardPage() {
                                   '999px',
 
                                 fontSize:
-                                  '11px',
+                                  '10px',
 
                                 fontWeight:
                                   700,
@@ -1531,18 +1470,21 @@ function AdminDashboardPage() {
 
                           <TableCell
                             sx={{
+                              padding:
+                                '15px 18px',
+
                               borderBottom:
                                 '1px solid #E5E7EB',
                             }}
                           >
                             <Chip
-                              label={
-                                user.status
-                              }
+                              label={translateStatus(
+                                user.status,
+                              )}
                               size="small"
                               sx={{
                                 minWidth:
-                                  '70px',
+                                  '72px',
 
                                 backgroundColor:
                                   statusStyle.backgroundColor,
@@ -1554,7 +1496,7 @@ function AdminDashboardPage() {
                                   '999px',
 
                                 fontSize:
-                                  '11px',
+                                  '10px',
 
                                 fontWeight:
                                   700,
@@ -1564,11 +1506,14 @@ function AdminDashboardPage() {
 
                           <TableCell
                             sx={{
+                              padding:
+                                '15px 18px',
+
                               color:
-                                '#6B7280',
+                                '#64748B',
 
                               fontSize:
-                                '13px',
+                                '12px',
 
                               whiteSpace:
                                 'nowrap',
@@ -1592,10 +1537,7 @@ function AdminDashboardPage() {
             <Box
               sx={{
                 minHeight:
-                  '240px',
-
-                padding:
-                  '40px 24px',
+                  '260px',
 
                 display:
                   'flex',
@@ -1609,6 +1551,9 @@ function AdminDashboardPage() {
                 justifyContent:
                   'center',
 
+                padding:
+                  '32px',
+
                 textAlign:
                   'center',
               }}
@@ -1616,19 +1561,10 @@ function AdminDashboardPage() {
               <Box
                 sx={{
                   width:
-                    '60px',
+                    '56px',
 
                   height:
-                    '60px',
-
-                  backgroundColor:
-                    '#FFF7ED',
-
-                  color:
-                    '#EA580C',
-
-                  borderRadius:
-                    '50%',
+                    '56px',
 
                   display:
                     'flex',
@@ -1639,8 +1575,17 @@ function AdminDashboardPage() {
                   justifyContent:
                     'center',
 
+                  backgroundColor:
+                    '#FFF7ED',
+
+                  color:
+                    '#EA580C',
+
+                  borderRadius:
+                    '50%',
+
                   fontSize:
-                    '22px',
+                    '20px',
 
                   fontWeight:
                     800,
@@ -1655,7 +1600,7 @@ function AdminDashboardPage() {
                     '#111827',
 
                   fontSize:
-                    '17px',
+                    '15px',
 
                   fontWeight:
                     800,
@@ -1664,26 +1609,28 @@ function AdminDashboardPage() {
                     '14px',
                 }}
               >
-                No user accounts
+                ยังไม่มีบัญชีผู้ใช้
               </Typography>
 
               <Typography
                 sx={{
                   color:
-                    '#6B7280',
+                    '#64748B',
 
                   fontSize:
-                    '14px',
+                    '12px',
 
                   marginTop:
                     '5px',
                 }}
               >
-                Created user accounts will appear here.
+                บัญชีผู้ใช้ที่สร้างจะปรากฏที่นี่
               </Typography>
             </Box>
           )}
         </Paper>
+
+        {/* Recent Activity */}
 
         <Paper
           elevation={0}
@@ -1695,7 +1642,7 @@ function AdminDashboardPage() {
               '1px solid #E5E7EB',
 
             borderRadius:
-              '12px',
+              '14px',
 
             overflow:
               'hidden',
@@ -1703,74 +1650,42 @@ function AdminDashboardPage() {
         >
           <Box
             sx={{
-              padding: {
-                xs:
-                  '20px',
+              minHeight:
+                '76px',
 
-                sm:
-                  '24px',
-              },
-
-              borderBottom:
-                '1px solid #E5E7EB',
+              padding:
+                '18px 22px',
 
               display:
                 'flex',
 
-              alignItems: {
-                xs:
-                  'flex-start',
-
-                sm:
-                  'center',
-              },
+              alignItems:
+                'center',
 
               justifyContent:
                 'space-between',
 
-              flexDirection: {
-                xs:
-                  'column',
-
-                sm:
-                  'row',
-              },
-
               gap:
-                '12px',
+                '14px',
+
+              borderBottom:
+                '1px solid #E5E7EB',
             }}
           >
-            <Box>
-              <Typography
-                sx={{
-                  color:
-                    '#111827',
+            <Typography
+              sx={{
+                color:
+                  '#111827',
 
-                  fontSize:
-                    '18px',
+                fontSize:
+                  '17px',
 
-                  fontWeight:
-                    800,
-                }}
-              >
-                Recent System Activity
-              </Typography>
-
-              <Typography
-                sx={{
-                  color:
-                    '#6B7280',
-
-                  fontSize:
-                    '14px',
-
-                  marginTop:
-                    '4px',
-                }}
-              >
-                Latest activities from the Audit Log.
-              </Typography>
-            </Box>
+                fontWeight:
+                  800,
+              }}
+            >
+              กิจกรรมล่าสุด
+            </Typography>
 
             <Button
               type="button"
@@ -1790,7 +1705,7 @@ function AdminDashboardPage() {
                   '#EA580C',
 
                 fontSize:
-                  '13px',
+                  '12px',
 
                 fontWeight:
                   700,
@@ -1807,7 +1722,7 @@ function AdminDashboardPage() {
                 },
               }}
             >
-              View All
+              ดูทั้งหมด
             </Button>
           </Box>
 
@@ -1833,10 +1748,10 @@ function AdminDashboardPage() {
                         'flex-start',
 
                       gap:
-                        '14px',
+                        '13px',
 
                       padding:
-                        '20px 22px',
+                        '17px 20px',
 
                       borderBottom:
                         index ===
@@ -1847,7 +1762,7 @@ function AdminDashboardPage() {
 
                       '&:hover': {
                         backgroundColor:
-                          '#F9FAFB',
+                          '#F8FAFC',
                       },
                     }}
                   >
@@ -1881,7 +1796,7 @@ function AdminDashboardPage() {
                           '10px',
 
                         fontSize:
-                          '14px',
+                          '13px',
 
                         fontWeight:
                           800,
@@ -1896,6 +1811,9 @@ function AdminDashboardPage() {
                       sx={{
                         minWidth:
                           0,
+
+                        flex:
+                          1,
                       }}
                     >
                       <Typography
@@ -1904,7 +1822,7 @@ function AdminDashboardPage() {
                             '#111827',
 
                           fontSize:
-                            '14px',
+                            '13px',
 
                           fontWeight:
                             800,
@@ -1918,16 +1836,16 @@ function AdminDashboardPage() {
                       <Typography
                         sx={{
                           color:
-                            '#4B5563',
+                            '#475569',
 
                           fontSize:
-                            '13px',
+                            '12px',
 
                           lineHeight:
                             1.6,
 
                           marginTop:
-                            '5px',
+                            '4px',
 
                           wordBreak:
                             'break-word',
@@ -1941,13 +1859,13 @@ function AdminDashboardPage() {
                       <Typography
                         sx={{
                           color:
-                            '#9CA3AF',
+                            '#94A3B8',
 
                           fontSize:
-                            '11px',
+                            '10px',
 
                           marginTop:
-                            '7px',
+                            '6px',
                         }}
                       >
                         {formatDateTime(
@@ -1964,10 +1882,7 @@ function AdminDashboardPage() {
             <Box
               sx={{
                 minHeight:
-                  '240px',
-
-                padding:
-                  '40px 24px',
+                  '260px',
 
                 display:
                   'flex',
@@ -1981,6 +1896,9 @@ function AdminDashboardPage() {
                 justifyContent:
                   'center',
 
+                padding:
+                  '32px',
+
                 textAlign:
                   'center',
               }}
@@ -1988,19 +1906,10 @@ function AdminDashboardPage() {
               <Box
                 sx={{
                   width:
-                    '60px',
+                    '56px',
 
                   height:
-                    '60px',
-
-                  backgroundColor:
-                    '#FFF7ED',
-
-                  color:
-                    '#EA580C',
-
-                  borderRadius:
-                    '50%',
+                    '56px',
 
                   display:
                     'flex',
@@ -2011,8 +1920,17 @@ function AdminDashboardPage() {
                   justifyContent:
                     'center',
 
+                  backgroundColor:
+                    '#FFF7ED',
+
+                  color:
+                    '#EA580C',
+
+                  borderRadius:
+                    '50%',
+
                   fontSize:
-                    '22px',
+                    '20px',
 
                   fontWeight:
                     800,
@@ -2027,7 +1945,7 @@ function AdminDashboardPage() {
                     '#111827',
 
                   fontSize:
-                    '17px',
+                    '15px',
 
                   fontWeight:
                     800,
@@ -2036,22 +1954,22 @@ function AdminDashboardPage() {
                     '14px',
                 }}
               >
-                No system activity
+                ยังไม่มีกิจกรรมในระบบ
               </Typography>
 
               <Typography
                 sx={{
                   color:
-                    '#6B7280',
+                    '#64748B',
 
                   fontSize:
-                    '14px',
+                    '12px',
 
                   marginTop:
                     '5px',
                 }}
               >
-                Recorded activities will appear here.
+                กิจกรรมที่บันทึกจะปรากฏที่นี่
               </Typography>
             </Box>
           )}

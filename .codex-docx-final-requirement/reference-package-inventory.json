@@ -1,0 +1,62 @@
+[
+  {
+    "path": "[Content_Types].xml",
+    "size": 1445,
+    "sha256": "72e1a7e789e238175e21a964870a263fd2426d6877bd868693e211a4eb23e587"
+  },
+  {
+    "path": "_rels/.rels",
+    "size": 590,
+    "sha256": "e19238d7a71fa7a2490776252686f70e2de6238c87cd509b5e3a3cc07c2ea4df"
+  },
+  {
+    "path": "docProps/app.xml",
+    "size": 992,
+    "sha256": "b1ad9233a60fe963d1b444b0709f82de5e4d15fc43cc8710278825abb340e4e7"
+  },
+  {
+    "path": "docProps/core.xml",
+    "size": 779,
+    "sha256": "9e1c1fa6bd1e7d04cc5f896fe5b3931a2500780d188ed6db823a554f118fd71c"
+  },
+  {
+    "path": "word/_rels/document.xml.rels",
+    "size": 950,
+    "sha256": "88f80560ab13c082cc73a423a90131d6040dbb0ef7e655d797a214a2f481cf8f"
+  },
+  {
+    "path": "word/document.xml",
+    "size": 1722574,
+    "sha256": "10331739b4a944a6a821f978cbfabe7e8b8f300411da1b7d153622f8fa2ae71f"
+  },
+  {
+    "path": "word/fontTable.xml",
+    "size": 3808,
+    "sha256": "3bb03ad11044bf9799e0da1fcded8bca716843059d516093913bada753036de6"
+  },
+  {
+    "path": "word/numbering.xml",
+    "size": 191760,
+    "sha256": "b97432b29e6dde956d142e013143a60e531e9dcfe043e8a485936c62193b2509"
+  },
+  {
+    "path": "word/settings.xml",
+    "size": 4649,
+    "sha256": "fcadc174054688bded9307c912c6c51454eb88c5fbf96f23cde8982f65776006"
+  },
+  {
+    "path": "word/styles.xml",
+    "size": 33096,
+    "sha256": "6fc2556da1619414fb2be1c2be852857cc765fcf1a2689d624f511b99f6c2f98"
+  },
+  {
+    "path": "word/theme/theme1.xml",
+    "size": 8393,
+    "sha256": "70a70d84494772c1855ec6c2f9a16e0fc6cc41bdb0ce3743563ed943b63e07b8"
+  },
+  {
+    "path": "word/webSettings.xml",
+    "size": 136998,
+    "sha256": "ba3dd30e50d7f239e22d6c2ae6fcaaae44eeb590d25c41c7ae214a0e18c073cc"
+  }
+]

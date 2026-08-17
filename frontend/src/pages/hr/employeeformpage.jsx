@@ -263,7 +263,9 @@ function EmployeeFormPage({ mode = 'add' }) {
             fontWeight: 800,
           }}
         >
-          Add Employee
+          {isEditMode
+            ? 'Edit Employee'
+            : 'Add Employee'}
         </Typography>
 
         <Typography
@@ -273,8 +275,9 @@ function EmployeeFormPage({ mode = 'add' }) {
             marginTop: '6px',
           }}
         >
-          Enter personal, employment and system account
-          information for the new employee.
+          {isEditMode
+            ? 'Update personal, employment and system account information for the selected employee.'
+            : 'Enter personal, employment and system account information for the new employee.'}
         </Typography>
 
 <Button

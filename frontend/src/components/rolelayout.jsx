@@ -3,30 +3,31 @@ import {
   Box,
   Button,
   ButtonBase,
+  Drawer,
+  IconButton,
   Typography,
 } from '@mui/material';
 
 import {
-  AccountBalanceWalletRounded,
-  AdminPanelSettingsRounded,
+  AddCircleOutlineRounded,
   AssessmentRounded,
-  BusinessRounded,
+  BadgeRounded,
   CalendarMonthRounded,
   CategoryRounded,
+  CloseRounded,
   DashboardRounded,
   DescriptionRounded,
-  EventRounded,
+  EventAvailableRounded,
+  FactCheckRounded,
   GroupsRounded,
   HistoryRounded,
-  ListAltRounded,
-  LockRounded,
+  LockOutlined,
   LogoutRounded,
   ManageAccountsRounded,
-  NotificationsRounded,
-  PersonRounded,
-  SettingsRounded,
-  TaskAltRounded,
-  WorkRounded,
+  MenuRounded,
+  NotificationsNoneRounded,
+  PersonOutlineRounded,
+  WorkOutlineRounded,
 } from '@mui/icons-material';
 
 import {
@@ -175,108 +176,163 @@ const roleRoutes = {
   },
 };
 
-const roleInformation = {
-  employee: {
-    label:
-      'Employee',
-
-    IllustrationIcon:
-      PersonRounded,
-  },
-
-  supervisor: {
-    label:
-      'Supervisor',
-
-    IllustrationIcon:
-      TaskAltRounded,
-  },
-
-  hr: {
-    label:
-      'Human Resources',
-
-    IllustrationIcon:
-      GroupsRounded,
-  },
-
-  admin: {
-    label:
-      'Administrator',
-
-    IllustrationIcon:
-      AdminPanelSettingsRounded,
-  },
-};
-
-const menuIconMap = {
+const menuLabels = {
   Dashboard:
-    DashboardRounded,
+    'แดชบอร์ด',
 
   'Leave Request':
-    DescriptionRounded,
+    'ยื่นคำขอลา',
 
   'My Requests':
-    ListAltRounded,
+    'คำขอของฉัน',
 
   'Leave Balance':
-    AccountBalanceWalletRounded,
+    'สิทธิ์การลา',
 
   Approval:
-    TaskAltRounded,
+    'รายการรออนุมัติ',
 
   'Team Reports':
-    AssessmentRounded,
-
-  Reports:
-    AssessmentRounded,
-
-  Notification:
-    NotificationsRounded,
-
-  Profile:
-    PersonRounded,
-
-  'Change Password':
-    LockRounded,
+    'รายงานทีม',
 
   'Employee Management':
-    GroupsRounded,
+    'จัดการพนักงาน',
 
   'Leave Entitlement':
-    CalendarMonthRounded,
+    'จัดการสิทธิ์การลา',
 
   'Leave Type':
-    CategoryRounded,
+    'จัดการประเภทการลา',
 
   'Holiday Management':
-    EventRounded,
+    'จัดการวันหยุด',
+
+  Reports:
+    'รายงานการลา',
 
   'User Management':
-    ManageAccountsRounded,
+    'จัดการผู้ใช้งาน',
 
   'Department Management':
-    BusinessRounded,
+    'จัดการแผนก',
 
   'Position Management':
-    WorkRounded,
+    'จัดการตำแหน่ง',
 
   'Audit Log':
-    HistoryRounded,
+    'ประวัติการใช้งาน',
+
+  Notification:
+    'การแจ้งเตือน',
+
+  Profile:
+    'ข้อมูลส่วนตัว',
+
+  'Change Password':
+    'เปลี่ยนรหัสผ่าน',
 
   Logout:
-    LogoutRounded,
+    'ออกจากระบบ',
 };
 
-const getInitials = (name) =>
-  String(name || 'User')
+const roleLabels = {
+  employee:
+    'Employee',
+
+  supervisor:
+    'Supervisor',
+
+  hr:
+    'Human Resources',
+
+  admin:
+    'Administrator',
+};
+
+const getInitials = (
+  name,
+) =>
+  String(
+    name || 'User',
+  )
     .trim()
     .split(/\s+/)
     .slice(0, 2)
-    .map((part) =>
-      part.charAt(0).toUpperCase(),
+    .map(
+      (part) =>
+        part
+          .charAt(0)
+          .toUpperCase(),
     )
     .join('') || 'U';
+
+const getMenuIcon = (
+  menuItem,
+) => {
+  const icons = {
+    Dashboard:
+      DashboardRounded,
+
+    'Leave Request':
+      AddCircleOutlineRounded,
+
+    'My Requests':
+      DescriptionRounded,
+
+    'Leave Balance':
+      EventAvailableRounded,
+
+    Approval:
+      FactCheckRounded,
+
+    'Team Reports':
+      AssessmentRounded,
+
+    'Employee Management':
+      GroupsRounded,
+
+    'Leave Entitlement':
+      EventAvailableRounded,
+
+    'Leave Type':
+      CategoryRounded,
+
+    'Holiday Management':
+      CalendarMonthRounded,
+
+    Reports:
+      AssessmentRounded,
+
+    'User Management':
+      ManageAccountsRounded,
+
+    'Department Management':
+      GroupsRounded,
+
+    'Position Management':
+      WorkOutlineRounded,
+
+    'Audit Log':
+      HistoryRounded,
+
+    Notification:
+      NotificationsNoneRounded,
+
+    Profile:
+      PersonOutlineRounded,
+
+    'Change Password':
+      LockOutlined,
+
+    Logout:
+      LogoutRounded,
+  };
+
+  return (
+    icons[menuItem] ||
+    BadgeRounded
+  );
+};
 
 function RoleLayout({
   children,
@@ -284,10 +340,18 @@ function RoleLayout({
   menuItems = [],
   theme,
 }) {
-  const [currentUser, setCurrentUser] =
-    useState(() =>
+  const [
+    currentUser,
+    setCurrentUser,
+  ] = useState(
+    () =>
       getCurrentUser(),
-    );
+  );
+
+  const [
+    mobileMenuOpen,
+    setMobileMenuOpen,
+  ] = useState(false);
 
   const navigate =
     useNavigate();
@@ -296,14 +360,17 @@ function RoleLayout({
     useLocation();
 
   const pathSegments =
-    location.pathname.split('/');
+    location.pathname
+      .split('/');
 
   const currentRole = [
     'employee',
     'supervisor',
     'hr',
     'admin',
-  ].includes(pathSegments[1])
+  ].includes(
+    pathSegments[1],
+  )
     ? pathSegments[1]
     : 'employee';
 
@@ -314,7 +381,6 @@ function RoleLayout({
 
     dark:
       theme?.dark ||
-      theme?.primary ||
       '#1D4ED8',
 
     soft:
@@ -327,22 +393,8 @@ function RoleLayout({
 
     text:
       theme?.text ||
-      theme?.primary ||
-      '#1E40AF',
+      '#1E3A8A',
   };
-
-  const currentRoleInformation =
-    roleInformation[currentRole] ||
-    roleInformation.employee;
-
-  const RoleIllustrationIcon =
-    currentRoleInformation
-      .IllustrationIcon;
-
-  const ActivePageIcon =
-    menuIconMap[activeMenu] ||
-    RoleIllustrationIcon ||
-    SettingsRounded;
 
   useEffect(() => {
     const handleAuthChanged =
@@ -366,88 +418,113 @@ function RoleLayout({
     };
   }, []);
 
-  const handleLogout = () => {
-    const activeUser =
-      getCurrentUser();
+  const displayName =
+    currentUser
+      ?.displayName ||
+    currentUser
+      ?.username ||
+    roleLabels[
+      currentRole
+    ] ||
+    'User';
 
-    try {
-      if (activeUser) {
-        createAuditLog({
-          userId:
-            activeUser.userId ||
-            null,
+  const profileRoleLabel =
+    roleLabels[
+      currentRole
+    ] ||
+    'User';
 
-          username:
-            activeUser.username ||
-            'unknown',
+  const handleLogout =
+    () => {
+      const selectedUser =
+        getCurrentUser();
 
-          role:
-            activeUser.role ||
-            currentRole,
+      try {
+        if (
+          selectedUser
+        ) {
+          createAuditLog({
+            userId:
+              selectedUser
+                .userId ||
+              null,
 
-          action:
-            'logout',
+            username:
+              selectedUser
+                .username ||
+              'unknown',
 
-          tableName:
-            'auth_sessions',
+            role:
+              selectedUser
+                .role ||
+              currentRole,
 
-          recordId:
-            activeUser.userId ||
-            null,
+            action:
+              'logout',
 
-          detail:
-            `${activeUser.username || 'User'} logged out of the system.`,
+            tableName:
+              'auth_sessions',
 
-          ipAddress:
-            '127.0.0.1',
-        });
+            recordId:
+              selectedUser
+                .userId ||
+              null,
+
+            detail:
+              `${selectedUser.username || 'User'} logged out of the system.`,
+
+            ipAddress:
+              '127.0.0.1',
+          });
+        }
+      } catch (error) {
+        console.error(
+          'Unable to create logout audit log.',
+          error,
+        );
+      } finally {
+        logoutUser();
+
+        navigate(
+          '/login',
+          {
+            replace:
+              true,
+          },
+        );
       }
-    } catch (error) {
-      console.error(
-        'Unable to create logout audit log.',
-        error,
-      );
-    } finally {
-      logoutUser();
+    };
+
+  const handleMenuClick =
+    (
+      menuItem,
+    ) => {
+      if (
+        menuItem ===
+        'Logout'
+      ) {
+        handleLogout();
+
+        return;
+      }
+
+      const targetRoute =
+        roleRoutes[
+          currentRole
+        ]?.[
+          menuItem
+        ];
+
+      if (
+        !targetRoute
+      ) {
+        return;
+      }
 
       navigate(
-        '/login',
-        {
-          replace: true,
-        },
+        targetRoute,
       );
-    }
-  };
-
-  const handleMenuClick = (
-    menuItem,
-  ) => {
-    if (
-      menuItem ===
-      'Logout'
-    ) {
-      handleLogout();
-
-      return;
-    }
-
-    const targetRoute =
-      roleRoutes[
-        currentRole
-      ]?.[menuItem];
-
-    if (!targetRoute) {
-      window.alert(
-        `Route for "${menuItem}" has not been configured yet.`,
-      );
-
-      return;
-    }
-
-    navigate(
-      targetRoute,
-    );
-  };
+    };
 
   return (
     <Box
@@ -461,18 +538,212 @@ function RoleLayout({
         minHeight:
           '100vh',
 
-        backgroundColor:
-          '#F5F7FB',
+        background:
+          `linear-gradient(
+            180deg,
+            ${resolvedTheme.soft}55 0px,
+            #F6F8FC 300px,
+            #F6F8FC 100%
+          )`,
 
         overflowX:
           'hidden',
       }}
     >
       <Box
+        component="header"
+        sx={{
+          height: '64px',
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          left: 0,
+          zIndex: 20,
+          display: {
+            xs: 'flex',
+            md: 'none',
+          },
+          alignItems: 'center',
+          gap: '12px',
+          padding: '0 16px',
+          backgroundColor: '#FFFFFF',
+          borderBottom: '1px solid #E5E7EB',
+        }}
+      >
+        <IconButton
+          type="button"
+          aria-label="เปิดเมนูนำทาง"
+          aria-controls="mobile-navigation-drawer"
+          aria-expanded={mobileMenuOpen}
+          onClick={() => setMobileMenuOpen(true)}
+          sx={{
+            color: resolvedTheme.primary,
+            backgroundColor: resolvedTheme.soft,
+          }}
+        >
+          <MenuRounded />
+        </IconButton>
+
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            sx={{
+              color: '#111827',
+              fontSize: '16px',
+              fontWeight: 800,
+              lineHeight: 1.25,
+            }}
+          >
+            Leave Approval
+          </Typography>
+          <Typography
+            sx={{
+              color: resolvedTheme.primary,
+              fontSize: '10px',
+              fontWeight: 700,
+              lineHeight: 1.3,
+            }}
+          >
+            {profileRoleLabel}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Drawer
+        id="mobile-navigation-drawer"
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: {
+            xs: 'block',
+            md: 'none',
+          },
+          '& .MuiDrawer-paper': {
+            width: '280px',
+            maxWidth: '86vw',
+            boxSizing: 'border-box',
+            backgroundColor: '#FFFFFF',
+          },
+        }}
+      >
+        <Box
+          sx={{
+            minHeight: '76px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 16px 14px 22px',
+            borderBottom: '1px solid #EEF0F3',
+          }}
+        >
+          <Box>
+            <Typography sx={{ color: '#111827', fontSize: '18px', fontWeight: 800 }}>
+              Leave Approval
+            </Typography>
+            <Typography sx={{ color: '#94A3B8', fontSize: '9px', fontWeight: 700, letterSpacing: '1.5px' }}>
+              ONLINE LEAVE SYSTEM
+            </Typography>
+          </Box>
+          <IconButton
+            type="button"
+            aria-label="ปิดเมนูนำทาง"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <CloseRounded />
+          </IconButton>
+        </Box>
+
+        <Box sx={{ padding: '16px 16px 12px' }}>
+          <ButtonBase
+            type="button"
+            onClick={() => {
+              handleMenuClick('Profile');
+              setMobileMenuOpen(false);
+            }}
+            sx={{
+              width: '100%',
+              minHeight: '68px',
+              padding: '10px 12px',
+              display: 'flex',
+              justifyContent: 'flex-start',
+              backgroundColor: '#F8FAFC',
+              border: '1px solid #E5E7EB',
+              borderRadius: '12px',
+              textAlign: 'left',
+            }}
+          >
+            <Avatar
+              src={currentUser?.profileImageUrl || undefined}
+              alt={displayName}
+              sx={{
+                width: '44px',
+                height: '44px',
+                backgroundColor: resolvedTheme.primary,
+                color: '#FFFFFF',
+                fontSize: '14px',
+                fontWeight: 800,
+              }}
+            >
+              {getInitials(displayName)}
+            </Avatar>
+            <Box sx={{ minWidth: 0, marginLeft: '11px' }}>
+              <Typography noWrap sx={{ color: '#111827', fontSize: '13px', fontWeight: 800 }}>
+                {displayName}
+              </Typography>
+              <Typography noWrap sx={{ color: '#64748B', fontSize: '10px', fontWeight: 600, marginTop: '4px' }}>
+                {profileRoleLabel}
+              </Typography>
+            </Box>
+          </ButtonBase>
+        </Box>
+
+        <Box component="nav" sx={{ padding: '8px 16px 20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {menuItems.map((menuItem) => {
+            const isActive = activeMenu === menuItem;
+            const isLogout = menuItem === 'Logout';
+            const MenuIcon = getMenuIcon(menuItem);
+
+            return (
+              <Button
+                key={menuItem}
+                type="button"
+                fullWidth
+                onClick={() => {
+                  handleMenuClick(menuItem);
+                  setMobileMenuOpen(false);
+                }}
+                startIcon={<MenuIcon sx={{ fontSize: '20px' }} />}
+                sx={{
+                  minHeight: '46px',
+                  padding: '8px 12px',
+                  justifyContent: 'flex-start',
+                  backgroundColor: isActive ? resolvedTheme.soft : 'transparent',
+                  color: isLogout ? '#DC2626' : isActive ? resolvedTheme.primary : '#475569',
+                  border: isActive ? `1px solid ${resolvedTheme.border}` : '1px solid transparent',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  fontWeight: isActive ? 700 : 600,
+                  textAlign: 'left',
+                  textTransform: 'none',
+                  '& .MuiButton-startIcon': { marginLeft: 0, marginRight: '12px' },
+                  '&:hover': {
+                    backgroundColor: isLogout ? '#FEF2F2' : resolvedTheme.soft,
+                    color: isLogout ? '#DC2626' : resolvedTheme.primary,
+                  },
+                }}
+              >
+                {menuLabels[menuItem] || menuItem}
+              </Button>
+            );
+          })}
+        </Box>
+      </Drawer>
+
+      <Box
         component="aside"
         sx={{
           width:
-            '300px',
+            '280px',
 
           height:
             '100vh',
@@ -506,47 +777,107 @@ function RoleLayout({
           borderRight:
             '1px solid #E5E7EB',
 
-          boxShadow:
-            '8px 0 30px rgba(15, 23, 42, 0.035)',
-
           overflowY:
             'auto',
+
+          overflowX:
+            'hidden',
         }}
       >
+        {/* Brand */}
         <Box
           sx={{
             minHeight:
-              '92px',
+              '90px',
 
             flexShrink:
               0,
 
-            padding:
-              '20px 22px',
-
             display:
               'flex',
 
-            alignItems:
+            flexDirection:
+              'column',
+
+            justifyContent:
               'center',
 
-            gap:
-              '13px',
+            padding:
+              '18px 22px',
 
             borderBottom:
-              '1px solid #E5E7EB',
+              '1px solid #EEF0F3',
           }}
         >
-          <Box
+          <Typography
+            sx={{
+              color:
+                '#111827',
+
+              fontSize:
+                '19px',
+
+              fontWeight:
+                800,
+
+              lineHeight:
+                1.25,
+            }}
+          >
+            Leave Approval
+          </Typography>
+
+          <Typography
+            sx={{
+              color:
+                '#94A3B8',
+
+              fontSize:
+                '9px',
+
+              fontWeight:
+                700,
+
+              letterSpacing:
+                '1.5px',
+
+              marginTop:
+                '4px',
+
+              lineHeight:
+                1.3,
+            }}
+          >
+            ONLINE LEAVE SYSTEM
+          </Typography>
+        </Box>
+
+        {/* Profile */}
+        <Box
+          sx={{
+            padding:
+              '16px 16px 12px',
+
+            flexShrink:
+              0,
+          }}
+        >
+          <ButtonBase
+            type="button"
+            onClick={() =>
+              handleMenuClick(
+                'Profile',
+              )
+            }
             sx={{
               width:
-                '46px',
+                '100%',
 
-              height:
-                '46px',
+              minHeight:
+                '72px',
 
-              flexShrink:
-                0,
+              padding:
+                '11px 12px',
 
               display:
                 'flex',
@@ -555,296 +886,232 @@ function RoleLayout({
                 'center',
 
               justifyContent:
-                'center',
+                'flex-start',
 
-              background:
-                `linear-gradient(135deg, ${resolvedTheme.primary}, ${resolvedTheme.dark})`,
+              backgroundColor:
+                '#F8FAFC',
 
-              color:
-                '#FFFFFF',
+              border:
+                '1px solid #E5E7EB',
 
               borderRadius:
-                '13px',
-
-              boxShadow:
-                `0 10px 22px ${resolvedTheme.primary}35`,
-            }}
-          >
-            <DescriptionRounded
-              sx={{
-                fontSize:
-                  '26px',
-              }}
-            />
-          </Box>
-
-          <Box
-            sx={{
-              minWidth:
-                0,
-            }}
-          >
-            <Typography
-              sx={{
-                color:
-                  '#111827',
-
-                fontSize:
-                  '19px',
-
-                fontWeight:
-                  900,
-
-                lineHeight:
-                  1.2,
-
-                whiteSpace:
-                  'nowrap',
-              }}
-            >
-              Leave Approval
-            </Typography>
-
-            <Typography
-              sx={{
-                color:
-                  '#94A3B8',
-
-                fontSize:
-                  '11px',
-
-                fontWeight:
-                  700,
-
-                marginTop:
-                  '4px',
-
-                letterSpacing:
-                  '0.3px',
-              }}
-            >
-              ONLINE LEAVE SYSTEM
-            </Typography>
-          </Box>
-        </Box>
-
-        <ButtonBase
-          type="button"
-          aria-label="Open profile"
-          onClick={() =>
-            handleMenuClick(
-              'Profile',
-            )
-          }
-          sx={{
-            width:
-              'calc(100% - 32px)',
-
-            margin:
-              '14px 16px 2px',
-
-            padding:
-              '12px 13px',
-
-            position:
-              'relative',
-
-            display:
-              'flex',
-
-            alignItems:
-              'center',
-
-            justifyContent:
-              'flex-start',
-
-            gap:
-              '11px',
-
-            backgroundColor:
-              '#F8FAFC',
-
-            border:
-              '1px solid #EEF2F7',
-
-            borderRadius:
-              '12px',
-
-            overflow:
-              'hidden',
-
-            textAlign:
-              'left',
-
-            transition:
-              'background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease',
-
-            '&::before': {
-              content:
-                '""',
-
-              width:
-                '3px',
-
-              height:
-                '100%',
+                '12px',
 
               position:
-                'absolute',
+                'relative',
 
-              top:
-                0,
+              overflow:
+                'hidden',
 
-              left:
-                0,
+              textAlign:
+                'left',
 
-              backgroundColor:
-                resolvedTheme.primary,
-            },
+              transition:
+                'background-color 0.15s ease, border-color 0.15s ease',
 
-            '&:hover': {
-              backgroundColor:
-                resolvedTheme.soft,
+              '&::before':
+                {
+                  content:
+                    '""',
 
-              borderColor:
-                resolvedTheme.border,
-
-              transform:
-                'translateY(-1px)',
-            },
-          }}
-        >
-          <Avatar
-            src={
-              currentUser
-                ?.profileImageUrl ||
-              undefined
-            }
-            alt={
-              currentUser
-                ?.displayName ||
-              'Profile'
-            }
-            sx={{
-              width:
-                '40px',
-
-              height:
-                '40px',
-
-              flexShrink:
-                0,
-
-              background:
-                `linear-gradient(135deg, ${resolvedTheme.primary}, ${resolvedTheme.dark})`,
-
-              color:
-                '#FFFFFF',
-
-              boxShadow:
-                `0 5px 12px ${resolvedTheme.primary}28`,
-
-              fontSize:
-                '13px',
-
-              fontWeight:
-                800,
-            }}
-          >
-            {getInitials(
-              currentUser
-                ?.displayName,
-            )}
-          </Avatar>
-
-          <Box
-            sx={{
-              minWidth:
-                0,
-
-              flex:
-                1,
-            }}
-          >
-            <Typography
-              noWrap
-              sx={{
-                color:
-                  '#111827',
-
-                fontSize:
-                  '13px',
-
-                fontWeight:
-                  800,
-
-                lineHeight:
-                  1.35,
-              }}
-            >
-              {currentUser
-                ?.displayName ||
-                currentUser
-                  ?.username ||
-                'User'}
-            </Typography>
-
-            <Box
-              sx={{
-                display:
-                  'flex',
-
-                alignItems:
-                  'center',
-
-                gap:
-                  '6px',
-
-                marginTop:
-                  '4px',
-              }}
-            >
-              <Box
-                sx={{
                   width:
-                    '6px',
+                    '4px',
 
                   height:
-                    '6px',
+                    '100%',
 
-                  flexShrink:
+                  position:
+                    'absolute',
+
+                  left:
+                    0,
+
+                  top:
                     0,
 
                   backgroundColor:
                     resolvedTheme.primary,
+                },
 
-                  borderRadius:
-                    '50%',
-                }}
-              />
+              '&:hover': {
+                backgroundColor:
+                  resolvedTheme.soft,
 
+                borderColor:
+                  resolvedTheme.border,
+              },
+            }}
+          >
+            <Avatar
+              src={
+                currentUser
+                  ?.profileImageUrl ||
+                undefined
+              }
+              alt={
+                displayName
+              }
+              sx={{
+                width:
+                  '46px',
+
+                height:
+                  '46px',
+
+                flexShrink:
+                  0,
+
+                marginLeft:
+                  '3px',
+
+                backgroundColor:
+                  resolvedTheme.primary,
+
+                color:
+                  '#FFFFFF',
+
+                fontSize:
+                  '14px',
+
+                fontWeight:
+                  800,
+
+                border:
+                  '3px solid #FFFFFF',
+
+                boxShadow:
+                  '0 2px 8px rgba(15, 23, 42, 0.08)',
+              }}
+            >
+              {getInitials(
+                displayName,
+              )}
+            </Avatar>
+
+            <Box
+              sx={{
+                flex:
+                  1,
+
+                minWidth:
+                  0,
+
+                marginLeft:
+                  '11px',
+
+                padding:
+                  '2px 0',
+              }}
+            >
               <Typography
-                noWrap
                 sx={{
+                  width:
+                    '100%',
+
                   color:
-                    '#64748B',
+                    '#111827',
 
                   fontSize:
-                    '11px',
+                    '13px',
 
                   fontWeight:
-                    700,
+                    800,
+
+                  lineHeight:
+                    1.35,
+
+                  whiteSpace:
+                    'nowrap',
+
+                  overflow:
+                    'hidden',
+
+                  textOverflow:
+                    'ellipsis',
+
+                  margin:
+                    0,
                 }}
               >
                 {
-                  currentRoleInformation
-                    .label
+                  displayName
                 }
               </Typography>
-            </Box>
-          </Box>
-        </ButtonBase>
 
+              <Box
+                sx={{
+                  display:
+                    'flex',
+
+                  alignItems:
+                    'center',
+
+                  minWidth:
+                    0,
+
+                  gap:
+                    '6px',
+
+                  marginTop:
+                    '5px',
+                }}
+              >
+                <Box
+                  sx={{
+                    width:
+                      '7px',
+
+                    height:
+                      '7px',
+
+                    flexShrink:
+                      0,
+
+                    backgroundColor:
+                      resolvedTheme.primary,
+
+                    borderRadius:
+                      '50%',
+                  }}
+                />
+
+                <Typography
+                  sx={{
+                    minWidth:
+                      0,
+
+                    color:
+                      '#64748B',
+
+                    fontSize:
+                      '10px',
+
+                    fontWeight:
+                      600,
+
+                    lineHeight:
+                      1.3,
+
+                    whiteSpace:
+                      'nowrap',
+
+                    overflow:
+                      'hidden',
+
+                    textOverflow:
+                      'ellipsis',
+                  }}
+                >
+                  {
+                    profileRoleLabel
+                  }
+                </Typography>
+              </Box>
+            </Box>
+          </ButtonBase>
+        </Box>
+
+        {/* Menu */}
         <Box
           component="nav"
           sx={{
@@ -852,7 +1119,7 @@ function RoleLayout({
               1,
 
             padding:
-              '14px 16px 18px',
+              '8px 16px 20px',
 
             display:
               'flex',
@@ -861,7 +1128,7 @@ function RoleLayout({
               'column',
 
             gap:
-              '7px',
+              '6px',
           }}
         >
           {menuItems.map(
@@ -877,10 +1144,9 @@ function RoleLayout({
                 'Logout';
 
               const MenuIcon =
-                menuIconMap[
-                  menuItem
-                ] ||
-                SettingsRounded;
+                getMenuIcon(
+                  menuItem,
+                );
 
               return (
                 <Button
@@ -898,10 +1164,10 @@ function RoleLayout({
                     <Box
                       sx={{
                         width:
-                          '30px',
+                          '32px',
 
                         height:
-                          '30px',
+                          '32px',
 
                         flexShrink:
                           0,
@@ -920,14 +1186,19 @@ function RoleLayout({
                             ? '#FEF2F2'
                             : isActive
                               ? '#FFFFFF'
-                              : '#F8FAFC',
+                              : 'transparent',
+
+                        color:
+                          isLogout
+                            ? '#DC2626'
+                            : isActive
+                              ? resolvedTheme.primary
+                              : '#64748B',
 
                         border:
-                          isLogout
-                            ? '1px solid #FECACA'
-                            : isActive
-                              ? `1px solid ${resolvedTheme.border}`
-                              : '1px solid #EEF2F7',
+                          isActive
+                            ? `1px solid ${resolvedTheme.border}`
+                            : '1px solid transparent',
 
                         borderRadius:
                           '8px',
@@ -935,40 +1206,35 @@ function RoleLayout({
                     >
                       <MenuIcon
                         sx={{
-                          color:
-                            isLogout
-                              ? '#DC2626'
-                              : isActive
-                                ? resolvedTheme.primary
-                                : '#64748B',
-
                           fontSize:
-                            '18px',
+                            '19px',
                         }}
                       />
                     </Box>
                   }
                   sx={{
                     minHeight:
-                      '50px',
+                      '48px',
 
                     padding:
-                      '9px 12px',
+                      '7px 10px',
 
                     justifyContent:
                       'flex-start',
 
                     backgroundColor:
-                      isActive
-                        ? resolvedTheme.soft
-                        : 'transparent',
+                      isLogout
+                        ? 'transparent'
+                        : isActive
+                          ? resolvedTheme.soft
+                          : 'transparent',
 
                     color:
                       isLogout
                         ? '#DC2626'
                         : isActive
                           ? resolvedTheme.primary
-                          : '#374151',
+                          : '#475569',
 
                     border:
                       isActive
@@ -979,12 +1245,15 @@ function RoleLayout({
                       '10px',
 
                     fontSize:
-                      '14px',
+                      '13px',
 
                     fontWeight:
                       isActive
-                        ? 800
+                        ? 700
                         : 600,
+
+                    lineHeight:
+                      1.4,
 
                     textAlign:
                       'left',
@@ -995,38 +1264,34 @@ function RoleLayout({
                     whiteSpace:
                       'normal',
 
-                    lineHeight:
-                      1.4,
-
                     '& .MuiButton-startIcon':
                       {
                         marginLeft:
                           0,
 
                         marginRight:
-                          '11px',
+                          '10px',
                       },
 
-                    '&:hover':
-                      {
-                        backgroundColor:
-                          isLogout
-                            ? '#FEF2F2'
-                            : resolvedTheme.soft,
+                    '&:hover': {
+                      backgroundColor:
+                        isLogout
+                          ? '#FEF2F2'
+                          : resolvedTheme.soft,
 
-                        color:
-                          isLogout
-                            ? '#DC2626'
-                            : resolvedTheme.primary,
-
-                        borderColor:
-                          isLogout
-                            ? '#FECACA'
-                            : resolvedTheme.border,
-                      },
+                      color:
+                        isLogout
+                          ? '#DC2626'
+                          : resolvedTheme.primary,
+                    },
                   }}
                 >
-                  {menuItem}
+                  {
+                    menuLabels[
+                      menuItem
+                    ] ||
+                    menuItem
+                  }
                 </Button>
               );
             },
@@ -1034,6 +1299,7 @@ function RoleLayout({
         </Box>
       </Box>
 
+      {/* Main Content */}
       <Box
         component="main"
         sx={{
@@ -1042,7 +1308,7 @@ function RoleLayout({
               '100%',
 
             md:
-              'calc(100% - 300px)',
+              'calc(100% - 280px)',
           },
 
           minWidth:
@@ -1051,26 +1317,20 @@ function RoleLayout({
           minHeight:
             '100vh',
 
-          position:
-            'relative',
-
-          isolation:
-            'isolate',
-
           marginLeft: {
             xs:
               0,
 
             md:
-              '300px',
+              '280px',
           },
 
           padding: {
             xs:
-              '24px 18px',
+              '88px 18px 24px',
 
             sm:
-              '28px 24px',
+              '92px 24px 28px',
 
             md:
               '32px',
@@ -1079,156 +1339,43 @@ function RoleLayout({
               '36px 40px',
           },
 
-          background:
-            `linear-gradient(180deg, ${resolvedTheme.soft} 0px, #F5F7FB 230px)`,
+          position:
+            'relative',
 
           overflowX:
             'hidden',
+
+          '&::before': {
+            content:
+              '""',
+
+            width:
+              '320px',
+
+            height:
+              '320px',
+
+            position:
+              'fixed',
+
+            top:
+              '-170px',
+
+            right:
+              '-100px',
+
+            borderRadius:
+              '50%',
+
+            backgroundColor:
+              `${resolvedTheme.primary}08`,
+
+            pointerEvents:
+              'none',
+          },
         }}
       >
-        <Box
-          aria-hidden="true"
-          sx={{
-            width:
-              '230px',
-
-            height:
-              '230px',
-
-            position:
-              'absolute',
-
-            top:
-              '-92px',
-
-            right:
-              '-76px',
-
-            zIndex:
-              -1,
-
-            backgroundColor:
-              resolvedTheme.primary,
-
-            borderRadius:
-              '50%',
-
-            opacity:
-              0.07,
-
-            pointerEvents:
-              'none',
-          }}
-        />
-
-        <Box
-          aria-hidden="true"
-          sx={{
-            width:
-              '130px',
-
-            height:
-              '130px',
-
-            position:
-              'absolute',
-
-            top:
-              '86px',
-
-            right:
-              '148px',
-
-            zIndex:
-              -1,
-
-            backgroundColor:
-              resolvedTheme.primary,
-
-            borderRadius:
-              '50%',
-
-            filter:
-              'blur(2px)',
-
-            opacity:
-              0.04,
-
-            pointerEvents:
-              'none',
-          }}
-        />
-
-        <Box
-          aria-hidden="true"
-          sx={{
-            width:
-              '118px',
-
-            height:
-              '118px',
-
-            position:
-              'absolute',
-
-            top:
-              '25px',
-
-            right:
-              '36px',
-
-            zIndex:
-              -1,
-
-            display: {
-              xs:
-                'none',
-
-              lg:
-                'flex',
-            },
-
-            alignItems:
-              'center',
-
-            justifyContent:
-              'center',
-
-            color:
-              resolvedTheme.primary,
-
-            opacity:
-              0.09,
-
-            pointerEvents:
-              'none',
-          }}
-        >
-          <ActivePageIcon
-            sx={{
-              fontSize:
-                '112px',
-            }}
-          />
-        </Box>
-
-        <Box
-          sx={{
-            width:
-              '100%',
-
-            minWidth:
-              0,
-
-            position:
-              'relative',
-
-            zIndex:
-              1,
-          }}
-        >
-          {children}
-        </Box>
+        {children}
       </Box>
     </Box>
   );

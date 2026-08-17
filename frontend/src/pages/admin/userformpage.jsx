@@ -41,6 +41,19 @@ const statusOptions = [
   'Locked',
 ];
 
+const roleDisplayLabels = {
+  Employee: 'พนักงาน',
+  Supervisor: 'หัวหน้างาน',
+  HR: 'ฝ่ายทรัพยากรบุคคล',
+  Admin: 'ผู้ดูแลระบบ',
+};
+
+const statusDisplayLabels = {
+  Active: 'ใช้งาน',
+  Inactive: 'ไม่ใช้งาน',
+  Locked: 'ถูกล็อก',
+};
+
 const normalizeValue = (value) =>
   String(value || '')
     .trim()
@@ -105,15 +118,15 @@ const mapEmployee = (employee) => ({
     employee.employeeCode || '',
   employeeName:
     employee.fullName ||
-    'Not specified',
+    'ไม่ระบุ',
   email:
     employee.email || '',
   department:
     employee.department ||
-    'Not specified',
+    'ไม่ระบุ',
   position:
     employee.position ||
-    'Not specified',
+    'ไม่ระบุ',
 });
 
 const mapUserAccount = (user) => ({
@@ -124,15 +137,15 @@ const mapUserAccount = (user) => ({
     user.employeeCode || '',
   employeeName:
     user.fullName ||
-    'Not specified',
+    'ไม่ระบุ',
   email:
     user.email || '',
   department:
     user.department ||
-    'Not specified',
+    'ไม่ระบุ',
   position:
     user.position ||
-    'Not specified',
+    'ไม่ระบุ',
   username:
     user.username || '',
   role:
@@ -325,7 +338,7 @@ function UserFormPage({
           }
 
           console.error(
-            'Unable to load the user form.',
+            'ไม่สามารถโหลดแบบฟอร์มบัญชีผู้ใช้ได้',
             error,
           );
           setEmployeeDirectory([]);
@@ -334,7 +347,7 @@ function UserFormPage({
             error.response?.data
               ?.message ||
               error.message ||
-              'Unable to load the user form.',
+              'ไม่สามารถโหลดแบบฟอร์มบัญชีผู้ใช้ได้',
           );
         } finally {
           if (isActive) {
@@ -403,11 +416,11 @@ function UserFormPage({
 
               department:
                 editUser.department ||
-                'Not specified',
+                'ไม่ระบุ',
 
               position:
                 editUser.position ||
-                'Not specified',
+                'ไม่ระบุ',
             },
           ];
         }
@@ -468,13 +481,13 @@ function UserFormPage({
 
   const pageTitle =
     isEditMode
-      ? 'Edit User Account'
-      : 'Add User Account';
+      ? 'แก้ไขบัญชีผู้ใช้'
+      : 'เพิ่มบัญชีผู้ใช้';
 
   const pageDescription =
     isEditMode
-      ? 'Update the username, role and account status of the selected user.'
-      : 'Create a system account for an existing employee.';
+      ? 'แก้ไขชื่อผู้ใช้ บทบาท และสถานะบัญชีของผู้ใช้ที่เลือก'
+      : 'สร้างบัญชีระบบให้พนักงานที่มีอยู่';
 
   const handleEmployeeChange = (
     employeeId,
@@ -550,19 +563,19 @@ function UserFormPage({
       !formData.employeeId
     ) {
       validationErrors.employeeId =
-        'Please select an employee.';
+        'กรุณาเลือกพนักงาน';
     }
 
     if (!normalizedUsername) {
       validationErrors.username =
-        'Please enter a username.';
+        'กรุณากรอกชื่อผู้ใช้';
     } else if (
       !/^[a-z0-9._-]{4,50}$/.test(
         normalizedUsername,
       )
     ) {
       validationErrors.username =
-        'Use 4–50 lowercase letters, numbers, dots, underscores or hyphens.';
+        'ใช้ตัวอักษรภาษาอังกฤษพิมพ์เล็ก ตัวเลข จุด ขีดล่าง หรือขีดกลาง จำนวน 4–50 ตัวอักษร';
     } else {
       const usernameAlreadyExists =
         userAccounts.some(
@@ -580,18 +593,18 @@ function UserFormPage({
         usernameAlreadyExists
       ) {
         validationErrors.username =
-          'This username is already in use.';
+          'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว';
       }
     }
 
     if (!formData.role) {
       validationErrors.role =
-        'Please select a role.';
+        'กรุณาเลือกบทบาท';
     }
 
     if (!formData.status) {
       validationErrors.status =
-        'Please select an account status.';
+        'กรุณาเลือกสถานะบัญชี';
     }
 
     setErrors(
@@ -621,7 +634,7 @@ function UserFormPage({
         severity: 'error',
 
         text:
-          'The selected employee information was not found.',
+          'ไม่พบข้อมูลพนักงานที่เลือก',
       });
 
       return;
@@ -704,14 +717,14 @@ function UserFormPage({
       ) {
         throw new Error(
           response.data?.message ||
-            'Unable to save the user account.',
+            'ไม่สามารถบันทึกบัญชีผู้ใช้ได้',
         );
       }
 
       if (isEditMode) {
         window.alert(
           response.data?.message ||
-            'User account updated successfully.',
+            'อัปเดตบัญชีผู้ใช้เรียบร้อยแล้ว',
         );
 
         navigate(
@@ -723,7 +736,7 @@ function UserFormPage({
       } else {
         if (!response.data?.temporaryPassword) {
           throw new Error(
-            'User was created but the response did not include a temporary password.',
+            'สร้างบัญชีผู้ใช้แล้ว แต่ระบบไม่ได้ส่งรหัสผ่านชั่วคราวกลับมา',
           );
         }
 
@@ -742,7 +755,7 @@ function UserFormPage({
           error.response?.data
             ?.message ||
           error.message ||
-          'Unable to save the user account.',
+          'ไม่สามารถบันทึกบัญชีผู้ใช้ได้',
       });
     } finally {
       setIsSubmitting(false);
@@ -915,7 +928,7 @@ function UserFormPage({
             },
           }}
         >
-          ← Back
+          ← กลับ
         </Button>
       </Box>
 
@@ -947,7 +960,7 @@ function UserFormPage({
             borderRadius: '8px',
           }}
         >
-          Loading user account information...
+          กำลังโหลดข้อมูลบัญชีผู้ใช้...
         </Alert>
       )}
 
@@ -965,7 +978,7 @@ function UserFormPage({
                 )
               }
             >
-              Retry
+              ลองอีกครั้ง
             </Button>
           }
           sx={{
@@ -989,7 +1002,7 @@ function UserFormPage({
               borderRadius: '8px',
             }}
           >
-            Every employee currently has a user account.
+            พนักงานทุกคนมีบัญชีผู้ใช้แล้ว
           </Alert>
         )}
 
@@ -1060,7 +1073,7 @@ function UserFormPage({
                   800,
               }}
             >
-              User Account Information
+              ข้อมูลบัญชีผู้ใช้
             </Typography>
 
             <Typography
@@ -1075,7 +1088,7 @@ function UserFormPage({
                   '4px',
               }}
             >
-              Select an employee and configure their system account.
+              เลือกพนักงานและกำหนดค่าบัญชีสำหรับเข้าใช้งานระบบ
             </Typography>
           </Box>
 
@@ -1125,7 +1138,7 @@ function UserFormPage({
               }}
             >
               <InputLabel id="user-employee-label">
-                Employee
+                พนักงาน
               </InputLabel>
 
               <Select
@@ -1133,7 +1146,7 @@ function UserFormPage({
                 value={
                   formData.employeeId
                 }
-                label="Employee"
+                label="พนักงาน"
                 onChange={(
                   event,
                 ) =>
@@ -1175,18 +1188,18 @@ function UserFormPage({
               <FormHelperText>
                 {errors.employeeId ||
                   (isEditMode
-                    ? 'The linked employee cannot be changed while editing.'
+                    ? 'ไม่สามารถเปลี่ยนพนักงานที่เชื่อมโยงไว้ขณะแก้ไขบัญชี'
                     : employeeOptions.length >
                         0
-                      ? 'Only employees without an existing account are shown.'
-                      : 'Every employee currently has a user account.')}
+                      ? 'แสดงเฉพาะพนักงานที่ยังไม่มีบัญชีผู้ใช้'
+                      : 'พนักงานทุกคนมีบัญชีผู้ใช้แล้ว')}
               </FormHelperText>
             </FormControl>
 
             <TextField
               fullWidth
               required
-              label="Username"
+              label="ชื่อผู้ใช้"
               value={
                 formData.username
               }
@@ -1204,7 +1217,7 @@ function UserFormPage({
               )}
               helperText={
                 errors.username ||
-                'Example: employee007'
+                'ตัวอย่าง: employee007'
               }
               autoComplete="off"
               slotProps={{
@@ -1242,7 +1255,7 @@ function UserFormPage({
               )}
             >
               <InputLabel id="user-role-label">
-                Role
+                บทบาท
               </InputLabel>
 
               <Select
@@ -1250,7 +1263,7 @@ function UserFormPage({
                 value={
                   formData.role
                 }
-                label="Role"
+                label="บทบาท"
                 onChange={(
                   event,
                 ) =>
@@ -1271,7 +1284,7 @@ function UserFormPage({
                       key={role}
                       value={role}
                     >
-                      {role}
+                      {roleDisplayLabels[role] || role}
                     </MenuItem>
                   ),
                 )}
@@ -1292,7 +1305,7 @@ function UserFormPage({
               )}
             >
               <InputLabel id="user-status-label">
-                Account Status
+                สถานะบัญชี
               </InputLabel>
 
               <Select
@@ -1300,7 +1313,7 @@ function UserFormPage({
                 value={
                   formData.status
                 }
-                label="Account Status"
+                label="สถานะบัญชี"
                 onChange={(
                   event,
                 ) =>
@@ -1321,7 +1334,7 @@ function UserFormPage({
                       key={status}
                       value={status}
                     >
-                      {status}
+                      {statusDisplayLabels[status] || status}
                     </MenuItem>
                   ),
                 )}
@@ -1337,16 +1350,16 @@ function UserFormPage({
             <TextField
               fullWidth
               disabled
-              label="Initial Password"
+              label="รหัสผ่านเริ่มต้น"
               value={
                 isEditMode
-                  ? 'Password already created'
-                  : 'Generated securely after saving'
+                  ? 'สร้างรหัสผ่านแล้ว'
+                  : 'ระบบจะสร้างอย่างปลอดภัยหลังบันทึก'
               }
               helperText={
                 isEditMode
-                  ? 'Use Reset Password from User Management when necessary.'
-                  : 'The user can sign in with this password after the account is created.'
+                  ? 'หากจำเป็น ให้ใช้คำสั่งรีเซ็ตรหัสผ่านจากหน้าจัดการผู้ใช้'
+                  : 'ผู้ใช้สามารถเข้าสู่ระบบด้วยรหัสผ่านนี้หลังสร้างบัญชีแล้ว'
               }
               sx={{
                 '& .MuiOutlinedInput-root':
@@ -1430,7 +1443,7 @@ function UserFormPage({
                   'none',
               }}
             >
-              Cancel
+              ยกเลิก
             </Button>
 
             <Button
@@ -1485,10 +1498,10 @@ function UserFormPage({
               }}
             >
               {isSubmitting
-                ? 'Saving...'
+                ? 'กำลังบันทึก...'
                 : isEditMode
-                  ? 'Save Changes'
-                  : 'Create User'}
+                  ? 'บันทึกการแก้ไข'
+                  : 'สร้างผู้ใช้'}
             </Button>
           </Box>
         </Paper>
@@ -1538,7 +1551,7 @@ function UserFormPage({
                   800,
               }}
             >
-              Account Preview
+              ตัวอย่างข้อมูลบัญชี
             </Typography>
 
             <Typography
@@ -1556,7 +1569,7 @@ function UserFormPage({
                   '5px',
               }}
             >
-              Review the employee and account information before saving.
+              ตรวจสอบข้อมูลพนักงานและบัญชีก่อนบันทึก
             </Typography>
 
             <Box
@@ -1577,56 +1590,56 @@ function UserFormPage({
               {[
                 {
                   label:
-                    'Employee',
+                    'พนักงาน',
 
                   value:
                     selectedEmployee
                       ?.employeeName ||
-                    'Not selected',
+                    'ยังไม่ได้เลือก',
                 },
                 {
                   label:
-                    'Employee ID',
+                    'รหัสพนักงาน',
 
                   value:
                     selectedEmployee
                       ?.employeeCode ||
-                    'Not selected',
+                    'ยังไม่ได้เลือก',
                 },
                 {
                   label:
-                    'Department',
+                    'แผนก',
 
                   value:
                     selectedEmployee
                       ?.department ||
-                    'Not selected',
+                    'ยังไม่ได้เลือก',
                 },
                 {
                   label:
-                    'Position',
+                    'ตำแหน่ง',
 
                   value:
                     selectedEmployee
                       ?.position ||
-                    'Not selected',
+                    'ยังไม่ได้เลือก',
                 },
                 {
                   label:
-                    'Email Address',
+                    'อีเมล',
 
                   value:
                     selectedEmployee
                       ?.email ||
-                    'Not selected',
+                    'ยังไม่ได้เลือก',
                 },
                 {
                   label:
-                    'Username',
+                    'ชื่อผู้ใช้',
 
                   value:
                     formData.username.trim() ||
-                    'Not entered',
+                    'ยังไม่ได้กรอก',
                 },
               ].map(
                 (item) => (
@@ -1710,7 +1723,7 @@ function UserFormPage({
             >
               <Chip
                 label={
-                  formData.role
+                  roleDisplayLabels[formData.role] || formData.role
                 }
                 size="small"
                 sx={{
@@ -1736,7 +1749,7 @@ function UserFormPage({
 
               <Chip
                 label={
-                  formData.status
+                  statusDisplayLabels[formData.status] || formData.status
                 }
                 size="small"
                 sx={{
@@ -1807,7 +1820,7 @@ function UserFormPage({
                   800,
               }}
             >
-              Initial Password
+              รหัสผ่านเริ่มต้น
             </Typography>
 
             <Typography
@@ -1825,7 +1838,7 @@ function UserFormPage({
                   '8px',
               }}
             >
-              New accounts receive a securely generated initial password after saving. It is shown only once, and the user can replace it from the Change Password page.
+              บัญชีใหม่จะได้รับรหัสผ่านเริ่มต้นที่ระบบสร้างอย่างปลอดภัยหลังบันทึก รหัสผ่านจะแสดงเพียงครั้งเดียว และผู้ใช้สามารถเปลี่ยนได้จากหน้าเปลี่ยนรหัสผ่าน
             </Typography>
           </Paper>
         </Box>
@@ -1833,7 +1846,7 @@ function UserFormPage({
 
       <TemporaryPasswordDialog
         open={Boolean(temporaryPasswordResult)}
-        title="User Account Created"
+        title="สร้างบัญชีผู้ใช้เรียบร้อยแล้ว"
         username={temporaryPasswordResult?.username || ''}
         temporaryPassword={temporaryPasswordResult?.temporaryPassword || ''}
         onClose={handleCloseTemporaryPassword}

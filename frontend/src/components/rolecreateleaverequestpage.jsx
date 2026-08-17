@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   Alert,
@@ -7,6 +12,8 @@ import {
   Chip,
   FormControl,
   FormHelperText,
+  IconButton,
+  InputAdornment,
   InputLabel,
   MenuItem,
   Paper,
@@ -15,9 +22,23 @@ import {
   Typography,
 } from '@mui/material';
 
-import { useLocation, useNavigate } from 'react-router-dom';
+import CalendarMonthRounded from '@mui/icons-material/CalendarMonthRounded';
 
-import { getLeaveOptions, getMyLeaveRequest, saveLeaveDraft, submitLeaveDraft, submitLeaveRequest as submitLeaveRequestApi, updateLeaveDraft } from '../api/leave-service.js';
+import {
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
+
+import {
+  getLeaveOptions,
+  getMyLeaveRequest,
+  getMyLeaveRequests,
+  saveLeaveDraft,
+  submitLeaveDraft,
+  submitLeaveRequest,
+  updateLeaveDraft,
+} from '../api/leave-service.js';
+
 
 const emptyFormData = {
   leaveTypeId: '',
@@ -51,31 +72,57 @@ const getYearFromDate = (
     ).slice(0, 4),
   );
 
-  return Number.isInteger(
-    year,
-  ) && year > 0
+  return Number.isInteger(year) &&
+    year > 0
     ? year
     : null;
+};
+
+const formatDisplayDate = (
+  dateValue,
+) => {
+  if (!dateValue) {
+    return '';
+  }
+
+  const date = new Date(
+    `${dateValue}T00:00:00`,
+  );
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return '';
+  }
+
+  return date.toLocaleDateString(
+    'th-TH-u-ca-gregory',
+    {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    },
+  );
 };
 
 const normalizeHolidayDate = (
   holiday,
 ) => {
   const value =
-    typeof holiday ===
-    'string'
+    typeof holiday === 'string'
       ? holiday
       : holiday?.holidayDate ||
         holiday?.holiday_date ||
         holiday?.date ||
         '';
 
-  const dateMatch =
-    String(value)
-      .trim()
-      .match(
-        /^\d{4}-\d{2}-\d{2}/,
-      );
+  const dateMatch = String(value)
+    .trim()
+    .match(
+      /^\d{4}-\d{2}-\d{2}/,
+    );
 
   return dateMatch
     ? dateMatch[0]
@@ -96,10 +143,9 @@ const normalizeLeaveType = (
   return {
     ...leaveType,
 
-    id:
-      Number(
-        leaveType?.id,
-      ),
+    id: Number(
+      leaveType?.id,
+    ),
 
     status:
       leaveType?.status ===
@@ -123,14 +169,13 @@ const normalizeLeaveType = (
           )
         : null,
 
-    minimumDays:
-      Math.max(
-        Number(
-          leaveType
-            ?.minimumDays,
-        ) || 1,
-        0.5,
-      ),
+    minimumDays: Math.max(
+      Number(
+        leaveType
+          ?.minimumDays,
+      ) || 1,
+      0.5,
+    ),
 
     maximumDaysPerRequest:
       Math.max(
@@ -179,16 +224,18 @@ const formatFileSize = (
 };
 
 const getAttachmentRuleText =
-  (leaveType) => {
+  (
+    leaveType,
+  ) => {
     if (!leaveType) {
-      return 'Not selected';
+      return 'ยังไม่ได้เลือก';
     }
 
     if (
       leaveType
         .requiresAttachment
     ) {
-      return 'Always required';
+      return 'ต้องแนบไฟล์';
     }
 
     if (
@@ -197,14 +244,177 @@ const getAttachmentRuleText =
           .attachmentRequiredAfterDays,
       ) > 0
     ) {
-      return `Required from ${formatDays(
+      return `ต้องแนบไฟล์เมื่อขอลาตั้งแต่ ${formatDays(
         leaveType
           .attachmentRequiredAfterDays,
-      )} working day(s)`;
+      )} วันทำงาน`;
     }
 
-    return 'Optional';
+    return 'ไม่บังคับแนบไฟล์';
   };
+
+function ThaiDateField({
+  label,
+  value,
+  onChange,
+  error = false,
+  helperText = '',
+}) {
+  const nativeDateInputRef =
+    useRef(null);
+
+  const openDatePicker = () => {
+    const input =
+      nativeDateInputRef.current;
+
+    if (!input) {
+      return;
+    }
+
+    if (
+      typeof input.showPicker ===
+      'function'
+    ) {
+      input.showPicker();
+      return;
+    }
+
+    input.click();
+  };
+
+  return (
+    <Box
+      sx={{
+        position: 'relative',
+      }}
+    >
+      <TextField
+        fullWidth
+        required
+        label={label}
+        value={
+          formatDisplayDate(
+            value,
+          )
+        }
+        placeholder="วว/ดด/ปปปป"
+        error={error}
+        helperText={helperText}
+        onClick={
+          openDatePicker
+        }
+        onKeyDown={(event) => {
+          if (
+            event.key ===
+              'Enter' ||
+            event.key === ' '
+          ) {
+            event.preventDefault();
+            openDatePicker();
+          }
+        }}
+        slotProps={{
+          inputLabel: {
+            shrink: true,
+          },
+          input: {
+            readOnly: true,
+
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  type="button"
+                  edge="end"
+                  aria-label="เลือกวันที่"
+                  onClick={(
+                    event,
+                  ) => {
+                    event.stopPropagation();
+                    openDatePicker();
+                  }}
+                  sx={{
+                    color:
+                      '#374151',
+                  }}
+                >
+                  <CalendarMonthRounded
+                    fontSize="small"
+                  />
+                </IconButton>
+              </InputAdornment>
+            ),
+          },
+        }}
+        sx={{
+          cursor: 'pointer',
+
+          '& .MuiOutlinedInput-root':
+            {
+              borderRadius:
+                '10px',
+
+              cursor:
+                'pointer',
+            },
+
+          '& .MuiInputBase-input':
+            {
+              cursor:
+                'pointer',
+            },
+
+          '& .MuiInputBase-input::placeholder':
+            {
+              color:
+                '#6B7280',
+
+              opacity:
+                1,
+            },
+        }}
+      />
+
+      <input
+        ref={
+          nativeDateInputRef
+        }
+        type="date"
+        value={
+          value || ''
+        }
+        onChange={(event) =>
+          onChange(
+            event.target.value,
+          )
+        }
+        tabIndex={-1}
+        aria-hidden="true"
+        style={{
+          position:
+            'absolute',
+
+          width:
+            '1px',
+
+          height:
+            '1px',
+
+          opacity:
+            0,
+
+          pointerEvents:
+            'none',
+
+          left:
+            0,
+
+          bottom:
+            0,
+        }}
+      />
+    </Box>
+  );
+}
 
 function RoleCreateLeaveRequestPage({
   LayoutComponent,
@@ -241,7 +451,9 @@ function RoleCreateLeaveRequestPage({
 
   const editRequestId =
     editParameter !== null
-      ? Number(editParameter)
+      ? Number(
+          editParameter,
+        )
       : null;
 
   const isEditMode =
@@ -278,13 +490,8 @@ function RoleCreateLeaveRequestPage({
   ] = useState(null);
 
   const [leaveOptions, setLeaveOptions] = useState({ leaveTypes: [], holidays: [] });
-  const entitlementYear = getYearFromDate(formData.startDate) || new Date().getFullYear();
-
-  useEffect(() => {
-    let active = true;
-    getLeaveOptions(entitlementYear).then((data) => { if (active) setLeaveOptions(data || { leaveTypes: [], holidays: [] }); }).catch((error) => { if (active) setMessage({ severity: 'error', text: error.response?.data?.message || 'Unable to load leave options.' }); });
-    return () => { active = false; };
-  }, [entitlementYear]);
+  const [roleRequests, setRoleRequests] = useState([]);
+  const storageRevision = 0;
 
   useEffect(() => {
     setErrors({});
@@ -297,101 +504,77 @@ function RoleCreateLeaveRequestPage({
       });
 
       setAttachments([]);
-
       setMessage(null);
 
       return;
     }
 
-    getMyLeaveRequest(editRequestId).then((storedRequest) => {
-
-    const belongsToCurrentRole =
-      !storedRequest?.role ||
-      storedRequest.role ===
-        currentRole;
-
-    if (
-      !storedRequest ||
-      String(
-        storedRequest.status,
-      ).toLowerCase() !==
-        'draft' ||
-      !belongsToCurrentRole
-    ) {
-      setLoadedDraft(null);
-
-      setFormData({
-        ...emptyFormData,
-      });
-
-      setAttachments([]);
-
-      setMessage({
-        severity:
-          'error',
-
-        text:
-          `Draft #${editRequestId} was not found or is no longer available for editing.`,
-      });
-
-      return;
-    }
-
-    setLoadedDraft(
-      storedRequest,
-    );
-
-    setFormData({
-      leaveTypeId:
-        storedRequest
-          .leaveTypeId || '',
-
-      startDate:
-        storedRequest
-          .startDate || '',
-
-      endDate:
-        storedRequest
-          .endDate || '',
-
-      reason:
-        storedRequest.reason ||
-        '',
-    });
-
-    setAttachments(
-      Array.isArray(
-        storedRequest
-          .attachments,
-      )
-        ? storedRequest
-            .attachments
-        : [],
-    );
-
-    setMessage({
-      severity:
-        'info',
-
-      text:
-        `Draft #${storedRequest.id} is open for editing.`,
-    });
-    }).catch((error) => setMessage({ severity: 'error', text: error.response?.data?.message || `Draft #${editRequestId} was not found.` }));
   }, [
-    currentRole,
-    editRequestId,
     isEditMode,
     location.search,
   ]);
 
-  const roleRequests = [];
+  const entitlementYear =
+    useMemo(
+      () =>
+        getYearFromDate(
+          formData.startDate,
+        ) ||
+        new Date()
+          .getFullYear(),
+      [
+        formData.startDate,
+      ],
+    );
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([getLeaveOptions(entitlementYear), getMyLeaveRequests()])
+      .then(([options, requests]) => {
+        if (!active) return;
+        setLeaveOptions(options || { leaveTypes: [], holidays: [] });
+        setRoleRequests(requests);
+      })
+      .catch((error) => {
+        if (active) setMessage({ severity: 'error', text: error.response?.data?.message || 'ไม่สามารถโหลดข้อมูลคำขอลาได้' });
+      });
+    return () => { active = false; };
+  }, [entitlementYear]);
+
+  useEffect(() => {
+    if (!isEditMode) return undefined;
+    let active = true;
+    getMyLeaveRequest(editRequestId)
+      .then((draft) => {
+        if (!active || String(draft?.status).toLowerCase() !== 'draft') return;
+        setLoadedDraft(draft);
+        setFormData({
+          leaveTypeId: draft.leaveTypeId || '',
+          startDate: draft.startDate || '',
+          endDate: draft.endDate || '',
+          reason: draft.reason || '',
+        });
+        setAttachments(Array.isArray(draft.attachments) ? draft.attachments : []);
+        setMessage({ severity: 'info', text: `กำลังแก้ไขร่างคำขอ #${draft.id}` });
+      })
+      .catch((error) => {
+        if (active) {
+          setLoadedDraft(null);
+          setMessage({ severity: 'error', text: error.response?.data?.message || `ไม่พบร่างคำขอ #${editRequestId}` });
+        }
+      });
+    return () => { active = false; };
+  }, [editRequestId, isEditMode]);
 
   const activeLeaveTypes =
     useMemo(() => {
-      return (leaveOptions.leaveTypes || []).map(normalizeLeaveType);
-    },
-      [leaveOptions],
-    );
+      return (leaveOptions.leaveTypes || [])
+        .map(
+          normalizeLeaveType,
+        );
+    }, [
+      leaveOptions.leaveTypes,
+    ]);
 
   const inactiveSelectedLeaveType =
     useMemo(() => {
@@ -403,7 +586,9 @@ function RoleCreateLeaveRequestPage({
 
       const isActive =
         activeLeaveTypes.some(
-          (leaveType) =>
+          (
+            leaveType,
+          ) =>
             Number(
               leaveType.id,
             ) ===
@@ -417,10 +602,24 @@ function RoleCreateLeaveRequestPage({
         return null;
       }
 
-      return null;
+      const storedLeaveType = Number(loadedDraft?.leaveTypeId) === Number(formData.leaveTypeId)
+        ? { id: loadedDraft.leaveTypeId, name: loadedDraft.leaveType }
+        : null;
+
+      return storedLeaveType
+        ? {
+            ...normalizeLeaveType(
+              storedLeaveType,
+            ),
+
+            status:
+              'Inactive',
+          }
+        : null;
     }, [
-      activeLeaveTypes,
-      formData.leaveTypeId,
+    activeLeaveTypes,
+    formData.leaveTypeId,
+    loadedDraft,
     ]);
 
   const selectableLeaveTypes =
@@ -442,14 +641,12 @@ function RoleCreateLeaveRequestPage({
     useMemo(
       () =>
         selectableLeaveTypes.map(
-          (leaveType) => {
-            const leaveTypeId =
-              Number(
-                leaveType.id,
-              );
-
+          (
+            leaveType,
+          ) => {
             const entitlement = leaveType.hasEntitlement ? leaveType : null;
-            const pendingDays = Number(leaveType.pendingDays || 0);
+
+            const pendingDays = Number(leaveType.pendingDays) || 0;
 
             const totalDays =
               Number(
@@ -504,9 +701,6 @@ function RoleCreateLeaveRequestPage({
           },
         ),
       [
-        currentRole,
-        entitlementYear,
-        roleRequests,
         selectableLeaveTypes,
       ],
     );
@@ -515,7 +709,9 @@ function RoleCreateLeaveRequestPage({
     useMemo(
       () =>
         calculatedLeaveTypes.find(
-          (leaveType) =>
+          (
+            leaveType,
+          ) =>
             Number(
               leaveType.id,
             ) ===
@@ -523,7 +719,8 @@ function RoleCreateLeaveRequestPage({
               formData
                 .leaveTypeId,
             ),
-        ) || null,
+        ) ||
+        null,
       [
         calculatedLeaveTypes,
         formData.leaveTypeId,
@@ -532,7 +729,11 @@ function RoleCreateLeaveRequestPage({
 
   const activeHolidayDates =
     useMemo(() => {
-      const storedHolidayDates = (leaveOptions.holidays || []).map((holiday) => holiday.date);
+      void storageRevision;
+
+      const storedHolidayDates = (leaveOptions.holidays || [])
+        .map(normalizeHolidayDate)
+        .filter(Boolean);
 
       const propHolidayDates =
         organizationHolidays
@@ -549,7 +750,8 @@ function RoleCreateLeaveRequestPage({
       );
     }, [
       organizationHolidays,
-      leaveOptions,
+      leaveOptions.holidays,
+      storageRevision,
     ]);
 
   const activeHolidayDateSet =
@@ -558,7 +760,9 @@ function RoleCreateLeaveRequestPage({
         new Set(
           activeHolidayDates,
         ),
-      [activeHolidayDates],
+      [
+        activeHolidayDates,
+      ],
     );
 
   const workingDaySummary =
@@ -606,14 +810,14 @@ function RoleCreateLeaveRequestPage({
       let weekendDays = 0;
       let holidayDays = 0;
 
-      const excludedDates =
-        [];
+      const excludedDates = [];
 
       const currentDate =
         new Date(startDate);
 
       while (
-        currentDate <= endDate
+        currentDate <=
+        endDate
       ) {
         const date =
           currentDate
@@ -639,7 +843,7 @@ function RoleCreateLeaveRequestPage({
           excludedDates.push({
             date,
             reason:
-              'Weekend',
+              'วันหยุดสุดสัปดาห์',
           });
         } else if (
           isHoliday
@@ -648,9 +852,8 @@ function RoleCreateLeaveRequestPage({
 
           excludedDates.push({
             date,
-
             reason:
-              'Organization Holiday',
+              'วันหยุดองค์กร',
           });
         } else {
           workingDays += 1;
@@ -718,7 +921,6 @@ function RoleCreateLeaveRequestPage({
         previousData,
       ) => ({
         ...previousData,
-
         [fieldName]:
           value,
       }),
@@ -729,16 +931,16 @@ function RoleCreateLeaveRequestPage({
         previousErrors,
       ) => ({
         ...previousErrors,
-
-        [fieldName]: '',
-
-        dateRange: '',
-
-        balance: '',
-
-        overlap: '',
-
-        policy: '',
+        [fieldName]:
+          '',
+        dateRange:
+          '',
+        balance:
+          '',
+        overlap:
+          '',
+        policy:
+          '',
       }),
     );
 
@@ -766,7 +968,9 @@ function RoleCreateLeaveRequestPage({
       }
 
       return roleRequests.some(
-        (request) => {
+        (
+          request,
+        ) => {
           if (
             isEditMode &&
             Number(
@@ -789,7 +993,9 @@ function RoleCreateLeaveRequestPage({
             ![
               'pending',
               'approved',
-            ].includes(status)
+            ].includes(
+              status,
+            )
           ) {
             return false;
           }
@@ -812,7 +1018,9 @@ function RoleCreateLeaveRequestPage({
     };
 
   const handleAttachmentChange =
-    (event) => {
+    (
+      event,
+    ) => {
       const selectedFiles =
         Array.from(
           event.target.files ||
@@ -828,13 +1036,17 @@ function RoleCreateLeaveRequestPage({
 
       const invalidTypeFile =
         selectedFiles.find(
-          (file) =>
+          (
+            file,
+          ) =>
             !allowedMimeTypes.includes(
               file.type,
             ),
         );
 
-      if (invalidTypeFile) {
+      if (
+        invalidTypeFile
+      ) {
         setErrors(
           (
             previousErrors,
@@ -842,7 +1054,7 @@ function RoleCreateLeaveRequestPage({
             ...previousErrors,
 
             attachments:
-              'Only PDF, JPG, JPEG and PNG files are allowed',
+              'อนุญาตเฉพาะไฟล์ PDF, JPG, JPEG และ PNG',
           }),
         );
 
@@ -854,12 +1066,16 @@ function RoleCreateLeaveRequestPage({
 
       const oversizedFile =
         selectedFiles.find(
-          (file) =>
+          (
+            file,
+          ) =>
             file.size >
             maximumFileSize,
         );
 
-      if (oversizedFile) {
+      if (
+        oversizedFile
+      ) {
         setErrors(
           (
             previousErrors,
@@ -867,7 +1083,7 @@ function RoleCreateLeaveRequestPage({
             ...previousErrors,
 
             attachments:
-              'Each attachment must not exceed 10 MB',
+              'ไฟล์แนบแต่ละไฟล์ต้องมีขนาดไม่เกิน 10 MB',
           }),
         );
 
@@ -905,7 +1121,8 @@ function RoleCreateLeaveRequestPage({
                     Number(
                       file.size,
                     ),
-              ) === index,
+              ) ===
+              index,
           );
         },
       );
@@ -915,8 +1132,8 @@ function RoleCreateLeaveRequestPage({
           previousErrors,
         ) => ({
           ...previousErrors,
-
-          attachments: '',
+          attachments:
+            '',
         }),
       );
 
@@ -935,7 +1152,9 @@ function RoleCreateLeaveRequestPage({
           previousAttachments,
         ) =>
           previousAttachments.filter(
-            (attachment) => {
+            (
+              attachment,
+            ) => {
               if (
                 selectedAttachment.id &&
                 attachment.id
@@ -965,8 +1184,8 @@ function RoleCreateLeaveRequestPage({
           previousErrors,
         ) => ({
           ...previousErrors,
-
-          attachments: '',
+          attachments:
+            '',
         }),
       );
 
@@ -982,30 +1201,32 @@ function RoleCreateLeaveRequestPage({
         !formData.leaveTypeId
       ) {
         validationErrors.leaveTypeId =
-          'Please select a leave type';
+          'กรุณาเลือกประเภทการลา';
       } else if (
         !selectedLeaveType
       ) {
         validationErrors.leaveTypeId =
-          'The selected leave type is no longer available';
+          'ประเภทการลาที่เลือกไม่สามารถใช้งานได้แล้ว';
       } else if (
         selectedLeaveType.status !==
         'Active'
       ) {
         validationErrors.leaveTypeId =
-          'This leave type is inactive. Please select an active leave type';
+          'ประเภทการลานี้ถูกปิดใช้งาน กรุณาเลือกประเภทการลาที่เปิดใช้งาน';
       }
 
       if (
         !formData.startDate
       ) {
         validationErrors.startDate =
-          'Please select the start date';
+          'กรุณาเลือกวันที่เริ่มลา';
       }
 
-      if (!formData.endDate) {
+      if (
+        !formData.endDate
+      ) {
         validationErrors.endDate =
-          'Please select the end date';
+          'กรุณาเลือกวันที่สิ้นสุด';
       }
 
       if (
@@ -1015,7 +1236,7 @@ function RoleCreateLeaveRequestPage({
           formData.endDate
       ) {
         validationErrors.dateRange =
-          'The end date must be on or after the start date';
+          'วันที่สิ้นสุดต้องตรงกับหรือหลังวันที่เริ่มลา';
       }
 
       const startYear =
@@ -1031,10 +1252,11 @@ function RoleCreateLeaveRequestPage({
       if (
         startYear &&
         endYear &&
-        startYear !== endYear
+        startYear !==
+          endYear
       ) {
         validationErrors.dateRange =
-          'The MVP system does not support leave requests across different years';
+          'ระบบยังไม่รองรับการยื่นลาคร่อมปี';
       }
 
       if (
@@ -1042,15 +1264,17 @@ function RoleCreateLeaveRequestPage({
         formData.endDate &&
         formData.startDate <=
           formData.endDate &&
-        requestedDays === 0
+        requestedDays ===
+          0
       ) {
         validationErrors.dateRange =
-          'The selected period contains no working days';
+          'ช่วงวันที่เลือกไม่มีวันทำงาน';
       }
 
       if (
         selectedLeaveType &&
-        requestedDays > 0
+        requestedDays >
+          0
       ) {
         if (
           requestedDays <
@@ -1060,9 +1284,9 @@ function RoleCreateLeaveRequestPage({
           )
         ) {
           validationErrors.policy =
-            `${selectedLeaveType.name} requires at least ${formatDays(
+            `${selectedLeaveType.name} ต้องลาอย่างน้อย ${formatDays(
               selectedLeaveType.minimumDays,
-            )} working day(s) per request`;
+            )} วันทำงานต่อคำขอ`;
         } else if (
           requestedDays >
           Number(
@@ -1071,9 +1295,9 @@ function RoleCreateLeaveRequestPage({
           )
         ) {
           validationErrors.policy =
-            `${selectedLeaveType.name} allows no more than ${formatDays(
+            `${selectedLeaveType.name} อนุญาตให้ลาได้สูงสุด ${formatDays(
               selectedLeaveType.maximumDaysPerRequest,
-            )} working day(s) per request`;
+            )} วันทำงานต่อคำขอ`;
         }
       }
 
@@ -1083,7 +1307,7 @@ function RoleCreateLeaveRequestPage({
           .hasEntitlement
       ) {
         validationErrors.balance =
-          `No leave entitlement was found for ${entitlementYear}`;
+          `ไม่พบสิทธิ์วันลาสำหรับปี ${entitlementYear}`;
       } else if (
         selectedLeaveType &&
         requestedDays >
@@ -1091,44 +1315,47 @@ function RoleCreateLeaveRequestPage({
             .availableDays
       ) {
         validationErrors.balance =
-          `Insufficient leave balance. Available: ${formatDays(
+          `สิทธิ์วันลาไม่เพียงพอ คงเหลือ ${formatDays(
             selectedLeaveType.availableDays,
-          )} day(s)`;
+          )} วัน`;
       }
 
       if (
         hasOverlappingRequest()
       ) {
         validationErrors.overlap =
-          'The selected dates overlap an existing Pending or Approved leave request';
+          'ช่วงวันที่เลือกซ้ำกับคำขอลาที่กำลังรออนุมัติหรือได้รับอนุมัติแล้ว';
       }
 
       const normalizedReason =
         formData.reason.trim();
 
-      if (!normalizedReason) {
+      if (
+        !normalizedReason
+      ) {
         validationErrors.reason =
-          'Please enter the reason for leave';
+          'กรุณากรอกเหตุผลการลา';
       } else if (
         normalizedReason.length <
         5
       ) {
         validationErrors.reason =
-          'The reason must contain at least 5 characters';
+          'เหตุผลการลาต้องมีอย่างน้อย 5 ตัวอักษร';
       } else if (
         normalizedReason.length >
         500
       ) {
         validationErrors.reason =
-          'The reason must not exceed 500 characters';
+          'เหตุผลการลาต้องไม่เกิน 500 ตัวอักษร';
       }
 
       if (
         attachmentRequired &&
-        attachments.length === 0
+        attachments.length ===
+          0
       ) {
         validationErrors.attachments =
-          'An attachment is required for this leave request';
+          'คำขอลานี้จำเป็นต้องแนบไฟล์';
       }
 
       setErrors(
@@ -1138,7 +1365,8 @@ function RoleCreateLeaveRequestPage({
       return (
         Object.keys(
           validationErrors,
-        ).length === 0
+        ).length ===
+        0
       );
     };
 
@@ -1161,7 +1389,7 @@ function RoleCreateLeaveRequestPage({
       leaveType:
         selectedLeaveType
           ?.name ||
-        'Not selected',
+        'ยังไม่ได้เลือก',
 
       startDate:
         formData.startDate,
@@ -1177,7 +1405,9 @@ function RoleCreateLeaveRequestPage({
 
       attachments:
         attachments.map(
-          (attachment) => ({
+          (
+            attachment,
+          ) => ({
             id:
               attachment.id ||
               null,
@@ -1207,15 +1437,18 @@ function RoleCreateLeaveRequestPage({
         formData.startDate ||
         formData.endDate ||
         formData.reason.trim() ||
-        attachments.length > 0;
+        attachments.length >
+          0;
 
-      if (!hasEnteredData) {
+      if (
+        !hasEnteredData
+      ) {
         setMessage({
           severity:
             'warning',
 
           text:
-            'Enter at least one leave request detail before saving a draft.',
+            'กรุณากรอกข้อมูลอย่างน้อย 1 รายการก่อนบันทึกร่าง',
         });
 
         window.scrollTo({
@@ -1236,7 +1469,7 @@ function RoleCreateLeaveRequestPage({
             'error',
 
           text:
-            `Draft #${editRequestId} cannot be updated because it was not found.`,
+            `ไม่สามารถอัปเดตร่างคำขอ #${editRequestId} ได้ เนื่องจากไม่พบข้อมูล`,
         });
 
         window.scrollTo({
@@ -1249,16 +1482,17 @@ function RoleCreateLeaveRequestPage({
       }
 
       try {
-      const payload = createStorageData();
-      const savedDraft = isEditMode ? await updateLeaveDraft(editRequestId, payload, attachments) : await saveLeaveDraft(payload, attachments);
-
-      if (!savedDraft) {
+        const payload = createStorageData();
+        const newFiles = attachments.filter((attachment) => attachment instanceof File);
+        if (isEditMode) await updateLeaveDraft(editRequestId, payload, newFiles);
+        else await saveLeaveDraft(payload, newFiles);
+      } catch (error) {
         setMessage({
           severity:
             'error',
 
           text:
-            'The draft could not be saved.',
+            error.response?.data?.message || 'ไม่สามารถบันทึกร่างได้',
         });
 
         window.scrollTo({
@@ -1273,10 +1507,9 @@ function RoleCreateLeaveRequestPage({
       navigate(
         `/${currentRole}/my-requests`,
       );
-      } catch (error) { setMessage({ severity: 'error', text: error.response?.data?.message || 'The draft could not be saved.' }); }
     };
 
-  const handleSubmit = (
+  const handleSubmit = async (
     event,
   ) => {
     event.preventDefault();
@@ -1292,7 +1525,7 @@ function RoleCreateLeaveRequestPage({
           'error',
 
         text:
-          `Draft #${editRequestId} cannot be submitted because it was not found.`,
+          `ไม่สามารถส่งร่างคำขอ #${editRequestId} ได้ เนื่องจากไม่พบข้อมูล`,
       });
 
       window.scrollTo({
@@ -1304,13 +1537,15 @@ function RoleCreateLeaveRequestPage({
       return;
     }
 
-    if (!validateSubmit()) {
+    if (
+      !validateSubmit()
+    ) {
       setMessage({
         severity:
           'error',
 
         text:
-          'Please correct the highlighted information before submitting.',
+          'กรุณาตรวจสอบและแก้ไขข้อมูลที่ระบบแจ้งก่อนส่งคำขอ',
       });
 
       window.scrollTo({
@@ -1322,17 +1557,18 @@ function RoleCreateLeaveRequestPage({
       return;
     }
 
-    const submitAsync = async () => { try {
-    const payload = createStorageData();
-    const submittedRequest = isEditMode ? await submitLeaveDraft(editRequestId, payload, attachments) : await submitLeaveRequestApi(payload, attachments);
-
-    if (!submittedRequest) {
+    try {
+      const payload = createStorageData();
+      const newFiles = attachments.filter((attachment) => attachment instanceof File);
+      if (isEditMode) await submitLeaveDraft(editRequestId, payload, newFiles);
+      else await submitLeaveRequest(payload, newFiles);
+    } catch (error) {
       setMessage({
         severity:
           'error',
 
         text:
-          'The leave request could not be submitted. Please check the available balance and selected dates.',
+          error.response?.data?.message || 'ไม่สามารถส่งคำขอลาได้ กรุณาตรวจสอบสิทธิ์วันลาคงเหลือและวันที่ที่เลือก',
       });
 
       window.scrollTo({
@@ -1347,8 +1583,6 @@ function RoleCreateLeaveRequestPage({
     navigate(
       `/${currentRole}/my-requests`,
     );
-    } catch (error) { setMessage({ severity: 'error', text: error.response?.data?.message || 'The leave request could not be submitted.' }); } };
-    submitAsync();
   };
 
   const handleReset =
@@ -1372,10 +1606,12 @@ function RoleCreateLeaveRequestPage({
 
           endDate:
             loadedDraft
-              .endDate || '',
+              .endDate ||
+            '',
 
           reason:
-            loadedDraft.reason ||
+            loadedDraft
+              .reason ||
             '',
         });
 
@@ -1394,7 +1630,7 @@ function RoleCreateLeaveRequestPage({
             'info',
 
           text:
-            `Draft #${loadedDraft.id} was reset to its saved information.`,
+            `คืนค่าร่างคำขอ #${loadedDraft.id} เป็นข้อมูลที่บันทึกไว้แล้ว`,
         });
 
         return;
@@ -1405,113 +1641,83 @@ function RoleCreateLeaveRequestPage({
       });
 
       setAttachments([]);
-
       setMessage(null);
     };
 
   const summaryItems = [
     [
-      'Leave Type',
+      'ประเภทการลา',
 
       selectedLeaveType
         ?.name ||
-        'Not selected',
+        'ยังไม่ได้เลือก',
     ],
-    [
-      'Entitlement Year',
 
-      entitlementYear,
-    ],
     [
-      'Minimum per Request',
+      'ช่วงวันที่ลา',
 
-      selectedLeaveType
-        ? `${formatDays(
-            selectedLeaveType.minimumDays,
-          )} day(s)`
-        : 'Not available',
+      formData.startDate &&
+      formData.endDate
+        ? `${formatDisplayDate(
+            formData.startDate,
+          )} - ${formatDisplayDate(
+            formData.endDate,
+          )}`
+        : 'ยังไม่ได้เลือก',
     ],
-    [
-      'Maximum per Request',
 
-      selectedLeaveType
-        ? `${formatDays(
-            selectedLeaveType.maximumDaysPerRequest,
-          )} day(s)`
-        : 'Not available',
-    ],
     [
-      'Attachment Rule',
+      'จำนวนวันที่ขอลา',
 
-      getAttachmentRuleText(
-        selectedLeaveType,
-      ),
+      `${formatDays(
+        requestedDays,
+      )} วัน`,
     ],
+
     [
-      'Total Entitlement',
+      'ไฟล์แนบ',
+
+      `${attachments.length} ไฟล์`,
+    ],
+
+    [
+      'สิทธิ์ทั้งหมด',
 
       selectedLeaveType
         ? `${formatDays(
             selectedLeaveType.totalDays,
-          )} day(s)`
-        : 'Not available',
+          )} วัน`
+        : 'ไม่มีข้อมูล',
     ],
+
     [
-      'Used Days',
+      'ใช้ไปแล้ว',
 
       selectedLeaveType
         ? `${formatDays(
             selectedLeaveType.usedDays,
-          )} day(s)`
-        : 'Not available',
+          )} วัน`
+        : 'ไม่มีข้อมูล',
     ],
+
     [
-      'Pending Days',
+      'รออนุมัติ',
 
       selectedLeaveType
         ? `${formatDays(
             selectedLeaveType.pendingDays,
-          )} day(s)`
-        : 'Not available',
+          )} วัน`
+        : 'ไม่มีข้อมูล',
     ],
+
     [
-      'Available Balance',
+      'สิทธิ์คงเหลือ',
 
       selectedLeaveType
         ? `${formatDays(
             selectedLeaveType.availableDays,
-          )} day(s)`
-        : 'Not available',
-    ],
-    [
-      'Requested Working Days',
-
-      `${formatDays(
-        requestedDays,
-      )} day(s)`,
-    ],
-    [
-      'Excluded Weekends',
-
-      `${workingDaySummary.weekendDays} day(s)`,
-    ],
-    [
-      'Excluded Holidays',
-
-      `${workingDaySummary.holidayDays} day(s)`,
-    ],
-    [
-      'Date Range',
-
-      formData.startDate &&
-      formData.endDate
-        ? `${formData.startDate} to ${formData.endDate}`
-        : 'Not selected',
-    ],
-    [
-      'Attachments',
-
-      `${attachments.length} file(s)`,
+          )} วัน`
+        : 'ไม่มีข้อมูล',
     ],
   ];
 
@@ -1551,25 +1757,8 @@ function RoleCreateLeaveRequestPage({
           }}
         >
           {isEditMode
-            ? 'Edit Leave Request Draft'
-            : 'Create Leave Request'}
-        </Typography>
-
-        <Typography
-          sx={{
-            color:
-              '#6B7280',
-
-            fontSize:
-              '15px',
-
-            marginTop:
-              '6px',
-          }}
-        >
-          {isEditMode
-            ? `Update Draft #${editRequestId} or submit it for approval.`
-            : 'Create a draft or submit a new leave request.'}
+            ? 'แก้ไขคำขอลาฉบับร่าง'
+            : 'สร้างคำขอลา'}
         </Typography>
       </Box>
 
@@ -1579,14 +1768,16 @@ function RoleCreateLeaveRequestPage({
             message.severity
           }
           onClose={() =>
-            setMessage(null)
+            setMessage(
+              null,
+            )
           }
           sx={{
             marginBottom:
               '24px',
 
             borderRadius:
-              '8px',
+              '10px',
           }}
         >
           {message.text}
@@ -1607,8 +1798,8 @@ function RoleCreateLeaveRequestPage({
             xs:
               '1fr',
 
-            xl:
-              'minmax(0, 1.7fr) minmax(320px, 1fr)',
+            lg:
+              'minmax(0, 1.55fr) minmax(360px, 0.85fr)',
           },
 
           gap:
@@ -1628,7 +1819,7 @@ function RoleCreateLeaveRequestPage({
               '1px solid #E5E7EB',
 
             borderRadius:
-              '12px',
+              '14px',
 
             overflow:
               'hidden',
@@ -1641,7 +1832,7 @@ function RoleCreateLeaveRequestPage({
                   '20px',
 
                 sm:
-                  '24px',
+                  '24px 28px',
               },
 
               borderBottom:
@@ -1660,23 +1851,7 @@ function RoleCreateLeaveRequestPage({
                   800,
               }}
             >
-              Leave Information
-            </Typography>
-
-            <Typography
-              sx={{
-                color:
-                  '#6B7280',
-
-                fontSize:
-                  '14px',
-
-                marginTop:
-                  '4px',
-              }}
-            >
-              Only leave types currently activated by HR can
-              be submitted.
+              ข้อมูลการลา
             </Typography>
           </Box>
 
@@ -1724,7 +1899,7 @@ function RoleCreateLeaveRequestPage({
               }}
             >
               <InputLabel id="leave-type-label">
-                Leave Type
+                ประเภทการลา
               </InputLabel>
 
               <Select
@@ -1732,7 +1907,7 @@ function RoleCreateLeaveRequestPage({
                 value={
                   formData.leaveTypeId
                 }
-                label="Leave Type"
+                label="ประเภทการลา"
                 onChange={(
                   event,
                 ) =>
@@ -1745,13 +1920,15 @@ function RoleCreateLeaveRequestPage({
                 }
                 sx={{
                   borderRadius:
-                    '8px',
+                    '10px',
                 }}
               >
                 {calculatedLeaveTypes.length >
                 0 ? (
                   calculatedLeaveTypes.map(
-                    (leaveType) => (
+                    (
+                      leaveType,
+                    ) => (
                       <MenuItem
                         key={
                           leaveType.id
@@ -1767,10 +1944,10 @@ function RoleCreateLeaveRequestPage({
                         {leaveType.name}{' '}
 
                         {leaveType.isSelectable
-                          ? `— ${formatDays(
+                          ? `— คงเหลือ ${formatDays(
                               leaveType.availableDays,
-                            )} day(s) available`
-                          : '— Inactive (select another type)'}
+                            )} วัน`
+                          : '— ปิดใช้งาน (กรุณาเลือกประเภทอื่น)'}
                       </MenuItem>
                     ),
                   )
@@ -1779,36 +1956,33 @@ function RoleCreateLeaveRequestPage({
                     disabled
                     value=""
                   >
-                    No active leave types available
+                    ไม่มีประเภทการลาที่เปิดใช้งาน
                   </MenuItem>
                 )}
               </Select>
 
               <FormHelperText>
                 {errors.leaveTypeId ||
-                  (activeLeaveTypes.length >
-                  0
-                    ? `Available balance for ${entitlementYear}`
-                    : 'HR has not enabled any leave types')}
+                  (
+                    activeLeaveTypes.length >
+                    0
+                      ? `สิทธิ์คงเหลือปี ${entitlementYear}`
+                      : 'HR ยังไม่ได้เปิดใช้งานประเภทการลา'
+                  )}
               </FormHelperText>
             </FormControl>
 
-            <TextField
-              fullWidth
-              required
-              type="date"
-              label="Start Date"
+            <ThaiDateField
+              label="วันที่เริ่มลา"
               value={
                 formData.startDate
               }
               onChange={(
-                event,
+                value,
               ) =>
                 handleInputChange(
                   'startDate',
-
-                  event.target
-                    .value,
+                  value,
                 )
               }
               error={
@@ -1819,37 +1993,19 @@ function RoleCreateLeaveRequestPage({
               helperText={
                 errors.startDate
               }
-              slotProps={{
-                inputLabel: {
-                  shrink:
-                    true,
-                },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    borderRadius:
-                      '8px',
-                  },
-              }}
             />
 
-            <TextField
-              fullWidth
-              required
-              type="date"
-              label="End Date"
+            <ThaiDateField
+              label="วันที่สิ้นสุด"
               value={
                 formData.endDate
               }
               onChange={(
-                event,
+                value,
               ) =>
                 handleInputChange(
                   'endDate',
-
-                  event.target
-                    .value,
+                  value,
                 )
               }
               error={
@@ -1860,19 +2016,6 @@ function RoleCreateLeaveRequestPage({
               helperText={
                 errors.endDate
               }
-              slotProps={{
-                inputLabel: {
-                  shrink:
-                    true,
-                },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    borderRadius:
-                      '8px',
-                  },
-              }}
             />
 
             {policyErrors.length >
@@ -1889,7 +2032,7 @@ function RoleCreateLeaveRequestPage({
                   },
 
                   borderRadius:
-                    '8px',
+                    '10px',
                 }}
               >
                 {policyErrors.map(
@@ -1943,82 +2086,128 @@ function RoleCreateLeaveRequestPage({
             >
               {[
                 [
-                  'Working Days',
+                  'วันทำงาน',
                   requestedDays,
                 ],
+
                 [
-                  'Weekend Days',
-                  workingDaySummary.weekendDays,
+                  'วันหยุดสุดสัปดาห์',
+                  workingDaySummary
+                    .weekendDays,
                 ],
+
                 [
-                  'Holiday Days',
-                  workingDaySummary.holidayDays,
+                  'วันหยุดองค์กร',
+                  workingDaySummary
+                    .holidayDays,
                 ],
               ].map(
-                ([
-                  label,
-                  value,
-                ]) => (
-                  <Box
-                    key={
-                      label
-                    }
-                    sx={{
-                      padding:
-                        '14px 16px',
+                (
+                  [
+                    label,
+                    value,
+                  ],
+                  index,
+                ) => {
+                  const cardStyles =
+                    [
+                      {
+                        background:
+                          '#EFF6FF',
 
-                      backgroundColor:
-                        '#F9FAFB',
+                        border:
+                          '#BFDBFE',
 
-                      border:
-                        '1px solid #E5E7EB',
-
-                      borderRadius:
-                        '8px',
-                    }}
-                  >
-                    <Typography
-                      sx={{
                         color:
-                          '#6B7280',
+                          '#2563EB',
+                      },
 
-                        fontSize:
-                          '11px',
+                      {
+                        background:
+                          '#FFFBEB',
 
-                        fontWeight:
-                          700,
+                        border:
+                          '#FDE68A',
+
+                        color:
+                          '#D97706',
+                      },
+
+                      {
+                        background:
+                          '#FFF1F2',
+
+                        border:
+                          '#FECDD3',
+
+                        color:
+                          '#E11D48',
+                      },
+                    ][index];
+
+                  return (
+                    <Box
+                      key={
+                        label
+                      }
+                      sx={{
+                        padding:
+                          '14px 16px',
+
+                        backgroundColor:
+                          cardStyles.background,
+
+                        border:
+                          `1px solid ${cardStyles.border}`,
+
+                        borderRadius:
+                          '10px',
                       }}
                     >
-                      {label}
-                    </Typography>
+                      <Typography
+                        sx={{
+                          color:
+                            cardStyles.color,
 
-                    <Typography
-                      sx={{
-                        color:
-                          '#111827',
+                          fontSize:
+                            '12px',
 
-                        fontSize:
-                          '22px',
+                          fontWeight:
+                            700,
+                        }}
+                      >
+                        {label}
+                      </Typography>
 
-                        fontWeight:
-                          800,
+                      <Typography
+                        sx={{
+                          color:
+                            '#111827',
 
-                        marginTop:
-                          '4px',
-                      }}
-                    >
-                      {formatDays(
-                        value,
-                      )}
-                    </Typography>
-                  </Box>
-                ),
+                          fontSize:
+                            '24px',
+
+                          fontWeight:
+                            800,
+
+                          marginTop:
+                            '4px',
+                        }}
+                      >
+                        {formatDays(
+                          value,
+                        )}
+                      </Typography>
+                    </Box>
+                  );
+                },
               )}
             </Box>
 
             {workingDaySummary
               .excludedDates
-              .length > 0 && (
+              .length >
+              0 && (
               <Alert
                 severity="info"
                 sx={{
@@ -2031,7 +2220,7 @@ function RoleCreateLeaveRequestPage({
                   },
 
                   borderRadius:
-                    '8px',
+                    '10px',
                 }}
               >
                 <Typography
@@ -2043,7 +2232,7 @@ function RoleCreateLeaveRequestPage({
                       700,
                   }}
                 >
-                  Excluded from leave calculation
+                  วันที่ไม่นับเป็นวันลา
                 </Typography>
 
                 <Typography
@@ -2066,7 +2255,9 @@ function RoleCreateLeaveRequestPage({
                       ) =>
                         `${item.date} (${item.reason})`,
                     )
-                    .join(', ')}
+                    .join(
+                      ', ',
+                    )}
                 </Typography>
               </Alert>
             )}
@@ -2077,8 +2268,8 @@ function RoleCreateLeaveRequestPage({
               multiline
               minRows={5}
               maxRows={8}
-              label="Reason for Leave"
-              placeholder="Enter the reason for your leave request"
+              label="เหตุผลการลา"
+              placeholder="กรอกเหตุผลการลา"
               value={
                 formData.reason
               }
@@ -2099,7 +2290,7 @@ function RoleCreateLeaveRequestPage({
               }
               helperText={
                 errors.reason ||
-                `${formData.reason.length}/500 characters`
+                `${formData.reason.length}/500 ตัวอักษร`
               }
               slotProps={{
                 htmlInput: {
@@ -2119,7 +2310,7 @@ function RoleCreateLeaveRequestPage({
                 '& .MuiOutlinedInput-root':
                   {
                     borderRadius:
-                      '8px',
+                      '10px',
                   },
               }}
             />
@@ -2147,7 +2338,7 @@ function RoleCreateLeaveRequestPage({
                     800,
                 }}
               >
-                Attachments
+                ไฟล์แนบ
                 {attachmentRequired
                   ? ' *'
                   : ''}
@@ -2170,9 +2361,9 @@ function RoleCreateLeaveRequestPage({
               >
                 {getAttachmentRuleText(
                   selectedLeaveType,
-                )}
-                . PDF, JPG, JPEG or PNG; maximum 10 MB per
-                file.
+                )}{' '}
+                • รองรับ PDF, JPG, JPEG และ PNG
+                ขนาดไม่เกิน 10 MB ต่อไฟล์
               </Typography>
 
               <Button
@@ -2195,7 +2386,7 @@ function RoleCreateLeaveRequestPage({
                     theme.primary,
 
                   borderRadius:
-                    '8px',
+                    '10px',
 
                   fontSize:
                     '13px',
@@ -2207,7 +2398,7 @@ function RoleCreateLeaveRequestPage({
                     'none',
                 }}
               >
-                + Select Files
+                + เลือกไฟล์
 
                 <input
                   hidden
@@ -2289,7 +2480,7 @@ function RoleCreateLeaveRequestPage({
                             '1px solid #E5E7EB',
 
                           borderRadius:
-                            '8px',
+                            '10px',
                         }}
                       >
                         <Box
@@ -2363,7 +2554,7 @@ function RoleCreateLeaveRequestPage({
                               'none',
                           }}
                         >
-                          Remove
+                          ลบ
                         </Button>
                       </Box>
                     ),
@@ -2410,40 +2601,6 @@ function RoleCreateLeaveRequestPage({
             <Button
               type="button"
               variant="outlined"
-              onClick={() =>
-                navigate(
-                  `/${currentRole}/my-requests`,
-                )
-              }
-              sx={{
-                minWidth:
-                  '100px',
-
-                height:
-                  '44px',
-
-                color:
-                  '#374151',
-
-                borderColor:
-                  '#D1D5DB',
-
-                borderRadius:
-                  '8px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
-              }}
-            >
-              ← Back
-            </Button>
-
-            <Button
-              type="button"
-              variant="outlined"
               onClick={
                 handleReset
               }
@@ -2461,7 +2618,7 @@ function RoleCreateLeaveRequestPage({
                   '#D1D5DB',
 
                 borderRadius:
-                  '8px',
+                  '10px',
 
                 fontWeight:
                   700,
@@ -2471,8 +2628,8 @@ function RoleCreateLeaveRequestPage({
               }}
             >
               {isEditMode
-                ? 'Reset Draft'
-                : 'Clear'}
+                ? 'คืนค่าร่าง'
+                : 'ล้างข้อมูล'}
             </Button>
 
             <Button
@@ -2495,7 +2652,7 @@ function RoleCreateLeaveRequestPage({
                   theme.primary,
 
                 borderRadius:
-                  '8px',
+                  '10px',
 
                 fontWeight:
                   700,
@@ -2505,8 +2662,8 @@ function RoleCreateLeaveRequestPage({
               }}
             >
               {isEditMode
-                ? 'Update Draft'
-                : 'Save Draft'}
+                ? 'อัปเดตร่าง'
+                : 'บันทึกร่าง'}
             </Button>
 
             <Button
@@ -2526,7 +2683,7 @@ function RoleCreateLeaveRequestPage({
                   '#FFFFFF',
 
                 borderRadius:
-                  '8px',
+                  '10px',
 
                 fontWeight:
                   700,
@@ -2547,101 +2704,122 @@ function RoleCreateLeaveRequestPage({
               }}
             >
               {isEditMode
-                ? 'Submit Edited Draft'
-                : 'Submit Request'}
+                ? 'ส่งร่างที่แก้ไข'
+                : 'ส่งคำขอ'}
             </Button>
           </Box>
         </Paper>
 
-        <Box
+        <Paper
+          elevation={0}
           sx={{
-            display:
-              'flex',
+            padding: {
+              xs:
+                '18px',
 
-            flexDirection:
-              'column',
+              sm:
+                '20px',
+            },
 
-            gap:
-              '24px',
+            backgroundColor:
+              '#FFFFFF',
+
+            border:
+              '1px solid #E5E7EB',
+
+            borderRadius:
+              '14px',
           }}
         >
-          <Paper
-            elevation={0}
+          <Typography
             sx={{
-              padding: {
-                xs:
-                  '20px',
+              color:
+                '#111827',
 
-                sm:
-                  '24px',
-              },
+              fontSize:
+                '18px',
 
-              backgroundColor:
-                '#FFFFFF',
-
-              border:
-                '1px solid #E5E7EB',
-
-              borderRadius:
-                '12px',
+              fontWeight:
+                800,
             }}
           >
-            <Typography
-              sx={{
-                color:
-                  '#111827',
+            สรุปคำขอลา
+          </Typography>
 
-                fontSize:
-                  '17px',
+          <Box
+            sx={{
+              display:
+                'grid',
 
-                fontWeight:
-                  800,
-              }}
-            >
-              Request Summary
-            </Typography>
+              gridTemplateColumns: {
+                xs:
+                  '1fr',
 
-            <Box
-              sx={{
-                display:
-                  'flex',
+                sm:
+                  'repeat(2, minmax(0, 1fr))',
+              },
 
-                flexDirection:
-                  'column',
+              gap:
+                '10px',
 
-                gap:
-                  '18px',
-
-                marginTop:
-                  '22px',
-              }}
-            >
-              {summaryItems.map(
-                ([
+              marginTop:
+                '16px',
+            }}
+          >
+            {summaryItems.map(
+              (
+                [
                   label,
                   value,
-                ]) => (
+                ],
+              ) => {
+                const isDateRange =
+                  label ===
+                  'ช่วงวันที่ลา';
+
+                return (
                   <Box
                     key={
                       label
                     }
+                    sx={{
+                      minWidth:
+                        0,
+
+                      padding:
+                        '10px 12px',
+
+                      backgroundColor:
+                        '#F8FAFC',
+
+                      border:
+                        '1px solid #E5E7EB',
+
+                      borderRadius:
+                        '10px',
+
+                      gridColumn:
+                        isDateRange
+                          ? {
+                              xs:
+                                'auto',
+
+                              sm:
+                                '1 / -1',
+                            }
+                          : 'auto',
+                    }}
                   >
                     <Typography
                       sx={{
                         color:
-                          '#9CA3AF',
+                          '#94A3B8',
 
                         fontSize:
                           '11px',
 
                         fontWeight:
                           700,
-
-                        textTransform:
-                          'uppercase',
-
-                        letterSpacing:
-                          '0.5px',
                       }}
                     >
                       {label}
@@ -2653,192 +2831,84 @@ function RoleCreateLeaveRequestPage({
                           '#111827',
 
                         fontSize:
-                          '14px',
+                          '13px',
 
                         fontWeight:
                           700,
 
                         lineHeight:
-                          1.5,
+                          1.45,
 
                         marginTop:
-                          '4px',
+                          '3px',
+
+                        wordBreak:
+                          isDateRange
+                            ? 'normal'
+                            : 'break-word',
+
+                        whiteSpace:
+                          isDateRange
+                            ? {
+                                xs:
+                                  'normal',
+
+                                sm:
+                                  'nowrap',
+                              }
+                            : 'normal',
                       }}
                     >
                       {value}
                     </Typography>
                   </Box>
-                ),
-              )}
-            </Box>
-
-            <Box
-              sx={{
-                paddingTop:
-                  '20px',
-
-                marginTop:
-                  '20px',
-
-                borderTop:
-                  '1px solid #E5E7EB',
-              }}
-            >
-              <Chip
-                label={
-                  attachmentRequired
-                    ? 'Attachment Required'
-                    : 'Attachment Optional'
-                }
-                size="small"
-                sx={{
-                  backgroundColor:
-                    attachmentRequired
-                      ? '#FEF2F2'
-                      : '#ECFDF5',
-
-                  color:
-                    attachmentRequired
-                      ? '#B91C1C'
-                      : '#047857',
-
-                  borderRadius:
-                    '999px',
-
-                  fontSize:
-                    '11px',
-
-                  fontWeight:
-                    700,
-                }}
-              />
-            </Box>
-          </Paper>
-
-          <Paper
-            elevation={0}
-            sx={{
-              padding: {
-                xs:
-                  '20px',
-
-                sm:
-                  '24px',
+                );
               },
+            )}
+          </Box>
 
-              backgroundColor:
-                theme.soft,
+          <Box
+            sx={{
+              paddingTop:
+                '14px',
 
-              border:
-                `1px solid ${
-                  theme.border ||
-                  '#E5E7EB'
-                }`,
+              marginTop:
+                '14px',
 
-              borderRadius:
-                '12px',
+              borderTop:
+                '1px solid #E5E7EB',
             }}
           >
-            <Typography
+            <Chip
+              label={
+                attachmentRequired
+                  ? 'ต้องแนบไฟล์'
+                  : 'ไม่บังคับแนบไฟล์'
+              }
+              size="small"
               sx={{
+                backgroundColor:
+                  attachmentRequired
+                    ? '#FEF2F2'
+                    : '#ECFDF5',
+
                 color:
-                  theme.dark,
+                  attachmentRequired
+                    ? '#B91C1C'
+                    : '#047857',
+
+                borderRadius:
+                  '999px',
 
                 fontSize:
-                  '15px',
+                  '11px',
 
                 fontWeight:
-                  800,
+                  700,
               }}
-            >
-              Leave Request Rules
-            </Typography>
-
-            <Typography
-              sx={{
-                color:
-                  theme.text ||
-                  '#4B5563',
-
-                fontSize:
-                  '13px',
-
-                lineHeight:
-                  1.8,
-
-                marginTop:
-                  '8px',
-              }}
-            >
-              Only active leave types configured by HR can be
-              selected. Minimum and maximum working days,
-              attachment rules, entitlement balance,
-              overlapping requests, weekends and active
-              organization holidays are checked before
-              submission.
-            </Typography>
-
-            <Typography
-              sx={{
-                color:
-                  theme.text ||
-                  '#4B5563',
-
-                fontSize:
-                  '12px',
-
-                lineHeight:
-                  1.7,
-
-                marginTop:
-                  '12px',
-              }}
-            >
-              Active leave types:{' '}
-              {
-                activeLeaveTypes.length
-              }
-              {' • '}
-              Active holidays:{' '}
-              {
-                activeHolidayDates.length
-              }
-            </Typography>
-
-            {selectedLeaveType && (
-              <Typography
-                sx={{
-                  color:
-                    theme.text ||
-                    '#4B5563',
-
-                  fontSize:
-                    '12px',
-
-                  lineHeight:
-                    1.7,
-
-                  marginTop:
-                    '8px',
-                }}
-              >
-                Selected rule: minimum{' '}
-                {formatDays(
-                  selectedLeaveType.minimumDays,
-                )}{' '}
-                day(s), maximum{' '}
-                {formatDays(
-                  selectedLeaveType.maximumDaysPerRequest,
-                )}{' '}
-                day(s) per request;{' '}
-                {getAttachmentRuleText(
-                  selectedLeaveType,
-                ).toLowerCase()}
-                .
-              </Typography>
-            )}
-          </Paper>
-        </Box>
+            />
+          </Box>
+        </Paper>
       </Box>
     </LayoutComponent>
   );

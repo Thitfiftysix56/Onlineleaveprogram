@@ -33,17 +33,167 @@ import {
   useNavigate,
 } from 'react-router-dom';
 
-import { cancelLeaveRequest, deleteLeaveDraft, getMyLeaveRequests } from '../api/leave-service.js';
+import {
+  cancelLeaveRequest,
+  deleteLeaveDraft,
+  getMyLeaveRequests,
+} from '../api/leave-service.js';
+
+const legacyRequestSamples = [
+  {
+    id: 1,
+    requestNo: null,
+    leaveType: 'ลาพักร้อน',
+    startDate: '2026-08-18',
+    endDate: '2026-08-19',
+    leaveDays: 2,
+    reason: 'ธุระส่วนตัว',
+    status: 'draft',
+    submittedAt: null,
+  },
+  {
+    id: 2,
+    requestNo: 'LR-20260720-0013',
+    leaveType: 'ลาพักร้อน',
+    startDate: '2026-07-30',
+    endDate: '2026-07-31',
+    leaveDays: 2,
+    reason: 'ธุระครอบครัว',
+    status: 'pending',
+    submittedAt: '2026-07-20T14:05:00',
+  },
+  {
+    id: 3,
+    requestNo: 'LR-20260715-0009',
+    leaveType: 'ลาป่วย',
+    startDate: '2026-07-16',
+    endDate: '2026-07-16',
+    leaveDays: 1,
+    reason: 'นัดพบแพทย์',
+    status: 'approved',
+    submittedAt: '2026-07-15T09:20:00',
+  },
+  {
+    id: 4,
+    requestNo: 'LR-20260710-0006',
+    leaveType: 'ลากิจ',
+    startDate: '2026-07-11',
+    endDate: '2026-07-11',
+    leaveDays: 1,
+    reason: 'มีธุระส่วนตัวเร่งด่วน',
+    status: 'rejected',
+    submittedAt: '2026-07-10T10:40:00',
+  },
+  {
+    id: 5,
+    requestNo: 'LR-20260625-0003',
+    leaveType: 'ลาพักร้อน',
+    startDate: '2026-06-29',
+    endDate: '2026-06-30',
+    leaveDays: 2,
+    reason: 'กิจกรรมครอบครัว',
+    status: 'cancelled',
+    submittedAt: '2026-06-25T13:15:00',
+  },
+  {
+    id: 6,
+    requestNo: 'LR-20260518-0001',
+    leaveType: 'ลาป่วย',
+    startDate: '2026-05-19',
+    endDate: '2026-05-21',
+    leaveDays: 3,
+    reason: 'ป่วยและพักรักษาตัว',
+    status: 'approved',
+    submittedAt: '2026-05-18T08:50:00',
+  },
+];
+
+const statusLabels = {
+  draft: 'แบบร่าง',
+  pending: 'รออนุมัติ',
+  approved: 'อนุมัติแล้ว',
+  rejected: 'ปฏิเสธแล้ว',
+  cancelled: 'ยกเลิกแล้ว',
+};
+
+const formatDate = (
+  dateString,
+) => {
+  if (!dateString) {
+    return '-';
+  }
+
+  const normalizedDate =
+    String(dateString)
+      .trim()
+      .slice(0, 10);
+
+  const match =
+    normalizedDate.match(
+      /^(\d{4})-(\d{2})-(\d{2})$/,
+    );
+
+  if (!match) {
+    return dateString;
+  }
+
+  const [, year, month, day] =
+    match;
+
+  return `${day}/${month}/${year}`;
+};
+
+const formatDateRange = (
+  startDate,
+  endDate,
+) => {
+  if (!startDate && !endDate) {
+    return '-';
+  }
+
+  if (
+    startDate &&
+    endDate &&
+    startDate === endDate
+  ) {
+    return formatDate(
+      startDate,
+    );
+  }
+
+  return `${formatDate(
+    startDate,
+  )} - ${formatDate(endDate)}`;
+};
+
+const formatDays = (
+  value,
+) => {
+  const days =
+    Number(value) || 0;
+
+  return Number.isInteger(days)
+    ? String(days)
+    : days
+        .toFixed(2)
+        .replace(/\.?0+$/, '');
+};
 
 function RoleMyRequestsPage({
   LayoutComponent,
   theme,
 }) {
-  const navigate = useNavigate();
-  const location = useLocation();
+  void legacyRequestSamples;
+  const navigate =
+    useNavigate();
+
+  const location =
+    useLocation();
 
   const pathRole =
-    location.pathname.split('/')[1];
+    location.pathname.split(
+      '/',
+    )[1];
 
   const currentRole = [
     'employee',
@@ -54,21 +204,53 @@ function RoleMyRequestsPage({
     ? pathRole
     : 'employee';
 
-  const [requests, setRequests] =
-    useState([]);
+  const [
+    requests,
+    setRequests,
+  ] = useState(
+    [],
+  );
 
-  const [searchText, setSearchText] =
-    useState('');
+  useEffect(() => {
+    let active = true;
 
-  const [statusFilter, setStatusFilter] =
-    useState('all');
+    getMyLeaveRequests()
+      .then((leaveRequests) => {
+        if (active) setRequests(leaveRequests);
+      })
+      .catch((error) => {
+        if (active) {
+          setMessage({
+            severity: 'error',
+            text: error.response?.data?.message || 'ไม่สามารถโหลดคำขอลาได้',
+          });
+        }
+      });
 
-  const [yearFilter, setYearFilter] =
-    useState('all');
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const [message, setMessage] =
-    useState(null);
-  const [loading, setLoading] = useState(true);
+  const [
+    searchText,
+    setSearchText,
+  ] = useState('');
+
+  const [
+    statusFilter,
+    setStatusFilter,
+  ] = useState('all');
+
+  const [
+    yearFilter,
+    setYearFilter,
+  ] = useState('all');
+
+  const [
+    message,
+    setMessage,
+  ] = useState(null);
 
   const [
     selectedRequest,
@@ -80,30 +262,32 @@ function RoleMyRequestsPage({
     setConfirmAction,
   ] = useState(null);
 
-  const [page, setPage] =
-    useState(0);
+  const [
+    page,
+    setPage,
+  ] = useState(0);
 
   const [
     rowsPerPage,
     setRowsPerPage,
   ] = useState(5);
 
-  useEffect(() => { reloadRequests(); }, [currentRole]);
-
-  async function reloadRequests() { setLoading(true); try { setRequests(await getMyLeaveRequests()); setPage(0); } catch (error) { setMessage({ severity:'error', text:error.response?.data?.message || 'Unable to load leave requests.' }); } finally { setLoading(false); } }
-
   const availableYears =
     useMemo(() => {
-      const years = requests
-        .filter(
-          (request) =>
-            Boolean(request.startDate),
-        )
-        .map((request) =>
-          request.startDate.slice(0, 4),
-        );
+      const years =
+        requests
+          .map(
+            (request) =>
+              String(
+                request.startDate ||
+                  '',
+              ).slice(0, 4),
+          )
+          .filter(Boolean);
 
-      return [...new Set(years)].sort(
+      return [
+        ...new Set(years),
+      ].sort(
         (
           firstYear,
           secondYear,
@@ -124,39 +308,68 @@ function RoleMyRequestsPage({
         (request) => {
           const requestNumber =
             request.requestNo ||
-            `draft-${request.id}`;
+            `แบบร่าง-${request.id}`;
 
           const leaveType =
-            request.leaveType || '';
+            String(
+              request.leaveType ||
+                '',
+            ).toLowerCase();
 
           const reason =
-            request.reason || '';
+            String(
+              request.reason ||
+                '',
+            ).toLowerCase();
 
           const status =
-            request.status || '';
+            String(
+              request.status ||
+                '',
+            ).toLowerCase();
+
+          const statusLabel =
+            String(
+              statusLabels[
+                status
+              ] || '',
+            ).toLowerCase();
 
           const matchesSearch =
             !keyword ||
-            requestNumber
+            String(
+              requestNumber,
+            )
               .toLowerCase()
-              .includes(keyword) ||
-            leaveType
-              .toLowerCase()
-              .includes(keyword) ||
-            reason
-              .toLowerCase()
-              .includes(keyword) ||
-            status
-              .toLowerCase()
-              .includes(keyword);
+              .includes(
+                keyword,
+              ) ||
+            leaveType.includes(
+              keyword,
+            ) ||
+            reason.includes(
+              keyword,
+            ) ||
+            status.includes(
+              keyword,
+            ) ||
+            statusLabel.includes(
+              keyword,
+            );
 
           const matchesStatus =
-            statusFilter === 'all' ||
-            status === statusFilter;
+            statusFilter ===
+              'all' ||
+            status ===
+              statusFilter;
 
           const matchesYear =
-            yearFilter === 'all' ||
-            request.startDate?.startsWith(
+            yearFilter ===
+              'all' ||
+            String(
+              request.startDate ||
+                '',
+            ).startsWith(
               yearFilter,
             );
 
@@ -180,7 +393,8 @@ function RoleMyRequestsPage({
         page * rowsPerPage;
 
       const lastRow =
-        firstRow + rowsPerPage;
+        firstRow +
+        rowsPerPage;
 
       return filteredRequests.slice(
         firstRow,
@@ -192,106 +406,49 @@ function RoleMyRequestsPage({
       rowsPerPage,
     ]);
 
-  const summary = useMemo(
-    () => ({
-      total: requests.length,
+  const summary =
+    useMemo(
+      () => ({
+        total:
+          requests.length,
 
-      draft: requests.filter(
-        (request) =>
-          request.status === 'draft',
-      ).length,
+        draft:
+          requests.filter(
+            (request) =>
+              request.status ===
+              'draft',
+          ).length,
 
-      pending: requests.filter(
-        (request) =>
-          request.status === 'pending',
-      ).length,
+        pending:
+          requests.filter(
+            (request) =>
+              request.status ===
+              'pending',
+          ).length,
 
-      approved: requests.filter(
-        (request) =>
-          request.status ===
-          'approved',
-      ).length,
+        approved:
+          requests.filter(
+            (request) =>
+              request.status ===
+              'approved',
+          ).length,
 
-      rejected: requests.filter(
-        (request) =>
-          request.status ===
-          'rejected',
-      ).length,
+        rejected:
+          requests.filter(
+            (request) =>
+              request.status ===
+              'rejected',
+          ).length,
 
-      cancelled: requests.filter(
-        (request) =>
-          request.status ===
-          'cancelled',
-      ).length,
-    }),
-    [requests],
-  );
-
-  const formatStatus = (status) => {
-    if (!status) {
-      return '-';
-    }
-
-    return (
-      status.charAt(0).toUpperCase() +
-      status.slice(1)
+        cancelled:
+          requests.filter(
+            (request) =>
+              request.status ===
+              'cancelled',
+          ).length,
+      }),
+      [requests],
     );
-  };
-
-  const formatDate = (
-    dateString,
-  ) => {
-    if (!dateString) {
-      return '-';
-    }
-
-    const date = new Date(
-      `${dateString}T00:00:00`,
-    );
-
-    if (
-      Number.isNaN(date.getTime())
-    ) {
-      return '-';
-    }
-
-    return date.toLocaleDateString(
-      'en-GB',
-      {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      },
-    );
-  };
-
-  const formatDateTime = (
-    dateTimeString,
-  ) => {
-    if (!dateTimeString) {
-      return '-';
-    }
-
-    const date =
-      new Date(dateTimeString);
-
-    if (
-      Number.isNaN(date.getTime())
-    ) {
-      return '-';
-    }
-
-    return date.toLocaleString(
-      'en-GB',
-      {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      },
-    );
-  };
 
   const getStatusStyle = (
     status,
@@ -300,31 +457,36 @@ function RoleMyRequestsPage({
       draft: {
         backgroundColor:
           '#F3F4F6',
-        color: '#4B5563',
+        color:
+          '#4B5563',
       },
 
       pending: {
         backgroundColor:
           '#FEF3C7',
-        color: '#B45309',
+        color:
+          '#B45309',
       },
 
       approved: {
         backgroundColor:
           '#DCFCE7',
-        color: '#15803D',
+        color:
+          '#15803D',
       },
 
       rejected: {
         backgroundColor:
           '#FEE2E2',
-        color: '#B91C1C',
+        color:
+          '#B91C1C',
       },
 
       cancelled: {
         backgroundColor:
           '#E5E7EB',
-        color: '#6B7280',
+        color:
+          '#6B7280',
       },
     };
 
@@ -332,7 +494,8 @@ function RoleMyRequestsPage({
       statusStyles[status] || {
         backgroundColor:
           '#F3F4F6',
-        color: '#4B5563',
+        color:
+          '#4B5563',
       }
     );
   };
@@ -359,13 +522,14 @@ function RoleMyRequestsPage({
       setMessage(null);
     };
 
-  const handleClearFilters = () => {
-    setSearchText('');
-    setStatusFilter('all');
-    setYearFilter('all');
-    setPage(0);
-    setMessage(null);
-  };
+  const handleClearFilters =
+    () => {
+      setSearchText('');
+      setStatusFilter('all');
+      setYearFilter('all');
+      setPage(0);
+      setMessage(null);
+    };
 
   const handleViewRequest = (
     request,
@@ -378,12 +542,6 @@ function RoleMyRequestsPage({
   const handleEditDraft = (
     request,
   ) => {
-    if (
-      request.status !== 'draft'
-    ) {
-      return;
-    }
-
     navigate(
       `/${currentRole}/leave-request?edit=${request.id}`,
     );
@@ -393,15 +551,22 @@ function RoleMyRequestsPage({
     action,
     request,
   ) => {
-    setConfirmAction(action);
-    setSelectedRequest(request);
+    setConfirmAction(
+      action,
+    );
+
+    setSelectedRequest(
+      request,
+    );
+
     setMessage(null);
   };
 
-  const closeConfirmation = () => {
-    setConfirmAction(null);
-    setSelectedRequest(null);
-  };
+  const closeConfirmation =
+    () => {
+      setConfirmAction(null);
+      setSelectedRequest(null);
+    };
 
   const handleConfirmAction =
     async () => {
@@ -418,23 +583,32 @@ function RoleMyRequestsPage({
         selectedRequest.status ===
           'draft'
       ) {
-        let wasDeleted = false; try { await deleteLeaveDraft(selectedRequest.id); wasDeleted = true; } catch (error) { setMessage({severity:'error',text:error.response?.data?.message||'Unable to delete draft.'}); }
-
-        if (wasDeleted) {
-          reloadRequests();
-
-          setMessage({
-            severity: 'success',
-
-            text: `Draft #${selectedRequest.id} was deleted successfully.`,
-          });
-        } else {
-          setMessage({
-            severity: 'error',
-
-            text: 'The selected request could not be deleted. Only Draft requests can be deleted.',
-          });
+        try {
+          await deleteLeaveDraft(selectedRequest.id);
+        } catch (error) {
+          setMessage({ severity: 'error', text: error.response?.data?.message || 'ไม่สามารถลบแบบร่างได้' });
+          closeConfirmation();
+          return;
         }
+
+        setRequests(
+          (
+            previousRequests,
+          ) =>
+            previousRequests.filter(
+              (request) =>
+                request.id !==
+                selectedRequest.id,
+            ),
+        );
+
+        setMessage({
+          severity:
+            'success',
+
+          text:
+            `ลบแบบร่าง #${selectedRequest.id} เรียบร้อยแล้ว`,
+        });
       }
 
       if (
@@ -443,23 +617,41 @@ function RoleMyRequestsPage({
         selectedRequest.status ===
           'pending'
       ) {
-        let cancelledRequest = null; try { cancelledRequest = await cancelLeaveRequest(selectedRequest.id); } catch (error) { setMessage({severity:'error',text:error.response?.data?.message||'Unable to cancel request.'}); }
-
-        if (cancelledRequest) {
-          reloadRequests();
-
-          setMessage({
-            severity: 'success',
-
-            text: `${selectedRequest.requestNo} was cancelled successfully.`,
-          });
-        } else {
-          setMessage({
-            severity: 'error',
-
-            text: 'The selected request could not be cancelled.',
-          });
+        try {
+          await cancelLeaveRequest(selectedRequest.id);
+        } catch (error) {
+          setMessage({ severity: 'error', text: error.response?.data?.message || 'ไม่สามารถยกเลิกคำขอลาได้' });
+          closeConfirmation();
+          return;
         }
+
+        setRequests(
+          (
+            previousRequests,
+          ) =>
+            previousRequests.map(
+              (request) =>
+                request.id ===
+                selectedRequest.id
+                  ? {
+                      ...request,
+                      status:
+                        'cancelled',
+                    }
+                  : request,
+            ),
+        );
+
+        setMessage({
+          severity:
+            'success',
+
+          text:
+            `ยกเลิกคำขอ ${
+              selectedRequest.requestNo ||
+              `#${selectedRequest.id}`
+            } เรียบร้อยแล้ว`,
+        });
       }
 
       closeConfirmation();
@@ -467,7 +659,8 @@ function RoleMyRequestsPage({
 
       window.scrollTo({
         top: 0,
-        behavior: 'smooth',
+        behavior:
+          'smooth',
       });
     };
 
@@ -481,7 +674,9 @@ function RoleMyRequestsPage({
   const handleRowsPerPageChange =
     (event) => {
       setRowsPerPage(
-        Number(event.target.value),
+        Number(
+          event.target.value,
+        ),
       );
 
       setPage(0);
@@ -489,103 +684,126 @@ function RoleMyRequestsPage({
 
   const summaryCards = [
     {
-      title: 'Total Requests',
-      value: summary.total,
-      backgroundColor: theme.soft,
-      color: theme.primary,
+      title:
+        'คำขอทั้งหมด',
+
+      value:
+        summary.total,
+
+      backgroundColor:
+        theme.soft,
+
+      color:
+        theme.primary,
     },
+
     {
-      title: 'Draft',
-      value: summary.draft,
-      backgroundColor: '#F3F4F6',
-      color: '#4B5563',
+      title:
+        'แบบร่าง',
+
+      value:
+        summary.draft,
+
+      backgroundColor:
+        '#F3F4F6',
+
+      color:
+        '#4B5563',
     },
+
     {
-      title: 'Pending',
-      value: summary.pending,
-      backgroundColor: '#FEF3C7',
-      color: '#B45309',
+      title:
+        'รออนุมัติ',
+
+      value:
+        summary.pending,
+
+      backgroundColor:
+        '#FEF3C7',
+
+      color:
+        '#B45309',
     },
+
     {
-      title: 'Approved',
-      value: summary.approved,
-      backgroundColor: '#DCFCE7',
-      color: '#15803D',
-    },
-    {
-      title: 'Rejected',
-      value: summary.rejected,
-      backgroundColor: '#FEE2E2',
-      color: '#B91C1C',
-    },
-    {
-      title: 'Cancelled',
-      value: summary.cancelled,
-      backgroundColor: '#E5E7EB',
-      color: '#6B7280',
+      title:
+        'อนุมัติแล้ว',
+
+      value:
+        summary.approved,
+
+      backgroundColor:
+        '#DCFCE7',
+
+      color:
+        '#15803D',
     },
   ];
 
   const confirmationTitle =
-    confirmAction === 'delete'
-      ? 'Delete Draft'
-      : 'Cancel Leave Request';
+    confirmAction ===
+    'delete'
+      ? 'ยืนยันการลบแบบร่าง'
+      : 'ยืนยันการยกเลิกคำขอ';
 
   const confirmationDescription =
-    confirmAction === 'delete'
-      ? 'Are you sure you want to delete this draft? This action cannot be undone.'
-      : 'Are you sure you want to cancel this pending leave request?';
+    confirmAction ===
+    'delete'
+      ? 'ต้องการลบแบบร่างนี้ใช่หรือไม่?'
+      : 'ต้องการยกเลิกคำขอลาที่กำลังรออนุมัตินี้ใช่หรือไม่?';
 
   const confirmationButtonText =
-    confirmAction === 'delete'
-      ? 'Delete Draft'
-      : 'Cancel Request';
+    confirmAction ===
+    'delete'
+      ? 'ลบแบบร่าง'
+      : 'ยกเลิกคำขอ';
 
   return (
-    <LayoutComponent activeMenu="My Requests">
-      {loading && <Alert severity="info" sx={{ marginBottom: '16px' }}>Loading leave requests...</Alert>}
+    <LayoutComponent
+      activeMenu="My Requests"
+    >
       <Box
         sx={{
-          marginBottom: '28px',
+          marginBottom:
+            '24px',
         }}
       >
         <Typography
           component="h1"
           sx={{
-            color: '#111827',
+            color:
+              '#111827',
 
             fontSize: {
-              xs: '26px',
-              sm: '30px',
+              xs:
+                '26px',
+
+              sm:
+                '30px',
             },
 
-            fontWeight: 800,
+            fontWeight:
+              800,
           }}
         >
-          My Requests
-        </Typography>
-
-        <Typography
-          sx={{
-            color: '#6B7280',
-            fontSize: '15px',
-            marginTop: '6px',
-          }}
-        >
-          Review and manage your own
-          leave requests.
+          คำขอลาของฉัน
         </Typography>
       </Box>
 
       {message && (
         <Alert
-          severity={message.severity}
+          severity={
+            message.severity
+          }
           onClose={() =>
             setMessage(null)
           }
           sx={{
-            marginBottom: '24px',
-            borderRadius: '8px',
+            marginBottom:
+              '20px',
+
+            borderRadius:
+              '10px',
           }}
         >
           {message.text}
@@ -594,30 +812,42 @@ function RoleMyRequestsPage({
 
       <Box
         sx={{
-          display: 'grid',
+          display:
+            'grid',
 
           gridTemplateColumns: {
-            xs: '1fr',
+            xs:
+              'repeat(2, minmax(0, 1fr))',
 
-            sm: 'repeat(2, minmax(0, 1fr))',
-
-            lg: 'repeat(3, minmax(0, 1fr))',
-
-            xl: 'repeat(6, minmax(0, 1fr))',
+            md:
+              'repeat(4, minmax(0, 1fr))',
           },
 
-          gap: '18px',
+          gap: {
+            xs:
+              '12px',
 
-          marginBottom: '24px',
+            sm:
+              '16px',
+          },
+
+          marginBottom:
+            '22px',
         }}
       >
         {summaryCards.map(
           (card) => (
             <Paper
-              key={card.title}
+              key={
+                card.title
+              }
               elevation={0}
               sx={{
-                padding: '18px',
+                minHeight:
+                  '112px',
+
+                padding:
+                  '16px 18px',
 
                 backgroundColor:
                   '#FFFFFF',
@@ -625,15 +855,32 @@ function RoleMyRequestsPage({
                 border:
                   '1px solid #E5E7EB',
 
-                borderRadius: '12px',
+                borderRadius:
+                  '12px',
+
+                display:
+                  'flex',
+
+                alignItems:
+                  'center',
+
+                gap:
+                  '14px',
               }}
             >
               <Box
                 sx={{
-                  width: '42px',
-                  height: '42px',
+                  width:
+                    '48px',
 
-                  display: 'flex',
+                  height:
+                    '48px',
+
+                  flexShrink:
+                    0,
+
+                  display:
+                    'flex',
 
                   alignItems:
                     'center',
@@ -644,32 +891,65 @@ function RoleMyRequestsPage({
                   backgroundColor:
                     card.backgroundColor,
 
-                  color: card.color,
+                  color:
+                    card.color,
 
                   borderRadius:
-                    '10px',
+                    '12px',
 
-                  fontSize: '17px',
+                  fontSize:
+                    '20px',
 
-                  fontWeight: 800,
+                  fontWeight:
+                    800,
                 }}
               >
-                {card.value}
+                {
+                  card.value
+                }
               </Box>
 
-              <Typography
+              <Box
                 sx={{
-                  color: '#111827',
-
-                  fontSize: '14px',
-
-                  fontWeight: 800,
-
-                  marginTop: '13px',
+                  minWidth:
+                    0,
                 }}
               >
-                {card.title}
-              </Typography>
+                <Typography
+                  sx={{
+                    color:
+                      '#6B7280',
+
+                    fontSize:
+                      '12px',
+
+                    fontWeight:
+                      600,
+                  }}
+                >
+                  สถานะคำขอ
+                </Typography>
+
+                <Typography
+                  sx={{
+                    color:
+                      '#111827',
+
+                    fontSize:
+                      '15px',
+
+                    fontWeight:
+                      800,
+
+                    marginTop:
+                      '2px',
+                  }}
+                >
+                  {
+                    card.title
+                  }
+                </Typography>
+              </Box>
             </Paper>
           ),
         )}
@@ -678,86 +958,144 @@ function RoleMyRequestsPage({
       <Paper
         elevation={0}
         sx={{
-          backgroundColor: '#FFFFFF',
+          backgroundColor:
+            '#FFFFFF',
 
           border:
             '1px solid #E5E7EB',
 
-          borderRadius: '12px',
+          borderRadius:
+            '14px',
 
-          overflow: 'hidden',
+          overflow:
+            'hidden',
         }}
       >
         <Box
           sx={{
             padding: {
-              xs: '20px',
-              sm: '24px',
+              xs:
+                '18px',
+
+              sm:
+                '20px 22px',
             },
 
             borderBottom:
               '1px solid #E5E7EB',
           }}
         >
-          <Typography
+          <Box
             sx={{
-              color: '#111827',
+              display:
+                'flex',
 
-              fontSize: '18px',
+              alignItems: {
+                xs:
+                  'flex-start',
 
-              fontWeight: 800,
+                sm:
+                  'center',
+              },
+
+              justifyContent:
+                'space-between',
+
+              flexDirection: {
+                xs:
+                  'column',
+
+                sm:
+                  'row',
+              },
+
+              gap:
+                '6px',
             }}
           >
-            Leave Request List
-          </Typography>
+            <Typography
+              sx={{
+                color:
+                  '#111827',
 
-          <Typography
-            sx={{
-              color: '#6B7280',
+                fontSize:
+                  '18px',
 
-              fontSize: '14px',
+                fontWeight:
+                  800,
+              }}
+            >
+              รายการคำขอลา
+            </Typography>
 
-              marginTop: '4px',
-            }}
-          >
-            Showing{' '}
-            {filteredRequests.length}{' '}
-            of {requests.length}{' '}
-            requests
-          </Typography>
+            <Typography
+              sx={{
+                color:
+                  '#6B7280',
+
+                fontSize:
+                  '13px',
+
+                fontWeight:
+                  500,
+              }}
+            >
+              แสดง{' '}
+              {
+                filteredRequests.length
+              }{' '}
+              จาก{' '}
+              {
+                requests.length
+              }{' '}
+              รายการ
+            </Typography>
+          </Box>
 
           <Box
             sx={{
-              display: 'grid',
+              display:
+                'grid',
 
               gridTemplateColumns: {
-                xs: '1fr',
+                xs:
+                  '1fr',
 
-                lg: 'minmax(280px, 1.5fr) repeat(2, minmax(170px, 0.7fr)) auto',
+                md:
+                  'minmax(260px, 1.6fr) minmax(160px, 0.65fr) minmax(140px, 0.55fr) auto',
               },
 
-              gap: '16px',
+              gap:
+                '12px',
 
-              marginTop: '22px',
+              marginTop:
+                '18px',
             }}
           >
             <TextField
               fullWidth
-              label="Search Request"
-              placeholder="Request number, leave type or reason"
-              value={searchText}
-              onChange={(event) =>
+              size="small"
+              label="ค้นหาคำขอ"
+              placeholder="เลขที่คำขอ ประเภทการลา หรือเหตุผล"
+              value={
+                searchText
+              }
+              onChange={(
+                event,
+              ) =>
                 handleSearchChange(
-                  event.target.value,
+                  event.target
+                    .value,
                 )
               }
               sx={{
                 '& .MuiOutlinedInput-root':
                   {
-                    height: '48px',
+                    height:
+                      '46px',
 
                     borderRadius:
-                      '8px',
+                      '9px',
 
                     '&.Mui-focused fieldset':
                       {
@@ -774,24 +1112,34 @@ function RoleMyRequestsPage({
               }}
             />
 
-            <FormControl fullWidth>
+            <FormControl
+              fullWidth
+              size="small"
+            >
               <InputLabel id="request-status-filter-label">
-                Status
+                สถานะ
               </InputLabel>
 
               <Select
                 labelId="request-status-filter-label"
-                value={statusFilter}
-                label="Status"
-                onChange={(event) =>
+                value={
+                  statusFilter
+                }
+                label="สถานะ"
+                onChange={(
+                  event,
+                ) =>
                   handleStatusFilterChange(
-                    event.target.value,
+                    event.target
+                      .value,
                   )
                 }
                 sx={{
-                  height: '48px',
+                  height:
+                    '46px',
 
-                  borderRadius: '8px',
+                  borderRadius:
+                    '9px',
 
                   '&.Mui-focused .MuiOutlinedInput-notchedOutline':
                     {
@@ -801,49 +1149,59 @@ function RoleMyRequestsPage({
                 }}
               >
                 <MenuItem value="all">
-                  All Statuses
+                  ทุกสถานะ
                 </MenuItem>
 
                 <MenuItem value="draft">
-                  Draft
+                  แบบร่าง
                 </MenuItem>
 
                 <MenuItem value="pending">
-                  Pending
+                  รออนุมัติ
                 </MenuItem>
 
                 <MenuItem value="approved">
-                  Approved
+                  อนุมัติแล้ว
                 </MenuItem>
 
                 <MenuItem value="rejected">
-                  Rejected
+                  ปฏิเสธแล้ว
                 </MenuItem>
 
                 <MenuItem value="cancelled">
-                  Cancelled
+                  ยกเลิกแล้ว
                 </MenuItem>
               </Select>
             </FormControl>
 
-            <FormControl fullWidth>
+            <FormControl
+              fullWidth
+              size="small"
+            >
               <InputLabel id="request-year-filter-label">
-                Year
+                ปี
               </InputLabel>
 
               <Select
                 labelId="request-year-filter-label"
-                value={yearFilter}
-                label="Year"
-                onChange={(event) =>
+                value={
+                  yearFilter
+                }
+                label="ปี"
+                onChange={(
+                  event,
+                ) =>
                   handleYearFilterChange(
-                    event.target.value,
+                    event.target
+                      .value,
                   )
                 }
                 sx={{
-                  height: '48px',
+                  height:
+                    '46px',
 
-                  borderRadius: '8px',
+                  borderRadius:
+                    '9px',
 
                   '&.Mui-focused .MuiOutlinedInput-notchedOutline':
                     {
@@ -853,16 +1211,22 @@ function RoleMyRequestsPage({
                 }}
               >
                 <MenuItem value="all">
-                  All Years
+                  ทุกปี
                 </MenuItem>
 
                 {availableYears.map(
                   (year) => (
                     <MenuItem
-                      key={year}
-                      value={year}
+                      key={
+                        year
+                      }
+                      value={
+                        year
+                      }
                     >
-                      {year}
+                      {
+                        year
+                      }
                     </MenuItem>
                   ),
                 )}
@@ -876,22 +1240,32 @@ function RoleMyRequestsPage({
                 handleClearFilters
               }
               sx={{
-                minWidth: '110px',
+                minWidth:
+                  '116px',
 
-                height: '48px',
+                height:
+                  '46px',
 
-                padding: '0 18px',
+                padding:
+                  '0 16px',
 
-                color: '#374151',
+                color:
+                  '#4B5563',
 
                 borderColor:
                   '#D1D5DB',
 
-                borderRadius: '8px',
+                borderRadius:
+                  '9px',
 
-                fontSize: '14px',
+                fontSize:
+                  '13px',
 
-                fontWeight: 700,
+                fontWeight:
+                  700,
+
+                whiteSpace:
+                  'nowrap',
 
                 textTransform:
                   'none',
@@ -905,7 +1279,7 @@ function RoleMyRequestsPage({
                 },
               }}
             >
-              Clear
+              ล้างตัวกรอง
             </Button>
           </Box>
         </Box>
@@ -915,83 +1289,137 @@ function RoleMyRequestsPage({
           <>
             <Box
               sx={{
-                width: '100%',
+                width:
+                  '100%',
 
-                overflowX: 'auto',
+                overflowX:
+                  'auto',
               }}
             >
               <Table
                 sx={{
-                  minWidth: '1120px',
+                  minWidth:
+                    '900px',
                 }}
               >
                 <TableHead>
                   <TableRow
                     sx={{
                       backgroundColor:
-                        '#F9FAFB',
+                        '#F8FAFC',
                     }}
                   >
                     {[
-                      'Request Number',
-                      'Leave Type',
-                      'Date Range',
-                      'Days',
-                      'Status',
-                      'Submitted',
-                      'Actions',
-                    ].map((heading) => (
-                      <TableCell
-                        key={heading}
-                        align={
-                          heading ===
-                          'Actions'
-                            ? 'right'
-                            : heading ===
-                                'Days'
-                              ? 'center'
-                              : 'left'
-                        }
-                        sx={{
-                          color:
-                            '#6B7280',
+                      {
+                        label:
+                          'เลขที่คำขอ',
 
-                          fontSize:
-                            '12px',
+                        align:
+                          'left',
+                      },
 
-                          fontWeight:
-                            800,
+                      {
+                        label:
+                          'ประเภทการลา',
 
-                          textTransform:
-                            'uppercase',
+                        align:
+                          'left',
+                      },
 
-                          letterSpacing:
-                            '0.4px',
+                      {
+                        label:
+                          'ช่วงวันที่',
 
-                          whiteSpace:
-                            'nowrap',
+                        align:
+                          'left',
+                      },
 
-                          borderBottom:
-                            '1px solid #E5E7EB',
-                        }}
-                      >
-                        {heading}
-                      </TableCell>
-                    ))}
+                      {
+                        label:
+                          'จำนวนวัน',
+
+                        align:
+                          'center',
+                      },
+
+                      {
+                        label:
+                          'สถานะ',
+
+                        align:
+                          'left',
+                      },
+
+                      {
+                        label:
+                          'การดำเนินการ',
+
+                        align:
+                          'right',
+                      },
+                    ].map(
+                      (
+                        heading,
+                      ) => (
+                        <TableCell
+                          key={
+                            heading.label
+                          }
+                          align={
+                            heading.align
+                          }
+                          sx={{
+                            padding:
+                              '13px 18px',
+
+                            color:
+                              '#64748B',
+
+                            fontSize:
+                              '12px',
+
+                            fontWeight:
+                              700,
+
+                            whiteSpace:
+                              'nowrap',
+
+                            borderBottom:
+                              '1px solid #E5E7EB',
+                          }}
+                        >
+                          {
+                            heading.label
+                          }
+                        </TableCell>
+                      ),
+                    )}
                   </TableRow>
                 </TableHead>
 
                 <TableBody>
                   {paginatedRequests.map(
-                    (request) => {
+                    (
+                      request,
+                    ) => {
                       const statusStyle =
                         getStatusStyle(
                           request.status,
                         );
 
+                      const statusLabel =
+                        statusLabels[
+                          request
+                            .status
+                        ] ||
+                        request.status ||
+                        '-';
+
                       return (
                         <TableRow
-                          key={request.id}
+                          key={
+                            request.id
+                          }
                           hover
                           sx={{
                             '&:last-child td':
@@ -999,12 +1427,21 @@ function RoleMyRequestsPage({
                                 borderBottom:
                                   'none',
                               },
+
+                            '&:hover':
+                              {
+                                backgroundColor:
+                                  '#FAFBFD',
+                              },
                           }}
                         >
                           <TableCell
                             sx={{
+                              padding:
+                                '16px 18px',
+
                               borderBottom:
-                                '1px solid #E5E7EB',
+                                '1px solid #EEF0F3',
                             }}
                           >
                             <Typography
@@ -1023,32 +1460,90 @@ function RoleMyRequestsPage({
                               }}
                             >
                               {request.requestNo ||
-                                `Draft #${request.id}`}
+                                `แบบร่าง #${request.id}`}
                             </Typography>
 
                             {!request.requestNo && (
                               <Typography
                                 sx={{
                                   color:
-                                    '#9CA3AF',
+                                    '#94A3B8',
 
                                   fontSize:
-                                    '11px',
+                                    '10px',
 
                                   marginTop:
                                     '3px',
+
+                                  whiteSpace:
+                                    'nowrap',
                                 }}
                               >
-                                Number assigned
-                                after submission
+                                ระบบจะสร้างเลขคำขอหลังจากส่งอนุมัติ
                               </Typography>
                             )}
                           </TableCell>
 
                           <TableCell
                             sx={{
+                              padding:
+                                '16px 18px',
+
                               color:
                                 '#374151',
+
+                              fontSize:
+                                '13px',
+
+                              fontWeight:
+                                600,
+
+                              whiteSpace:
+                                'nowrap',
+
+                              borderBottom:
+                                '1px solid #EEF0F3',
+                            }}
+                          >
+                            {request.leaveType ||
+                              '-'}
+                          </TableCell>
+
+                          <TableCell
+                            sx={{
+                              padding:
+                                '16px 18px',
+
+                              color:
+                                '#4B5563',
+
+                              fontSize:
+                                '12px',
+
+                              fontWeight:
+                                500,
+
+                              whiteSpace:
+                                'nowrap',
+
+                              borderBottom:
+                                '1px solid #EEF0F3',
+                            }}
+                          >
+                            {formatDateRange(
+                              request.startDate,
+                              request.endDate,
+                            )}
+                          </TableCell>
+
+                          <TableCell
+                            align="center"
+                            sx={{
+                              padding:
+                                '16px 18px',
+
+                              color:
+                                '#111827',
 
                               fontSize:
                                 '13px',
@@ -1060,71 +1555,35 @@ function RoleMyRequestsPage({
                                 'nowrap',
 
                               borderBottom:
-                                '1px solid #E5E7EB',
+                                '1px solid #EEF0F3',
                             }}
                           >
-                            {request.leaveType ||
-                              'Not selected'}
-                          </TableCell>
-
-                          <TableCell
-                            sx={{
-                              color:
-                                '#4B5563',
-
-                              fontSize:
-                                '12px',
-
-                              whiteSpace:
-                                'nowrap',
-
-                              borderBottom:
-                                '1px solid #E5E7EB',
-                            }}
-                          >
-                            {formatDate(
-                              request.startDate,
+                            {formatDays(
+                              request.leaveDays,
                             )}{' '}
-                            –{' '}
-                            {formatDate(
-                              request.endDate,
-                            )}
-                          </TableCell>
-
-                          <TableCell
-                            align="center"
-                            sx={{
-                              color:
-                                '#111827',
-
-                              fontSize:
-                                '13px',
-
-                              fontWeight:
-                                800,
-
-                              borderBottom:
-                                '1px solid #E5E7EB',
-                            }}
-                          >
-                            {request.leaveDays ||
-                              0}
+                            วัน
                           </TableCell>
 
                           <TableCell
                             sx={{
+                              padding:
+                                '16px 18px',
+
                               borderBottom:
-                                '1px solid #E5E7EB',
+                                '1px solid #EEF0F3',
                             }}
                           >
                             <Chip
-                              label={formatStatus(
-                                request.status,
-                              )}
+                              label={
+                                statusLabel
+                              }
                               size="small"
                               sx={{
                                 minWidth:
-                                  '78px',
+                                  '86px',
+
+                                height:
+                                  '28px',
 
                                 backgroundColor:
                                   statusStyle.backgroundColor,
@@ -1140,38 +1599,27 @@ function RoleMyRequestsPage({
 
                                 fontWeight:
                                   700,
+
+                                '& .MuiChip-label':
+                                  {
+                                    padding:
+                                      '0 12px',
+                                  },
                               }}
                             />
                           </TableCell>
 
                           <TableCell
-                            sx={{
-                              color:
-                                '#6B7280',
-
-                              fontSize:
-                                '12px',
-
-                              whiteSpace:
-                                'nowrap',
-
-                              borderBottom:
-                                '1px solid #E5E7EB',
-                            }}
-                          >
-                            {formatDateTime(
-                              request.submittedAt,
-                            )}
-                          </TableCell>
-
-                          <TableCell
                             align="right"
                             sx={{
+                              padding:
+                                '16px 18px',
+
                               whiteSpace:
                                 'nowrap',
 
                               borderBottom:
-                                '1px solid #E5E7EB',
+                                '1px solid #EEF0F3',
                             }}
                           >
                             <Box
@@ -1182,7 +1630,11 @@ function RoleMyRequestsPage({
                                 justifyContent:
                                   'flex-end',
 
-                                gap: '8px',
+                                alignItems:
+                                  'center',
+
+                                gap:
+                                  '7px',
                               }}
                             >
                               <Button
@@ -1195,10 +1647,10 @@ function RoleMyRequestsPage({
                                 }
                                 sx={{
                                   minWidth:
-                                    '64px',
+                                    '54px',
 
                                   height:
-                                    '36px',
+                                    '34px',
 
                                   padding:
                                     '0 12px',
@@ -1207,6 +1659,7 @@ function RoleMyRequestsPage({
                                     theme.primary,
 
                                   borderColor:
+                                    theme.border ||
                                     theme.primary,
 
                                   borderRadius:
@@ -1227,11 +1680,11 @@ function RoleMyRequestsPage({
                                         theme.soft,
 
                                       borderColor:
-                                        theme.dark,
+                                        theme.primary,
                                     },
                                 }}
                               >
-                                View
+                                ดู
                               </Button>
 
                               {request.status ===
@@ -1247,19 +1700,20 @@ function RoleMyRequestsPage({
                                     }
                                     sx={{
                                       minWidth:
-                                        '64px',
+                                        '58px',
 
                                       height:
-                                        '36px',
+                                        '34px',
 
                                       padding:
                                         '0 12px',
 
                                       color:
-                                        '#2563EB',
+                                        theme.primary,
 
                                       borderColor:
-                                        '#2563EB',
+                                        theme.border ||
+                                        theme.primary,
 
                                       borderRadius:
                                         '8px',
@@ -1276,11 +1730,14 @@ function RoleMyRequestsPage({
                                       '&:hover':
                                         {
                                           backgroundColor:
-                                            '#EFF6FF',
+                                            theme.soft,
+
+                                          borderColor:
+                                            theme.primary,
                                         },
                                     }}
                                   >
-                                    Edit
+                                    แก้ไข
                                   </Button>
 
                                   <Button
@@ -1294,10 +1751,10 @@ function RoleMyRequestsPage({
                                     }
                                     sx={{
                                       minWidth:
-                                        '68px',
+                                        '50px',
 
                                       height:
-                                        '36px',
+                                        '34px',
 
                                       padding:
                                         '0 12px',
@@ -1306,7 +1763,7 @@ function RoleMyRequestsPage({
                                         '#DC2626',
 
                                       borderColor:
-                                        '#DC2626',
+                                        '#FCA5A5',
 
                                       borderRadius:
                                         '8px',
@@ -1324,10 +1781,13 @@ function RoleMyRequestsPage({
                                         {
                                           backgroundColor:
                                             '#FEF2F2',
+
+                                          borderColor:
+                                            '#DC2626',
                                         },
                                     }}
                                   >
-                                    Delete
+                                    ลบ
                                   </Button>
                                 </>
                               )}
@@ -1345,10 +1805,10 @@ function RoleMyRequestsPage({
                                   }
                                   sx={{
                                     minWidth:
-                                      '68px',
+                                      '62px',
 
                                     height:
-                                      '36px',
+                                      '34px',
 
                                     padding:
                                       '0 12px',
@@ -1357,7 +1817,7 @@ function RoleMyRequestsPage({
                                       '#B45309',
 
                                     borderColor:
-                                      '#F59E0B',
+                                      '#FCD34D',
 
                                     borderRadius:
                                       '8px',
@@ -1375,10 +1835,13 @@ function RoleMyRequestsPage({
                                       {
                                         backgroundColor:
                                           '#FFFBEB',
+
+                                        borderColor:
+                                          '#F59E0B',
                                       },
                                   }}
                                 >
-                                  Cancel
+                                  ยกเลิก
                                 </Button>
                               )}
                             </Box>
@@ -1396,7 +1859,9 @@ function RoleMyRequestsPage({
               count={
                 filteredRequests.length
               }
-              page={page}
+              page={
+                page
+              }
               onPageChange={
                 handlePageChange
               }
@@ -1410,39 +1875,67 @@ function RoleMyRequestsPage({
                 5,
                 10,
               ]}
+              labelRowsPerPage="จำนวนรายการต่อหน้า:"
+              labelDisplayedRows={({
+                from,
+                to,
+                count,
+              }) =>
+                `${from}–${to} จาก ${count}`
+              }
               sx={{
                 borderTop:
                   '1px solid #E5E7EB',
+
+                color:
+                  '#4B5563',
+
+                '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows':
+                  {
+                    fontSize:
+                      '12px',
+                  },
               }}
             />
           </>
         ) : (
           <Box
             sx={{
-              minHeight: '300px',
+              minHeight:
+                '260px',
 
-              padding: '40px 24px',
+              padding:
+                '36px 24px',
 
-              display: 'flex',
+              display:
+                'flex',
 
-              flexDirection: 'column',
+              flexDirection:
+                'column',
 
-              alignItems: 'center',
+              alignItems:
+                'center',
 
               justifyContent:
                 'center',
 
-              textAlign: 'center',
+              textAlign:
+                'center',
             }}
           >
             <Box
               sx={{
-                width: '64px',
-                height: '64px',
+                width:
+                  '56px',
 
-                display: 'flex',
+                height:
+                  '56px',
 
-                alignItems: 'center',
+                display:
+                  'flex',
+
+                alignItems:
+                  'center',
 
                 justifyContent:
                   'center',
@@ -1450,13 +1943,17 @@ function RoleMyRequestsPage({
                 backgroundColor:
                   theme.soft,
 
-                color: theme.primary,
+                color:
+                  theme.primary,
 
-                borderRadius: '50%',
+                borderRadius:
+                  '50%',
 
-                fontSize: '24px',
+                fontSize:
+                  '20px',
 
-                fontWeight: 800,
+                fontWeight:
+                  800,
               }}
             >
               0
@@ -1464,29 +1961,35 @@ function RoleMyRequestsPage({
 
             <Typography
               sx={{
-                color: '#111827',
+                color:
+                  '#111827',
 
-                fontSize: '18px',
+                fontSize:
+                  '17px',
 
-                fontWeight: 800,
+                fontWeight:
+                  800,
 
-                marginTop: '16px',
+                marginTop:
+                  '14px',
               }}
             >
-              No leave requests found
+              ไม่พบคำขอลา
             </Typography>
 
             <Typography
               sx={{
-                color: '#6B7280',
+                color:
+                  '#6B7280',
 
-                fontSize: '14px',
+                fontSize:
+                  '13px',
 
-                marginTop: '6px',
+                marginTop:
+                  '5px',
               }}
             >
-              Try changing or clearing
-              the selected filters.
+              ลองเปลี่ยนตัวกรองหรือล้างตัวกรองแล้วค้นหาอีกครั้ง
             </Typography>
 
             <Button
@@ -1496,22 +1999,29 @@ function RoleMyRequestsPage({
                 handleClearFilters
               }
               sx={{
-                height: '42px',
+                height:
+                  '40px',
 
-                marginTop: '20px',
+                marginTop:
+                  '18px',
 
-                padding: '0 18px',
+                padding:
+                  '0 18px',
 
-                color: theme.primary,
+                color:
+                  theme.primary,
 
                 borderColor:
                   theme.primary,
 
-                borderRadius: '8px',
+                borderRadius:
+                  '8px',
 
-                fontSize: '14px',
+                fontSize:
+                  '13px',
 
-                fontWeight: 700,
+                fontWeight:
+                  700,
 
                 textTransform:
                   'none',
@@ -1525,7 +2035,7 @@ function RoleMyRequestsPage({
                 },
               }}
             >
-              Clear Filters
+              ล้างตัวกรอง
             </Button>
           </Box>
         )}
@@ -1536,96 +2046,115 @@ function RoleMyRequestsPage({
           selectedRequest &&
             confirmAction,
         )}
-        onClose={closeConfirmation}
+        onClose={
+          closeConfirmation
+        }
         fullWidth
         maxWidth="xs"
         slotProps={{
           paper: {
             sx: {
-              borderRadius: '12px',
+              borderRadius:
+                '14px',
             },
           },
         }}
       >
         <DialogTitle
           sx={{
-            color: '#111827',
+            color:
+              '#111827',
 
-            fontSize: '20px',
+            fontSize:
+              '19px',
 
-            fontWeight: 800,
+            fontWeight:
+              800,
 
             borderBottom:
               '1px solid #E5E7EB',
           }}
         >
-          {confirmationTitle}
+          {
+            confirmationTitle
+          }
         </DialogTitle>
 
         <DialogContent
           sx={{
             padding:
-              '24px !important',
+              '22px !important',
           }}
         >
           <Typography
             sx={{
-              color: '#4B5563',
+              color:
+                '#4B5563',
 
-              fontSize: '14px',
+              fontSize:
+                '14px',
 
-              lineHeight: 1.7,
+              lineHeight:
+                1.7,
             }}
           >
-            {confirmationDescription}
+            {
+              confirmationDescription
+            }
           </Typography>
 
           {selectedRequest && (
             <Box
               sx={{
-                padding: '16px',
+                padding:
+                  '14px',
 
-                marginTop: '18px',
+                marginTop:
+                  '16px',
 
                 backgroundColor:
-                  '#F9FAFB',
+                  '#F8FAFC',
 
                 border:
                   '1px solid #E5E7EB',
 
-                borderRadius: '8px',
+                borderRadius:
+                  '10px',
               }}
             >
               <Typography
                 sx={{
-                  color: '#111827',
+                  color:
+                    '#111827',
 
-                  fontSize: '14px',
+                  fontSize:
+                    '13px',
 
-                  fontWeight: 800,
+                  fontWeight:
+                    800,
                 }}
               >
                 {selectedRequest.requestNo ||
-                  `Draft #${selectedRequest.id}`}
+                  `แบบร่าง #${selectedRequest.id}`}
               </Typography>
 
               <Typography
                 sx={{
-                  color: '#6B7280',
+                  color:
+                    '#6B7280',
 
-                  fontSize: '13px',
+                  fontSize:
+                    '12px',
 
-                  marginTop: '5px',
+                  marginTop:
+                    '5px',
                 }}
               >
                 {selectedRequest.leaveType ||
-                  'Not selected'}
-                :{' '}
-                {formatDate(
+                  '-'}{' '}
+                •{' '}
+                {formatDateRange(
                   selectedRequest.startDate,
-                )}{' '}
-                –{' '}
-                {formatDate(
                   selectedRequest.endDate,
                 )}
               </Typography>
@@ -1636,7 +2165,7 @@ function RoleMyRequestsPage({
         <DialogActions
           sx={{
             padding:
-              '16px 24px 20px',
+              '14px 22px 18px',
 
             borderTop:
               '1px solid #E5E7EB',
@@ -1645,28 +2174,36 @@ function RoleMyRequestsPage({
           <Button
             type="button"
             variant="outlined"
-            onClick={closeConfirmation}
+            onClick={
+              closeConfirmation
+            }
             sx={{
-              minWidth: '90px',
+              minWidth:
+                '84px',
 
-              height: '42px',
+              height:
+                '40px',
 
-              color: '#374151',
+              color:
+                '#374151',
 
               borderColor:
                 '#D1D5DB',
 
-              borderRadius: '8px',
+              borderRadius:
+                '8px',
 
-              fontSize: '14px',
+              fontSize:
+                '13px',
 
-              fontWeight: 700,
+              fontWeight:
+                700,
 
               textTransform:
                 'none',
             }}
           >
-            Back
+            กลับ
           </Button>
 
           <Button
@@ -1676,35 +2213,45 @@ function RoleMyRequestsPage({
               handleConfirmAction
             }
             sx={{
-              minWidth: '130px',
+              minWidth:
+                '118px',
 
-              height: '42px',
+              height:
+                '40px',
 
               backgroundColor:
                 '#DC2626',
 
-              color: '#FFFFFF',
+              color:
+                '#FFFFFF',
 
-              borderRadius: '8px',
+              borderRadius:
+                '8px',
 
-              fontSize: '14px',
+              fontSize:
+                '13px',
 
-              fontWeight: 700,
+              fontWeight:
+                700,
 
               textTransform:
                 'none',
 
-              boxShadow: 'none',
+              boxShadow:
+                'none',
 
               '&:hover': {
                 backgroundColor:
                   '#B91C1C',
 
-                boxShadow: 'none',
+                boxShadow:
+                  'none',
               },
             }}
           >
-            {confirmationButtonText}
+            {
+              confirmationButtonText
+            }
           </Button>
         </DialogActions>
       </Dialog>

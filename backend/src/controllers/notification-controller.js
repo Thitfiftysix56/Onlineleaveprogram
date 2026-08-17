@@ -8,25 +8,31 @@ const data = (row) => ({
   leaveRequestId: row.leave_request_id,
   title: row.title,
   message: row.message,
-  path: notificationPath(row.notification_type, row.leave_request_id),
+  path: notificationPath(row.notification_type, row.leave_request_id, row.owner_role),
   read: Boolean(row.is_read),
   readAt: null,
   createdAt: row.created_at,
 })
 
-function notificationPath(type, leaveRequestId) {
+function notificationPath(type, leaveRequestId, ownerRole = 'Employee') {
   if (!leaveRequestId) return null
   if (type === 'leave-submitted') return `/supervisor/approval/${leaveRequestId}`
   if (['leave-approved', 'leave-rejected'].includes(type)) {
-    return `/employee/my-requests/${leaveRequestId}`
+    const role = String(ownerRole || 'Employee').toLowerCase()
+    return `/${['employee', 'supervisor', 'hr', 'admin'].includes(role) ? role : 'employee'}/my-requests/${leaveRequestId}`
   }
   return null
 }
 
 export async function listNotifications(request, response) {
   const [rows] = await pool.execute(
-    `SELECT notification_id, notification_type, leave_request_id, title, message, is_read, created_at
-     FROM notifications WHERE user_id = ? ORDER BY created_at DESC`, [request.user.userId],
+    `SELECT n.notification_id, n.notification_type, n.leave_request_id, n.title, n.message, n.is_read, n.created_at,
+       owner_role.role_name AS owner_role
+     FROM notifications n
+     LEFT JOIN leave_requests lr ON lr.leave_request_id = n.leave_request_id
+     LEFT JOIN users owner_user ON owner_user.employee_id = lr.employee_id
+     LEFT JOIN roles owner_role ON owner_role.role_id = owner_user.role_id
+     WHERE n.user_id = ? ORDER BY n.created_at DESC`, [request.user.userId],
   )
   const [[count]] = await pool.execute(
     'SELECT COUNT(*) AS unread_count FROM notifications WHERE user_id = ? AND is_read = 0', [request.user.userId],
