@@ -64,6 +64,10 @@ async function validate(connection, employeeId, body, currentId = 0, submitting 
   const leaveTypeId = positiveId(body.leaveTypeId)
   const startDate = date(body.startDate); const endDate = date(body.endDate)
   const reason = String(body.reason || '').trim()
+  const requestsHalfDay = body.halfDay === true
+    || String(body.halfDay || '').toLowerCase() === 'true'
+    || ['half-day', 'half_day', 'halfday'].includes(String(body.durationType || body.leaveDuration || '').toLowerCase())
+  if (requestsHalfDay) return { error: 'Half-day leave is not supported.' }
   if (!submitting && !leaveTypeId && !startDate && !endDate && !reason) return { value: { leaveTypeId: null, startDate: null, endDate: null, reason: '' } }
   if (!leaveTypeId || !startDate || !endDate || !reason) return { error: 'Leave type, start date, end date and reason are required.' }
   if (startDate > endDate) return { error: 'End date must be on or after start date.' }
