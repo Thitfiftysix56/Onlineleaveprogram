@@ -1,761 +1,1423 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
 import {
   Alert,
   Box,
   Button,
   Chip,
+  CircularProgress,
   FormControl,
   InputLabel,
   MenuItem,
   Paper,
   Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from '@mui/material';
-import HRLayout from '../../layouts/hrlayout.jsx';
-import { useNavigate } from 'react-router-dom';
+
 import {
-  getEmployees,
-  updateEmployeeStatus,
-} from '../../api/employee-service.js';
+  useNavigate,
+} from 'react-router-dom';
+
+import HRLayout from '../../layouts/hrlayout.jsx';
+import api from '../../api/axios.js';
+
+const theme = {
+  primary: '#059669',
+  dark: '#047857',
+  soft: '#ECFDF5',
+  border: '#A7F3D0',
+};
+
+/* =========================
+   Normalize Employee
+========================= */
+
+const normalizeEmployee = (
+  employee,
+) => ({
+  id:
+    employee.employeeId ??
+    employee.employee_id ??
+    employee.id,
+
+  employeeCode:
+    employee.employeeCode ||
+    employee.employee_code ||
+    employee.code ||
+    '-',
+
+  firstName:
+    employee.firstName ||
+    employee.first_name ||
+    '',
+
+  lastName:
+    employee.lastName ||
+    employee.last_name ||
+    '',
+
+  fullName:
+    employee.fullName ||
+    employee.employeeName ||
+    employee.employee_name ||
+    [
+      employee.firstName ||
+        employee.first_name,
+      employee.lastName ||
+        employee.last_name,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim() ||
+    '-',
+
+  email:
+    employee.email ||
+    '-',
+
+  phone:
+    employee.phone ||
+    employee.phoneNumber ||
+    employee.phone_number ||
+    '-',
+
+  department:
+    employee.departmentName ||
+    employee.department_name ||
+    employee.department ||
+    '-',
+
+  departmentId:
+    employee.departmentId ??
+    employee.department_id ??
+    null,
+
+  position:
+    employee.positionName ||
+    employee.position_name ||
+    employee.position ||
+    '-',
+
+  positionId:
+    employee.positionId ??
+    employee.position_id ??
+    null,
+
+  supervisorName:
+    employee.supervisorName ||
+    employee.supervisor_name ||
+    '-',
+
+  status:
+    String(
+      employee.status ||
+        employee.employeeStatus ||
+        'active',
+    )
+      .trim()
+      .toLowerCase(),
+});
+
+/* =========================
+   Status
+========================= */
+
+const translateStatus = (
+  status,
+) => {
+  const labels = {
+    active: 'ใช้งานอยู่',
+    inactive: 'ไม่ใช้งาน',
+    resigned: 'ลาออก',
+  };
+
+  return labels[status] || status || '-';
+};
+
+const getStatusStyle = (
+  status,
+) => {
+  if (status === 'active') {
+    return {
+      backgroundColor: '#DCFCE7',
+      color: '#15803D',
+    };
+  }
+
+  if (status === 'inactive') {
+    return {
+      backgroundColor: '#FEE2E2',
+      color: '#B91C1C',
+    };
+  }
+
+  return {
+    backgroundColor: '#F1F5F9',
+    color: '#64748B',
+  };
+};
+
+/* =========================
+   Component
+========================= */
 
 function EmployeeManagementPage() {
   const navigate = useNavigate();
-  const [searchText, setSearchText] = useState('');
-  const [departmentFilter, setDepartmentFilter] =
-    useState('All');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [actionMessage, setActionMessage] = useState('');
-  const [employees, setEmployees] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const [updatingId, setUpdatingId] = useState(null);
 
-  const loadEmployees = useCallback(async () => {
+  const [
+    employees,
+    setEmployees,
+  ] = useState([]);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    updatingId,
+    setUpdatingId,
+  ] = useState(null);
+
+  const [
+    error,
+    setError,
+  ] = useState('');
+
+  const [
+    actionMessage,
+    setActionMessage,
+  ] = useState('');
+
+  const [
+    searchText,
+    setSearchText,
+  ] = useState('');
+
+  const [
+    departmentFilter,
+    setDepartmentFilter,
+  ] = useState('all');
+
+  const [
+    statusFilter,
+    setStatusFilter,
+  ] = useState('all');
+
+  /* =========================
+     Load Employees
+  ========================= */
+
+  const loadEmployees = async () => {
     setLoading(true);
-    setLoadError('');
+    setError('');
+
     try {
-      const rows = await getEmployees();
-      setEmployees(rows.map((employee) => ({
-        ...employee,
-        id: employee.employeeId,
-        employeeId: employee.employeeCode,
-        name: employee.fullName,
-        role: employee.roleName,
-        status: employee.status.charAt(0).toUpperCase() + employee.status.slice(1),
-      })));
-    } catch (error) {
-      setLoadError(error.response?.data?.message || 'Unable to load employees.');
+      const response =
+        await api.get(
+          '/hr/employees',
+        );
+
+      const data =
+        response.data?.data;
+
+      const employeeList =
+        Array.isArray(
+          data?.employees,
+        )
+          ? data.employees
+          : Array.isArray(data)
+            ? data
+            : [];
+
+      setEmployees(
+        employeeList.map(
+          normalizeEmployee,
+        ),
+      );
+    } catch (loadError) {
+      setError(
+        loadError.response?.data
+          ?.message ||
+          'ไม่สามารถโหลดข้อมูลพนักงานได้',
+      );
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    loadEmployees();
   }, []);
 
-  useEffect(() => { loadEmployees(); }, [loadEmployees]);
+  /* =========================
+     Departments
+  ========================= */
 
-  const departments = useMemo(() => [
-    'All',
-    ...new Set(employees.map((employee) => employee.department)),
-  ], [employees]);
-
-  const filteredEmployees = useMemo(() => {
-    const keyword = searchText.trim().toLowerCase();
-
-    return employees.filter((employee) => {
-      const matchesSearch =
-        !keyword ||
-        employee.employeeId.toLowerCase().includes(keyword) ||
-        employee.name.toLowerCase().includes(keyword) ||
-        employee.email.toLowerCase().includes(keyword) ||
-        employee.position.toLowerCase().includes(keyword);
-
-      const matchesDepartment =
-        departmentFilter === 'All' ||
-        employee.department === departmentFilter;
-
-      const matchesStatus =
-        statusFilter === 'All' ||
-        employee.status === statusFilter;
-
-      return (
-        matchesSearch &&
-        matchesDepartment &&
-        matchesStatus
+  const departments =
+    useMemo(() => {
+      return [
+        ...new Set(
+          employees
+            .map(
+              (employee) =>
+                employee.department,
+            )
+            .filter(
+              (department) =>
+                department &&
+                department !== '-',
+            ),
+        ),
+      ].sort((a, b) =>
+        a.localeCompare(b),
       );
-    });
-  }, [employees, searchText, departmentFilter, statusFilter]);
+    }, [employees]);
 
-  const activeEmployees = employees.filter(
-    (employee) => employee.status === 'Active',
-  ).length;
+  /* =========================
+     Filter
+  ========================= */
 
-  const inactiveEmployees = employees.filter(
-    (employee) => employee.status === 'Inactive',
-  ).length;
+  const filteredEmployees =
+    useMemo(() => {
+      const keyword =
+        searchText
+          .trim()
+          .toLowerCase();
 
-  const handleAddEmployee = () => {
-    navigate('/hr/employee-management/add');
-  };
+      return employees.filter(
+        (employee) => {
+          const matchesSearch =
+            !keyword ||
+            employee.employeeCode
+              .toLowerCase()
+              .includes(keyword) ||
+            employee.fullName
+              .toLowerCase()
+              .includes(keyword) ||
+            employee.email
+              .toLowerCase()
+              .includes(keyword) ||
+            employee.position
+              .toLowerCase()
+              .includes(keyword);
 
-  const handleViewEmployee = (employee) => {
-    setActionMessage(
-      `View selected for ${employee.name}. Employee detail navigation will be connected later.`,
-    );
+          const matchesDepartment =
+            departmentFilter ===
+              'all' ||
+            employee.department ===
+              departmentFilter;
 
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
-  };
+          const matchesStatus =
+            statusFilter ===
+              'all' ||
+            employee.status ===
+              statusFilter;
 
-  const handleEditEmployee = (employee) => {
-    navigate(`/hr/employee-management/${employee.id}/edit`);
-  };
+          return (
+            matchesSearch &&
+            matchesDepartment &&
+            matchesStatus
+          );
+        },
+      );
+    }, [
+      employees,
+      searchText,
+      departmentFilter,
+      statusFilter,
+    ]);
 
-  const handleStatusChange = async (employee) => {
-    const nextStatus = employee.status === 'Active' ? 'Inactive' : 'Active';
-    if (!window.confirm(`Change ${employee.name} to ${nextStatus}?`)) return;
-    setUpdatingId(employee.id);
-    try {
-      await updateEmployeeStatus(employee.id, nextStatus);
-      await loadEmployees();
-      setActionMessage(`${employee.name} was changed to ${nextStatus}.`);
-    } catch (error) {
-      setActionMessage(error.response?.data?.message || 'Unable to update employee status.');
-    } finally {
-      setUpdatingId(null);
-    }
-  };
+  /* =========================
+     Summary
+  ========================= */
+
+  const activeCount =
+    employees.filter(
+      (employee) =>
+        employee.status ===
+        'active',
+    ).length;
+
+  const inactiveCount =
+    employees.filter(
+      (employee) =>
+        employee.status ===
+        'inactive',
+    ).length;
+
+  const summaryCards = [
+    {
+      title:
+        'พนักงานทั้งหมด',
+
+      value:
+        employees.length,
+
+      backgroundColor:
+        theme.soft,
+
+      color:
+        theme.primary,
+    },
+
+    {
+      title:
+        'ใช้งานอยู่',
+
+      value:
+        activeCount,
+
+      backgroundColor:
+        '#DCFCE7',
+
+      color:
+        '#15803D',
+    },
+
+    {
+      title:
+        'ไม่ใช้งาน',
+
+      value:
+        inactiveCount,
+
+      backgroundColor:
+        '#FEE2E2',
+
+      color:
+        '#B91C1C',
+    },
+  ];
+
+  /* =========================
+     Actions
+  ========================= */
 
   const handleClearFilters = () => {
     setSearchText('');
-    setDepartmentFilter('All');
-    setStatusFilter('All');
-    setActionMessage('');
+    setDepartmentFilter('all');
+    setStatusFilter('all');
   };
+
+  const handleAddEmployee = () => {
+    navigate(
+      '/hr/employee-management/add',
+    );
+  };
+
+  const handleEditEmployee = (
+    employee,
+  ) => {
+    navigate(
+      `/hr/employee-management/${employee.id}/edit`,
+    );
+  };
+
+  const handleToggleStatus =
+    async (employee) => {
+      if (!employee.id) {
+        return;
+      }
+
+      const nextStatus =
+        employee.status ===
+        'active'
+          ? 'inactive'
+          : 'active';
+
+      setUpdatingId(
+        employee.id,
+      );
+
+      setError('');
+      setActionMessage('');
+
+      try {
+        await api.patch(
+          `/hr/employees/${employee.id}/status`,
+          {
+            status:
+              nextStatus,
+          },
+        );
+
+        setEmployees(
+          (
+            previousEmployees,
+          ) =>
+            previousEmployees.map(
+              (item) =>
+                item.id ===
+                employee.id
+                  ? {
+                      ...item,
+                      status:
+                        nextStatus,
+                    }
+                  : item,
+            ),
+        );
+
+        setActionMessage(
+          nextStatus ===
+            'active'
+            ? `เปิดใช้งาน ${employee.fullName} แล้ว`
+            : `ปิดใช้งาน ${employee.fullName} แล้ว`,
+        );
+      } catch (updateError) {
+        setError(
+          updateError.response?.data
+            ?.message ||
+            'ไม่สามารถเปลี่ยนสถานะพนักงานได้',
+        );
+      } finally {
+        setUpdatingId(null);
+      }
+    };
+
+  /* =========================
+     UI
+  ========================= */
 
   return (
     <HRLayout activeMenu="Employee Management">
+      {/* Header */}
+
       <Box
         sx={{
           display: 'flex',
+
           alignItems: {
             xs: 'flex-start',
             sm: 'center',
           },
-          justifyContent: 'space-between',
+
+          justifyContent:
+            'space-between',
+
           flexDirection: {
             xs: 'column',
             sm: 'row',
           },
+
           gap: '16px',
-          marginBottom: '28px',
+
+          marginBottom:
+            '22px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color: '#111827',
-              fontSize: {
-                xs: '26px',
-                sm: '30px',
-              },
-              fontWeight: 800,
-            }}
-          >
-            Employee Management
-          </Typography>
+        <Typography
+          component="h1"
+          sx={{
+            color: '#111827',
 
-          <Typography
-            sx={{
-              color: '#6B7280',
-              fontSize: '15px',
-              marginTop: '6px',
-            }}
-          >
-            View and manage employee information registered in
-            the system.
-          </Typography>
-        </Box>
+            fontSize: {
+              xs: '26px',
+              sm: '30px',
+            },
+
+            fontWeight: 800,
+          }}
+        >
+          จัดการพนักงาน
+        </Typography>
 
         <Button
           type="button"
           variant="contained"
-          onClick={handleAddEmployee}
+          onClick={
+            handleAddEmployee
+          }
           sx={{
-            minWidth: '150px',
-            height: '44px',
-            padding: '0 20px',
-            backgroundColor: '#059669',
-            color: '#FFFFFF',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: 700,
-            textTransform: 'none',
-            boxShadow: 'none',
+            minWidth:
+              '140px',
+
+            height:
+              '42px',
+
+            padding:
+              '0 18px',
+
+            backgroundColor:
+              theme.primary,
+
+            color:
+              '#FFFFFF',
+
+            borderRadius:
+              '8px',
+
+            fontSize:
+              '12px',
+
+            fontWeight:
+              700,
+
+            textTransform:
+              'none',
+
+            boxShadow:
+              'none',
 
             '&:hover': {
-              backgroundColor: '#047857',
-              boxShadow: 'none',
+              backgroundColor:
+                theme.dark,
+
+              boxShadow:
+                'none',
             },
           }}
         >
-          Add Employee
+          + เพิ่มพนักงาน
         </Button>
       </Box>
 
+      {/* Messages */}
+
+      {error && (
+        <Alert
+          severity="error"
+          onClose={() =>
+            setError('')
+          }
+          sx={{
+            marginBottom:
+              '20px',
+
+            borderRadius:
+              '10px',
+          }}
+        >
+          {error}
+        </Alert>
+      )}
+
       {actionMessage && (
         <Alert
-          severity="info"
-          onClose={() => setActionMessage('')}
+          severity="success"
+          onClose={() =>
+            setActionMessage('')
+          }
           sx={{
-            marginBottom: '24px',
-            borderRadius: '8px',
+            marginBottom:
+              '20px',
+
+            borderRadius:
+              '10px',
           }}
         >
           {actionMessage}
         </Alert>
       )}
 
-      {loadError && (
-        <Alert severity="error" action={<Button onClick={loadEmployees}>Retry</Button>} sx={{ marginBottom: '24px' }}>
-          {loadError}
-        </Alert>
-      )}
+      {/* Summary Cards */}
 
       <Box
         sx={{
           display: 'grid',
+
           gridTemplateColumns: {
             xs: '1fr',
-            sm: 'repeat(3, minmax(0, 1fr))',
+
+            sm:
+              'repeat(3, minmax(0, 1fr))',
           },
-          gap: '20px',
-          marginBottom: '24px',
+
+          gap: '18px',
+
+          marginBottom:
+            '24px',
         }}
       >
-        <Paper
-          elevation={0}
-          sx={{
-            padding: '20px',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E5E7EB',
-            borderRadius: '12px',
-          }}
-        >
-          <Typography
-            sx={{
-              color: '#6B7280',
-              fontSize: '14px',
-              fontWeight: 600,
-            }}
-          >
-            Total Employees
-          </Typography>
+        {summaryCards.map(
+          (card) => (
+            <Paper
+              key={card.title}
+              elevation={0}
+              sx={{
+                minHeight:
+                  '140px',
 
-          <Typography
-            sx={{
-              color: '#111827',
-              fontSize: '30px',
-              fontWeight: 800,
-              marginTop: '8px',
-            }}
-          >
-            {employees.length}
-          </Typography>
-        </Paper>
+                padding:
+                  '20px',
 
-        <Paper
-          elevation={0}
-          sx={{
-            padding: '20px',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E5E7EB',
-            borderRadius: '12px',
-          }}
-        >
-          <Typography
-            sx={{
-              color: '#6B7280',
-              fontSize: '14px',
-              fontWeight: 600,
-            }}
-          >
-            Active Employees
-          </Typography>
+                backgroundColor:
+                  '#FFFFFF',
 
-          <Typography
-            sx={{
-              color: '#059669',
-              fontSize: '30px',
-              fontWeight: 800,
-              marginTop: '8px',
-            }}
-          >
-            {activeEmployees}
-          </Typography>
-        </Paper>
+                border:
+                  '1px solid #E5E7EB',
 
-        <Paper
-          elevation={0}
-          sx={{
-            padding: '20px',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E5E7EB',
-            borderRadius: '12px',
-          }}
-        >
-          <Typography
-            sx={{
-              color: '#6B7280',
-              fontSize: '14px',
-              fontWeight: 600,
-            }}
-          >
-            Inactive Employees
-          </Typography>
+                borderRadius:
+                  '14px',
+              }}
+            >
+              <Box
+                sx={{
+                  width:
+                    '50px',
 
-          <Typography
-            sx={{
-              color: '#DC2626',
-              fontSize: '30px',
-              fontWeight: 800,
-              marginTop: '8px',
-            }}
-          >
-            {inactiveEmployees}
-          </Typography>
-        </Paper>
+                  height:
+                    '50px',
+
+                  display:
+                    'flex',
+
+                  alignItems:
+                    'center',
+
+                  justifyContent:
+                    'center',
+
+                  backgroundColor:
+                    card.backgroundColor,
+
+                  color:
+                    card.color,
+
+                  borderRadius:
+                    '11px',
+
+                  fontSize:
+                    '20px',
+
+                  fontWeight:
+                    800,
+                }}
+              >
+                {card.value}
+              </Box>
+
+              <Typography
+                sx={{
+                  color:
+                    '#111827',
+
+                  fontSize:
+                    '14px',
+
+                  fontWeight:
+                    800,
+
+                  marginTop:
+                    '13px',
+                }}
+              >
+                {card.title}
+              </Typography>
+            </Paper>
+          ),
+        )}
       </Box>
+
+      {/* Main Card */}
 
       <Paper
         elevation={0}
         sx={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E5E7EB',
-          borderRadius: '12px',
-          overflow: 'hidden',
+          backgroundColor:
+            '#FFFFFF',
+
+          border:
+            '1px solid #E5E7EB',
+
+          borderRadius:
+            '14px',
+
+          overflow:
+            'hidden',
         }}
       >
+        {/* Filter */}
+
         <Box
           sx={{
-            padding: {
-              xs: '20px',
-              sm: '24px',
-            },
-            borderBottom: '1px solid #E5E7EB',
+            padding:
+              '20px 24px',
+
+            borderBottom:
+              '1px solid #E5E7EB',
           }}
         >
           <Typography
             sx={{
-              color: '#111827',
-              fontSize: '18px',
-              fontWeight: 800,
+              color:
+                '#111827',
+
+              fontSize:
+                '18px',
+
+              fontWeight:
+                800,
             }}
           >
-            Employee List
+            รายชื่อพนักงาน
           </Typography>
 
           <Typography
             sx={{
-              color: '#6B7280',
-              fontSize: '14px',
-              marginTop: '4px',
+              color:
+                '#64748B',
+
+              fontSize:
+                '12px',
+
+              marginTop:
+                '4px',
             }}
           >
-            Showing {filteredEmployees.length} of{' '}
-            {employees.length} employees
+            แสดง{' '}
+            {
+              filteredEmployees.length
+            }{' '}
+            จาก{' '}
+            {employees.length}{' '}
+            รายการ
           </Typography>
 
           <Box
             sx={{
-              display: 'grid',
+              display:
+                'grid',
+
               gridTemplateColumns: {
-                xs: '1fr',
-                md: 'minmax(240px, 2fr) minmax(190px, 1fr) minmax(150px, 1fr) auto',
+                xs:
+                  '1fr',
+
+                md:
+                  'minmax(250px, 1.4fr) repeat(2, minmax(170px, 0.8fr)) auto',
               },
-              gap: '16px',
-              marginTop: '22px',
+
+              gap:
+                '14px',
+
+              marginTop:
+                '20px',
             }}
           >
+            {/* Search */}
+
             <TextField
               fullWidth
-              label="Search Employee"
-              placeholder="Employee ID, name, email or position"
-              value={searchText}
-              onChange={(event) =>
-                setSearchText(event.target.value)
+              label="ค้นหาพนักงาน"
+              placeholder="ชื่อ รหัส อีเมล หรือตำแหน่ง"
+              value={
+                searchText
+              }
+              onChange={(
+                event,
+              ) =>
+                setSearchText(
+                  event.target
+                    .value,
+                )
               }
               sx={{
-                '& .MuiOutlinedInput-root': {
-                  height: '48px',
-                  borderRadius: '8px',
-                },
+                '& .MuiOutlinedInput-root':
+                  {
+                    height:
+                      '48px',
+
+                    borderRadius:
+                      '9px',
+
+                    '&.Mui-focused fieldset':
+                      {
+                        borderColor:
+                          theme.primary,
+                      },
+                  },
+
+                '& .MuiInputLabel-root.Mui-focused':
+                  {
+                    color:
+                      theme.primary,
+                  },
               }}
             />
 
-            <FormControl fullWidth>
-              <InputLabel id="employee-department-filter-label">
-                Department
+            {/* Department */}
+
+            <FormControl
+              fullWidth
+            >
+              <InputLabel>
+                แผนก
               </InputLabel>
 
               <Select
-                labelId="employee-department-filter-label"
-                value={departmentFilter}
-                label="Department"
-                onChange={(event) =>
-                  setDepartmentFilter(event.target.value)
+                value={
+                  departmentFilter
+                }
+                label="แผนก"
+                onChange={(
+                  event,
+                ) =>
+                  setDepartmentFilter(
+                    event.target
+                      .value,
+                  )
                 }
                 sx={{
-                  height: '48px',
-                  borderRadius: '8px',
+                  height:
+                    '48px',
+
+                  borderRadius:
+                    '9px',
                 }}
               >
-                {departments.map((department) => (
-                  <MenuItem
-                    key={department}
-                    value={department}
-                  >
-                    {department === 'All'
-                      ? 'All Departments'
-                      : department}
-                  </MenuItem>
-                ))}
+                <MenuItem value="all">
+                  ทุกแผนก
+                </MenuItem>
+
+                {departments.map(
+                  (
+                    department,
+                  ) => (
+                    <MenuItem
+                      key={
+                        department
+                      }
+                      value={
+                        department
+                      }
+                    >
+                      {
+                        department
+                      }
+                    </MenuItem>
+                  ),
+                )}
               </Select>
             </FormControl>
 
-            <FormControl fullWidth>
-              <InputLabel id="employee-status-filter-label">
-                Status
+            {/* Status */}
+
+            <FormControl
+              fullWidth
+            >
+              <InputLabel>
+                สถานะ
               </InputLabel>
 
               <Select
-                labelId="employee-status-filter-label"
-                value={statusFilter}
-                label="Status"
-                onChange={(event) =>
-                  setStatusFilter(event.target.value)
+                value={
+                  statusFilter
+                }
+                label="สถานะ"
+                onChange={(
+                  event,
+                ) =>
+                  setStatusFilter(
+                    event.target
+                      .value,
+                  )
                 }
                 sx={{
-                  height: '48px',
-                  borderRadius: '8px',
+                  height:
+                    '48px',
+
+                  borderRadius:
+                    '9px',
                 }}
               >
-                <MenuItem value="All">
-                  All Statuses
+                <MenuItem value="all">
+                  ทุกสถานะ
                 </MenuItem>
 
-                <MenuItem value="Active">
-                  Active
+                <MenuItem value="active">
+                  ใช้งานอยู่
                 </MenuItem>
 
-                <MenuItem value="Inactive">
-                  Inactive
+                <MenuItem value="inactive">
+                  ไม่ใช้งาน
+                </MenuItem>
+
+                <MenuItem value="resigned">
+                  ลาออก
                 </MenuItem>
               </Select>
             </FormControl>
+
+            {/* Clear */}
 
             <Button
               type="button"
               variant="outlined"
-              onClick={handleClearFilters}
+              onClick={
+                handleClearFilters
+              }
               sx={{
-                minWidth: '120px',
-                height: '48px',
-                padding: '0 18px',
-                color: '#374151',
-                borderColor: '#D1D5DB',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 700,
-                textTransform: 'none',
+                height:
+                  '48px',
 
-                '&:hover': {
-                  borderColor: '#9CA3AF',
-                  backgroundColor: '#F9FAFB',
-                },
+                padding:
+                  '0 18px',
+
+                color:
+                  '#475569',
+
+                borderColor:
+                  '#CBD5E1',
+
+                borderRadius:
+                  '9px',
+
+                fontSize:
+                  '12px',
+
+                fontWeight:
+                  700,
+
+                textTransform:
+                  'none',
+
+                '&:hover':
+                  {
+                    backgroundColor:
+                      '#F8FAFC',
+
+                    borderColor:
+                      '#94A3B8',
+                  },
               }}
             >
-              Clear
+              ล้างตัวกรอง
             </Button>
           </Box>
         </Box>
 
+        {/* Loading */}
+
         {loading ? (
-          <Box sx={{ minHeight: '300px', display: 'grid', placeItems: 'center' }}>
-            <Typography sx={{ color: '#6B7280' }}>Loading employees...</Typography>
-          </Box>
-        ) : filteredEmployees.length > 0 ? (
           <Box
             sx={{
-              overflowX: 'auto',
+              minHeight:
+                '300px',
+
+              display:
+                'flex',
+
+              alignItems:
+                'center',
+
+              justifyContent:
+                'center',
             }}
           >
-            <Box
-              component="table"
+            <CircularProgress
               sx={{
-                width: '100%',
-                minWidth: '1050px',
-                borderCollapse: 'collapse',
+                color:
+                  theme.primary,
+              }}
+            />
+          </Box>
+        ) : filteredEmployees.length >
+          0 ? (
+          /* Table */
+
+          <Box
+            sx={{
+              overflowX:
+                'auto',
+            }}
+          >
+            <Table
+              sx={{
+                minWidth:
+                  '1050px',
               }}
             >
-              <Box component="thead">
-                <Box
-                  component="tr"
+              <TableHead>
+                <TableRow
                   sx={{
-                    backgroundColor: '#F9FAFB',
+                    backgroundColor:
+                      '#F8FAFC',
                   }}
                 >
                   {[
-                    'Employee ID',
-                    'Employee',
-                    'Department',
-                    'Position',
-                    'Role',
-                    'Status',
-                    'Action',
-                  ].map((heading) => (
-                    <Box
-                      key={heading}
-                      component="th"
-                      sx={{
-                        padding: '14px 18px',
-                        color: '#6B7280',
-                        borderBottom: '1px solid #E5E7EB',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        textAlign: 'left',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {heading}
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-
-              <Box component="tbody">
-                {filteredEmployees.map((employee) => (
-                  <Box
-                    key={employee.id}
-                    component="tr"
-                    sx={{
-                      '&:hover': {
-                        backgroundColor: '#F9FAFB',
-                      },
-                    }}
-                  >
-                    <Box
-                      component="td"
-                      sx={{
-                        padding: '16px 18px',
-                        borderBottom: '1px solid #E5E7EB',
-                        color: '#059669',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {employee.employeeId}
-                    </Box>
-
-                    <Box
-                      component="td"
-                      sx={{
-                        padding: '16px 18px',
-                        borderBottom: '1px solid #E5E7EB',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      <Typography
+                    'รหัสพนักงาน',
+                    'ชื่อพนักงาน',
+                    'อีเมล',
+                    'แผนก',
+                    'ตำแหน่ง',
+                    'สถานะ',
+                    'การดำเนินการ',
+                  ].map(
+                    (
+                      heading,
+                    ) => (
+                      <TableCell
+                        key={
+                          heading
+                        }
                         sx={{
-                          color: '#111827',
-                          fontSize: '14px',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {employee.name}
-                      </Typography>
-
-                      <Typography
-                        sx={{
-                          color: '#6B7280',
-                          fontSize: '12px',
-                          marginTop: '3px',
-                        }}
-                      >
-                        {employee.email}
-                      </Typography>
-                    </Box>
-
-                    <Box
-                      component="td"
-                      sx={{
-                        padding: '16px 18px',
-                        borderBottom: '1px solid #E5E7EB',
-                        color: '#4B5563',
-                        fontSize: '13px',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {employee.department}
-                    </Box>
-
-                    <Box
-                      component="td"
-                      sx={{
-                        padding: '16px 18px',
-                        borderBottom: '1px solid #E5E7EB',
-                        color: '#4B5563',
-                        fontSize: '13px',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {employee.position}
-                    </Box>
-
-                    <Box
-                      component="td"
-                      sx={{
-                        padding: '16px 18px',
-                        borderBottom: '1px solid #E5E7EB',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      <Chip
-                        label={employee.role}
-                        size="small"
-                        sx={{
-                          minWidth: '78px',
-                          backgroundColor: '#EFF6FF',
-                          color: '#2563EB',
-                          borderRadius: '999px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                        }}
-                      />
-                    </Box>
-
-                    <Box
-                      component="td"
-                      sx={{
-                        padding: '16px 18px',
-                        borderBottom: '1px solid #E5E7EB',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      <Chip
-                        label={employee.status}
-                        disabled={updatingId === employee.id}
-                        onClick={() => handleStatusChange(employee)}
-                        size="small"
-                        sx={{
-                          minWidth: '78px',
-                          backgroundColor:
-                            employee.status === 'Active'
-                              ? '#DCFCE7'
-                              : '#FEE2E2',
                           color:
-                            employee.status === 'Active'
-                              ? '#15803D'
-                              : '#B91C1C',
-                          borderRadius: '999px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                        }}
-                      />
-                    </Box>
+                            '#64748B',
 
-                    <Box
-                      component="td"
-                      sx={{
-                        padding: '16px 18px',
-                        borderBottom: '1px solid #E5E7EB',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '14px',
+                          fontSize:
+                            '11px',
+
+                          fontWeight:
+                            700,
+
+                          whiteSpace:
+                            'nowrap',
+
+                          borderBottom:
+                            '1px solid #E5E7EB',
                         }}
                       >
-                        <Button
-                          type="button"
-                          onClick={() =>
-                            handleViewEmployee(employee)
-                          }
-                          sx={{
-                            minWidth: 0,
-                            padding: 0,
-                            color: '#059669',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            textTransform: 'none',
+                        {
+                          heading
+                        }
+                      </TableCell>
+                    ),
+                  )}
+                </TableRow>
+              </TableHead>
 
-                            '&:hover': {
-                              backgroundColor: 'transparent',
-                              textDecoration: 'underline',
-                            },
+              <TableBody>
+                {filteredEmployees.map(
+                  (
+                    employee,
+                  ) => {
+                    const statusStyle =
+                      getStatusStyle(
+                        employee.status,
+                      );
+
+                    return (
+                      <TableRow
+                        key={
+                          employee.id ||
+                          employee.employeeCode
+                        }
+                        hover
+                      >
+                        {/* Employee Code */}
+
+                        <TableCell>
+                          <Typography
+                            sx={{
+                              color:
+                                theme.primary,
+
+                              fontSize:
+                                '12px',
+
+                              fontWeight:
+                                800,
+
+                              whiteSpace:
+                                'nowrap',
+                            }}
+                          >
+                            {
+                              employee.employeeCode
+                            }
+                          </Typography>
+                        </TableCell>
+
+                        {/* Name */}
+
+                        <TableCell>
+                          <Typography
+                            sx={{
+                              color:
+                                '#111827',
+
+                              fontSize:
+                                '12px',
+
+                              fontWeight:
+                                700,
+
+                              whiteSpace:
+                                'nowrap',
+                            }}
+                          >
+                            {
+                              employee.fullName
+                            }
+                          </Typography>
+                        </TableCell>
+
+                        {/* Email */}
+
+                        <TableCell
+                          sx={{
+                            color:
+                              '#475569',
+
+                            fontSize:
+                              '12px',
+
+                            whiteSpace:
+                              'nowrap',
                           }}
                         >
-                          View
-                        </Button>
-
-                        <Button
-                          type="button"
-                          onClick={() =>
-                            handleEditEmployee(employee)
+                          {
+                            employee.email
                           }
-                          sx={{
-                            minWidth: 0,
-                            padding: 0,
-                            color: '#2563EB',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            textTransform: 'none',
+                        </TableCell>
 
-                            '&:hover': {
-                              backgroundColor: 'transparent',
-                              textDecoration: 'underline',
-                            },
+                        {/* Department */}
+
+                        <TableCell
+                          sx={{
+                            color:
+                              '#475569',
+
+                            fontSize:
+                              '12px',
+
+                            whiteSpace:
+                              'nowrap',
                           }}
                         >
-                          Edit
-                        </Button>
-                      </Box>
-                    </Box>
-                  </Box>
-                ))}
-              </Box>
-            </Box>
+                          {
+                            employee.department
+                          }
+                        </TableCell>
+
+                        {/* Position */}
+
+                        <TableCell
+                          sx={{
+                            color:
+                              '#475569',
+
+                            fontSize:
+                              '12px',
+
+                            whiteSpace:
+                              'nowrap',
+                          }}
+                        >
+                          {
+                            employee.position
+                          }
+                        </TableCell>
+
+                        {/* Status */}
+
+                        <TableCell>
+                          <Chip
+                            label={translateStatus(
+                              employee.status,
+                            )}
+                            size="small"
+                            sx={{
+                              minWidth:
+                                '78px',
+
+                              backgroundColor:
+                                statusStyle.backgroundColor,
+
+                              color:
+                                statusStyle.color,
+
+                              borderRadius:
+                                '999px',
+
+                              fontSize:
+                                '10px',
+
+                              fontWeight:
+                                700,
+                            }}
+                          />
+                        </TableCell>
+
+                        {/* Actions */}
+
+                        <TableCell>
+                          <Box
+                            sx={{
+                              display:
+                                'flex',
+
+                              alignItems:
+                                'center',
+
+                              gap:
+                                '14px',
+
+                              whiteSpace:
+                                'nowrap',
+                            }}
+                          >
+                            <Button
+                              type="button"
+                              onClick={() =>
+                                handleEditEmployee(
+                                  employee,
+                                )
+                              }
+                              sx={{
+                                minWidth:
+                                  0,
+
+                                padding:
+                                  0,
+
+                                color:
+                                  theme.primary,
+
+                                fontSize:
+                                  '11px',
+
+                                fontWeight:
+                                  700,
+
+                                textTransform:
+                                  'none',
+
+                                '&:hover':
+                                  {
+                                    backgroundColor:
+                                      'transparent',
+
+                                    textDecoration:
+                                      'underline',
+                                  },
+                              }}
+                            >
+                              แก้ไข
+                            </Button>
+
+                            {employee.status !==
+                              'resigned' && (
+                              <Button
+                                type="button"
+                                disabled={
+                                  updatingId ===
+                                  employee.id
+                                }
+                                onClick={() =>
+                                  handleToggleStatus(
+                                    employee,
+                                  )
+                                }
+                                sx={{
+                                  minWidth:
+                                    0,
+
+                                  padding:
+                                    0,
+
+                                  color:
+                                    employee.status ===
+                                    'active'
+                                      ? '#DC2626'
+                                      : '#2563EB',
+
+                                  fontSize:
+                                    '11px',
+
+                                  fontWeight:
+                                    700,
+
+                                  textTransform:
+                                    'none',
+
+                                  '&:hover':
+                                    {
+                                      backgroundColor:
+                                        'transparent',
+
+                                      textDecoration:
+                                        'underline',
+                                    },
+                                }}
+                              >
+                                {updatingId ===
+                                employee.id
+                                  ? 'กำลังบันทึก...'
+                                  : employee.status ===
+                                      'active'
+                                    ? 'ปิดใช้งาน'
+                                    : 'เปิดใช้งาน'}
+                              </Button>
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  },
+                )}
+              </TableBody>
+            </Table>
           </Box>
         ) : (
+          /* Empty State */
+
           <Box
             sx={{
-              minHeight: '300px',
-              padding: '40px 24px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
+              minHeight:
+                '280px',
+
+              padding:
+                '40px 24px',
+
+              display:
+                'flex',
+
+              flexDirection:
+                'column',
+
+              alignItems:
+                'center',
+
+              justifyContent:
+                'center',
+
+              textAlign:
+                'center',
             }}
           >
             <Box
               sx={{
-                width: '64px',
-                height: '64px',
-                backgroundColor: '#ECFDF5',
-                color: '#059669',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '24px',
-                fontWeight: 800,
+                width:
+                  '58px',
+
+                height:
+                  '58px',
+
+                display:
+                  'flex',
+
+                alignItems:
+                  'center',
+
+                justifyContent:
+                  'center',
+
+                backgroundColor:
+                  theme.soft,
+
+                color:
+                  theme.primary,
+
+                borderRadius:
+                  '50%',
+
+                fontSize:
+                  '20px',
+
+                fontWeight:
+                  800,
               }}
             >
               0
@@ -763,48 +1425,36 @@ function EmployeeManagementPage() {
 
             <Typography
               sx={{
-                color: '#111827',
-                fontSize: '18px',
-                fontWeight: 800,
-                marginTop: '16px',
+                color:
+                  '#111827',
+
+                fontSize:
+                  '16px',
+
+                fontWeight:
+                  800,
+
+                marginTop:
+                  '14px',
               }}
             >
-              No employees found
+              ไม่พบข้อมูลพนักงาน
             </Typography>
 
             <Typography
               sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '6px',
+                color:
+                  '#64748B',
+
+                fontSize:
+                  '12px',
+
+                marginTop:
+                  '5px',
               }}
             >
-              Try changing or clearing the current filters.
+              ลองเปลี่ยนหรือล้างตัวกรอง
             </Typography>
-
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={handleClearFilters}
-              sx={{
-                height: '42px',
-                marginTop: '20px',
-                padding: '0 18px',
-                color: '#059669',
-                borderColor: '#059669',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 700,
-                textTransform: 'none',
-
-                '&:hover': {
-                  borderColor: '#047857',
-                  backgroundColor: '#ECFDF5',
-                },
-              }}
-            >
-              Clear Filters
-            </Button>
           </Box>
         )}
       </Paper>

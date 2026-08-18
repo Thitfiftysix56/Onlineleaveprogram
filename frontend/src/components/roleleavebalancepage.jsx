@@ -1,11 +1,11 @@
 import {
-  useCallback,
   useEffect,
   useMemo,
   useState,
 } from 'react';
 
 import {
+  Alert,
   Box,
   Chip,
   FormControl,
@@ -14,355 +14,308 @@ import {
   MenuItem,
   Paper,
   Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   Typography,
 } from '@mui/material';
 
-import { useLocation } from 'react-router-dom';
-
 import { getLeaveBalance } from '../api/leave-service.js';
 
-const EMPTY_BALANCES = [];
+const legacyLeaveBalanceSamples = [
+  {
+    id: 1,
+    leaveType: 'Annual Leave',
+    year: 2026,
+    totalDays: 10,
+    usedDays: 3,
+    pendingDays: 2,
+    updatedAt: '20 Jul 2026, 14:05',
+  },
+  {
+    id: 2,
+    leaveType: 'Sick Leave',
+    year: 2026,
+    totalDays: 30,
+    usedDays: 1,
+    pendingDays: 0,
+    updatedAt: '16 Jul 2026, 09:20',
+  },
+  {
+    id: 3,
+    leaveType: 'Personal Leave',
+    year: 2026,
+    totalDays: 5,
+    usedDays: 0,
+    pendingDays: 1,
+    updatedAt: '20 Jul 2026, 14:05',
+  },
+  {
+    id: 4,
+    leaveType: 'Annual Leave',
+    year: 2025,
+    totalDays: 10,
+    usedDays: 8,
+    pendingDays: 0,
+    updatedAt: '31 Dec 2025, 16:30',
+  },
+  {
+    id: 5,
+    leaveType: 'Sick Leave',
+    year: 2025,
+    totalDays: 30,
+    usedDays: 4,
+    pendingDays: 0,
+    updatedAt: '31 Dec 2025, 16:30',
+  },
+  {
+    id: 6,
+    leaveType: 'Personal Leave',
+    year: 2025,
+    totalDays: 5,
+    usedDays: 2,
+    pendingDays: 0,
+    updatedAt: '31 Dec 2025, 16:30',
+  },
+];
 
-const normalizeRole = (value) =>
-  String(value || 'employee')
-    .trim()
-    .toLowerCase();
-
-const normalizeStatus = (value) =>
-  String(value || '')
-    .trim()
-    .toLowerCase();
-
-const toNumber = (value) => {
-  const number = Number(value);
-
-  return Number.isFinite(number)
-    ? number
-    : 0;
+const leaveTypeLabels = {
+  'Annual Leave': 'ลาพักร้อน',
+  'Sick Leave': 'ลาป่วย',
+  'Personal Leave': 'ลากิจ',
+  'Maternity Leave': 'ลาคลอด',
+  'Other Leave': 'ลาอื่น ๆ',
 };
 
-const formatDays = (value) => {
-  const number = toNumber(value);
-
-  return Number.isInteger(number)
-    ? String(number)
-    : number
-        .toFixed(2)
-        .replace(/\.?0+$/, '');
-};
-
-const getTimestamp = (value) => {
-  const timestamp = new Date(
-    value || 0,
-  ).getTime();
-
-  return Number.isNaN(timestamp)
-    ? 0
-    : timestamp;
-};
-
-const getRequestYear = (request) => {
-  const value =
-    request?.startDate ||
-    request?.submittedAt ||
-    request?.createdAt ||
-    '';
-
-  const directYear = Number(
-    String(value).slice(0, 4),
-  );
+const formatDays = (
+  numberOfDays,
+) => {
+  const numericValue =
+    Number(numberOfDays);
 
   if (
-    Number.isInteger(directYear) &&
-    directYear > 0
+    !Number.isFinite(
+      numericValue,
+    )
   ) {
-    return directYear;
+    return '0';
   }
 
-  const date = new Date(value);
+  if (
+    Number.isInteger(
+      numericValue,
+    )
+  ) {
+    return String(
+      numericValue,
+    );
+  }
 
-  return Number.isNaN(
-    date.getTime(),
-  )
-    ? null
-    : date.getFullYear();
+  return numericValue
+    .toFixed(2)
+    .replace(
+      /\.?0+$/,
+      '',
+    );
 };
 
-const formatDateTime = (value) => {
+const getLeaveTypeLabel = (
+  leaveType,
+) =>
+  leaveTypeLabels[
+    leaveType
+  ] ||
+  leaveType ||
+  '-';
+
+const formatDateTime = (
+  value,
+) => {
   if (!value) {
     return '-';
   }
 
-  const date = new Date(value);
+  const text =
+    String(value).trim();
+
+  const englishDateMatch =
+    text.match(
+      /^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4}),?\s+(\d{1,2}):(\d{2})$/,
+    );
+
+  if (
+    englishDateMatch
+  ) {
+    const [
+      ,
+      day,
+      monthText,
+      year,
+      hour,
+      minute,
+    ] =
+      englishDateMatch;
+
+    const months = {
+      Jan: '01',
+      Feb: '02',
+      Mar: '03',
+      Apr: '04',
+      May: '05',
+      Jun: '06',
+      Jul: '07',
+      Aug: '08',
+      Sep: '09',
+      Oct: '10',
+      Nov: '11',
+      Dec: '12',
+    };
+
+    const normalizedMonth =
+      monthText
+        .charAt(0)
+        .toUpperCase() +
+      monthText
+        .slice(1)
+        .toLowerCase();
+
+    const month =
+      months[
+        normalizedMonth
+      ];
+
+    if (month) {
+      return `${String(
+        day,
+      ).padStart(
+        2,
+        '0',
+      )}/${month}/${year} ${String(
+        hour,
+      ).padStart(
+        2,
+        '0',
+      )}:${minute}`;
+    }
+  }
+
+  const date =
+    new Date(value);
 
   if (
     Number.isNaN(
       date.getTime(),
     )
   ) {
-    return String(value);
+    return text;
   }
 
-  return new Intl.DateTimeFormat(
-    'en-GB',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    },
-  ).format(date);
-};
-
-const normalizeFallbackBalances = (
-  balances,
-) =>
-  balances.map((balance) => {
-    const totalDays = Math.max(
-      toNumber(balance.totalDays),
-      0,
+  const day =
+    String(
+      date.getDate(),
+    ).padStart(
+      2,
+      '0',
     );
 
-    const usedDays = Math.max(
-      toNumber(balance.usedDays),
-      0,
+  const month =
+    String(
+      date.getMonth() +
+        1,
+    ).padStart(
+      2,
+      '0',
     );
 
-    const pendingDays = Math.max(
-      toNumber(balance.pendingDays),
-      0,
+  const year =
+    date.getFullYear();
+
+  const hour =
+    String(
+      date.getHours(),
+    ).padStart(
+      2,
+      '0',
     );
 
-    const remainingDays = Math.max(
-      totalDays - usedDays,
-      0,
+  const minute =
+    String(
+      date.getMinutes(),
+    ).padStart(
+      2,
+      '0',
     );
 
-    const availableDays = Math.max(
-      remainingDays - pendingDays,
-      0,
-    );
-
-    return {
-      ...balance,
-      totalDays,
-      usedDays,
-      pendingDays,
-      remainingDays,
-      availableDays,
-    };
-  });
-
-const buildLeaveBalances = ({
-  role,
-  fallbackBalances = EMPTY_BALANCES,
-}) => {
-  const normalizedRole =
-    normalizeRole(role);
-
-  /*
-   * อ่านคำขอลาก่อน เพราะ initializeLeaveRequests()
-   * จะย้ายยอดคำขอที่ Approved เข้า Entitlement Storage
-   */
-  const requests =
-    getLeaveRequests({
-      role: normalizedRole,
-    });
-
-  const entitlements =
-    getLeaveEntitlements({
-      role: normalizedRole,
-    });
-
-  if (
-    entitlements.length === 0
-  ) {
-    return normalizeFallbackBalances(
-      fallbackBalances,
-    );
-  }
-
-  return entitlements.map(
-    (entitlement) => {
-      const leaveTypeId = Number(
-        entitlement.leaveTypeId,
-      );
-
-      const year = Number(
-        entitlement.year,
-      );
-
-      const relatedRequests =
-        requests.filter(
-          (request) =>
-            Number(
-              request.leaveTypeId,
-            ) === leaveTypeId &&
-            getRequestYear(
-              request,
-            ) === year,
-        );
-
-      const pendingDays =
-        relatedRequests
-          .filter(
-            (request) =>
-              normalizeStatus(
-                request.status,
-              ) === 'pending',
-          )
-          .reduce(
-            (
-              total,
-              request,
-            ) =>
-              total +
-              toNumber(
-                request.leaveDays,
-              ),
-            0,
-          );
-
-      const totalDays =
-        Math.max(
-          toNumber(
-            entitlement.totalDays,
-          ),
-          0,
-        );
-
-      const usedDays =
-        Math.min(
-          Math.max(
-            toNumber(
-              entitlement.usedDays,
-            ),
-            0,
-          ),
-          totalDays,
-        );
-
-      const remainingDays =
-        Math.max(
-          totalDays - usedDays,
-          0,
-        );
-
-      const availableDays =
-        Math.max(
-          remainingDays -
-            pendingDays,
-          0,
-        );
-
-      const latestRequestTimestamp =
-        relatedRequests.reduce(
-          (
-            latest,
-            request,
-          ) =>
-            Math.max(
-              latest,
-
-              getTimestamp(
-                request.updatedAt ||
-                  request.approvedAt ||
-                  request.submittedAt ||
-                  request.createdAt,
-              ),
-            ),
-          0,
-        );
-
-      const latestTimestamp =
-        Math.max(
-          getTimestamp(
-            entitlement.updatedAt,
-          ),
-
-          latestRequestTimestamp,
-        );
-
-      return {
-        id:
-          entitlement.id ||
-          `${normalizedRole}-${leaveTypeId}-${year}`,
-
-        leaveTypeId,
-
-        leaveType:
-          entitlement.leaveType ||
-          'Leave',
-
-        year,
-
-        totalDays,
-
-        usedDays,
-
-        pendingDays,
-
-        remainingDays,
-
-        availableDays,
-
-        updatedAt:
-          latestTimestamp > 0
-            ? formatDateTime(
-                latestTimestamp,
-              )
-            : '-',
-      };
-    },
-  );
+  return `${day}/${month}/${year} ${hour}:${minute}`;
 };
 
 const getLeaveTypeStyle = (
   leaveType,
+  theme,
 ) => {
-  const styles = {
+  const leaveTypeStyles = {
     'Annual Leave': {
       shortName: 'A',
-      backgroundColor: '#EFF6FF',
-      color: '#2563EB',
-      borderColor: '#BFDBFE',
+      backgroundColor:
+        '#EFF6FF',
+      color:
+        '#2563EB',
+      borderColor:
+        '#BFDBFE',
     },
 
     'Sick Leave': {
       shortName: 'S',
-      backgroundColor: '#FEF2F2',
-      color: '#DC2626',
-      borderColor: '#FECACA',
+      backgroundColor:
+        '#FFF1F2',
+      color:
+        '#E11D48',
+      borderColor:
+        '#FECDD3',
     },
 
     'Personal Leave': {
       shortName: 'P',
-      backgroundColor: '#F5F3FF',
-      color: '#7C3AED',
-      borderColor: '#DDD6FE',
+      backgroundColor:
+        '#F5F3FF',
+      color:
+        '#7C3AED',
+      borderColor:
+        '#DDD6FE',
+    },
+
+    'Maternity Leave': {
+      shortName: 'M',
+      backgroundColor:
+        '#FDF2F8',
+      color:
+        '#DB2777',
+      borderColor:
+        '#FBCFE8',
     },
   };
 
   return (
-    styles[leaveType] || {
+    leaveTypeStyles[
+      leaveType
+    ] || {
       shortName:
         String(
-          leaveType || 'Leave',
+          leaveType || 'L',
         )
           .trim()
           .charAt(0)
-          .toUpperCase() || 'L',
+          .toUpperCase() ||
+        'L',
 
-      backgroundColor: '#F3F4F6',
-      color: '#4B5563',
-      borderColor: '#D1D5DB',
+      backgroundColor:
+        theme?.soft ||
+        '#F3F4F6',
+
+      color:
+        theme?.primary ||
+        '#4B5563',
+
+      borderColor:
+        theme?.border ||
+        '#D1D5DB',
     }
   );
 };
@@ -371,1041 +324,159 @@ const getBalanceStatus = (
   balance,
 ) => {
   if (
-    balance.availableDays <= 0
+    balance.availableDays <=
+    0
   ) {
     return {
-      label: 'No Balance',
-      backgroundColor: '#FEE2E2',
-      color: '#B91C1C',
+      label:
+        'สิทธิ์หมด',
+
+      backgroundColor:
+        '#FEE2E2',
+
+      color:
+        '#B91C1C',
     };
   }
 
-  const percentage =
-    balance.totalDays > 0
+  const availablePercentage =
+    balance.totalDays >
+    0
       ? (balance.availableDays /
           balance.totalDays) *
         100
       : 0;
 
-  if (percentage <= 25) {
+  if (
+    availablePercentage <=
+    25
+  ) {
     return {
-      label: 'Low Balance',
-      backgroundColor: '#FEF3C7',
-      color: '#B45309',
+      label:
+        'คงเหลือน้อย',
+
+      backgroundColor:
+        '#FEF3C7',
+
+      color:
+        '#B45309',
     };
   }
 
   return {
-    label: 'Available',
-    backgroundColor: '#DCFCE7',
-    color: '#15803D',
+    label:
+      'ใช้งานได้',
+
+    backgroundColor:
+      '#DCFCE7',
+
+    color:
+      '#15803D',
   };
 };
-
-function SummaryCard({
-  card,
-}) {
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        padding: '20px',
-
-        backgroundColor:
-          '#FFFFFF',
-
-        border:
-          '1px solid #E5E7EB',
-
-        borderRadius:
-          '12px',
-      }}
-    >
-      <Box
-        sx={{
-          width: '48px',
-
-          height: '48px',
-
-          display: 'flex',
-
-          alignItems:
-            'center',
-
-          justifyContent:
-            'center',
-
-          backgroundColor:
-            card.backgroundColor,
-
-          color:
-            card.color,
-
-          borderRadius:
-            '12px',
-
-          fontSize:
-            '19px',
-
-          fontWeight: 800,
-        }}
-      >
-        {formatDays(
-          card.value,
-        )}
-      </Box>
-
-      <Typography
-        sx={{
-          color:
-            '#111827',
-
-          fontSize:
-            '15px',
-
-          fontWeight:
-            800,
-
-          marginTop:
-            '14px',
-        }}
-      >
-        {card.title}
-      </Typography>
-
-      <Typography
-        sx={{
-          color:
-            '#9CA3AF',
-
-          fontSize:
-            '12px',
-
-          lineHeight:
-            1.6,
-
-          marginTop:
-            '4px',
-        }}
-      >
-        {card.description}
-      </Typography>
-    </Paper>
-  );
-}
-
-function BalanceCard({
-  balance,
-}) {
-  const typeStyle =
-    getLeaveTypeStyle(
-      balance.leaveType,
-    );
-
-  const status =
-    getBalanceStatus(
-      balance,
-    );
-
-  const committedPercentage =
-    balance.totalDays > 0
-      ? Math.min(
-          100,
-
-          ((balance.usedDays +
-            balance.pendingDays) /
-            balance.totalDays) *
-            100,
-        )
-      : 0;
-
-  const metrics = [
-    {
-      label: 'Total',
-      value:
-        balance.totalDays,
-      color: '#111827',
-    },
-    {
-      label: 'Used',
-      value:
-        balance.usedDays,
-      color: '#DC2626',
-    },
-    {
-      label: 'Pending',
-      value:
-        balance.pendingDays,
-      color: '#B45309',
-    },
-  ];
-
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        padding:
-          '24px',
-
-        backgroundColor:
-          '#FFFFFF',
-
-        border:
-          '1px solid #E5E7EB',
-
-        borderRadius:
-          '12px',
-      }}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-
-          alignItems:
-            'flex-start',
-
-          justifyContent:
-            'space-between',
-
-          gap: '14px',
-        }}
-      >
-        <Box
-          sx={{
-            display: 'flex',
-
-            alignItems:
-              'center',
-
-            gap: '14px',
-          }}
-        >
-          <Box
-            sx={{
-              width:
-                '48px',
-
-              height:
-                '48px',
-
-              flexShrink:
-                0,
-
-              display:
-                'flex',
-
-              alignItems:
-                'center',
-
-              justifyContent:
-                'center',
-
-              backgroundColor:
-                typeStyle
-                  .backgroundColor,
-
-              color:
-                typeStyle
-                  .color,
-
-              border: `1px solid ${typeStyle.borderColor}`,
-
-              borderRadius:
-                '12px',
-
-              fontSize:
-                '19px',
-
-              fontWeight:
-                800,
-            }}
-          >
-            {typeStyle.shortName}
-          </Box>
-
-          <Box>
-            <Typography
-              sx={{
-                color:
-                  '#111827',
-
-                fontSize:
-                  '17px',
-
-                fontWeight:
-                  800,
-              }}
-            >
-              {balance.leaveType}
-            </Typography>
-
-            <Typography
-              sx={{
-                color:
-                  '#9CA3AF',
-
-                fontSize:
-                  '12px',
-
-                marginTop:
-                  '3px',
-              }}
-            >
-              Entitlement year{' '}
-              {balance.year}
-            </Typography>
-          </Box>
-        </Box>
-
-        <Chip
-          label={
-            status.label
-          }
-          size="small"
-          sx={{
-            flexShrink: 0,
-
-            backgroundColor:
-              status.backgroundColor,
-
-            color:
-              status.color,
-
-            borderRadius:
-              '999px',
-
-            fontSize:
-              '10px',
-
-            fontWeight:
-              700,
-          }}
-        />
-      </Box>
-
-      <Box
-        sx={{
-          padding:
-            '20px',
-
-          marginTop:
-            '22px',
-
-          backgroundColor:
-            typeStyle
-              .backgroundColor,
-
-          border: `1px solid ${typeStyle.borderColor}`,
-
-          borderRadius:
-            '12px',
-
-          textAlign:
-            'center',
-        }}
-      >
-        <Typography
-          sx={{
-            color:
-              typeStyle.color,
-
-            fontSize:
-              '36px',
-
-            fontWeight:
-              800,
-
-            lineHeight:
-              1,
-          }}
-        >
-          {formatDays(
-            balance.availableDays,
-          )}
-        </Typography>
-
-        <Typography
-          sx={{
-            color:
-              '#4B5563',
-
-            fontSize:
-              '12px',
-
-            fontWeight:
-              700,
-
-            marginTop:
-              '8px',
-          }}
-        >
-          Available Days
-        </Typography>
-      </Box>
-
-      <Box
-        sx={{
-          display:
-            'grid',
-
-          gridTemplateColumns:
-            'repeat(3, minmax(0, 1fr))',
-
-          gap:
-            '10px',
-
-          marginTop:
-            '20px',
-        }}
-      >
-        {metrics.map(
-          (item) => (
-            <Box
-              key={
-                item.label
-              }
-              sx={{
-                padding:
-                  '12px 8px',
-
-                backgroundColor:
-                  '#F9FAFB',
-
-                borderRadius:
-                  '8px',
-
-                textAlign:
-                  'center',
-              }}
-            >
-              <Typography
-                sx={{
-                  color:
-                    item.color,
-
-                  fontSize:
-                    '17px',
-
-                  fontWeight:
-                    800,
-                }}
-              >
-                {formatDays(
-                  item.value,
-                )}
-              </Typography>
-
-              <Typography
-                sx={{
-                  color:
-                    '#9CA3AF',
-
-                  fontSize:
-                    '10px',
-
-                  fontWeight:
-                    700,
-
-                  textTransform:
-                    'uppercase',
-
-                  marginTop:
-                    '3px',
-                }}
-              >
-                {item.label}
-              </Typography>
-            </Box>
-          ),
-        )}
-      </Box>
-
-      <Box
-        sx={{
-          marginTop:
-            '22px',
-        }}
-      >
-        <Box
-          sx={{
-            display:
-              'flex',
-
-            justifyContent:
-              'space-between',
-
-            gap:
-              '12px',
-
-            marginBottom:
-              '8px',
-          }}
-        >
-          <Typography
-            sx={{
-              color:
-                '#6B7280',
-
-              fontSize:
-                '11px',
-
-              fontWeight:
-                700,
-            }}
-          >
-            Used and Pending
-          </Typography>
-
-          <Typography
-            sx={{
-              color:
-                '#374151',
-
-              fontSize:
-                '11px',
-
-              fontWeight:
-                800,
-            }}
-          >
-            {committedPercentage.toFixed(
-              0,
-            )}
-            %
-          </Typography>
-        </Box>
-
-        <LinearProgress
-          variant="determinate"
-          value={
-            committedPercentage
-          }
-          sx={{
-            height:
-              '9px',
-
-            backgroundColor:
-              '#E5E7EB',
-
-            borderRadius:
-              '999px',
-
-            '& .MuiLinearProgress-bar':
-              {
-                backgroundColor:
-                  typeStyle
-                    .color,
-
-                borderRadius:
-                  '999px',
-              },
-          }}
-        />
-      </Box>
-
-      <Typography
-        sx={{
-          color:
-            '#9CA3AF',
-
-          fontSize:
-            '10px',
-
-          lineHeight:
-            1.5,
-
-          marginTop:
-            '20px',
-        }}
-      >
-        Last updated:{' '}
-        {balance.updatedAt}
-      </Typography>
-    </Paper>
-  );
-}
-
-function BalanceTable({
-  balances,
-  selectedYear,
-}) {
-  const headings = [
-    'Leave Type',
-    'Total Days',
-    'Used Days',
-    'Pending Days',
-    'Remaining Days',
-    'Available Days',
-    'Status',
-  ];
-
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        backgroundColor:
-          '#FFFFFF',
-
-        border:
-          '1px solid #E5E7EB',
-
-        borderRadius:
-          '12px',
-
-        overflow:
-          'hidden',
-      }}
-    >
-      <Box
-        sx={{
-          padding: {
-            xs: '20px',
-            sm: '24px',
-          },
-
-          borderBottom:
-            '1px solid #E5E7EB',
-        }}
-      >
-        <Typography
-          sx={{
-            color:
-              '#111827',
-
-            fontSize:
-              '18px',
-
-            fontWeight:
-              800,
-          }}
-        >
-          Balance Detail
-        </Typography>
-
-        <Typography
-          sx={{
-            color:
-              '#6B7280',
-
-            fontSize:
-              '14px',
-
-            marginTop:
-              '4px',
-          }}
-        >
-          Detailed leave entitlement for{' '}
-          {selectedYear}.
-        </Typography>
-      </Box>
-
-      <Box
-        sx={{
-          width:
-            '100%',
-
-          overflowX:
-            'auto',
-        }}
-      >
-        <Table
-          sx={{
-            minWidth:
-              '900px',
-          }}
-        >
-          <TableHead>
-            <TableRow
-              sx={{
-                backgroundColor:
-                  '#F9FAFB',
-              }}
-            >
-              {headings.map(
-                (heading) => (
-                  <TableCell
-                    key={
-                      heading
-                    }
-                    align={
-                      heading ===
-                        'Leave Type' ||
-                      heading ===
-                        'Status'
-                        ? 'left'
-                        : 'center'
-                    }
-                    sx={{
-                      color:
-                        '#6B7280',
-
-                      fontSize:
-                        '12px',
-
-                      fontWeight:
-                        800,
-
-                      textTransform:
-                        'uppercase',
-
-                      letterSpacing:
-                        '0.4px',
-
-                      whiteSpace:
-                        'nowrap',
-                    }}
-                  >
-                    {heading}
-                  </TableCell>
-                ),
-              )}
-            </TableRow>
-          </TableHead>
-
-          <TableBody>
-            {balances.map(
-              (balance) => {
-                const status =
-                  getBalanceStatus(
-                    balance,
-                  );
-
-                const numericCells =
-                  [
-                    {
-                      value:
-                        balance.totalDays,
-                      color:
-                        '#111827',
-                    },
-                    {
-                      value:
-                        balance.usedDays,
-                      color:
-                        '#DC2626',
-                    },
-                    {
-                      value:
-                        balance.pendingDays,
-                      color:
-                        '#B45309',
-                    },
-                    {
-                      value:
-                        balance.remainingDays,
-                      color:
-                        '#374151',
-                    },
-                    {
-                      value:
-                        balance.availableDays,
-                      color:
-                        '#059669',
-                    },
-                  ];
-
-                return (
-                  <TableRow
-                    key={
-                      balance.id
-                    }
-                    hover
-                  >
-                    <TableCell
-                      sx={{
-                        color:
-                          '#111827',
-
-                        fontSize:
-                          '14px',
-
-                        fontWeight:
-                          800,
-                      }}
-                    >
-                      {balance.leaveType}
-                    </TableCell>
-
-                    {numericCells.map(
-                      (
-                        item,
-                        index,
-                      ) => (
-                        <TableCell
-                          key={`${balance.id}-${index}`}
-                          align="center"
-                          sx={{
-                            color:
-                              item.color,
-
-                            fontSize:
-                              '14px',
-
-                            fontWeight:
-                              700,
-                          }}
-                        >
-                          {formatDays(
-                            item.value,
-                          )}
-                        </TableCell>
-                      ),
-                    )}
-
-                    <TableCell>
-                      <Chip
-                        label={
-                          status.label
-                        }
-                        size="small"
-                        sx={{
-                          minWidth:
-                            '92px',
-
-                          backgroundColor:
-                            status.backgroundColor,
-
-                          color:
-                            status.color,
-
-                          borderRadius:
-                            '999px',
-
-                          fontSize:
-                            '11px',
-
-                          fontWeight:
-                            700,
-                        }}
-                      />
-                    </TableCell>
-                  </TableRow>
-                );
-              },
-            )}
-          </TableBody>
-        </Table>
-      </Box>
-    </Paper>
-  );
-}
-
-function EmptyBalance({
-  theme,
-}) {
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        minHeight:
-          '300px',
-
-        padding:
-          '40px 24px',
-
-        display:
-          'flex',
-
-        flexDirection:
-          'column',
-
-        alignItems:
-          'center',
-
-        justifyContent:
-          'center',
-
-        backgroundColor:
-          '#FFFFFF',
-
-        border:
-          '1px solid #E5E7EB',
-
-        borderRadius:
-          '12px',
-
-        textAlign:
-          'center',
-      }}
-    >
-      <Box
-        sx={{
-          width:
-            '64px',
-
-          height:
-            '64px',
-
-          display:
-            'flex',
-
-          alignItems:
-            'center',
-
-          justifyContent:
-            'center',
-
-          backgroundColor:
-            theme.soft,
-
-          color:
-            theme.primary,
-
-          borderRadius:
-            '50%',
-
-          fontSize:
-            '24px',
-
-          fontWeight:
-            800,
-        }}
-      >
-        0
-      </Box>
-
-      <Typography
-        sx={{
-          color:
-            '#111827',
-
-          fontSize:
-            '18px',
-
-          fontWeight:
-            800,
-
-          marginTop:
-            '16px',
-        }}
-      >
-        No leave balance found
-      </Typography>
-
-      <Typography
-        sx={{
-          color:
-            '#6B7280',
-
-          fontSize:
-            '14px',
-
-          lineHeight:
-            1.7,
-
-          marginTop:
-            '6px',
-        }}
-      >
-        No leave entitlement has been assigned for
-        the selected year.
-      </Typography>
-    </Paper>
-  );
-}
 
 function RoleLeaveBalancePage({
   LayoutComponent,
   theme,
-  initialBalances = EMPTY_BALANCES,
 }) {
-  const location =
-    useLocation();
-
-  const pathRole =
-    location.pathname
-      .split('/')[1];
-
-  const currentRole = [
-    'employee',
-    'supervisor',
-    'hr',
-    'admin',
-  ].includes(pathRole)
-    ? pathRole
-    : 'employee';
-
-  const [
-    leaveBalances,
-    setLeaveBalances,
-  ] = useState([]);
+  void legacyLeaveBalanceSamples;
+  const currentYear = new Date().getFullYear();
+  const availableYears = [currentYear, currentYear - 1];
 
   const [
     selectedYear,
     setSelectedYear,
-  ] = useState(() => {
-    return String(new Date().getFullYear());
-  });
+  ] = useState(
+    String(currentYear),
+  );
+
+  const [balances, setBalances] = useState([]);
   const [loadError, setLoadError] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  const loadBalanceData = useCallback(async () => { setLoading(true); setLoadError(''); try { const data = await getLeaveBalance(selectedYear); setLeaveBalances((data?.balances || []).map((item) => ({ ...item, year:data.year, totalDays:item.total, usedDays:item.used, pendingDays:item.pending, remainingDays:item.remaining, availableDays:item.remaining }))); } catch (error) { setLoadError(error.response?.data?.message || 'Unable to load leave balance.'); } finally { setLoading(false); } }, [selectedYear]);
 
   useEffect(() => {
-    loadBalanceData();
+    let active = true;
+    setLoadError('');
 
-    return undefined;
-  }, [loadBalanceData]);
+    getLeaveBalance(Number(selectedYear))
+      .then((data) => {
+        if (!active) return;
+        setBalances((data?.balances || []).map((balance) => ({
+          ...balance,
+          year: data.year,
+          totalDays: balance.total,
+          usedDays: balance.used,
+          pendingDays: balance.pending,
+        })));
+      })
+      .catch((error) => {
+        if (active) {
+          setBalances([]);
+          setLoadError(error.response?.data?.message || 'ไม่สามารถโหลดสิทธิ์วันลาได้');
+        }
+      });
 
-  const availableYears =
-    useMemo(() => {
-      const years =
-        leaveBalances
-          .map(
-            (balance) =>
-              Number(
-                balance.year,
-              ),
-          )
-          .filter(
-            Number.isInteger,
-          );
-
-      return [
-        ...new Set(years),
-      ].sort(
-        (
-          first,
-          second,
-        ) =>
-          second -
-          first,
-      );
-    }, [leaveBalances]);
-
-  useEffect(() => {
-    if (
-      availableYears.length >
-        0 &&
-      !availableYears.some(
-        (year) =>
-          String(year) ===
-          selectedYear,
-      )
-    ) {
-      setSelectedYear(
-        String(
-          availableYears[0],
-        ),
-      );
-    }
-  }, [
-    availableYears,
-    selectedYear,
-  ]);
+    return () => {
+      active = false;
+    };
+  }, [selectedYear]);
 
   const selectedBalances =
     useMemo(
       () =>
-        leaveBalances.filter(
-          (balance) =>
-            String(
-              balance.year,
-            ) ===
-            selectedYear,
-        ),
+        balances
+          .filter(
+            (
+              balance,
+            ) =>
+              String(
+                balance.year,
+              ) ===
+              selectedYear,
+          )
+          .map(
+            (
+              balance,
+            ) => {
+              const totalDays =
+                Number(
+                  balance.totalDays,
+                ) || 0;
+
+              const usedDays =
+                Number(
+                  balance.usedDays,
+                ) || 0;
+
+              const pendingDays =
+                Number(
+                  balance.pendingDays,
+                ) || 0;
+
+              const remainingDays =
+                totalDays -
+                usedDays;
+
+              const availableDays =
+                remainingDays -
+                pendingDays;
+
+              return {
+                ...balance,
+
+                totalDays,
+
+                usedDays,
+
+                pendingDays,
+
+                remainingDays,
+
+                availableDays,
+              };
+            },
+          ),
       [
-        leaveBalances,
+        balances,
         selectedYear,
       ],
     );
@@ -1420,102 +491,129 @@ function RoleLeaveBalancePage({
           ) => ({
             totalDays:
               result.totalDays +
-              toNumber(
+              Number(
                 balance.totalDays,
               ),
 
             usedDays:
               result.usedDays +
-              toNumber(
+              Number(
                 balance.usedDays,
               ),
 
             pendingDays:
               result.pendingDays +
-              toNumber(
+              Number(
                 balance.pendingDays,
               ),
 
             availableDays:
               result.availableDays +
-              toNumber(
+              Number(
                 balance.availableDays,
               ),
           }),
           {
-            totalDays: 0,
-            usedDays: 0,
-            pendingDays: 0,
-            availableDays: 0,
+            totalDays:
+              0,
+
+            usedDays:
+              0,
+
+            pendingDays:
+              0,
+
+            availableDays:
+              0,
           },
         ),
-      [selectedBalances],
+      [
+        selectedBalances,
+      ],
     );
 
   const summaryCards = [
     {
       title:
-        'Total Entitlement',
+        'สิทธิ์ทั้งหมด',
 
       value:
         summary.totalDays,
 
       description:
-        'Total leave days granted',
+        'จำนวนวันลาที่ได้รับ',
 
       backgroundColor:
-        theme.soft,
+        theme?.soft ||
+        '#EFF6FF',
 
       color:
-        theme.primary,
+        theme?.primary ||
+        '#2563EB',
+
+      borderColor:
+        theme?.border ||
+        '#BFDBFE',
     },
+
     {
       title:
-        'Used Days',
+        'ใช้ไปแล้ว',
 
       value:
         summary.usedDays,
 
       description:
-        'Days from approved requests',
+        'จากคำขอที่อนุมัติแล้ว',
 
       backgroundColor:
-        '#FEF2F2',
+        '#FFF1F2',
 
       color:
-        '#DC2626',
+        '#E11D48',
+
+      borderColor:
+        '#FECDD3',
     },
+
     {
       title:
-        'Pending Days',
+        'รออนุมัติ',
 
       value:
         summary.pendingDays,
 
       description:
-        'Days awaiting approval',
+        'อยู่ระหว่างการพิจารณา',
 
       backgroundColor:
-        '#FEF3C7',
+        '#FFFBEB',
 
       color:
-        '#B45309',
+        '#D97706',
+
+      borderColor:
+        '#FDE68A',
     },
+
     {
       title:
-        'Available Days',
+        'คงเหลือใช้ได้',
 
       value:
         summary.availableDays,
 
       description:
-        'Days currently available',
+        'สามารถใช้ยื่นคำขอได้',
 
       backgroundColor:
         '#ECFDF5',
 
       color:
         '#059669',
+
+      borderColor:
+        '#A7F3D0',
     },
   ];
 
@@ -1523,7 +621,6 @@ function RoleLeaveBalancePage({
     <LayoutComponent
       activeMenu="Leave Balance"
     >
-      {(loading || loadError) && <Typography sx={{ marginBottom:'16px', color:loadError?'#B91C1C':'#6B7280' }}>{loadError || 'Loading leave balance...'}</Typography>}
       <Box
         sx={{
           display:
@@ -1549,52 +646,35 @@ function RoleLeaveBalancePage({
           },
 
           gap:
-            '18px',
+            '16px',
 
           marginBottom:
-            '28px',
+            '24px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color:
-                '#111827',
+        <Typography
+          component="h1"
+          sx={{
+            color:
+              '#111827',
 
-              fontSize: {
-                xs:
-                  '26px',
+            fontSize: {
+              xs:
+                '26px',
 
-                sm:
-                  '30px',
-              },
+              sm:
+                '30px',
+            },
 
-              fontWeight:
-                800,
-            }}
-          >
-            Leave Balance
-          </Typography>
-
-          <Typography
-            sx={{
-              color:
-                '#6B7280',
-
-              fontSize:
-                '15px',
-
-              marginTop:
-                '6px',
-            }}
-          >
-            Review your leave entitlement, usage and
-            available balance.
-          </Typography>
-        </Box>
+            fontWeight:
+              800,
+          }}
+        >
+          สิทธิ์วันลาคงเหลือ
+        </Typography>
 
         <FormControl
+          size="small"
           sx={{
             width: {
               xs:
@@ -1606,7 +686,7 @@ function RoleLeaveBalancePage({
           }}
         >
           <InputLabel id="leave-balance-year-label">
-            Entitlement Year
+            ปีสิทธิ์
           </InputLabel>
 
           <Select
@@ -1614,7 +694,7 @@ function RoleLeaveBalancePage({
             value={
               selectedYear
             }
-            label="Entitlement Year"
+            label="ปีสิทธิ์"
             onChange={(
               event,
             ) =>
@@ -1625,40 +705,58 @@ function RoleLeaveBalancePage({
             }
             sx={{
               height:
-                '48px',
+                '44px',
 
               backgroundColor:
                 '#FFFFFF',
 
               borderRadius:
-                '8px',
+                '9px',
 
               '&.Mui-focused .MuiOutlinedInput-notchedOutline':
                 {
                   borderColor:
-                    theme.primary,
+                    theme?.primary ||
+                    '#2563EB',
+                },
+
+              '& .MuiSelect-select':
+                {
+                  fontSize:
+                    '13px',
+
+                  fontWeight:
+                    600,
                 },
             }}
           >
             {availableYears.map(
-              (year) => (
+              (
+                year,
+              ) => (
                 <MenuItem
                   key={
                     year
                   }
-                  value={
-                    String(
-                      year,
-                    )
-                  }
+                  value={String(
+                    year,
+                  )}
                 >
-                  {year}
+                  {
+                    year
+                  }
                 </MenuItem>
               ),
             )}
           </Select>
         </FormControl>
       </Box>
+
+      {loadError && (
+        <Alert severity="error" sx={{ marginBottom: '20px', borderRadius: '10px' }}>
+          {loadError}
+        </Alert>
+      )}
 
       <Box
         sx={{
@@ -1667,32 +765,168 @@ function RoleLeaveBalancePage({
 
           gridTemplateColumns: {
             xs:
-              '1fr',
-
-            sm:
               'repeat(2, minmax(0, 1fr))',
 
-            xl:
+            lg:
               'repeat(4, minmax(0, 1fr))',
           },
 
-          gap:
-            '20px',
+          gap: {
+            xs:
+              '12px',
+
+            sm:
+              '16px',
+          },
 
           marginBottom:
-            '24px',
+            '26px',
         }}
       >
         {summaryCards.map(
-          (card) => (
-            <SummaryCard
+          (
+            card,
+          ) => (
+            <Paper
               key={
                 card.title
               }
-              card={
-                card
-              }
-            />
+              elevation={0}
+              sx={{
+                minHeight:
+                  '112px',
+
+                padding:
+                  '16px 18px',
+
+                display:
+                  'flex',
+
+                alignItems:
+                  'center',
+
+                gap:
+                  '14px',
+
+                backgroundColor:
+                  '#FFFFFF',
+
+                border:
+                  '1px solid #E5E7EB',
+
+                borderRadius:
+                  '12px',
+              }}
+            >
+              <Box
+                sx={{
+                  width:
+                    '48px',
+
+                  height:
+                    '48px',
+
+                  flexShrink:
+                    0,
+
+                  display:
+                    'flex',
+
+                  alignItems:
+                    'center',
+
+                  justifyContent:
+                    'center',
+
+                  backgroundColor:
+                    card.backgroundColor,
+
+                  color:
+                    card.color,
+
+                  border:
+                    `1px solid ${card.borderColor}`,
+
+                  borderRadius:
+                    '12px',
+
+                  fontSize:
+                    '18px',
+
+                  fontWeight:
+                    800,
+                }}
+              >
+                {formatDays(
+                  card.value,
+                )}
+              </Box>
+
+              <Box
+                sx={{
+                  minWidth:
+                    0,
+                }}
+              >
+                <Typography
+                  sx={{
+                    color:
+                      '#111827',
+
+                    fontSize:
+                      '14px',
+
+                    fontWeight:
+                      800,
+                  }}
+                >
+                  {
+                    card.title
+                  }
+                </Typography>
+
+                <Typography
+                  sx={{
+                    color:
+                      card.color,
+
+                    fontSize:
+                      '20px',
+
+                    fontWeight:
+                      800,
+
+                    lineHeight:
+                      1.3,
+
+                    marginTop:
+                      '2px',
+                  }}
+                >
+                  {formatDays(
+                    card.value,
+                  )}{' '}
+                  วัน
+                </Typography>
+
+                <Typography
+                  sx={{
+                    color:
+                      '#9CA3AF',
+
+                    fontSize:
+                      '10px',
+
+                    marginTop:
+                      '2px',
+                  }}
+                >
+                  {
+                    card.description
+                  }
+                </Typography>
+              </Box>
+            </Paper>
           ),
         )}
       </Box>
@@ -1700,124 +934,807 @@ function RoleLeaveBalancePage({
       {selectedBalances.length >
       0 ? (
         <>
+          <Typography
+            sx={{
+              color:
+                '#111827',
+
+              fontSize:
+                '18px',
+
+              fontWeight:
+                800,
+
+              marginBottom:
+                '14px',
+            }}
+          >
+            สิทธิ์แยกตามประเภทการลา
+          </Typography>
+
           <Box
             sx={{
               display:
                 'grid',
 
-              gridTemplateColumns:
-                {
-                  xs:
-                    '1fr',
+              gridTemplateColumns: {
+                xs:
+                  '1fr',
 
-                  lg:
-                    'repeat(2, minmax(0, 1fr))',
+                md:
+                  'repeat(2, minmax(0, 1fr))',
 
-                  xl:
-                    'repeat(3, minmax(0, 1fr))',
-                },
+                lg:
+                  'repeat(3, minmax(0, 1fr))',
+              },
 
               gap:
-                '24px',
-
-              marginBottom:
-                '24px',
+                '18px',
             }}
           >
             {selectedBalances.map(
-              (balance) => (
-                <BalanceCard
-                  key={
-                    balance.id
-                  }
-                  balance={
-                    balance
-                  }
-                />
-              ),
+              (
+                balance,
+              ) => {
+                const leaveTypeStyle =
+                  getLeaveTypeStyle(
+                    balance.leaveType,
+                    theme,
+                  );
+
+                const balanceStatus =
+                  getBalanceStatus(
+                    balance,
+                  );
+
+                const usedPercentage =
+                  balance.totalDays >
+                  0
+                    ? Math.min(
+                        100,
+                        (balance.usedDays /
+                          balance.totalDays) *
+                          100,
+                      )
+                    : 0;
+
+                const pendingPercentage =
+                  balance.totalDays >
+                  0
+                    ? Math.min(
+                        100,
+                        (balance.pendingDays /
+                          balance.totalDays) *
+                          100,
+                      )
+                    : 0;
+
+                const committedPercentage =
+                  Math.min(
+                    100,
+                    usedPercentage +
+                      pendingPercentage,
+                  );
+
+                return (
+                  <Paper
+                    key={
+                      balance.id
+                    }
+                    elevation={0}
+                    sx={{
+                      padding:
+                        '20px',
+
+                      backgroundColor:
+                        '#FFFFFF',
+
+                      border:
+                        '1px solid #E5E7EB',
+
+                      borderRadius:
+                        '14px',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display:
+                          'flex',
+
+                        alignItems:
+                          'flex-start',
+
+                        justifyContent:
+                          'space-between',
+
+                        gap:
+                          '12px',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display:
+                            'flex',
+
+                          alignItems:
+                            'center',
+
+                          gap:
+                            '12px',
+
+                          minWidth:
+                            0,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width:
+                              '46px',
+
+                            height:
+                              '46px',
+
+                            flexShrink:
+                              0,
+
+                            display:
+                              'flex',
+
+                            alignItems:
+                              'center',
+
+                            justifyContent:
+                              'center',
+
+                            backgroundColor:
+                              leaveTypeStyle.backgroundColor,
+
+                            color:
+                              leaveTypeStyle.color,
+
+                            border:
+                              `1px solid ${leaveTypeStyle.borderColor}`,
+
+                            borderRadius:
+                              '11px',
+
+                            fontSize:
+                              '17px',
+
+                            fontWeight:
+                              800,
+                          }}
+                        >
+                          {
+                            leaveTypeStyle.shortName
+                          }
+                        </Box>
+
+                        <Box
+                          sx={{
+                            minWidth:
+                              0,
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              color:
+                                '#111827',
+
+                              fontSize:
+                                '16px',
+
+                              fontWeight:
+                                800,
+
+                              lineHeight:
+                                1.4,
+                            }}
+                          >
+                            {getLeaveTypeLabel(
+                              balance.leaveType,
+                            )}
+                          </Typography>
+
+                          <Typography
+                            sx={{
+                              color:
+                                '#9CA3AF',
+
+                              fontSize:
+                                '11px',
+
+                              marginTop:
+                                '2px',
+                            }}
+                          >
+                            ปีสิทธิ์{' '}
+                            {
+                              balance.year
+                            }
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Chip
+                        label={
+                          balanceStatus.label
+                        }
+                        size="small"
+                        sx={{
+                          flexShrink:
+                            0,
+
+                          height:
+                            '26px',
+
+                          backgroundColor:
+                            balanceStatus.backgroundColor,
+
+                          color:
+                            balanceStatus.color,
+
+                          borderRadius:
+                            '999px',
+
+                          fontSize:
+                            '10px',
+
+                          fontWeight:
+                            700,
+
+                          '& .MuiChip-label':
+                            {
+                              padding:
+                                '0 10px',
+                            },
+                        }}
+                      />
+                    </Box>
+
+                    <Box
+                      sx={{
+                        padding:
+                          '18px',
+
+                        marginTop:
+                          '18px',
+
+                        backgroundColor:
+                          leaveTypeStyle.backgroundColor,
+
+                        border:
+                          `1px solid ${leaveTypeStyle.borderColor}`,
+
+                        borderRadius:
+                          '12px',
+
+                        textAlign:
+                          'center',
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          color:
+                            leaveTypeStyle.color,
+
+                          fontSize:
+                            '34px',
+
+                          fontWeight:
+                            800,
+
+                          lineHeight:
+                            1,
+                        }}
+                      >
+                        {formatDays(
+                          balance.availableDays,
+                        )}
+                      </Typography>
+
+                      <Typography
+                        sx={{
+                          color:
+                            '#374151',
+
+                          fontSize:
+                            '12px',
+
+                          fontWeight:
+                            700,
+
+                          marginTop:
+                            '7px',
+                        }}
+                      >
+                        วันคงเหลือใช้ได้
+                      </Typography>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display:
+                          'grid',
+
+                        gridTemplateColumns:
+                          'repeat(3, minmax(0, 1fr))',
+
+                        gap:
+                          '8px',
+
+                        marginTop:
+                          '16px',
+                      }}
+                    >
+                      {[
+                        {
+                          label:
+                            'สิทธิ์ทั้งหมด',
+
+                          value:
+                            balance.totalDays,
+
+                          color:
+                            '#111827',
+                        },
+
+                        {
+                          label:
+                            'ใช้ไปแล้ว',
+
+                          value:
+                            balance.usedDays,
+
+                          color:
+                            '#DC2626',
+                        },
+
+                        {
+                          label:
+                            'รออนุมัติ',
+
+                          value:
+                            balance.pendingDays,
+
+                          color:
+                            '#B45309',
+                        },
+                      ].map(
+                        (
+                          item,
+                        ) => (
+                          <Box
+                            key={
+                              item.label
+                            }
+                            sx={{
+                              padding:
+                                '11px 6px',
+
+                              backgroundColor:
+                                '#F8FAFC',
+
+                              border:
+                                '1px solid #F1F5F9',
+
+                              borderRadius:
+                                '9px',
+
+                              textAlign:
+                                'center',
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                color:
+                                  item.color,
+
+                                fontSize:
+                                  '17px',
+
+                                fontWeight:
+                                  800,
+                              }}
+                            >
+                              {formatDays(
+                                item.value,
+                              )}
+                            </Typography>
+
+                            <Typography
+                              sx={{
+                                color:
+                                  '#64748B',
+
+                                fontSize:
+                                  '9px',
+
+                                fontWeight:
+                                  600,
+
+                                marginTop:
+                                  '2px',
+
+                                whiteSpace:
+                                  'nowrap',
+                              }}
+                            >
+                              {
+                                item.label
+                              }
+                            </Typography>
+                          </Box>
+                        ),
+                      )}
+                    </Box>
+
+                    <Box
+                      sx={{
+                        marginTop:
+                          '18px',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display:
+                            'flex',
+
+                          alignItems:
+                            'center',
+
+                          justifyContent:
+                            'space-between',
+
+                          gap:
+                            '12px',
+
+                          marginBottom:
+                            '7px',
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color:
+                              '#6B7280',
+
+                            fontSize:
+                              '11px',
+
+                            fontWeight:
+                              600,
+                          }}
+                        >
+                          ใช้ไปและรออนุมัติ
+                        </Typography>
+
+                        <Typography
+                          sx={{
+                            color:
+                              '#374151',
+
+                            fontSize:
+                              '11px',
+
+                            fontWeight:
+                              800,
+                          }}
+                        >
+                          {committedPercentage.toFixed(
+                            0,
+                          )}
+                          %
+                        </Typography>
+                      </Box>
+
+                      <LinearProgress
+                        variant="determinate"
+                        value={
+                          committedPercentage
+                        }
+                        sx={{
+                          height:
+                            '8px',
+
+                          backgroundColor:
+                            '#E5E7EB',
+
+                          borderRadius:
+                            '999px',
+
+                          '& .MuiLinearProgress-bar':
+                            {
+                              backgroundColor:
+                                leaveTypeStyle.color,
+
+                              borderRadius:
+                                '999px',
+                            },
+                        }}
+                      />
+
+                      <Box
+                        sx={{
+                          display:
+                            'flex',
+
+                          flexWrap:
+                            'wrap',
+
+                          gap:
+                            '12px',
+
+                          marginTop:
+                            '10px',
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display:
+                              'flex',
+
+                            alignItems:
+                              'center',
+
+                            gap:
+                              '5px',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width:
+                                '7px',
+
+                              height:
+                                '7px',
+
+                              backgroundColor:
+                                '#DC2626',
+
+                              borderRadius:
+                                '50%',
+                            }}
+                          />
+
+                          <Typography
+                            sx={{
+                              color:
+                                '#6B7280',
+
+                              fontSize:
+                                '10px',
+                            }}
+                          >
+                            ใช้แล้ว{' '}
+                            {formatDays(
+                              balance.usedDays,
+                            )}{' '}
+                            วัน
+                          </Typography>
+                        </Box>
+
+                        <Box
+                          sx={{
+                            display:
+                              'flex',
+
+                            alignItems:
+                              'center',
+
+                            gap:
+                              '5px',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width:
+                                '7px',
+
+                              height:
+                                '7px',
+
+                              backgroundColor:
+                                '#F59E0B',
+
+                              borderRadius:
+                                '50%',
+                            }}
+                          />
+
+                          <Typography
+                            sx={{
+                              color:
+                                '#6B7280',
+
+                              fontSize:
+                                '10px',
+                            }}
+                          >
+                            รออนุมัติ{' '}
+                            {formatDays(
+                              balance.pendingDays,
+                            )}{' '}
+                            วัน
+                          </Typography>
+                        </Box>
+
+                        <Box
+                          sx={{
+                            display:
+                              'flex',
+
+                            alignItems:
+                              'center',
+
+                            gap:
+                              '5px',
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width:
+                                '7px',
+
+                              height:
+                                '7px',
+
+                              backgroundColor:
+                                '#22C55E',
+
+                              borderRadius:
+                                '50%',
+                            }}
+                          />
+
+                          <Typography
+                            sx={{
+                              color:
+                                '#6B7280',
+
+                              fontSize:
+                                '10px',
+                            }}
+                          >
+                            ใช้ได้{' '}
+                            {formatDays(
+                              balance.availableDays,
+                            )}{' '}
+                            วัน
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+
+                    <Typography
+                      sx={{
+                        color:
+                          '#9CA3AF',
+
+                        fontSize:
+                          '10px',
+
+                        marginTop:
+                          '17px',
+                      }}
+                    >
+                      อัปเดตล่าสุด:{' '}
+                      {formatDateTime(
+                        balance.updatedAt,
+                      )}
+                    </Typography>
+                  </Paper>
+                );
+              },
             )}
           </Box>
-
-          <BalanceTable
-            balances={
-              selectedBalances
-            }
-            selectedYear={
-              selectedYear
-            }
-          />
         </>
       ) : (
-        <EmptyBalance
-          theme={
-            theme
-          }
-        />
+        <Paper
+          elevation={0}
+          sx={{
+            minHeight:
+              '260px',
+
+            padding:
+              '36px 24px',
+
+            display:
+              'flex',
+
+            flexDirection:
+              'column',
+
+            alignItems:
+              'center',
+
+            justifyContent:
+              'center',
+
+            backgroundColor:
+              '#FFFFFF',
+
+            border:
+              '1px solid #E5E7EB',
+
+            borderRadius:
+              '14px',
+
+            textAlign:
+              'center',
+          }}
+        >
+          <Box
+            sx={{
+              width:
+                '56px',
+
+              height:
+                '56px',
+
+              display:
+                'flex',
+
+              alignItems:
+                'center',
+
+              justifyContent:
+                'center',
+
+              backgroundColor:
+                theme?.soft ||
+                '#EFF6FF',
+
+              color:
+                theme?.primary ||
+                '#2563EB',
+
+              borderRadius:
+                '50%',
+
+              fontSize:
+                '20px',
+
+              fontWeight:
+                800,
+            }}
+          >
+            0
+          </Box>
+
+          <Typography
+            sx={{
+              color:
+                '#111827',
+
+              fontSize:
+                '17px',
+
+              fontWeight:
+                800,
+
+              marginTop:
+                '14px',
+            }}
+          >
+            ไม่พบข้อมูลสิทธิ์วันลา
+          </Typography>
+
+          <Typography
+            sx={{
+              color:
+                '#6B7280',
+
+              fontSize:
+                '13px',
+
+              marginTop:
+                '5px',
+            }}
+          >
+            ยังไม่มีการกำหนดสิทธิ์วันลาสำหรับปีที่เลือก
+          </Typography>
+        </Paper>
       )}
-
-      <Paper
-        elevation={0}
-        sx={{
-          padding: {
-            xs:
-              '20px',
-
-            sm:
-              '24px',
-          },
-
-          marginTop:
-            '24px',
-
-          backgroundColor:
-            theme.soft,
-
-          border: `1px solid ${
-            theme.border ||
-            '#E5E7EB'
-          }`,
-
-          borderRadius:
-            '12px',
-        }}
-      >
-        <Typography
-          sx={{
-            color:
-              theme.dark,
-
-            fontSize:
-              '15px',
-
-            fontWeight:
-              800,
-          }}
-        >
-          How Your Leave Balance Is Calculated
-        </Typography>
-
-        <Typography
-          sx={{
-            color:
-              theme.text ||
-              '#4B5563',
-
-            fontSize:
-              '13px',
-
-            lineHeight:
-              1.8,
-
-            marginTop:
-              '8px',
-          }}
-        >
-          Remaining days equal total entitlement minus
-          approved leave. Available days also deduct
-          Pending requests, so the same entitlement cannot
-          be used by multiple requests.
-        </Typography>
-      </Paper>
     </LayoutComponent>
   );
 }

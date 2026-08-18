@@ -297,6 +297,7 @@ function RoleLeaveRequestDetailPage({
   }, [
     currentRole,
     isOwner,
+    isSupervisor,
     numericRequestId,
     requestData,
     requestId,

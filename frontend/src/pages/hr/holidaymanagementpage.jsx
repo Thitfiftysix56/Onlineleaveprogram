@@ -1,5 +1,4 @@
 import {
-  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -10,249 +9,352 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControl,
   FormHelperText,
+  InputAdornment,
   InputLabel,
   MenuItem,
   Paper,
   Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from '@mui/material';
 
+import {
+  CalendarMonthRounded,
+} from '@mui/icons-material';
+
 import HRLayout from '../../layouts/hrlayout.jsx';
+import api from '../../api/axios.js';
 
-import {
-  createHoliday,
-  deleteHoliday,
-  getHolidays,
-  updateHoliday,
-} from '../../api/holiday-service.js';
+const theme = {
+  primary: '#059669',
+  dark: '#047857',
+  soft: '#ECFDF5',
+  border: '#A7F3D0',
+};
 
-import {
-  createAuditLog,
-} from '../../utils/auditlogstorage.js';
+const currentYear =
+  new Date().getFullYear();
 
-const createInitialHolidayForm = () => ({
-  name: '',
-  date: '',
-  type: 'Public Holiday',
-  description: '',
-  status: 'Active',
-});
+/* =========================
+   Helpers
+========================= */
 
-const normalizeStatus = (holiday) => {
+const toBoolean = (value) => {
   if (
-    typeof holiday?.isActive ===
-    'boolean'
+    typeof value === 'boolean'
   ) {
-    return holiday.isActive
-      ? 'Active'
-      : 'Inactive';
+    return value;
   }
 
   if (
-    typeof holiday?.is_active ===
-    'boolean'
+    typeof value === 'number'
   ) {
-    return holiday.is_active
-      ? 'Active'
-      : 'Inactive';
+    return value === 1;
   }
 
-  const status = String(
-    holiday?.status || '',
+  const text = String(
+    value ?? '',
   )
     .trim()
     .toLowerCase();
 
-  if (status === 'inactive') {
-    return 'Inactive';
+  if (
+    [
+      '1',
+      'true',
+      'active',
+    ].includes(text)
+  ) {
+    return true;
   }
 
-  return 'Active';
+  if (
+    [
+      '0',
+      'false',
+      'inactive',
+    ].includes(text)
+  ) {
+    return false;
+  }
+
+  return Boolean(value);
+};
+
+const normalizeDateValue = (
+  value,
+) => {
+  const text = String(
+    value || '',
+  );
+
+  const match =
+    text.match(
+      /^\d{4}-\d{2}-\d{2}/,
+    );
+
+  return match
+    ? match[0]
+    : '';
 };
 
 const normalizeHoliday = (
   holiday,
-  index,
 ) => {
-  const id =
-    Number(
-      holiday?.id ??
-        holiday?.holidayId ??
-        holiday?.holiday_id,
-    ) ||
-    index + 1;
-
-  const name =
-    holiday?.name ||
-    holiday?.holidayName ||
-    holiday?.holiday_name ||
-    'Organization Holiday';
-
   const date =
-    holiday?.date ||
-    holiday?.holidayDate ||
-    holiday?.holiday_date ||
-    '';
+    normalizeDateValue(
+      holiday.date ||
+        holiday.holidayDate ||
+        holiday.holiday_date,
+    );
 
-  const type =
-    holiday?.type ||
-    holiday?.holidayType ||
-    holiday?.holiday_type ||
-    'Public Holiday';
-
-  const description =
-    holiday?.description ||
-    holiday?.detail ||
-    `${name} holiday.`;
-
-  const status =
-    normalizeStatus(holiday);
+  const activeValue =
+    holiday.isActive ??
+    holiday.is_active ??
+    holiday.active ??
+    holiday.status;
 
   return {
-    ...holiday,
+    id:
+      holiday.id ??
+      holiday.holidayId ??
+      holiday.holiday_id,
 
-    id,
-    name,
+    name:
+      holiday.name ||
+      holiday.holidayName ||
+      holiday.holiday_name ||
+      '-',
+
     date,
-    type,
-    description,
-    status,
+
+    year:
+      Number(
+        holiday.year ??
+          holiday.holidayYear ??
+          holiday.holiday_year ??
+          date.slice(0, 4),
+      ) || null,
 
     isActive:
-      status === 'Active',
-
-    createdAt:
-      holiday?.createdAt ||
-      holiday?.created_at ||
-      null,
-
-    updatedAt:
-      holiday?.updatedAt ||
-      holiday?.updated_at ||
-      null,
+      activeValue ===
+      undefined
+        ? true
+        : toBoolean(
+            activeValue,
+          ),
   };
 };
 
-const normalizeHolidays = (
-  holidays,
-) =>
-  Array.isArray(holidays)
-    ? holidays
-        .map(normalizeHoliday)
-        .filter(
-          (holiday) =>
-            Boolean(holiday.date),
-        )
-        .sort(
-          (
-            firstHoliday,
-            secondHoliday,
-          ) =>
-            firstHoliday.date.localeCompare(
-              secondHoliday.date,
+const formatDate = (
+  dateValue,
+) => {
+  const date =
+    normalizeDateValue(
+      dateValue,
+    );
+
+  if (!date) {
+    return '-';
+  }
+
+  const [
+    year,
+    month,
+    day,
+  ] = date.split('-');
+
+  return `${day}/${month}/${year}`;
+};
+
+const getThaiDayName = (
+  dateValue,
+) => {
+  const date =
+    normalizeDateValue(
+      dateValue,
+    );
+
+  if (!date) {
+    return '-';
+  }
+
+  const parsedDate =
+    new Date(
+      `${date}T00:00:00`,
+    );
+
+  if (
+    Number.isNaN(
+      parsedDate.getTime(),
+    )
+  ) {
+    return '-';
+  }
+
+  const dayNames = [
+    'วันอาทิตย์',
+    'วันจันทร์',
+    'วันอังคาร',
+    'วันพุธ',
+    'วันพฤหัสบดี',
+    'วันศุกร์',
+    'วันเสาร์',
+  ];
+
+  return dayNames[
+    parsedDate.getDay()
+  ];
+};
+
+const createEmptyForm = () => ({
+  name: '',
+  date: '',
+  status: 'active',
+});
+
+/* =========================
+   Thai Date Field
+========================= */
+
+function ThaiDateField({
+  label,
+  value,
+  onChange,
+  error = false,
+  helperText = '',
+}) {
+  return (
+    <Box
+      sx={{
+        position: 'relative',
+      }}
+    >
+      <TextField
+        fullWidth
+        label={label}
+        value={
+          value
+            ? formatDate(value)
+            : ''
+        }
+        placeholder="วว/ดด/ปปปป"
+        error={error}
+        helperText={helperText}
+        slotProps={{
+          input: {
+            readOnly: true,
+
+            endAdornment: (
+              <InputAdornment position="end">
+                <CalendarMonthRounded
+                  sx={{
+                    color:
+                      '#64748B',
+
+                    fontSize:
+                      '20px',
+                  }}
+                />
+              </InputAdornment>
             ),
-        )
-    : [];
+          },
 
-const formatHolidayDate = (
-  dateString,
-) => {
-  if (!dateString) {
-    return '-';
-  }
+          inputLabel: {
+            shrink: true,
+          },
+        }}
+        sx={{
+          '& .MuiOutlinedInput-root':
+            {
+              borderRadius:
+                '9px',
 
-  const date =
-    new Date(
-      `${dateString}T00:00:00`,
-    );
+              '&.Mui-focused fieldset':
+                {
+                  borderColor:
+                    theme.primary,
+                },
+            },
 
-  if (
-    Number.isNaN(
-      date.getTime(),
-    )
-  ) {
-    return '-';
-  }
+          '& .MuiInputLabel-root.Mui-focused':
+            {
+              color:
+                theme.primary,
+            },
+        }}
+      />
 
-  return date.toLocaleDateString(
-    'en-GB',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    },
+      <input
+        type="date"
+        value={value}
+        onChange={(event) =>
+          onChange(
+            event.target.value,
+          )
+        }
+        style={{
+          position:
+            'absolute',
+
+          inset:
+            0,
+
+          width:
+            '100%',
+
+          height:
+            helperText
+              ? '56px'
+              : '100%',
+
+          opacity:
+            0,
+
+          cursor:
+            'pointer',
+        }}
+      />
+    </Box>
   );
-};
+}
 
-const getDayName = (
-  dateString,
-) => {
-  if (!dateString) {
-    return '-';
-  }
-
-  const date =
-    new Date(
-      `${dateString}T00:00:00`,
-    );
-
-  if (
-    Number.isNaN(
-      date.getTime(),
-    )
-  ) {
-    return '-';
-  }
-
-  return date.toLocaleDateString(
-    'en-US',
-    {
-      weekday: 'long',
-    },
-  );
-};
-
-const createHolidayAuditLog = ({
-  action,
-  holiday,
-  detail,
-}) =>
-  createAuditLog({
-    userId: 3,
-
-    username: 'hr001',
-
-    role: 'hr',
-
-    action,
-
-    tableName: 'holidays',
-
-    recordId:
-      holiday?.id || null,
-
-    detail,
-
-    ipAddress: '127.0.0.1',
-  });
+/* =========================
+   Component
+========================= */
 
 function HolidayManagementPage() {
-  const currentYear =
-    String(
-      new Date().getFullYear(),
-    );
-
   const [
     holidays,
     setHolidays,
   ] = useState([]);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    error,
+    setError,
+  ] = useState('');
+
+  const [
+    actionMessage,
+    setActionMessage,
+  ] = useState('');
 
   const [
     searchText,
@@ -262,17 +364,18 @@ function HolidayManagementPage() {
   const [
     yearFilter,
     setYearFilter,
-  ] = useState(currentYear);
-
-  const [
-    typeFilter,
-    setTypeFilter,
-  ] = useState('All');
+  ] = useState(
+    String(currentYear),
+  );
 
   const [
     statusFilter,
     setStatusFilter,
-  ] = useState('All');
+  ] = useState('all');
+
+  /* =========================
+     Add / Edit
+  ========================= */
 
   const [
     dialogOpen,
@@ -285,102 +388,138 @@ function HolidayManagementPage() {
   ] = useState('add');
 
   const [
-    selectedHolidayId,
-    setSelectedHolidayId,
+    selectedHoliday,
+    setSelectedHoliday,
   ] = useState(null);
 
   const [
-    holidayForm,
-    setHolidayForm,
+    formData,
+    setFormData,
   ] = useState(
-    createInitialHolidayForm,
+    createEmptyForm(),
   );
 
   const [
-    errors,
-    setErrors,
+    formErrors,
+    setFormErrors,
   ] = useState({});
 
   const [
-    actionMessage,
-    setActionMessage,
-  ] = useState(null);
-
-  const [
-    deleteDialogOpen,
-    setDeleteDialogOpen,
+    saving,
+    setSaving,
   ] = useState(false);
 
-  const [
-    selectedDeleteHoliday,
-    setSelectedDeleteHoliday,
-  ] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const [saving, setSaving] = useState(false);
+  /* =========================
+     Delete
+  ========================= */
 
-  const loadHolidayData =
-    useCallback(async () => {
-      setLoading(true); setLoadError('');
+  const [
+    deleteTarget,
+    setDeleteTarget,
+  ] = useState(null);
+
+  const [
+    deleting,
+    setDeleting,
+  ] = useState(false);
+
+  /* =========================
+     Load Holidays
+  ========================= */
+
+  const loadHolidays =
+    async () => {
+      setLoading(true);
+      setError('');
+
       try {
-        const rows = await getHolidays();
-        setHolidays(normalizeHolidays(rows));
-      } catch (error) {
-        setLoadError(error.response?.data?.message || 'Unable to load holidays.');
+        const response =
+          await api.get(
+            '/hr/holidays',
+          );
+
+        const data =
+          response.data?.data;
+
+        const holidayList =
+          Array.isArray(
+            data?.holidays,
+          )
+            ? data.holidays
+            : Array.isArray(
+                  data?.items,
+                )
+              ? data.items
+              : Array.isArray(
+                    data,
+                  )
+                ? data
+                : [];
+
+        setHolidays(
+          holidayList
+            .map(
+              normalizeHoliday,
+            )
+            .filter(
+              (holiday) =>
+                holiday.id &&
+                holiday.date,
+            ),
+        );
+      } catch (
+        loadError
+      ) {
+        setError(
+          loadError.response
+            ?.data?.message ||
+            'ไม่สามารถโหลดข้อมูลวันหยุดได้',
+        );
       } finally {
         setLoading(false);
       }
-    }, []);
+    };
 
   useEffect(() => {
-    loadHolidayData();
-  }, [loadHolidayData]);
+    loadHolidays();
+  }, []);
+
+  /* =========================
+     Years
+  ========================= */
 
   const availableYears =
     useMemo(() => {
-      const storedYears =
+      const years =
         holidays
-          .map((holiday) =>
-            String(
-              holiday.date || '',
-            ).slice(0, 4),
+          .map(
+            (holiday) =>
+              Number(
+                holiday.year,
+              ),
           )
-          .filter(Boolean);
+          .filter(
+            (year) =>
+              Number.isInteger(
+                year,
+              ),
+          );
 
       return [
         ...new Set([
           currentYear,
-          ...storedYears,
+          ...years,
         ]),
       ].sort(
-        (
+        (firstYear, secondYear) =>
+          secondYear -
           firstYear,
-          secondYear,
-        ) =>
-          Number(secondYear) -
-          Number(firstYear),
       );
-    }, [
-      currentYear,
-      holidays,
-    ]);
+    }, [holidays]);
 
-  useEffect(() => {
-    if (
-      yearFilter !== 'All' &&
-      availableYears.length > 0 &&
-      !availableYears.includes(
-        yearFilter,
-      )
-    ) {
-      setYearFilter(
-        availableYears[0],
-      );
-    }
-  }, [
-    availableYears,
-    yearFilter,
-  ]);
+  /* =========================
+     Filter
+  ========================= */
 
   const filteredHolidays =
     useMemo(() => {
@@ -389,702 +528,719 @@ function HolidayManagementPage() {
           .trim()
           .toLowerCase();
 
-      return holidays.filter(
-        (holiday) => {
-          const matchesSearch =
-            !keyword ||
-            holiday.name
-              .toLowerCase()
-              .includes(keyword) ||
-            holiday.description
-              .toLowerCase()
-              .includes(keyword);
+      return holidays
+        .filter(
+          (holiday) => {
+            const matchesSearch =
+              !keyword ||
+              holiday.name
+                .toLowerCase()
+                .includes(
+                  keyword,
+                );
 
-          const matchesYear =
-            yearFilter === 'All' ||
-            holiday.date.startsWith(
-              yearFilter,
+            const matchesYear =
+              yearFilter ===
+                'all' ||
+              String(
+                holiday.year,
+              ) ===
+                String(
+                  yearFilter,
+                );
+
+            const matchesStatus =
+              statusFilter ===
+                'all' ||
+              (statusFilter ===
+                'active' &&
+                holiday.isActive) ||
+              (statusFilter ===
+                'inactive' &&
+                !holiday.isActive);
+
+            return (
+              matchesSearch &&
+              matchesYear &&
+              matchesStatus
             );
-
-          const matchesType =
-            typeFilter === 'All' ||
-            holiday.type ===
-              typeFilter;
-
-          const matchesStatus =
-            statusFilter === 'All' ||
-            holiday.status ===
-              statusFilter;
-
-          return (
-            matchesSearch &&
-            matchesYear &&
-            matchesType &&
-            matchesStatus
-          );
-        },
-      );
+          },
+        )
+        .sort(
+          (
+            firstHoliday,
+            secondHoliday,
+          ) =>
+            firstHoliday.date.localeCompare(
+              secondHoliday.date,
+            ),
+        );
     }, [
       holidays,
       searchText,
+      yearFilter,
       statusFilter,
-      typeFilter,
+    ]);
+
+  /* =========================
+     Summary
+  ========================= */
+
+  const summaryHolidays =
+    useMemo(() => {
+      if (
+        yearFilter ===
+        'all'
+      ) {
+        return holidays;
+      }
+
+      return holidays.filter(
+        (holiday) =>
+          String(
+            holiday.year,
+          ) ===
+          String(
+            yearFilter,
+          ),
+      );
+    }, [
+      holidays,
       yearFilter,
     ]);
 
-  const summary =
-    useMemo(() => {
-      const now =
-        new Date();
+  const today = new Date();
 
-      now.setHours(
-        0,
-        0,
-        0,
-        0,
-      );
+  today.setHours(
+    0,
+    0,
+    0,
+    0,
+  );
 
-      return holidays.reduce(
-        (
-          result,
-          holiday,
-        ) => {
-          const holidayDate =
-            new Date(
-              `${holiday.date}T00:00:00`,
-            );
+  const activeCount =
+    summaryHolidays.filter(
+      (holiday) =>
+        holiday.isActive,
+    ).length;
 
-          const isActive =
-            holiday.status ===
-            'Active';
+  const inactiveCount =
+    summaryHolidays.filter(
+      (holiday) =>
+        !holiday.isActive,
+    ).length;
 
-          return {
-            active:
-              result.active +
-              (isActive ? 1 : 0),
+  const upcomingCount =
+    summaryHolidays.filter(
+      (holiday) => {
+        if (
+          !holiday.isActive
+        ) {
+          return false;
+        }
 
-            upcoming:
-              result.upcoming +
-              (isActive &&
-              !Number.isNaN(
-                holidayDate.getTime(),
-              ) &&
-              holidayDate >= now
-                ? 1
-                : 0),
+        const holidayDate =
+          new Date(
+            `${holiday.date}T00:00:00`,
+          );
 
-            public:
-              result.public +
-              (isActive &&
-              holiday.type ===
-                'Public Holiday'
-                ? 1
-                : 0),
+        return (
+          !Number.isNaN(
+            holidayDate.getTime(),
+          ) &&
+          holidayDate >= today
+        );
+      },
+    ).length;
 
-            company:
-              result.company +
-              (isActive &&
-              holiday.type ===
-                'Company Holiday'
-                ? 1
-                : 0),
-          };
-        },
-        {
-          active: 0,
-          upcoming: 0,
-          public: 0,
-          company: 0,
-        },
-      );
-    }, [holidays]);
+  const summaryCards = [
+    {
+      title:
+        'วันหยุดทั้งหมด',
+
+      value:
+        summaryHolidays.length,
+
+      backgroundColor:
+        theme.soft,
+
+      color:
+        theme.primary,
+    },
+
+    {
+      title:
+        'ใช้งานอยู่',
+
+      value:
+        activeCount,
+
+      backgroundColor:
+        '#DCFCE7',
+
+      color:
+        '#15803D',
+    },
+
+    {
+      title:
+        'กำลังจะมาถึง',
+
+      value:
+        upcomingCount,
+
+      backgroundColor:
+        '#DBEAFE',
+
+      color:
+        '#2563EB',
+    },
+
+    {
+      title:
+        'ไม่ใช้งาน',
+
+      value:
+        inactiveCount,
+
+      backgroundColor:
+        '#FEE2E2',
+
+      color:
+        '#DC2626',
+    },
+  ];
+
+  /* =========================
+     Filter Actions
+  ========================= */
 
   const handleClearFilters =
     () => {
       setSearchText('');
 
       setYearFilter(
-        currentYear,
+        String(
+          currentYear,
+        ),
       );
 
-      setTypeFilter('All');
-
-      setStatusFilter('All');
-
-      setActionMessage(null);
+      setStatusFilter(
+        'all',
+      );
     };
 
-  const handleOpenAddDialog =
+  /* =========================
+     Add Holiday
+  ========================= */
+
+  const handleOpenAdd =
     () => {
       setDialogMode('add');
 
-      setSelectedHolidayId(
+      setSelectedHoliday(
         null,
       );
 
-      setHolidayForm(
-        createInitialHolidayForm(),
+      setFormData(
+        createEmptyForm(),
       );
 
-      setErrors({});
-
-      setActionMessage(null);
+      setFormErrors({});
 
       setDialogOpen(true);
     };
 
-  const handleOpenEditDialog =
+  /* =========================
+     Edit Holiday
+  ========================= */
+
+  const handleOpenEdit =
     (holiday) => {
       setDialogMode('edit');
 
-      setSelectedHolidayId(
-        holiday.id,
+      setSelectedHoliday(
+        holiday,
       );
 
-      setHolidayForm({
+      setFormData({
         name:
           holiday.name,
 
         date:
           holiday.date,
 
-        type:
-          holiday.type,
-
-        description:
-          holiday.description,
-
         status:
-          holiday.status,
+          holiday.isActive
+            ? 'active'
+            : 'inactive',
       });
 
-      setErrors({});
-
-      setActionMessage(null);
+      setFormErrors({});
 
       setDialogOpen(true);
     };
 
   const handleCloseDialog =
     () => {
+      if (saving) {
+        return;
+      }
+
       setDialogOpen(false);
 
-      setDialogMode('add');
-
-      setSelectedHolidayId(
+      setSelectedHoliday(
         null,
       );
 
-      setHolidayForm(
-        createInitialHolidayForm(),
+      setFormData(
+        createEmptyForm(),
       );
 
-      setErrors({});
+      setFormErrors({});
     };
 
   const handleFormChange = (
-    fieldName,
+    field,
     value,
   ) => {
-    setHolidayForm(
+    setFormData(
       (
         previousForm,
       ) => ({
         ...previousForm,
 
-        [fieldName]:
+        [field]:
           value,
       }),
     );
 
-    setErrors(
+    setFormErrors(
       (
         previousErrors,
       ) => ({
         ...previousErrors,
 
-        [fieldName]: '',
+        [field]:
+          '',
       }),
     );
   };
 
-  const validateHolidayForm =
+  /* =========================
+     Validate
+  ========================= */
+
+  const validateForm =
     () => {
-      const validationErrors =
-        {};
+      const errors = {};
 
-      const holidayName =
-        holidayForm.name.trim();
+      const name =
+        formData.name.trim();
 
-      const description =
-        holidayForm.description.trim();
-
-      if (!holidayName) {
-        validationErrors.name =
-          'Please enter the holiday name.';
+      if (!name) {
+        errors.name =
+          'กรุณากรอกชื่อวันหยุด';
+      } else if (
+        name.length > 100
+      ) {
+        errors.name =
+          'ชื่อวันหยุดต้องไม่เกิน 100 ตัวอักษร';
       }
 
-      if (!holidayForm.date) {
-        validationErrors.date =
-          'Please select the holiday date.';
+      if (
+        !formData.date
+      ) {
+        errors.date =
+          'กรุณาเลือกวันที่';
       } else {
-        const duplicateHoliday =
+        const duplicatedDate =
           holidays.some(
             (holiday) =>
               holiday.date ===
-                holidayForm.date &&
-              Number(holiday.id) !==
+                formData.date &&
+              Number(
+                holiday.id,
+              ) !==
                 Number(
-                  selectedHolidayId,
+                  selectedHoliday
+                    ?.id,
                 ),
           );
 
-        if (duplicateHoliday) {
-          validationErrors.date =
-            'A holiday already exists on this date.';
+        if (
+          duplicatedDate
+        ) {
+          errors.date =
+            'มีวันหยุดในวันที่นี้อยู่แล้ว';
         }
       }
 
-      if (!holidayForm.type) {
-        validationErrors.type =
-          'Please select the holiday type.';
-      }
-
-      if (!description) {
-        validationErrors.description =
-          'Please enter the holiday description.';
-      } else if (
-        description.length < 5
+      if (
+        !formData.status
       ) {
-        validationErrors.description =
-          'Description must contain at least 5 characters.';
+        errors.status =
+          'กรุณาเลือกสถานะ';
       }
 
-      if (!holidayForm.status) {
-        validationErrors.status =
-          'Please select the holiday status.';
-      }
-
-      setErrors(
-        validationErrors,
+      setFormErrors(
+        errors,
       );
 
       return (
         Object.keys(
-          validationErrors,
+          errors,
         ).length === 0
       );
     };
 
-  const handleSaveHoliday =
+  /* =========================
+     Save
+  ========================= */
+
+  const handleSave =
     async () => {
       if (
-        !validateHolidayForm()
+        !validateForm()
       ) {
         return;
       }
 
-      const now =
-        new Date().toISOString();
-
-      const preparedHoliday = {
-        id:
-          dialogMode === 'edit'
-            ? selectedHolidayId
-            : Math.max(
-                0,
-                ...holidays.map(
-                  (holiday) =>
-                    Number(
-                      holiday.id,
-                    ) || 0,
-                ),
-              ) + 1,
-
-        name:
-          holidayForm.name.trim(),
-
-        date:
-          holidayForm.date,
-
-        type:
-          holidayForm.type,
-
-        description:
-          holidayForm.description.trim(),
-
-        status:
-          holidayForm.status,
-
-        isActive:
-          holidayForm.status ===
-          'Active',
-
-        createdAt:
-          dialogMode === 'edit'
-            ? holidays.find(
-                (holiday) =>
-                  Number(
-                    holiday.id,
-                  ) ===
-                  Number(
-                    selectedHolidayId,
-                  ),
-              )?.createdAt ||
-              now
-            : now,
-
-        updatedAt: now,
-      };
-
       setSaving(true);
+      setError('');
+      setActionMessage('');
+
       try {
-        const result = dialogMode === 'edit'
-          ? await updateHoliday(selectedHolidayId, preparedHoliday)
-          : await createHoliday(preparedHoliday);
-        const savedHoliday = normalizeHoliday(result.data.holiday, 0);
+        const payload = {
+          holidayName:
+            formData.name.trim(),
 
-      createHolidayAuditLog({
-        action:
-          dialogMode === 'edit'
-            ? 'update_holiday'
-            : 'create_holiday',
+          holidayDate:
+            formData.date,
 
-        holiday: savedHoliday,
+          year:
+            Number(
+              formData.date.slice(
+                0,
+                4,
+              ),
+            ),
 
-        detail:
-          `${
-            dialogMode === 'edit'
-              ? 'Updated'
-              : 'Created'
-          } holiday "${savedHoliday.name}" on ${savedHoliday.date}. Status: ${savedHoliday.status}.`,
-      });
+          isActive:
+            formData.status ===
+            'active',
+        };
 
-      setActionMessage({
-        severity: 'success',
+        if (
+          dialogMode ===
+            'edit' &&
+          selectedHoliday
+            ?.id
+        ) {
+          await api.put(
+            `/hr/holidays/${selectedHoliday.id}`,
+            payload,
+          );
 
-        text:
-          `${savedHoliday.name} was ${
-            dialogMode === 'edit'
-              ? 'updated'
-              : 'added'
-          } successfully.`,
-      });
+          setActionMessage(
+            'แก้ไขวันหยุดเรียบร้อยแล้ว',
+          );
+        } else {
+          await api.post(
+            '/hr/holidays',
+            payload,
+          );
 
-      setYearFilter(
-        savedHoliday.date.slice(
-          0,
-          4,
-        ),
-      );
+          setActionMessage(
+            'เพิ่มวันหยุดเรียบร้อยแล้ว',
+          );
+        }
 
-      handleCloseDialog();
+        setDialogOpen(
+          false,
+        );
 
-      await loadHolidayData();
+        setSelectedHoliday(
+          null,
+        );
 
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth',
-      });
-      } catch (error) {
-        setErrors({ form: error.response?.data?.message || 'Unable to save holiday.' });
-      } finally { setSaving(false); }
+        setFormData(
+          createEmptyForm(),
+        );
+
+        setFormErrors({});
+
+        await loadHolidays();
+      } catch (
+        saveError
+      ) {
+        setFormErrors(
+          (
+            previousErrors,
+          ) => ({
+            ...previousErrors,
+
+            general:
+              saveError.response
+                ?.data
+                ?.message ||
+              'ไม่สามารถบันทึกวันหยุดได้',
+          }),
+        );
+      } finally {
+        setSaving(false);
+      }
     };
 
-  const handleToggleStatus = (
-    selectedHoliday,
-  ) => {
-    const nextStatus =
-      selectedHoliday.status ===
-      'Active'
-        ? 'Inactive'
-        : 'Active';
+  /* =========================
+     Delete
+  ========================= */
 
-    const updatedHoliday = {
-      ...selectedHoliday,
-
-      status:
-        nextStatus,
-
-      isActive:
-        nextStatus === 'Active',
-
-      updatedAt:
-        new Date().toISOString(),
-    };
-
-    setSaving(true);
-    updateHoliday(selectedHoliday.id, updatedHoliday)
-      .then(() => loadHolidayData())
-      .then(() => {
-
-    createHolidayAuditLog({
-      action:
-        nextStatus === 'Active'
-          ? 'activate_holiday'
-          : 'deactivate_holiday',
-
-      holiday:
-        updatedHoliday,
-
-      detail:
-        `Changed holiday "${updatedHoliday.name}" on ${updatedHoliday.date} to ${nextStatus}.`,
-    });
-
-    setActionMessage({
-      severity: 'success',
-
-      text:
-        `${updatedHoliday.name} was changed to ${nextStatus}.`,
-    });
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
-      })
-      .catch((error) => setActionMessage({ severity: 'error', text: error.response?.data?.message || 'Unable to update holiday status.' }))
-      .finally(() => setSaving(false));
-  };
-
-  const handleOpenDeleteDialog =
+  const handleOpenDelete =
     (holiday) => {
-      setSelectedDeleteHoliday(
+      setDeleteTarget(
         holiday,
       );
-
-      setDeleteDialogOpen(
-        true,
-      );
-
-      setActionMessage(null);
     };
 
-  const handleCloseDeleteDialog =
+  const handleCloseDelete =
     () => {
-      setDeleteDialogOpen(
-        false,
-      );
+      if (deleting) {
+        return;
+      }
 
-      setSelectedDeleteHoliday(
+      setDeleteTarget(
         null,
       );
     };
 
-  const handleConfirmDelete =
+  const handleDelete =
     async () => {
       if (
-        !selectedDeleteHoliday
+        !deleteTarget?.id
       ) {
         return;
       }
 
-      setSaving(true);
+      setDeleting(true);
+      setError('');
+      setActionMessage('');
+
       try {
-        await deleteHoliday(selectedDeleteHoliday.id);
+        await api.delete(
+          `/hr/holidays/${deleteTarget.id}`,
+        );
 
-      createHolidayAuditLog({
-        action:
-          'delete_holiday',
+        setActionMessage(
+          `ลบวันหยุด "${deleteTarget.name}" เรียบร้อยแล้ว`,
+        );
 
-        holiday:
-          selectedDeleteHoliday,
+        setDeleteTarget(
+          null,
+        );
 
-        detail:
-          `Deleted holiday "${selectedDeleteHoliday.name}" on ${selectedDeleteHoliday.date}.`,
-      });
-
-      setActionMessage({
-        severity: 'success',
-
-        text:
-          `${selectedDeleteHoliday.name} was deleted successfully.`,
-      });
-
-      handleCloseDeleteDialog();
-
-      await loadHolidayData();
-
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth',
-      });
-      } catch (error) {
-        setActionMessage({ severity: 'error', text: error.response?.data?.message || 'Unable to delete holiday.' });
-      } finally { setSaving(false); }
+        await loadHolidays();
+      } catch (
+        deleteError
+      ) {
+        setError(
+          deleteError.response
+            ?.data?.message ||
+            'ไม่สามารถลบวันหยุดได้',
+        );
+      } finally {
+        setDeleting(false);
+      }
     };
 
-  const summaryCards = [
-    {
-      title: 'Active Holidays',
-      value: summary.active,
-      color: '#059669',
-    },
-    {
-      title: 'Upcoming Holidays',
-      value: summary.upcoming,
-      color: '#2563EB',
-    },
-    {
-      title: 'Public Holidays',
-      value: summary.public,
-      color: '#7C3AED',
-    },
-    {
-      title: 'Company Holidays',
-      value: summary.company,
-      color: '#B45309',
-    },
-  ];
+  /* =========================
+     UI
+  ========================= */
 
   return (
-    <HRLayout
-      activeMenu="Holiday Management"
-    >
+    <HRLayout activeMenu="Holiday Management">
+      {/* Header */}
+
       <Box
         sx={{
-          display: 'flex',
+          display:
+            'flex',
 
           alignItems: {
-            xs: 'flex-start',
-            sm: 'center',
+            xs:
+              'flex-start',
+
+            sm:
+              'center',
           },
 
           justifyContent:
             'space-between',
 
           flexDirection: {
-            xs: 'column',
-            sm: 'row',
+            xs:
+              'column',
+
+            sm:
+              'row',
           },
 
-          gap: '16px',
+          gap:
+            '16px',
 
           marginBottom:
-            '28px',
+            '22px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color: '#111827',
+        <Typography
+          component="h1"
+          sx={{
+            color:
+              '#111827',
 
-              fontSize: {
-                xs: '26px',
-                sm: '30px',
-              },
+            fontSize: {
+              xs:
+                '26px',
 
-              fontWeight: 800,
-            }}
-          >
-            Holiday Management
-          </Typography>
+              sm:
+                '30px',
+            },
 
-          <Typography
-            sx={{
-              color: '#6B7280',
-
-              fontSize: '15px',
-
-              marginTop: '6px',
-            }}
-          >
-            Manage holidays used when calculating leave
-            working days.
-          </Typography>
-        </Box>
+            fontWeight:
+              800,
+          }}
+        >
+          จัดการวันหยุด
+        </Typography>
 
         <Button
           type="button"
           variant="contained"
           onClick={
-            handleOpenAddDialog
+            handleOpenAdd
           }
           sx={{
-            minWidth: '150px',
+            minWidth:
+              '140px',
 
-            height: '44px',
+            height:
+              '42px',
 
-            padding: '0 20px',
+            padding:
+              '0 18px',
 
             backgroundColor:
-              '#059669',
+              theme.primary,
 
-            color: '#FFFFFF',
+            color:
+              '#FFFFFF',
 
-            borderRadius: '8px',
+            borderRadius:
+              '8px',
 
-            fontSize: '14px',
+            fontSize:
+              '12px',
 
-            fontWeight: 700,
+            fontWeight:
+              700,
 
-            textTransform: 'none',
+            textTransform:
+              'none',
 
-            boxShadow: 'none',
+            boxShadow:
+              'none',
 
             '&:hover': {
               backgroundColor:
-                '#047857',
+                theme.dark,
 
-              boxShadow: 'none',
+              boxShadow:
+                'none',
             },
           }}
         >
-          Add Holiday
+          + เพิ่มวันหยุด
         </Button>
       </Box>
 
-      {actionMessage && (
+      {/* Messages */}
+
+      {error && (
         <Alert
-          severity={
-            actionMessage.severity
-          }
+          severity="error"
           onClose={() =>
-            setActionMessage(null)
+            setError('')
           }
           sx={{
-            marginBottom: '24px',
+            marginBottom:
+              '20px',
 
-            borderRadius: '8px',
+            borderRadius:
+              '10px',
           }}
         >
-          {actionMessage.text}
+          {error}
         </Alert>
       )}
 
-      {(loading || loadError) && (
-        <Alert severity={loadError ? 'error' : 'info'} action={loadError ? <Button onClick={loadHolidayData}>Retry</Button> : null} sx={{ marginBottom: '24px', borderRadius: '8px' }}>
-          {loadError || 'Loading holidays...'}
+      {actionMessage && (
+        <Alert
+          severity="success"
+          onClose={() =>
+            setActionMessage(
+              '',
+            )
+          }
+          sx={{
+            marginBottom:
+              '20px',
+
+            borderRadius:
+              '10px',
+          }}
+        >
+          {actionMessage}
         </Alert>
       )}
+
+      {/* Summary Cards */}
 
       <Box
         sx={{
-          display: 'grid',
+          display:
+            'grid',
 
           gridTemplateColumns: {
-            xs: '1fr',
+            xs:
+              '1fr',
 
             sm:
-              'repeat(2, minmax(0, 1fr))',
+              'repeat(2, 1fr)',
 
             xl:
-              'repeat(4, minmax(0, 1fr))',
+              'repeat(4, 1fr)',
           },
 
-          gap: '20px',
+          gap:
+            '18px',
 
-          marginBottom: '24px',
+          marginBottom:
+            '24px',
         }}
       >
         {summaryCards.map(
           (card) => (
             <Paper
-              key={card.title}
+              key={
+                card.title
+              }
               elevation={0}
               sx={{
-                padding: '20px',
+                minHeight:
+                  '140px',
+
+                padding:
+                  '20px',
 
                 backgroundColor:
                   '#FFFFFF',
@@ -1093,38 +1249,68 @@ function HolidayManagementPage() {
                   '1px solid #E5E7EB',
 
                 borderRadius:
-                  '12px',
+                  '14px',
               }}
             >
-              <Typography
+              <Box
                 sx={{
-                  color: '#6B7280',
+                  width:
+                    '50px',
 
-                  fontSize: '14px',
+                  height:
+                    '50px',
 
-                  fontWeight: 600,
-                }}
-              >
-                {card.title}
-              </Typography>
+                  display:
+                    'flex',
 
-              <Typography
-                sx={{
-                  color: card.color,
+                  alignItems:
+                    'center',
 
-                  fontSize: '30px',
+                  justifyContent:
+                    'center',
 
-                  fontWeight: 800,
+                  backgroundColor:
+                    card.backgroundColor,
 
-                  marginTop: '8px',
+                  color:
+                    card.color,
+
+                  borderRadius:
+                    '11px',
+
+                  fontSize:
+                    '20px',
+
+                  fontWeight:
+                    800,
                 }}
               >
                 {card.value}
+              </Box>
+
+              <Typography
+                sx={{
+                  color:
+                    '#111827',
+
+                  fontSize:
+                    '14px',
+
+                  fontWeight:
+                    800,
+
+                  marginTop:
+                    '13px',
+                }}
+              >
+                {card.title}
               </Typography>
             </Paper>
           ),
         )}
       </Box>
+
+      {/* Main Card */}
 
       <Paper
         elevation={0}
@@ -1135,17 +1321,19 @@ function HolidayManagementPage() {
           border:
             '1px solid #E5E7EB',
 
-          borderRadius: '12px',
+          borderRadius:
+            '14px',
 
-          overflow: 'hidden',
+          overflow:
+            'hidden',
         }}
       >
+        {/* Filters */}
+
         <Box
           sx={{
-            padding: {
-              xs: '20px',
-              sm: '24px',
-            },
+            padding:
+              '20px 24px',
 
             borderBottom:
               '1px solid #E5E7EB',
@@ -1153,97 +1341,146 @@ function HolidayManagementPage() {
         >
           <Typography
             sx={{
-              color: '#111827',
+              color:
+                '#111827',
 
-              fontSize: '18px',
+              fontSize:
+                '18px',
 
-              fontWeight: 800,
+              fontWeight:
+                800,
             }}
           >
-            Holiday List
+            รายการวันหยุด
           </Typography>
 
           <Typography
             sx={{
-              color: '#6B7280',
+              color:
+                '#64748B',
 
-              fontSize: '14px',
+              fontSize:
+                '12px',
 
-              marginTop: '4px',
+              marginTop:
+                '4px',
             }}
           >
-            Showing {filteredHolidays.length} of{' '}
-            {holidays.length} holidays
+            แสดง{' '}
+            {
+              filteredHolidays.length
+            }{' '}
+            จาก{' '}
+            {
+              holidays.length
+            }{' '}
+            รายการ
           </Typography>
 
           <Box
             sx={{
-              display: 'grid',
+              display:
+                'grid',
 
               gridTemplateColumns: {
-                xs: '1fr',
+                xs:
+                  '1fr',
 
                 lg:
-                  'minmax(240px, 2fr) repeat(3, minmax(150px, 1fr)) auto',
+                  'minmax(260px, 1.4fr) repeat(2, minmax(160px, 0.7fr)) auto',
               },
 
-              gap: '16px',
+              gap:
+                '14px',
 
-              marginTop: '22px',
+              marginTop:
+                '20px',
             }}
           >
+            {/* Search */}
+
             <TextField
               fullWidth
-              label="Search Holiday"
-              placeholder="Holiday name or description"
-              value={searchText}
-              onChange={(event) =>
+              label="ค้นหาวันหยุด"
+              placeholder="ชื่อวันหยุด"
+              value={
+                searchText
+              }
+              onChange={(
+                event,
+              ) =>
                 setSearchText(
-                  event.target.value,
+                  event.target
+                    .value,
                 )
               }
               sx={{
                 '& .MuiOutlinedInput-root':
                   {
-                    height: '48px',
+                    height:
+                      '48px',
+
                     borderRadius:
-                      '8px',
+                      '9px',
+
+                    '&.Mui-focused fieldset':
+                      {
+                        borderColor:
+                          theme.primary,
+                      },
+                  },
+
+                '& .MuiInputLabel-root.Mui-focused':
+                  {
+                    color:
+                      theme.primary,
                   },
               }}
             />
 
+            {/* Year */}
+
             <FormControl
               fullWidth
             >
-              <InputLabel id="holiday-year-filter-label">
-                Year
+              <InputLabel>
+                ปี
               </InputLabel>
 
               <Select
-                labelId="holiday-year-filter-label"
-                value={yearFilter}
-                label="Year"
-                onChange={(event) =>
+                value={
+                  yearFilter
+                }
+                label="ปี"
+                onChange={(
+                  event,
+                ) =>
                   setYearFilter(
-                    event.target.value,
+                    event.target
+                      .value,
                   )
                 }
                 sx={{
-                  height: '48px',
+                  height:
+                    '48px',
 
                   borderRadius:
-                    '8px',
+                    '9px',
                 }}
               >
-                <MenuItem value="All">
-                  All Years
+                <MenuItem value="all">
+                  ทุกปี
                 </MenuItem>
 
                 {availableYears.map(
                   (year) => (
                     <MenuItem
-                      key={year}
-                      value={year}
+                      key={
+                        year
+                      }
+                      value={String(
+                        year,
+                      )}
                     >
                       {year}
                     </MenuItem>
@@ -1252,79 +1489,51 @@ function HolidayManagementPage() {
               </Select>
             </FormControl>
 
+            {/* Status */}
+
             <FormControl
               fullWidth
             >
-              <InputLabel id="holiday-type-filter-label">
-                Type
+              <InputLabel>
+                สถานะ
               </InputLabel>
 
               <Select
-                labelId="holiday-type-filter-label"
-                value={typeFilter}
-                label="Type"
-                onChange={(event) =>
-                  setTypeFilter(
-                    event.target.value,
-                  )
+                value={
+                  statusFilter
                 }
-                sx={{
-                  height: '48px',
-
-                  borderRadius:
-                    '8px',
-                }}
-              >
-                <MenuItem value="All">
-                  All Types
-                </MenuItem>
-
-                <MenuItem value="Public Holiday">
-                  Public Holiday
-                </MenuItem>
-
-                <MenuItem value="Company Holiday">
-                  Company Holiday
-                </MenuItem>
-              </Select>
-            </FormControl>
-
-            <FormControl
-              fullWidth
-            >
-              <InputLabel id="holiday-status-filter-label">
-                Status
-              </InputLabel>
-
-              <Select
-                labelId="holiday-status-filter-label"
-                value={statusFilter}
-                label="Status"
-                onChange={(event) =>
+                label="สถานะ"
+                onChange={(
+                  event,
+                ) =>
                   setStatusFilter(
-                    event.target.value,
+                    event.target
+                      .value,
                   )
                 }
                 sx={{
-                  height: '48px',
+                  height:
+                    '48px',
 
                   borderRadius:
-                    '8px',
+                    '9px',
                 }}
               >
-                <MenuItem value="All">
-                  All Statuses
+                <MenuItem value="all">
+                  ทุกสถานะ
                 </MenuItem>
 
-                <MenuItem value="Active">
-                  Active
+                <MenuItem value="active">
+                  ใช้งานอยู่
                 </MenuItem>
 
-                <MenuItem value="Inactive">
-                  Inactive
+                <MenuItem value="inactive">
+                  ไม่ใช้งาน
                 </MenuItem>
               </Select>
             </FormControl>
+
+            {/* Clear */}
 
             <Button
               type="button"
@@ -1333,283 +1542,239 @@ function HolidayManagementPage() {
                 handleClearFilters
               }
               sx={{
-                minWidth: '110px',
+                minWidth:
+                  '110px',
 
-                height: '48px',
+                height:
+                  '48px',
 
-                padding: '0 18px',
+                padding:
+                  '0 18px',
 
-                color: '#374151',
+                color:
+                  '#475569',
 
                 borderColor:
-                  '#D1D5DB',
+                  '#CBD5E1',
 
-                borderRadius: '8px',
+                borderRadius:
+                  '9px',
 
-                fontSize: '14px',
+                fontSize:
+                  '12px',
 
-                fontWeight: 700,
+                fontWeight:
+                  700,
 
-                textTransform: 'none',
+                textTransform:
+                  'none',
 
                 '&:hover': {
-                  borderColor:
-                    '#9CA3AF',
-
                   backgroundColor:
-                    '#F9FAFB',
+                    '#F8FAFC',
+
+                  borderColor:
+                    '#94A3B8',
                 },
               }}
             >
-              Clear
+              ล้างตัวกรอง
             </Button>
           </Box>
         </Box>
 
-        {filteredHolidays.length >
-        0 ? (
+        {/* Content */}
+
+        {loading ? (
           <Box
             sx={{
-              overflowX: 'auto',
+              minHeight:
+                '300px',
+
+              display:
+                'flex',
+
+              alignItems:
+                'center',
+
+              justifyContent:
+                'center',
             }}
           >
-            <Box
-              component="table"
+            <CircularProgress
               sx={{
-                width: '100%',
-
-                minWidth: '1120px',
-
-                borderCollapse:
-                  'collapse',
+                color:
+                  theme.primary,
+              }}
+            />
+          </Box>
+        ) : filteredHolidays.length >
+          0 ? (
+          <Box
+            sx={{
+              overflowX:
+                'auto',
+            }}
+          >
+            <Table
+              sx={{
+                minWidth:
+                  '900px',
               }}
             >
-              <Box component="thead">
-                <Box
-                  component="tr"
+              <TableHead>
+                <TableRow
                   sx={{
                     backgroundColor:
-                      '#F9FAFB',
+                      '#F8FAFC',
                   }}
                 >
                   {[
-                    'Holiday',
-                    'Date',
-                    'Day',
-                    'Type',
-                    'Status',
-                    'Action',
+                    'ชื่อวันหยุด',
+                    'วันที่',
+                    'วัน',
+                    'ปี',
+                    'สถานะ',
+                    'การดำเนินการ',
                   ].map(
-                    (heading) => (
-                      <Box
-                        key={heading}
-                        component="th"
+                    (
+                      heading,
+                    ) => (
+                      <TableCell
+                        key={
+                          heading
+                        }
                         sx={{
-                          padding:
-                            '14px 18px',
-
                           color:
-                            '#6B7280',
-
-                          borderBottom:
-                            '1px solid #E5E7EB',
+                            '#64748B',
 
                           fontSize:
-                            '12px',
+                            '11px',
 
                           fontWeight:
                             700,
 
-                          textAlign:
-                            'left',
-
                           whiteSpace:
                             'nowrap',
-                        }}
-                      >
-                        {heading}
-                      </Box>
-                    ),
-                  )}
-                </Box>
-              </Box>
-
-              <Box component="tbody">
-                {filteredHolidays.map(
-                  (holiday) => (
-                    <Box
-                      key={holiday.id}
-                      component="tr"
-                      sx={{
-                        '&:hover': {
-                          backgroundColor:
-                            '#F9FAFB',
-                        },
-                      }}
-                    >
-                      <Box
-                        component="td"
-                        sx={{
-                          minWidth:
-                            '300px',
-
-                          padding:
-                            '16px 18px',
 
                           borderBottom:
                             '1px solid #E5E7EB',
                         }}
                       >
+                        {
+                          heading
+                        }
+                      </TableCell>
+                    ),
+                  )}
+                </TableRow>
+              </TableHead>
+
+              <TableBody>
+                {filteredHolidays.map(
+                  (
+                    holiday,
+                  ) => (
+                    <TableRow
+                      key={
+                        holiday.id
+                      }
+                      hover
+                    >
+                      {/* Name */}
+
+                      <TableCell>
                         <Typography
                           sx={{
                             color:
                               '#111827',
 
                             fontSize:
-                              '14px',
+                              '12px',
 
                             fontWeight:
                               700,
+
+                            whiteSpace:
+                              'nowrap',
                           }}
                         >
-                          {holiday.name}
+                          {
+                            holiday.name
+                          }
                         </Typography>
+                      </TableCell>
 
+                      {/* Date */}
+
+                      <TableCell>
                         <Typography
                           sx={{
-                            maxWidth:
-                              '340px',
-
                             color:
-                              '#6B7280',
+                              theme.primary,
 
                             fontSize:
                               '12px',
 
-                            lineHeight:
-                              1.6,
+                            fontWeight:
+                              800,
 
-                            marginTop:
-                              '4px',
+                            whiteSpace:
+                              'nowrap',
                           }}
                         >
-                          {holiday.description}
+                          {formatDate(
+                            holiday.date,
+                          )}
                         </Typography>
-                      </Box>
+                      </TableCell>
 
-                      <Box
-                        component="td"
+                      {/* Day */}
+
+                      <TableCell
                         sx={{
-                          padding:
-                            '16px 18px',
-
-                          borderBottom:
-                            '1px solid #E5E7EB',
-
                           color:
-                            '#059669',
+                            '#475569',
 
                           fontSize:
-                            '13px',
-
-                          fontWeight:
-                            700,
+                            '12px',
 
                           whiteSpace:
                             'nowrap',
                         }}
                       >
-                        {formatHolidayDate(
+                        {getThaiDayName(
                           holiday.date,
                         )}
-                      </Box>
+                      </TableCell>
 
-                      <Box
-                        component="td"
+                      {/* Year */}
+
+                      <TableCell
                         sx={{
-                          padding:
-                            '16px 18px',
-
-                          borderBottom:
-                            '1px solid #E5E7EB',
-
                           color:
-                            '#4B5563',
+                            '#475569',
 
                           fontSize:
-                            '13px',
+                            '12px',
 
                           whiteSpace:
                             'nowrap',
                         }}
                       >
-                        {getDayName(
-                          holiday.date,
-                        )}
-                      </Box>
+                        {
+                          holiday.year
+                        }
+                      </TableCell>
 
-                      <Box
-                        component="td"
-                        sx={{
-                          padding:
-                            '16px 18px',
+                      {/* Status */}
 
-                          borderBottom:
-                            '1px solid #E5E7EB',
-
-                          whiteSpace:
-                            'nowrap',
-                        }}
-                      >
+                      <TableCell>
                         <Chip
                           label={
-                            holiday.type
-                          }
-                          size="small"
-                          sx={{
-                            minWidth:
-                              '120px',
-
-                            backgroundColor:
-                              holiday.type ===
-                              'Public Holiday'
-                                ? '#F5F3FF'
-                                : '#FEF3C7',
-
-                            color:
-                              holiday.type ===
-                              'Public Holiday'
-                                ? '#7C3AED'
-                                : '#B45309',
-
-                            borderRadius:
-                              '999px',
-
-                            fontSize:
-                              '11px',
-
-                            fontWeight:
-                              700,
-                          }}
-                        />
-                      </Box>
-
-                      <Box
-                        component="td"
-                        sx={{
-                          padding:
-                            '16px 18px',
-
-                          borderBottom:
-                            '1px solid #E5E7EB',
-
-                          whiteSpace:
-                            'nowrap',
-                        }}
-                      >
-                        <Chip
-                          label={
-                            holiday.status
+                            holiday.isActive
+                              ? 'ใช้งานอยู่'
+                              : 'ไม่ใช้งาน'
                           }
                           size="small"
                           sx={{
@@ -1617,14 +1782,12 @@ function HolidayManagementPage() {
                               '78px',
 
                             backgroundColor:
-                              holiday.status ===
-                              'Active'
+                              holiday.isActive
                                 ? '#DCFCE7'
                                 : '#FEE2E2',
 
                             color:
-                              holiday.status ===
-                              'Active'
+                              holiday.isActive
                                 ? '#15803D'
                                 : '#B91C1C',
 
@@ -1632,27 +1795,17 @@ function HolidayManagementPage() {
                               '999px',
 
                             fontSize:
-                              '11px',
+                              '10px',
 
                             fontWeight:
                               700,
                           }}
                         />
-                      </Box>
+                      </TableCell>
 
-                      <Box
-                        component="td"
-                        sx={{
-                          padding:
-                            '16px 18px',
+                      {/* Actions */}
 
-                          borderBottom:
-                            '1px solid #E5E7EB',
-
-                          whiteSpace:
-                            'nowrap',
-                        }}
-                      >
+                      <TableCell>
                         <Box
                           sx={{
                             display:
@@ -1661,115 +1814,111 @@ function HolidayManagementPage() {
                             alignItems:
                               'center',
 
-                            gap: '14px',
+                            gap:
+                              '14px',
+
+                            whiteSpace:
+                              'nowrap',
                           }}
                         >
                           <Button
                             type="button"
                             onClick={() =>
-                              handleOpenEditDialog(
+                              handleOpenEdit(
                                 holiday,
                               )
                             }
                             sx={{
-                              minWidth: 0,
+                              minWidth:
+                                0,
 
-                              padding: 0,
+                              padding:
+                                0,
 
                               color:
-                                '#059669',
+                                theme.primary,
 
                               fontSize:
-                                '13px',
+                                '11px',
 
                               fontWeight:
                                 700,
 
                               textTransform:
                                 'none',
+
+                              '&:hover':
+                                {
+                                  backgroundColor:
+                                    'transparent',
+
+                                  textDecoration:
+                                    'underline',
+                                },
                             }}
                           >
-                            Edit
+                            แก้ไข
                           </Button>
 
                           <Button
                             type="button"
                             onClick={() =>
-                              handleToggleStatus(
+                              handleOpenDelete(
                                 holiday,
                               )
                             }
                             sx={{
-                              minWidth: 0,
+                              minWidth:
+                                0,
 
-                              padding: 0,
+                              padding:
+                                0,
 
                               color:
-                                holiday.status ===
-                                'Active'
-                                  ? '#DC2626'
-                                  : '#2563EB',
+                                '#DC2626',
 
                               fontSize:
-                                '13px',
+                                '11px',
 
                               fontWeight:
                                 700,
 
                               textTransform:
                                 'none',
+
+                              '&:hover':
+                                {
+                                  backgroundColor:
+                                    'transparent',
+
+                                  textDecoration:
+                                    'underline',
+                                },
                             }}
                           >
-                            {holiday.status ===
-                            'Active'
-                              ? 'Deactivate'
-                              : 'Activate'}
-                          </Button>
-
-                          <Button
-                            type="button"
-                            onClick={() =>
-                              handleOpenDeleteDialog(
-                                holiday,
-                              )
-                            }
-                            sx={{
-                              minWidth: 0,
-
-                              padding: 0,
-
-                              color:
-                                '#B91C1C',
-
-                              fontSize:
-                                '13px',
-
-                              fontWeight:
-                                700,
-
-                              textTransform:
-                                'none',
-                            }}
-                          >
-                            Delete
+                            ลบ
                           </Button>
                         </Box>
-                      </Box>
-                    </Box>
+                      </TableCell>
+                    </TableRow>
                   ),
                 )}
-              </Box>
-            </Box>
+              </TableBody>
+            </Table>
           </Box>
         ) : (
+          /* Empty */
+
           <Box
             sx={{
-              minHeight: '300px',
+              minHeight:
+                '280px',
 
               padding:
                 '40px 24px',
 
-              display: 'flex',
+              display:
+                'flex',
 
               flexDirection:
                 'column',
@@ -1786,19 +1935,14 @@ function HolidayManagementPage() {
           >
             <Box
               sx={{
-                width: '64px',
+                width:
+                  '58px',
 
-                height: '64px',
+                height:
+                  '58px',
 
-                backgroundColor:
-                  '#ECFDF5',
-
-                color: '#059669',
-
-                borderRadius:
-                  '50%',
-
-                display: 'flex',
+                display:
+                  'flex',
 
                 alignItems:
                   'center',
@@ -1806,9 +1950,20 @@ function HolidayManagementPage() {
                 justifyContent:
                   'center',
 
-                fontSize: '24px',
+                backgroundColor:
+                  theme.soft,
 
-                fontWeight: 800,
+                color:
+                  theme.primary,
+
+                borderRadius:
+                  '50%',
+
+                fontSize:
+                  '20px',
+
+                fontWeight:
+                  800,
               }}
             >
               0
@@ -1816,35 +1971,48 @@ function HolidayManagementPage() {
 
             <Typography
               sx={{
-                color: '#111827',
+                color:
+                  '#111827',
 
-                fontSize: '18px',
+                fontSize:
+                  '16px',
 
-                fontWeight: 800,
+                fontWeight:
+                  800,
 
-                marginTop: '16px',
+                marginTop:
+                  '14px',
               }}
             >
-              No holidays found
+              ไม่พบข้อมูลวันหยุด
             </Typography>
 
             <Typography
               sx={{
-                color: '#6B7280',
+                color:
+                  '#64748B',
 
-                fontSize: '14px',
+                fontSize:
+                  '12px',
 
-                marginTop: '6px',
+                marginTop:
+                  '5px',
               }}
             >
-              Try changing or clearing the selected filters.
+              ลองเปลี่ยนหรือล้างตัวกรอง
             </Typography>
           </Box>
         )}
       </Paper>
 
+      {/* =========================
+          Add / Edit Dialog
+      ========================= */}
+
       <Dialog
-        open={dialogOpen}
+        open={
+          dialogOpen
+        }
         onClose={
           handleCloseDialog
         }
@@ -1854,366 +2022,360 @@ function HolidayManagementPage() {
           sx: {
             borderRadius:
               '14px',
-
-            overflow: 'hidden',
           },
         }}
       >
         <DialogTitle
           sx={{
-            padding: {
-              xs: '20px',
-              sm: '24px',
-            },
+            padding:
+              '20px 24px',
+
+            color:
+              '#111827',
+
+            fontSize:
+              '20px',
+
+            fontWeight:
+              800,
 
             borderBottom:
               '1px solid #E5E7EB',
           }}
         >
-          <Typography
-            component="div"
-            sx={{
-              color: '#111827',
-
-              fontSize: '20px',
-
-              fontWeight: 800,
-            }}
-          >
-            {dialogMode === 'edit'
-              ? 'Edit Holiday'
-              : 'Add Holiday'}
-          </Typography>
-
-          <Typography
-            component="div"
-            sx={{
-              color: '#6B7280',
-
-              fontSize: '14px',
-
-              lineHeight: 1.6,
-
-              marginTop: '6px',
-            }}
-          >
-            Active holidays are excluded when calculating
-            leave working days.
-          </Typography>
+          {dialogMode ===
+          'edit'
+            ? 'แก้ไขวันหยุด'
+            : 'เพิ่มวันหยุด'}
         </DialogTitle>
 
         <DialogContent
           sx={{
-            padding: {
-              xs: '20px',
-              sm: '24px',
-            },
+            padding:
+              '24px !important',
           }}
         >
+          {formErrors.general && (
+            <Alert
+              severity="error"
+              sx={{
+                marginBottom:
+                  '18px',
+
+                borderRadius:
+                  '9px',
+              }}
+            >
+              {
+                formErrors.general
+              }
+            </Alert>
+          )}
+
           <Box
             sx={{
-              display: 'flex',
+              display:
+                'flex',
 
               flexDirection:
                 'column',
 
-              gap: '20px',
+              gap:
+                '18px',
             }}
           >
+            {/* Name */}
+
             <TextField
               fullWidth
-              required
-              label="Holiday Name"
-              placeholder="Example: New Year’s Day"
+              label="ชื่อวันหยุด"
+              placeholder="เช่น วันขึ้นปีใหม่"
               value={
-                holidayForm.name
+                formData.name
               }
-              onChange={(event) =>
+              onChange={(
+                event,
+              ) =>
                 handleFormChange(
                   'name',
-                  event.target.value,
+                  event.target
+                    .value,
                 )
               }
-              error={
-                Boolean(errors.name)
-              }
-              helperText={
-                errors.name
-              }
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    borderRadius:
-                      '8px',
-                  },
-              }}
-            />
-
-            <TextField
-              fullWidth
-              required
-              type="date"
-              label="Holiday Date"
-              value={
-                holidayForm.date
-              }
-              onChange={(event) =>
-                handleFormChange(
-                  'date',
-                  event.target.value,
-                )
-              }
-              error={
-                Boolean(errors.date)
-              }
-              helperText={
-                errors.date
-              }
-              slotProps={{
-                inputLabel: {
-                  shrink: true,
-                },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    borderRadius:
-                      '8px',
-                  },
-              }}
-            />
-
-            <FormControl
-              fullWidth
-              required
-              error={
-                Boolean(errors.type)
-              }
-            >
-              <InputLabel id="holiday-form-type-label">
-                Holiday Type
-              </InputLabel>
-
-              <Select
-                labelId="holiday-form-type-label"
-                value={
-                  holidayForm.type
-                }
-                label="Holiday Type"
-                onChange={(event) =>
-                  handleFormChange(
-                    'type',
-                    event.target.value,
-                  )
-                }
-                sx={{
-                  borderRadius:
-                    '8px',
-                }}
-              >
-                <MenuItem value="Public Holiday">
-                  Public Holiday
-                </MenuItem>
-
-                <MenuItem value="Company Holiday">
-                  Company Holiday
-                </MenuItem>
-              </Select>
-
-              {errors.type && (
-                <FormHelperText>
-                  {errors.type}
-                </FormHelperText>
+              error={Boolean(
+                formErrors.name,
               )}
-            </FormControl>
-
-            <TextField
-              fullWidth
-              required
-              multiline
-              minRows={4}
-              label="Description"
-              placeholder="Describe this holiday"
-              value={
-                holidayForm.description
-              }
-              onChange={(event) =>
-                handleFormChange(
-                  'description',
-                  event.target.value,
-                )
-              }
-              error={
-                Boolean(
-                  errors.description,
-                )
-              }
               helperText={
-                errors.description ||
-                `${holidayForm.description.length}/300 characters`
+                formErrors.name ||
+                `${formData.name.length}/100 ตัวอักษร`
               }
               slotProps={{
                 htmlInput: {
-                  maxLength: 300,
+                  maxLength:
+                    100,
                 },
               }}
               sx={{
                 '& .MuiOutlinedInput-root':
                   {
                     borderRadius:
-                      '8px',
+                      '9px',
                   },
 
                 '& .MuiFormHelperText-root':
                   {
                     textAlign:
-                      errors.description
+                      formErrors.name
                         ? 'left'
                         : 'right',
                   },
               }}
             />
 
-            <FormControl
-              fullWidth
-              required
-              error={
-                Boolean(
-                  errors.status,
+            {/* Date */}
+
+            <ThaiDateField
+              label="วันที่"
+              value={
+                formData.date
+              }
+              onChange={(
+                value,
+              ) =>
+                handleFormChange(
+                  'date',
+                  value,
                 )
               }
+              error={Boolean(
+                formErrors.date,
+              )}
+              helperText={
+                formErrors.date ||
+                ''
+              }
+            />
+
+            {/* Status */}
+
+            <FormControl
+              fullWidth
+              error={Boolean(
+                formErrors.status,
+              )}
             >
-              <InputLabel id="holiday-form-status-label">
-                Status
+              <InputLabel>
+                สถานะ
               </InputLabel>
 
               <Select
-                labelId="holiday-form-status-label"
                 value={
-                  holidayForm.status
+                  formData.status
                 }
-                label="Status"
-                onChange={(event) =>
+                label="สถานะ"
+                onChange={(
+                  event,
+                ) =>
                   handleFormChange(
                     'status',
-                    event.target.value,
+                    event.target
+                      .value,
                   )
                 }
                 sx={{
                   borderRadius:
-                    '8px',
+                    '9px',
                 }}
               >
-                <MenuItem value="Active">
-                  Active
+                <MenuItem value="active">
+                  ใช้งานอยู่
                 </MenuItem>
 
-                <MenuItem value="Inactive">
-                  Inactive
+                <MenuItem value="inactive">
+                  ไม่ใช้งาน
                 </MenuItem>
               </Select>
 
-              {errors.status && (
+              {formErrors.status && (
                 <FormHelperText>
-                  {errors.status}
+                  {
+                    formErrors.status
+                  }
                 </FormHelperText>
               )}
             </FormControl>
+
+            {/* Year Preview */}
+
+            {formData.date && (
+              <Box
+                sx={{
+                  padding:
+                    '14px 16px',
+
+                  backgroundColor:
+                    '#F8FAFC',
+
+                  border:
+                    '1px solid #E5E7EB',
+
+                  borderRadius:
+                    '10px',
+                }}
+              >
+                <Typography
+                  sx={{
+                    color:
+                      '#64748B',
+
+                    fontSize:
+                      '10px',
+
+                    fontWeight:
+                      700,
+                  }}
+                >
+                  ปีของวันหยุด
+                </Typography>
+
+                <Typography
+                  sx={{
+                    color:
+                      theme.primary,
+
+                    fontSize:
+                      '16px',
+
+                    fontWeight:
+                      800,
+
+                    marginTop:
+                      '3px',
+                  }}
+                >
+                  {formData.date.slice(
+                    0,
+                    4,
+                  )}
+                </Typography>
+              </Box>
+            )}
           </Box>
         </DialogContent>
 
         <DialogActions
           sx={{
-            padding: {
-              xs:
-                '16px 20px 20px',
-
-              sm:
-                '16px 24px 24px',
-            },
+            padding:
+              '16px 24px 22px',
 
             borderTop:
               '1px solid #E5E7EB',
 
-            gap: '10px',
+            gap:
+              '10px',
           }}
         >
           <Button
             type="button"
             variant="outlined"
+            disabled={
+              saving
+            }
             onClick={
               handleCloseDialog
             }
             sx={{
-              minWidth: '100px',
+              minWidth:
+                '100px',
 
-              height: '42px',
+              height:
+                '42px',
 
-              color: '#374151',
+              color:
+                '#475569',
 
               borderColor:
-                '#D1D5DB',
+                '#CBD5E1',
 
-              borderRadius: '8px',
+              borderRadius:
+                '8px',
 
-              fontSize: '14px',
+              fontSize:
+                '12px',
 
-              fontWeight: 700,
+              fontWeight:
+                700,
 
               textTransform:
                 'none',
             }}
           >
-            Cancel
+            ยกเลิก
           </Button>
 
           <Button
             type="button"
             variant="contained"
-            disabled={saving}
+            disabled={
+              saving
+            }
             onClick={
-              handleSaveHoliday
+              handleSave
             }
             sx={{
-              minWidth: '130px',
+              minWidth:
+                '120px',
 
-              height: '42px',
+              height:
+                '42px',
 
               backgroundColor:
-                '#059669',
+                theme.primary,
 
-              color: '#FFFFFF',
+              color:
+                '#FFFFFF',
 
-              borderRadius: '8px',
+              borderRadius:
+                '8px',
 
-              fontSize: '14px',
+              fontSize:
+                '12px',
 
-              fontWeight: 700,
+              fontWeight:
+                700,
 
               textTransform:
                 'none',
 
-              boxShadow: 'none',
+              boxShadow:
+                'none',
 
               '&:hover': {
                 backgroundColor:
-                  '#047857',
+                  theme.dark,
 
-                boxShadow: 'none',
+                boxShadow:
+                  'none',
               },
             }}
           >
-            {dialogMode === 'edit'
-              ? 'Save Changes'
-              : 'Save Holiday'}
+            {saving
+              ? 'กำลังบันทึก...'
+              : 'บันทึก'}
           </Button>
         </DialogActions>
       </Dialog>
 
+      {/* =========================
+          Delete Dialog
+      ========================= */}
+
       <Dialog
-        open={deleteDialogOpen}
+        open={Boolean(
+          deleteTarget,
+        )}
         onClose={
-          handleCloseDeleteDialog
+          handleCloseDelete
         }
         fullWidth
         maxWidth="xs"
@@ -2226,117 +2388,177 @@ function HolidayManagementPage() {
       >
         <DialogTitle
           sx={{
-            color: '#111827',
+            padding:
+              '20px 24px',
 
-            fontSize: '20px',
+            color:
+              '#111827',
 
-            fontWeight: 800,
+            fontSize:
+              '20px',
+
+            fontWeight:
+              800,
 
             borderBottom:
               '1px solid #E5E7EB',
           }}
         >
-          Delete Holiday
+          ยืนยันการลบวันหยุด
         </DialogTitle>
 
         <DialogContent
           sx={{
-            paddingTop:
+            padding:
               '24px !important',
           }}
         >
           <Typography
             sx={{
-              color: '#374151',
+              color:
+                '#475569',
 
-              fontSize: '14px',
+              fontSize:
+                '13px',
 
-              lineHeight: 1.7,
+              lineHeight:
+                1.8,
             }}
           >
-            Delete{' '}
-            <strong>
-              {selectedDeleteHoliday?.name ||
-                'this holiday'}
-            </strong>
-            ? This date will no longer be excluded from
-            leave-day calculations.
+            ต้องการลบวันหยุด{' '}
+            <Box
+              component="span"
+              sx={{
+                color:
+                  '#111827',
+
+                fontWeight:
+                  800,
+              }}
+            >
+              {
+                deleteTarget?.name
+              }
+            </Box>{' '}
+            วันที่{' '}
+            <Box
+              component="span"
+              sx={{
+                color:
+                  theme.primary,
+
+                fontWeight:
+                  800,
+              }}
+            >
+              {formatDate(
+                deleteTarget
+                  ?.date,
+              )}
+            </Box>{' '}
+            ใช่หรือไม่
           </Typography>
         </DialogContent>
 
         <DialogActions
           sx={{
             padding:
-              '16px 24px 24px',
+              '16px 24px 22px',
 
             borderTop:
               '1px solid #E5E7EB',
 
-            gap: '10px',
+            gap:
+              '10px',
           }}
         >
           <Button
             type="button"
             variant="outlined"
+            disabled={
+              deleting
+            }
             onClick={
-              handleCloseDeleteDialog
+              handleCloseDelete
             }
             sx={{
-              minWidth: '100px',
+              minWidth:
+                '100px',
 
-              height: '42px',
+              height:
+                '42px',
 
-              color: '#374151',
+              color:
+                '#475569',
 
               borderColor:
-                '#D1D5DB',
+                '#CBD5E1',
 
-              borderRadius: '8px',
+              borderRadius:
+                '8px',
+
+              fontSize:
+                '12px',
+
+              fontWeight:
+                700,
 
               textTransform:
                 'none',
-
-              fontWeight: 700,
             }}
           >
-            Cancel
+            ยกเลิก
           </Button>
 
           <Button
             type="button"
             variant="contained"
-            disabled={saving}
+            disabled={
+              deleting
+            }
             onClick={
-              handleConfirmDelete
+              handleDelete
             }
             sx={{
-              minWidth: '110px',
+              minWidth:
+                '100px',
 
-              height: '42px',
+              height:
+                '42px',
 
               backgroundColor:
                 '#DC2626',
 
-              color: '#FFFFFF',
+              color:
+                '#FFFFFF',
 
-              borderRadius: '8px',
+              borderRadius:
+                '8px',
+
+              fontSize:
+                '12px',
+
+              fontWeight:
+                700,
 
               textTransform:
                 'none',
 
-              fontWeight: 700,
-
-              boxShadow: 'none',
+              boxShadow:
+                'none',
 
               '&:hover': {
                 backgroundColor:
                   '#B91C1C',
 
-                boxShadow: 'none',
+                boxShadow:
+                  'none',
               },
             }}
           >
-            Delete
+            {deleting
+              ? 'กำลังลบ...'
+              : 'ลบ'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -818,51 +818,7 @@ function LoginPage() {
             )}
           </Button>
 
-          <Box
-            sx={{
-              marginTop: '20px',
-              padding: '13px 15px',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '10px',
-              borderRadius: '10px',
-              border:
-                '1px solid #E1EAF6',
-              backgroundColor:
-                '#F7FAFE',
-            }}
-          >
-            <CheckCircleRounded
-              sx={{
-                flexShrink: 0,
-                marginTop: '1px',
-                color: '#2563EB',
-                fontSize: '18px',
-              }}
-            />
-
-            <Typography
-              sx={{
-                color: '#64748B',
-                fontSize: '11.5px',
-                lineHeight: 1.7,
-              }}
-            >
-              ระบบจะตรวจสอบ Role จากบัญชีผู้ใช้โดยอัตโนมัติ
-              โดยไม่ต้องเลือก Role ด้วยตนเอง
-            </Typography>
-          </Box>
-
-          <Typography
-            sx={{
-              marginTop: '22px',
-              color: '#94A3B8',
-              fontSize: '11px',
-              textAlign: 'center',
-            }}
-          >
-            เข้าใช้งานอย่างปลอดภัยตาม Role สำหรับ Employee, Supervisor, HR และ Admin
-          </Typography>
+         
         </Box>
       </Paper>
     </Box>

@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -9,95 +10,586 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   FormControl,
+  InputAdornment,
   InputLabel,
   MenuItem,
   Paper,
   Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from '@mui/material';
 
-import HRLayout from '../../layouts/hrlayout.jsx';
+import {
+  CalendarMonthRounded,
+} from '@mui/icons-material';
 
 import {
-  getLeaveRequests,
+  useNavigate,
+} from 'react-router-dom';
+
+import HRLayout from '../../layouts/hrlayout.jsx';
+import api from '../../api/axios.js';
+
+import {
   leaveRequestStorageKey,
 } from '../../utils/leaverequeststorage.js';
 
-import {
-  createHRAuditLog,
-} from '../../utils/auditlogstorage.js';
-
-const employeeProfiles = {
-  employee: {
-    employeeId: 'EMP001',
-    employeeName: 'Employee User',
-    department:
-      'Information Technology',
-    approver: 'Supervisor User',
-  },
-
-  supervisor: {
-    employeeId: 'SUP001',
-    employeeName:
-      'Nattapong Srisuk',
-    department:
-      'Information Technology',
-    approver: 'Manager User',
-  },
-
-  hr: {
-    employeeId: 'HR001',
-    employeeName:
-      'Suda Rattanapong',
-    department:
-      'Human Resources',
-    approver: 'HR Supervisor',
-  },
-
-  admin: {
-    employeeId: 'ADM001',
-    employeeName:
-      'Preecha Wongchai',
-    department:
-      'Information Technology',
-    approver: 'System Manager',
-  },
+const theme = {
+  primary: '#059669',
+  dark: '#047857',
+  soft: '#ECFDF5',
+  border: '#A7F3D0',
 };
 
-const capitalizeText = (value) => {
-  const normalizedValue = String(
-    value || '',
-  )
-    .trim()
-    .toLowerCase();
+/* =========================
+   Translation
+========================= */
 
-  if (!normalizedValue) {
-    return '';
-  }
+const translateLeaveType = (
+  value,
+) => {
+  const labels = {
+    'Annual Leave':
+      'ลาพักร้อน',
+
+    'Sick Leave':
+      'ลาป่วย',
+
+    'Personal Leave':
+      'ลากิจ',
+
+    'Maternity Leave':
+      'ลาคลอด',
+
+    'Paternity Leave':
+      'ลาเพื่อดูแลบุตร',
+
+    'Ordination Leave':
+      'ลาอุปสมบท',
+
+    'Military Leave':
+      'ลาเพื่อรับราชการทหาร',
+
+    'Other Leave':
+      'ลาอื่น ๆ',
+
+    Other:
+      'ลาอื่น ๆ',
+  };
 
   return (
-    normalizedValue
-      .charAt(0)
-      .toUpperCase() +
-    normalizedValue.slice(1)
+    labels[value] ||
+    value ||
+    '-'
   );
 };
 
-const escapeXml = (value) =>
-  String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;');
+const translateStatus = (
+  status,
+) => {
+  const labels = {
+    draft:
+      'ฉบับร่าง',
+
+    pending:
+      'รออนุมัติ',
+
+    approved:
+      'อนุมัติแล้ว',
+
+    rejected:
+      'ปฏิเสธแล้ว',
+
+    cancelled:
+      'ยกเลิกแล้ว',
+  };
+
+  return (
+    labels[
+      String(
+        status || '',
+      ).toLowerCase()
+    ] ||
+    status ||
+    '-'
+  );
+};
+
+const getStatusStyle = (
+  status,
+) => {
+  const normalizedStatus =
+    String(
+      status || '',
+    ).toLowerCase();
+
+  const styles = {
+    draft: {
+      backgroundColor:
+        '#F1F5F9',
+
+      color:
+        '#64748B',
+    },
+
+    pending: {
+      backgroundColor:
+        '#FEF3C7',
+
+      color:
+        '#B45309',
+    },
+
+    approved: {
+      backgroundColor:
+        '#DCFCE7',
+
+      color:
+        '#15803D',
+    },
+
+    rejected: {
+      backgroundColor:
+        '#FEE2E2',
+
+      color:
+        '#B91C1C',
+    },
+
+    cancelled: {
+      backgroundColor:
+        '#E5E7EB',
+
+      color:
+        '#64748B',
+    },
+  };
+
+  return (
+    styles[
+      normalizedStatus
+    ] || {
+      backgroundColor:
+        '#F1F5F9',
+
+      color:
+        '#64748B',
+    }
+  );
+};
+
+/* =========================
+   Date
+========================= */
+
+const normalizeDateValue = (
+  value,
+) => {
+  const text =
+    String(value || '');
+
+  const match =
+    text.match(
+      /^\d{4}-\d{2}-\d{2}/,
+    );
+
+  return match
+    ? match[0]
+    : '';
+};
+
+const formatDate = (
+  value,
+) => {
+  const date =
+    normalizeDateValue(
+      value,
+    );
+
+  if (!date) {
+    return '-';
+  }
+
+  const [
+    year,
+    month,
+    day,
+  ] = date.split('-');
+
+  return `${day}/${month}/${year}`;
+};
+
+const formatDateRange = (
+  startDate,
+  endDate,
+) => {
+  const start =
+    normalizeDateValue(
+      startDate,
+    );
+
+  const end =
+    normalizeDateValue(
+      endDate,
+    );
+
+  if (!start && !end) {
+    return '-';
+  }
+
+  if (
+    !end ||
+    start === end
+  ) {
+    return formatDate(
+      start,
+    );
+  }
+
+  return `${formatDate(
+    start,
+  )} - ${formatDate(
+    end,
+  )}`;
+};
+
+/* =========================
+   Thai Date Field
+========================= */
+
+function ThaiDateField({
+  label,
+  value,
+  onChange,
+}) {
+  return (
+    <Box
+      sx={{
+        position:
+          'relative',
+      }}
+    >
+      <TextField
+        fullWidth
+        label={label}
+        value={
+          value
+            ? formatDate(
+                value,
+              )
+            : ''
+        }
+        placeholder="วว/ดด/ปปปป"
+        slotProps={{
+          input: {
+            readOnly: true,
+
+            endAdornment: (
+              <InputAdornment position="end">
+                <CalendarMonthRounded
+                  sx={{
+                    color:
+                      '#64748B',
+
+                    fontSize:
+                      '20px',
+                  }}
+                />
+              </InputAdornment>
+            ),
+          },
+
+          inputLabel: {
+            shrink: true,
+          },
+        }}
+        sx={{
+          '& .MuiOutlinedInput-root':
+            {
+              height:
+                '48px',
+
+              borderRadius:
+                '9px',
+
+              '&.Mui-focused fieldset':
+                {
+                  borderColor:
+                    theme.primary,
+                },
+            },
+
+          '& .MuiInputLabel-root.Mui-focused':
+            {
+              color:
+                theme.primary,
+            },
+
+          '& .MuiInputBase-input::placeholder':
+            {
+              opacity: 1,
+
+              color:
+                '#64748B',
+            },
+        }}
+      />
+
+      <input
+        type="date"
+        value={value}
+        onChange={(
+          event,
+        ) =>
+          onChange(
+            event.target
+              .value,
+          )
+        }
+        style={{
+          position:
+            'absolute',
+
+          inset: 0,
+
+          width:
+            '100%',
+
+          height:
+            '100%',
+
+          opacity: 0,
+
+          cursor:
+            'pointer',
+        }}
+      />
+    </Box>
+  );
+}
+
+/* =========================
+   Normalize Request
+========================= */
+
+const normalizeRequest = (
+  request,
+) => {
+  const id =
+    request.id ??
+    request.leaveRequestId ??
+    request.leave_request_id ??
+    request.requestId;
+
+  const employeeName =
+    request.employeeName ||
+    request.employee_name ||
+    request.employee?.fullName ||
+    request.employee?.name ||
+    [
+      request.firstName ||
+        request.first_name,
+      request.lastName ||
+        request.last_name,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim() ||
+    '-';
+
+  const employeeCode =
+    request.employeeCode ||
+    request.employee_code ||
+    request.employee?.employeeCode ||
+    request.employee?.code ||
+    request.employeeId ||
+    request.employee_id ||
+    '-';
+
+  const leaveType =
+    request.leaveType ||
+    request.leave_type ||
+    request.leaveTypeName ||
+    request.leave_type_name ||
+    request.leaveType?.name ||
+    '-';
+
+  return {
+    id,
+
+    requestNo:
+      request.requestNo ||
+      request.request_no ||
+      request.referenceNo ||
+      request.reference_no ||
+      (
+        id
+          ? `#${id}`
+          : '-'
+      ),
+
+    employeeName,
+
+    employeeCode:
+      String(
+        employeeCode,
+      ),
+
+    department:
+      request.department ||
+      request.departmentName ||
+      request.department_name ||
+      request.employee?.department ||
+      '-',
+
+    leaveTypeId:
+      request.leaveTypeId ??
+      request.leave_type_id ??
+      null,
+
+    leaveType:
+      typeof leaveType ===
+      'string'
+        ? leaveType
+        : leaveType?.name ||
+          '-',
+
+    startDate:
+      normalizeDateValue(
+        request.startDate ||
+          request.start_date,
+      ),
+
+    endDate:
+      normalizeDateValue(
+        request.endDate ||
+          request.end_date,
+      ),
+
+    leaveDays:
+      Number(
+        request.leaveDays ??
+          request.leave_days ??
+          request.totalDays ??
+          0,
+      ) || 0,
+
+    status:
+      String(
+        request.status ||
+          'draft',
+      ).toLowerCase(),
+
+    approver:
+      request.approver ||
+      request.approverName ||
+      request.approver_name ||
+      request.supervisorName ||
+      request.supervisor_name ||
+      '-',
+  };
+};
+
+/* =========================
+   Response
+========================= */
+
+const getResponseRequests = (
+  response,
+) => {
+  const data =
+    response?.data?.data;
+
+  if (
+    Array.isArray(
+      data?.leaveRequests,
+    )
+  ) {
+    return data.leaveRequests;
+  }
+
+  if (
+    Array.isArray(
+      data?.requests,
+    )
+  ) {
+    return data.requests;
+  }
+
+  if (
+    Array.isArray(data)
+  ) {
+    return data;
+  }
+
+  return null;
+};
+
+/* =========================
+   Excel Export
+========================= */
+
+const escapeHtml = (
+  value,
+) =>
+  String(
+    value ?? '',
+  )
+    .replace(
+      /&/g,
+      '&amp;',
+    )
+    .replace(
+      /</g,
+      '&lt;',
+    )
+    .replace(
+      />/g,
+      '&gt;',
+    )
+    .replace(
+      /"/g,
+      '&quot;',
+    )
+    .replace(
+      /'/g,
+      '&#039;',
+    );
+
+/* =========================
+   Component
+========================= */
 
 function HRReportsPage() {
+  const navigate =
+    useNavigate();
+
   const [
     leaveRequests,
     setLeaveRequests,
   ] = useState([]);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    error,
+    setError,
+  ] = useState('');
+
+  const [
+    actionMessage,
+    setActionMessage,
+  ] = useState(null);
 
   const [
     searchText,
@@ -107,17 +599,17 @@ function HRReportsPage() {
   const [
     departmentFilter,
     setDepartmentFilter,
-  ] = useState('All');
+  ] = useState('all');
 
   const [
     leaveTypeFilter,
     setLeaveTypeFilter,
-  ] = useState('All');
+  ] = useState('all');
 
   const [
     statusFilter,
     setStatusFilter,
-  ] = useState('All');
+  ] = useState('all');
 
   const [
     startDate,
@@ -129,217 +621,156 @@ function HRReportsPage() {
     setEndDate,
   ] = useState('');
 
-  const [
-    actionMessage,
-    setActionMessage,
-  ] = useState(null);
+  /* =========================
+     Load Report
+  ========================= */
 
-  const normalizeReportRequest = (
-    request,
-  ) => {
-    const requestRole = String(
-      request.role || 'employee',
-    ).toLowerCase();
+  const loadReport =
+    useCallback(
+      async () => {
+        setLoading(true);
+        setError('');
 
-    const profile =
-      employeeProfiles[requestRole] ||
-      employeeProfiles.employee;
-
-    const normalizedStatus =
-      capitalizeText(request.status);
-
-    return {
-      ...request,
-
-      id: Number(request.id),
-
-      requestNo:
-        request.requestNo ||
-        `Request #${request.id}`,
-
-      employeeId:
-        request.employeeId ||
-        request.employeeCode ||
-        profile.employeeId,
-
-      employeeName:
-        request.employeeName ||
-        profile.employeeName,
-
-      department:
-        request.department ||
-        request.departmentName ||
-        profile.department,
-
-      leaveType:
-        request.leaveType ||
-        'Not specified',
-
-      startDate:
-        request.startDate || '',
-
-      endDate:
-        request.endDate || '',
-
-      leaveDays:
-        Number(
-          request.leaveDays,
-        ) || 0,
-
-      status:
-        normalizedStatus ||
-        'Pending',
-
-      approver:
-        request.approver ||
-        request.approverName ||
-        profile.approver,
-
-      submittedAt:
-        request.submittedAt ||
-        null,
-
-      createdAt:
-        request.createdAt ||
-        null,
-    };
-  };
-
-  const loadLeaveRequests = () => {
-    const storedRequests =
-      getLeaveRequests()
-        .filter(
-          (request) =>
-            String(
-              request.status || '',
-            ).toLowerCase() !==
-            'draft',
-        )
-        .map(
-          normalizeReportRequest,
-        )
-        .sort(
-          (
-            firstRequest,
-            secondRequest,
-          ) => {
-            const firstDate =
-              new Date(
-                firstRequest.submittedAt ||
-                  firstRequest.createdAt ||
-                  firstRequest.startDate ||
-                  0,
-              ).getTime();
-
-            const secondDate =
-              new Date(
-                secondRequest.submittedAt ||
-                  secondRequest.createdAt ||
-                  secondRequest.startDate ||
-                  0,
-              ).getTime();
-
-            return (
-              secondDate -
-              firstDate
+        try {
+          const response =
+            await api.get(
+              '/reports/leave-requests',
             );
-          },
-        );
 
-    setLeaveRequests(
-      storedRequests,
+          const apiRequests =
+            getResponseRequests(
+              response,
+            );
+
+          if (
+            Array.isArray(
+              apiRequests,
+            )
+          ) {
+            setLeaveRequests(
+              apiRequests.map(
+                normalizeRequest,
+              ),
+            );
+
+            return;
+          }
+
+          setLeaveRequests([]);
+          setError('รูปแบบข้อมูลรายงานจากระบบไม่ถูกต้อง');
+        } catch (requestError) {
+          setLeaveRequests([]);
+          setError(requestError.response?.data?.message || 'ไม่สามารถโหลดข้อมูลรายงานการลาได้');
+        } finally {
+          setLoading(false);
+        }
+      },
+      [],
     );
-  };
 
   useEffect(() => {
-    loadLeaveRequests();
+    loadReport();
 
-    const handleStorageChange = (
-      event,
-    ) => {
-      if (
-        !event.key ||
-        event.key ===
-          leaveRequestStorageKey
-      ) {
-        loadLeaveRequests();
-      }
-    };
+    const handleStorage =
+      (event) => {
+        if (
+          !event.key ||
+          event.key ===
+            leaveRequestStorageKey
+        ) {
+          loadReport();
+        }
+      };
 
-    const handleWindowFocus = () => {
-      loadLeaveRequests();
-    };
+    const handleFocus =
+      () => {
+        loadReport();
+      };
 
     window.addEventListener(
       'storage',
-      handleStorageChange,
+      handleStorage,
     );
 
     window.addEventListener(
       'focus',
-      handleWindowFocus,
+      handleFocus,
     );
 
     return () => {
       window.removeEventListener(
         'storage',
-        handleStorageChange,
+        handleStorage,
       );
 
       window.removeEventListener(
         'focus',
-        handleWindowFocus,
+        handleFocus,
       );
     };
-  }, []);
+  }, [loadReport]);
 
-  const departments = useMemo(
-    () => [
-      'All',
+  /* =========================
+     Filter Options
+  ========================= */
 
-      ...new Set(
-        leaveRequests
-          .map(
-            (request) =>
-              request.department,
-          )
-          .filter(Boolean),
-      ),
-    ],
-    [leaveRequests],
-  );
+  const departments =
+    useMemo(() => {
+      return [
+        ...new Set(
+          leaveRequests
+            .map(
+              (request) =>
+                request.department,
+            )
+            .filter(
+              (department) =>
+                department &&
+                department !==
+                  '-',
+            ),
+        ),
+      ].sort(
+        (
+          first,
+          second,
+        ) =>
+          first.localeCompare(
+            second,
+          ),
+      );
+    }, [leaveRequests]);
 
-  const leaveTypes = useMemo(
-    () => [
-      'All',
+  const leaveTypes =
+    useMemo(() => {
+      return [
+        ...new Set(
+          leaveRequests
+            .map(
+              (request) =>
+                request.leaveType,
+            )
+            .filter(
+              (leaveType) =>
+                leaveType &&
+                leaveType !==
+                  '-',
+            ),
+        ),
+      ].sort(
+        (
+          first,
+          second,
+        ) =>
+          first.localeCompare(
+            second,
+          ),
+      );
+    }, [leaveRequests]);
 
-      ...new Set(
-        leaveRequests
-          .map(
-            (request) =>
-              request.leaveType,
-          )
-          .filter(Boolean),
-      ),
-    ],
-    [leaveRequests],
-  );
-
-  const statuses = useMemo(
-    () => [
-      'All',
-
-      ...new Set(
-        leaveRequests
-          .map(
-            (request) =>
-              request.status,
-          )
-          .filter(Boolean),
-      ),
-    ],
-    [leaveRequests],
-  );
+  /* =========================
+     Filter
+  ========================= */
 
   const filteredRequests =
     useMemo(() => {
@@ -350,52 +781,74 @@ function HRReportsPage() {
 
       return leaveRequests.filter(
         (request) => {
-          const searchableText = [
-            request.requestNo,
-            request.employeeId,
-            request.employeeName,
-            request.department,
-            request.leaveType,
-            request.status,
-            request.approver,
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase();
+          const translatedLeaveType =
+            translateLeaveType(
+              request.leaveType,
+            ).toLowerCase();
 
           const matchesSearch =
             !keyword ||
-            searchableText.includes(
+            String(
+              request.requestNo ||
+                '',
+            )
+              .toLowerCase()
+              .includes(
+                keyword,
+              ) ||
+            String(
+              request.employeeName ||
+                '',
+            )
+              .toLowerCase()
+              .includes(
+                keyword,
+              ) ||
+            String(
+              request.employeeCode ||
+                '',
+            )
+              .toLowerCase()
+              .includes(
+                keyword,
+              ) ||
+            translatedLeaveType.includes(
               keyword,
             );
 
           const matchesDepartment =
             departmentFilter ===
-              'All' ||
+              'all' ||
             request.department ===
               departmentFilter;
 
           const matchesLeaveType =
             leaveTypeFilter ===
-              'All' ||
+              'all' ||
             request.leaveType ===
               leaveTypeFilter;
 
           const matchesStatus =
             statusFilter ===
-              'All' ||
+              'all' ||
             request.status ===
               statusFilter;
 
           const matchesStartDate =
             !startDate ||
-            request.endDate >=
-              startDate;
+            (
+              request.startDate &&
+              request.startDate >=
+                startDate
+            );
 
           const matchesEndDate =
             !endDate ||
-            request.startDate <=
-              endDate;
+            (
+              request.endDate &&
+              request.endDate <=
+                endDate
+            );
 
           return (
             matchesSearch &&
@@ -417,424 +870,462 @@ function HRReportsPage() {
       endDate,
     ]);
 
-  const totalRequests =
-    filteredRequests.length;
+  /* =========================
+     Summary
+  ========================= */
 
-  const approvedRequests =
-    filteredRequests.filter(
-      (request) =>
-        request.status ===
-        'Approved',
-    ).length;
+  const summary =
+    useMemo(() => {
+      const approved =
+        filteredRequests.filter(
+          (request) =>
+            request.status ===
+            'approved',
+        );
 
-  const rejectedRequests =
-    filteredRequests.filter(
-      (request) =>
-        request.status ===
-        'Rejected',
-    ).length;
+      return {
+        total:
+          filteredRequests.length,
 
-  const totalLeaveDays =
-    filteredRequests
-      .filter(
-        (request) =>
-          request.status ===
-          'Approved',
-      )
-      .reduce(
-        (total, request) =>
-          total +
-          Number(
-            request.leaveDays,
+        approved:
+          approved.length,
+
+        rejected:
+          filteredRequests.filter(
+            (request) =>
+              request.status ===
+              'rejected',
+          ).length,
+
+        approvedDays:
+          approved.reduce(
+            (
+              total,
+              request,
+            ) =>
+              total +
+              Number(
+                request.leaveDays ||
+                  0,
+              ),
+            0,
           ),
-        0,
+      };
+    }, [
+      filteredRequests,
+    ]);
+
+  const summaryCards = [
+    {
+      title:
+        'คำขอทั้งหมด',
+
+      value:
+        summary.total,
+
+      backgroundColor:
+        theme.soft,
+
+      color:
+        theme.primary,
+    },
+
+    {
+      title:
+        'อนุมัติแล้ว',
+
+      value:
+        summary.approved,
+
+      backgroundColor:
+        '#DCFCE7',
+
+      color:
+        '#15803D',
+    },
+
+    {
+      title:
+        'ปฏิเสธแล้ว',
+
+      value:
+        summary.rejected,
+
+      backgroundColor:
+        '#FEE2E2',
+
+      color:
+        '#DC2626',
+    },
+
+    {
+      title:
+        'วันลาที่อนุมัติ',
+
+      value:
+        summary.approvedDays,
+
+      backgroundColor:
+        '#F3E8FF',
+
+      color:
+        '#7C3AED',
+    },
+  ];
+
+  /* =========================
+     Actions
+  ========================= */
+
+  const handleClearFilters =
+    () => {
+      setSearchText('');
+
+      setDepartmentFilter(
+        'all',
       );
 
-  const formatDate = (
-    dateString,
-  ) => {
-    if (!dateString) {
-      return '-';
-    }
+      setLeaveTypeFilter(
+        'all',
+      );
 
-    const date = new Date(
-      `${dateString}T00:00:00`,
-    );
+      setStatusFilter(
+        'all',
+      );
 
-    if (
-      Number.isNaN(
-        date.getTime(),
-      )
-    ) {
-      return '-';
-    }
+      setStartDate('');
+      setEndDate('');
 
-    return date.toLocaleDateString(
-      'en-GB',
-      {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      },
-    );
-  };
-
-  const getStatusStyle = (
-    status,
-  ) => {
-    const styles = {
-      Pending: {
-        backgroundColor:
-          '#FEF3C7',
-
-        color: '#B45309',
-      },
-
-      Approved: {
-        backgroundColor:
-          '#DCFCE7',
-
-        color: '#15803D',
-      },
-
-      Rejected: {
-        backgroundColor:
-          '#FEE2E2',
-
-        color: '#B91C1C',
-      },
-
-      Cancelled: {
-        backgroundColor:
-          '#F3F4F6',
-
-        color: '#6B7280',
-      },
+      setActionMessage(
+        null,
+      );
     };
 
-    return (
-      styles[status] ||
-      styles.Cancelled
-    );
-  };
+  const handleViewRequest =
+    (request) => {
+      if (!request.id) {
+        return;
+      }
 
-  const handleClearFilters = () => {
-    setSearchText('');
-    setDepartmentFilter('All');
-    setLeaveTypeFilter('All');
-    setStatusFilter('All');
-    setStartDate('');
-    setEndDate('');
-    setActionMessage(null);
-  };
+      navigate(
+        `/hr/reports/leave-requests/${request.id}`,
+      );
+    };
 
-  const createExcelCell = (
-    value,
-    type = 'String',
-  ) =>
-    `<Cell><Data ss:Type="${type}">${escapeXml(
-      value,
-    )}</Data></Cell>`;
+  /* =========================
+     Export Excel
+  ========================= */
 
-  const handleExportReport = () => {
-    if (
-      filteredRequests.length === 0
-    ) {
-      setActionMessage({
-        severity: 'warning',
+  const handleExportReport =
+    () => {
+      if (
+        filteredRequests.length ===
+        0
+      ) {
+        setActionMessage({
+          severity:
+            'warning',
 
-        text: 'There are no report records to export.',
-      });
+          text:
+            'ไม่มีข้อมูลสำหรับส่งออก',
+        });
 
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth',
-      });
+        return;
+      }
 
-      return;
-    }
+      const tableRows =
+        filteredRequests
+          .map(
+            (request) => `
+              <tr>
+                <td>${escapeHtml(
+                  request.requestNo,
+                )}</td>
 
-    const headings = [
-      'Request Number',
-      'Employee ID',
-      'Employee Name',
-      'Department',
-      'Leave Type',
-      'Start Date',
-      'End Date',
-      'Leave Days',
-      'Status',
-      'Approver',
-    ];
+                <td>${escapeHtml(
+                  request.employeeCode,
+                )}</td>
 
-    const headingRow = `
-      <Row>
-        ${headings
-          .map((heading) =>
-            createExcelCell(
-              heading,
-            ),
+                <td>${escapeHtml(
+                  request.employeeName,
+                )}</td>
+
+                <td>${escapeHtml(
+                  request.department,
+                )}</td>
+
+                <td>${escapeHtml(
+                  translateLeaveType(
+                    request.leaveType,
+                  ),
+                )}</td>
+
+                <td>${escapeHtml(
+                  formatDate(
+                    request.startDate,
+                  ),
+                )}</td>
+
+                <td>${escapeHtml(
+                  formatDate(
+                    request.endDate,
+                  ),
+                )}</td>
+
+                <td>${escapeHtml(
+                  request.leaveDays,
+                )}</td>
+
+                <td>${escapeHtml(
+                  translateStatus(
+                    request.status,
+                  ),
+                )}</td>
+
+                <td>${escapeHtml(
+                  request.approver,
+                )}</td>
+              </tr>
+            `,
           )
-          .join('')}
-      </Row>
-    `;
+          .join('');
 
-    const dataRows =
-      filteredRequests
-        .map(
-          (request) => `
-            <Row>
-              ${createExcelCell(
-                request.requestNo,
-              )}
+      const html = `
+        <html>
+          <head>
+            <meta charset="UTF-8" />
+          </head>
 
-              ${createExcelCell(
-                request.employeeId,
-              )}
+          <body>
+            <table border="1">
+              <thead>
+                <tr>
+                  <th>เลขที่คำขอ</th>
+                  <th>รหัสพนักงาน</th>
+                  <th>ชื่อพนักงาน</th>
+                  <th>แผนก</th>
+                  <th>ประเภทการลา</th>
+                  <th>วันที่เริ่มต้น</th>
+                  <th>วันที่สิ้นสุด</th>
+                  <th>จำนวนวัน</th>
+                  <th>สถานะ</th>
+                  <th>ผู้อนุมัติ</th>
+                </tr>
+              </thead>
 
-              ${createExcelCell(
-                request.employeeName,
-              )}
+              <tbody>
+                ${tableRows}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
 
-              ${createExcelCell(
-                request.department,
-              )}
+      const blob =
+        new Blob(
+          [
+            '\ufeff',
+            html,
+          ],
+          {
+            type:
+              'application/vnd.ms-excel;charset=utf-8;',
+          },
+        );
 
-              ${createExcelCell(
-                request.leaveType,
-              )}
+      const url =
+        URL.createObjectURL(
+          blob,
+        );
 
-              ${createExcelCell(
-                request.startDate,
-              )}
+      const link =
+        document.createElement(
+          'a',
+        );
 
-              ${createExcelCell(
-                request.endDate,
-              )}
+      const today =
+        new Date();
 
-              ${createExcelCell(
-                request.leaveDays,
-                'Number',
-              )}
+      const day =
+        String(
+          today.getDate(),
+        ).padStart(
+          2,
+          '0',
+        );
 
-              ${createExcelCell(
-                request.status,
-              )}
+      const month =
+        String(
+          today.getMonth() +
+            1,
+        ).padStart(
+          2,
+          '0',
+        );
 
-              ${createExcelCell(
-                request.approver,
-              )}
-            </Row>
-          `,
-        )
-        .join('');
+      const year =
+        today.getFullYear();
 
-    const workbook = `
-      <?xml version="1.0" encoding="UTF-8"?>
-      <?mso-application progid="Excel.Sheet"?>
+      link.href = url;
 
-      <Workbook
-        xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-        xmlns:o="urn:schemas-microsoft-com:office:office"
-        xmlns:x="urn:schemas-microsoft-com:office:excel"
-        xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
-        xmlns:html="http://www.w3.org/TR/REC-html40"
-      >
-        <Worksheet ss:Name="Leave Requests">
-          <Table>
-            ${headingRow}
-            ${dataRows}
-          </Table>
-        </Worksheet>
-      </Workbook>
-    `.trim();
+      link.download =
+        `leave-report-${day}-${month}-${year}.xls`;
 
-    const blob = new Blob(
-      [
-        '\uFEFF',
-        workbook,
-      ],
-      {
-        type: 'application/vnd.ms-excel;charset=utf-8',
-      },
-    );
+      document.body.appendChild(
+        link,
+      );
 
-    const downloadUrl =
-      URL.createObjectURL(blob);
+      link.click();
 
-    const downloadLink =
-      document.createElement('a');
+      document.body.removeChild(
+        link,
+      );
 
-    const currentDate =
-      new Date();
+      URL.revokeObjectURL(
+        url,
+      );
 
-    const fileDate = [
-      currentDate.getFullYear(),
+      setActionMessage({
+        severity:
+          'success',
 
-      String(
-        currentDate.getMonth() +
-          1,
-      ).padStart(2, '0'),
+        text:
+          `ส่งออกรายงาน ${filteredRequests.length} รายการเรียบร้อยแล้ว`,
+      });
+    };
 
-      String(
-        currentDate.getDate(),
-      ).padStart(2, '0'),
-    ].join('-');
-
-    downloadLink.href =
-      downloadUrl;
-
-    downloadLink.download =
-      `hr_leave_report_${fileDate}.xls`;
-
-    document.body.appendChild(
-      downloadLink,
-    );
-
-    downloadLink.click();
-
-    document.body.removeChild(
-      downloadLink,
-    );
-
-    URL.revokeObjectURL(
-      downloadUrl,
-    );
-
-    createHRAuditLog({
-      action: 'export_report',
-
-      tableName:
-        'leave_requests',
-
-      recordId: null,
-
-      detail:
-        `Exported HR leave request report with ${filteredRequests.length} record(s) in Excel format.`,
-    });
-
-    setActionMessage({
-      severity: 'success',
-
-      text: `${filteredRequests.length} report record(s) were exported successfully.`,
-    });
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
-  };
+  /* =========================
+     UI
+  ========================= */
 
   return (
     <HRLayout activeMenu="Reports">
+      {/* Header */}
+
       <Box
         sx={{
-          display: 'flex',
+          display:
+            'flex',
 
           alignItems: {
-            xs: 'flex-start',
-            sm: 'center',
+            xs:
+              'flex-start',
+
+            sm:
+              'center',
           },
 
           justifyContent:
             'space-between',
 
           flexDirection: {
-            xs: 'column',
-            sm: 'row',
+            xs:
+              'column',
+
+            sm:
+              'row',
           },
 
-          gap: '16px',
+          gap:
+            '16px',
 
           marginBottom:
-            '28px',
+            '22px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color: '#111827',
-
-              fontSize: {
-                xs: '26px',
-                sm: '30px',
-              },
-
-              fontWeight: 800,
-            }}
-          >
-            HR Reports
-          </Typography>
-
-          <Typography
-            sx={{
-              color: '#6B7280',
-
-              fontSize: '15px',
-
-              marginTop: '6px',
-            }}
-          >
-            Review leave request
-            statistics and export
-            filtered report
-            information.
-          </Typography>
-        </Box>
-
-        <Box
+        <Typography
+          component="h1"
           sx={{
-            display: 'flex',
+            color:
+              '#111827',
 
-            gap: '10px',
+            fontSize: {
+              xs:
+                '26px',
 
-            flexWrap: 'wrap',
+              sm:
+                '30px',
+            },
+
+            fontWeight:
+              800,
           }}
         >
+          รายงานการลา
+        </Typography>
 
+        <Button
+          type="button"
+          variant="contained"
+          onClick={
+            handleExportReport
+          }
+          disabled={
+            loading
+          }
+          sx={{
+            minWidth:
+              '140px',
 
-          <Button
-            type="button"
-            variant="contained"
-            onClick={
-              handleExportReport
-            }
-            sx={{
-              minWidth: '150px',
+            height:
+              '42px',
 
-              height: '44px',
+            padding:
+              '0 18px',
 
-              padding: '0 20px',
+            backgroundColor:
+              theme.primary,
 
+            color:
+              '#FFFFFF',
+
+            borderRadius:
+              '8px',
+
+            fontSize:
+              '12px',
+
+            fontWeight:
+              700,
+
+            textTransform:
+              'none',
+
+            boxShadow:
+              'none',
+
+            '&:hover': {
               backgroundColor:
-                '#059669',
+                theme.dark,
 
-              color: '#FFFFFF',
-
-              borderRadius: '8px',
-
-              fontSize: '14px',
-
-              fontWeight: 700,
-
-              textTransform:
+              boxShadow:
                 'none',
-
-              boxShadow: 'none',
-
-              '&:hover': {
-                backgroundColor:
-                  '#047857',
-
-                boxShadow: 'none',
-              },
-            }}
-          >
-            Export Excel
-          </Button>
-        </Box>
+            },
+          }}
+        >
+          ส่งออก Excel
+        </Button>
       </Box>
+
+      {/* Messages */}
+
+      {error && (
+        <Alert
+          severity="error"
+          onClose={() =>
+            setError('')
+          }
+          sx={{
+            marginBottom:
+              '20px',
+
+            borderRadius:
+              '10px',
+          }}
+        >
+          {error}
+        </Alert>
+      )}
 
       {actionMessage && (
         <Alert
@@ -842,445 +1333,132 @@ function HRReportsPage() {
             actionMessage.severity
           }
           onClose={() =>
-            setActionMessage(null)
+            setActionMessage(
+              null,
+            )
           }
           sx={{
-            marginBottom: '24px',
+            marginBottom:
+              '20px',
 
-            borderRadius: '8px',
+            borderRadius:
+              '10px',
           }}
         >
-          {actionMessage.text}
+          {
+            actionMessage.text
+          }
         </Alert>
       )}
 
+      {/* Summary Cards */}
+
       <Box
         sx={{
-          display: 'grid',
+          display:
+            'grid',
 
           gridTemplateColumns: {
-            xs: '1fr',
+            xs:
+              '1fr',
 
-            sm: 'repeat(2, minmax(0, 1fr))',
+            sm:
+              'repeat(2, 1fr)',
 
-            xl: 'repeat(4, minmax(0, 1fr))',
+            xl:
+              'repeat(4, 1fr)',
           },
 
-          gap: '20px',
+          gap:
+            '18px',
 
           marginBottom:
             '24px',
         }}
       >
-        {[
-          {
-            title:
-              'Total Requests',
-
-            value:
-              totalRequests,
-
-            color: '#2563EB',
-          },
-
-          {
-            title:
-              'Approved Requests',
-
-            value:
-              approvedRequests,
-
-            color: '#059669',
-          },
-
-          {
-            title:
-              'Rejected Requests',
-
-            value:
-              rejectedRequests,
-
-            color: '#DC2626',
-          },
-
-          {
-            title:
-              'Approved Leave Days',
-
-            value:
-              totalLeaveDays,
-
-            color: '#7C3AED',
-          },
-        ].map((card) => (
-          <Paper
-            key={card.title}
-            elevation={0}
-            sx={{
-              padding: '20px',
-
-              backgroundColor:
-                '#FFFFFF',
-
-              border:
-                '1px solid #E5E7EB',
-
-              borderRadius: '12px',
-            }}
-          >
-            <Typography
+        {summaryCards.map(
+          (card) => (
+            <Paper
+              key={
+                card.title
+              }
+              elevation={0}
               sx={{
-                color: '#6B7280',
+                minHeight:
+                  '140px',
 
-                fontSize: '14px',
+                padding:
+                  '20px',
 
-                fontWeight: 600,
+                backgroundColor:
+                  '#FFFFFF',
+
+                border:
+                  '1px solid #E5E7EB',
+
+                borderRadius:
+                  '14px',
               }}
             >
-              {card.title}
-            </Typography>
+              <Box
+                sx={{
+                  width:
+                    '50px',
 
-            <Typography
-              sx={{
-                color: card.color,
+                  height:
+                    '50px',
 
-                fontSize: '30px',
+                  display:
+                    'flex',
 
-                fontWeight: 800,
+                  alignItems:
+                    'center',
 
-                marginTop: '8px',
-              }}
-            >
-              {card.value}
-            </Typography>
-          </Paper>
-        ))}
+                  justifyContent:
+                    'center',
+
+                  backgroundColor:
+                    card.backgroundColor,
+
+                  color:
+                    card.color,
+
+                  borderRadius:
+                    '11px',
+
+                  fontSize:
+                    '20px',
+
+                  fontWeight:
+                    800,
+                }}
+              >
+                {card.value}
+              </Box>
+
+              <Typography
+                sx={{
+                  color:
+                    '#111827',
+
+                  fontSize:
+                    '14px',
+
+                  fontWeight:
+                    800,
+
+                  marginTop:
+                    '13px',
+                }}
+              >
+                {card.title}
+              </Typography>
+            </Paper>
+          ),
+        )}
       </Box>
 
-      <Paper
-        elevation={0}
-        sx={{
-          marginBottom:
-            '24px',
-
-          padding: {
-            xs: '20px',
-            sm: '24px',
-          },
-
-          backgroundColor:
-            '#FFFFFF',
-
-          border:
-            '1px solid #E5E7EB',
-
-          borderRadius: '12px',
-        }}
-      >
-        <Typography
-          sx={{
-            color: '#111827',
-
-            fontSize: '18px',
-
-            fontWeight: 800,
-          }}
-        >
-          Report Filters
-        </Typography>
-
-        <Typography
-          sx={{
-            color: '#6B7280',
-
-            fontSize: '14px',
-
-            marginTop: '4px',
-          }}
-        >
-          Filter the report by
-          employee, date, department,
-          leave type and status.
-        </Typography>
-
-        <Box
-          sx={{
-            display: 'grid',
-
-            gridTemplateColumns: {
-              xs: '1fr',
-
-              md: 'repeat(2, minmax(0, 1fr))',
-
-              xl: 'repeat(3, minmax(0, 1fr))',
-            },
-
-            gap: '18px',
-
-            marginTop: '22px',
-          }}
-        >
-          <TextField
-            fullWidth
-            label="Search"
-            placeholder="Request number, employee ID or name"
-            value={searchText}
-            onChange={(event) =>
-              setSearchText(
-                event.target.value,
-              )
-            }
-            sx={{
-              '& .MuiOutlinedInput-root':
-                {
-                  height: '48px',
-
-                  borderRadius:
-                    '8px',
-
-                  '&.Mui-focused fieldset':
-                    {
-                      borderColor:
-                        '#059669',
-                    },
-                },
-
-              '& .MuiInputLabel-root.Mui-focused':
-                {
-                  color: '#059669',
-                },
-            }}
-          />
-
-          <FormControl fullWidth>
-            <InputLabel id="report-department-label">
-              Department
-            </InputLabel>
-
-            <Select
-              labelId="report-department-label"
-              value={
-                departmentFilter
-              }
-              label="Department"
-              onChange={(event) =>
-                setDepartmentFilter(
-                  event.target.value,
-                )
-              }
-              sx={{
-                height: '48px',
-
-                borderRadius: '8px',
-              }}
-            >
-              {departments.map(
-                (department) => (
-                  <MenuItem
-                    key={department}
-                    value={department}
-                  >
-                    {department ===
-                    'All'
-                      ? 'All Departments'
-                      : department}
-                  </MenuItem>
-                ),
-              )}
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth>
-            <InputLabel id="report-leave-type-label">
-              Leave Type
-            </InputLabel>
-
-            <Select
-              labelId="report-leave-type-label"
-              value={
-                leaveTypeFilter
-              }
-              label="Leave Type"
-              onChange={(event) =>
-                setLeaveTypeFilter(
-                  event.target.value,
-                )
-              }
-              sx={{
-                height: '48px',
-
-                borderRadius: '8px',
-              }}
-            >
-              {leaveTypes.map(
-                (leaveType) => (
-                  <MenuItem
-                    key={leaveType}
-                    value={leaveType}
-                  >
-                    {leaveType ===
-                    'All'
-                      ? 'All Leave Types'
-                      : leaveType}
-                  </MenuItem>
-                ),
-              )}
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth>
-            <InputLabel id="report-status-label">
-              Status
-            </InputLabel>
-
-            <Select
-              labelId="report-status-label"
-              value={statusFilter}
-              label="Status"
-              onChange={(event) =>
-                setStatusFilter(
-                  event.target.value,
-                )
-              }
-              sx={{
-                height: '48px',
-
-                borderRadius: '8px',
-              }}
-            >
-              {statuses.map(
-                (status) => (
-                  <MenuItem
-                    key={status}
-                    value={status}
-                  >
-                    {status ===
-                    'All'
-                      ? 'All Statuses'
-                      : status}
-                  </MenuItem>
-                ),
-              )}
-            </Select>
-          </FormControl>
-
-          <TextField
-            fullWidth
-            type="date"
-            label="Start Date"
-            value={startDate}
-            onChange={(event) =>
-              setStartDate(
-                event.target.value,
-              )
-            }
-            slotProps={{
-              inputLabel: {
-                shrink: true,
-              },
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root':
-                {
-                  height: '48px',
-
-                  borderRadius:
-                    '8px',
-                },
-
-              '& input[type="date"]':
-                {
-                  color: startDate
-                    ? '#111827'
-                    : '#6B7280',
-                },
-            }}
-          />
-
-          <TextField
-            fullWidth
-            type="date"
-            label="End Date"
-            value={endDate}
-            onChange={(event) =>
-              setEndDate(
-                event.target.value,
-              )
-            }
-            slotProps={{
-              inputLabel: {
-                shrink: true,
-              },
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root':
-                {
-                  height: '48px',
-
-                  borderRadius:
-                    '8px',
-                },
-
-              '& input[type="date"]':
-                {
-                  color: endDate
-                    ? '#111827'
-                    : '#6B7280',
-                },
-            }}
-          />
-        </Box>
-
-        <Box
-          sx={{
-            display: 'flex',
-
-            justifyContent:
-              'flex-end',
-
-            marginTop: '18px',
-          }}
-        >
-          <Button
-            type="button"
-            variant="outlined"
-            onClick={
-              handleClearFilters
-            }
-            sx={{
-              minWidth: '120px',
-
-              height: '42px',
-
-              padding: '0 18px',
-
-              color: '#374151',
-
-              borderColor:
-                '#D1D5DB',
-
-              borderRadius: '8px',
-
-              fontSize: '14px',
-
-              fontWeight: 700,
-
-              textTransform:
-                'none',
-
-              '&:hover': {
-                backgroundColor:
-                  '#F9FAFB',
-
-                borderColor:
-                  '#9CA3AF',
-              },
-            }}
-          >
-            Clear Filters
-          </Button>
-        </Box>
-      </Paper>
+      {/* Main Card */}
 
       <Paper
         elevation={0}
@@ -1291,17 +1469,19 @@ function HRReportsPage() {
           border:
             '1px solid #E5E7EB',
 
-          borderRadius: '12px',
+          borderRadius:
+            '14px',
 
-          overflow: 'hidden',
+          overflow:
+            'hidden',
         }}
       >
+        {/* Filters */}
+
         <Box
           sx={{
-            padding: {
-              xs: '20px',
-              sm: '24px',
-            },
+            padding:
+              '20px 24px',
 
             borderBottom:
               '1px solid #E5E7EB',
@@ -1309,158 +1489,612 @@ function HRReportsPage() {
         >
           <Typography
             sx={{
-              color: '#111827',
+              color:
+                '#111827',
 
-              fontSize: '18px',
+              fontSize:
+                '18px',
 
-              fontWeight: 800,
+              fontWeight:
+                800,
             }}
           >
-            Leave Request Report
+            รายการการลา
           </Typography>
 
           <Typography
             sx={{
-              color: '#6B7280',
+              color:
+                '#64748B',
 
-              fontSize: '14px',
+              fontSize:
+                '12px',
 
-              marginTop: '4px',
+              marginTop:
+                '4px',
             }}
           >
-            Showing{' '}
+            แสดง{' '}
             {
               filteredRequests.length
             }{' '}
-            of {leaveRequests.length}{' '}
-            leave requests
+            จาก{' '}
+            {
+              leaveRequests.length
+            }{' '}
+            รายการ
           </Typography>
-        </Box>
 
-        {filteredRequests.length >
-        0 ? (
           <Box
             sx={{
-              overflowX: 'auto',
+              display:
+                'grid',
+
+              gridTemplateColumns: {
+                xs:
+                  '1fr',
+
+                md:
+                  'repeat(2, 1fr)',
+
+                xl:
+                  'repeat(3, 1fr)',
+              },
+
+              gap:
+                '14px',
+
+              marginTop:
+                '20px',
             }}
           >
-            <Box
-              component="table"
+            {/* Search */}
+
+            <TextField
+              fullWidth
+              label="ค้นหา"
+              placeholder="เลขที่คำขอ ชื่อ หรือรหัสพนักงาน"
+              value={
+                searchText
+              }
+              onChange={(
+                event,
+              ) =>
+                setSearchText(
+                  event.target
+                    .value,
+                )
+              }
               sx={{
-                width: '100%',
+                '& .MuiOutlinedInput-root':
+                  {
+                    height:
+                      '48px',
 
-                minWidth: '1300px',
+                    borderRadius:
+                      '9px',
 
-                borderCollapse:
-                  'collapse',
+                    '&.Mui-focused fieldset':
+                      {
+                        borderColor:
+                          theme.primary,
+                      },
+                  },
+
+                '& .MuiInputLabel-root.Mui-focused':
+                  {
+                    color:
+                      theme.primary,
+                  },
+              }}
+            />
+
+            {/* Department */}
+
+            <FormControl
+              fullWidth
+            >
+              <InputLabel>
+                แผนก
+              </InputLabel>
+
+              <Select
+                value={
+                  departmentFilter
+                }
+                label="แผนก"
+                onChange={(
+                  event,
+                ) =>
+                  setDepartmentFilter(
+                    event.target
+                      .value,
+                  )
+                }
+                sx={{
+                  height:
+                    '48px',
+
+                  borderRadius:
+                    '9px',
+                }}
+              >
+                <MenuItem value="all">
+                  ทุกแผนก
+                </MenuItem>
+
+                {departments.map(
+                  (
+                    department,
+                  ) => (
+                    <MenuItem
+                      key={
+                        department
+                      }
+                      value={
+                        department
+                      }
+                    >
+                      {
+                        department
+                      }
+                    </MenuItem>
+                  ),
+                )}
+              </Select>
+            </FormControl>
+
+            {/* Leave Type */}
+
+            <FormControl
+              fullWidth
+            >
+              <InputLabel>
+                ประเภทการลา
+              </InputLabel>
+
+              <Select
+                value={
+                  leaveTypeFilter
+                }
+                label="ประเภทการลา"
+                onChange={(
+                  event,
+                ) =>
+                  setLeaveTypeFilter(
+                    event.target
+                      .value,
+                  )
+                }
+                sx={{
+                  height:
+                    '48px',
+
+                  borderRadius:
+                    '9px',
+                }}
+              >
+                <MenuItem value="all">
+                  ทุกประเภท
+                </MenuItem>
+
+                {leaveTypes.map(
+                  (
+                    leaveType,
+                  ) => (
+                    <MenuItem
+                      key={
+                        leaveType
+                      }
+                      value={
+                        leaveType
+                      }
+                    >
+                      {translateLeaveType(
+                        leaveType,
+                      )}
+                    </MenuItem>
+                  ),
+                )}
+              </Select>
+            </FormControl>
+
+            {/* Status */}
+
+            <FormControl
+              fullWidth
+            >
+              <InputLabel>
+                สถานะ
+              </InputLabel>
+
+              <Select
+                value={
+                  statusFilter
+                }
+                label="สถานะ"
+                onChange={(
+                  event,
+                ) =>
+                  setStatusFilter(
+                    event.target
+                      .value,
+                  )
+                }
+                sx={{
+                  height:
+                    '48px',
+
+                  borderRadius:
+                    '9px',
+                }}
+              >
+                <MenuItem value="all">
+                  ทุกสถานะ
+                </MenuItem>
+
+                <MenuItem value="draft">
+                  ฉบับร่าง
+                </MenuItem>
+
+                <MenuItem value="pending">
+                  รออนุมัติ
+                </MenuItem>
+
+                <MenuItem value="approved">
+                  อนุมัติแล้ว
+                </MenuItem>
+
+                <MenuItem value="rejected">
+                  ปฏิเสธแล้ว
+                </MenuItem>
+
+                <MenuItem value="cancelled">
+                  ยกเลิกแล้ว
+                </MenuItem>
+              </Select>
+            </FormControl>
+
+            {/* Start Date */}
+
+            <ThaiDateField
+              label="วันที่เริ่มต้น"
+              value={
+                startDate
+              }
+              onChange={
+                setStartDate
+              }
+            />
+
+            {/* End Date */}
+
+            <ThaiDateField
+              label="วันที่สิ้นสุด"
+              value={
+                endDate
+              }
+              onChange={
+                setEndDate
+              }
+            />
+          </Box>
+
+          <Box
+            sx={{
+              display:
+                'flex',
+
+              justifyContent:
+                'flex-end',
+
+              marginTop:
+                '14px',
+            }}
+          >
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={
+                handleClearFilters
+              }
+              sx={{
+                minWidth:
+                  '110px',
+
+                height:
+                  '42px',
+
+                padding:
+                  '0 18px',
+
+                color:
+                  '#475569',
+
+                borderColor:
+                  '#CBD5E1',
+
+                borderRadius:
+                  '9px',
+
+                fontSize:
+                  '12px',
+
+                fontWeight:
+                  700,
+
+                textTransform:
+                  'none',
+
+                '&:hover': {
+                  backgroundColor:
+                    '#F8FAFC',
+
+                  borderColor:
+                    '#94A3B8',
+                },
               }}
             >
-              <Box component="thead">
-                <Box
-                  component="tr"
+              ล้างตัวกรอง
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Loading */}
+
+        {loading ? (
+          <Box
+            sx={{
+              minHeight:
+                '300px',
+
+              display:
+                'flex',
+
+              alignItems:
+                'center',
+
+              justifyContent:
+                'center',
+            }}
+          >
+            <CircularProgress
+              sx={{
+                color:
+                  theme.primary,
+              }}
+            />
+          </Box>
+        ) : filteredRequests.length >
+          0 ? (
+          /* Table */
+
+          <Box
+            sx={{
+              width:
+                '100%',
+
+              maxWidth:
+                '100%',
+
+              overflow:
+                'hidden',
+            }}
+          >
+            <Table
+              size="small"
+              sx={{
+                width:
+                  '100%',
+
+                tableLayout:
+                  'fixed',
+
+                '& th, & td': {
+                  boxSizing:
+                    'border-box',
+                },
+              }}
+            >
+              <colgroup>
+                <col
+                  style={{
+                    width:
+                      '11%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '14%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '12%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '12%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '17%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '7%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '10%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '12%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '5%',
+                  }}
+                />
+              </colgroup>
+
+              <TableHead>
+                <TableRow
                   sx={{
                     backgroundColor:
-                      '#F9FAFB',
+                      '#F8FAFC',
                   }}
                 >
                   {[
-                    'Request No.',
-                    'Employee',
-                    'Department',
-                    'Leave Type',
-                    'Leave Period',
-                    'Days',
-                    'Status',
-                    'Approver',
+                    'เลขที่คำขอ',
+                    'พนักงาน',
+                    'แผนก',
+                    'ประเภทการลา',
+                    'ช่วงวันที่',
+                    'จำนวนวัน',
+                    'สถานะ',
+                    'ผู้อนุมัติ',
+                    'การดำเนินการ',
                   ].map(
-                    (heading) => (
-                      <Box
-                        key={heading}
-                        component="th"
+                    (
+                      heading,
+                    ) => (
+                      <TableCell
+                        key={
+                          heading
+                        }
+                        align={
+                          [
+                            'จำนวนวัน',
+                            'สถานะ',
+                            'การดำเนินการ',
+                          ].includes(
+                            heading,
+                          )
+                            ? 'center'
+                            : 'left'
+                        }
                         sx={{
                           padding:
-                            '14px 18px',
+                            '11px 7px',
 
                           color:
-                            '#6B7280',
-
-                          borderBottom:
-                            '1px solid #E5E7EB',
+                            '#64748B',
 
                           fontSize:
-                            '12px',
+                            '9.5px',
 
                           fontWeight:
                             700,
 
-                          textAlign:
-                            'left',
+                          lineHeight:
+                            1.35,
 
                           whiteSpace:
-                            'nowrap',
+                            'normal',
+
+                          wordBreak:
+                            'break-word',
+
+                          borderBottom:
+                            '1px solid #E5E7EB',
                         }}
                       >
-                        {heading}
-                      </Box>
+                        {
+                          heading
+                        }
+                      </TableCell>
                     ),
                   )}
-                </Box>
-              </Box>
+                </TableRow>
+              </TableHead>
 
-              <Box component="tbody">
+              <TableBody>
                 {filteredRequests.map(
-                  (request) => {
+                  (
+                    request,
+                    index,
+                  ) => {
                     const statusStyle =
                       getStatusStyle(
                         request.status,
                       );
 
                     return (
-                      <Box
-                        key={request.id}
-                        component="tr"
-                        sx={{
-                          '&:hover': {
-                            backgroundColor:
-                              '#F9FAFB',
-                          },
-                        }}
+                      <TableRow
+                        key={
+                          request.id ||
+                          `${request.requestNo}-${index}`
+                        }
+                        hover
                       >
-                        <Box
-                          component="td"
+                        {/* Request */}
+
+                        <TableCell
                           sx={{
                             padding:
-                              '16px 18px',
+                              '12px 7px',
 
                             borderBottom:
                               '1px solid #E5E7EB',
-
-                            color:
-                              '#059669',
-
-                            fontSize:
-                              '13px',
-
-                            fontWeight:
-                              800,
-
-                            whiteSpace:
-                              'nowrap',
                           }}
                         >
-                          {
-                            request.requestNo
-                          }
-                        </Box>
+                          <Typography
+                            sx={{
+                              color:
+                                theme.primary,
 
-                        <Box
-                          component="td"
+                              fontSize:
+                                '10px',
+
+                              fontWeight:
+                                800,
+
+                              lineHeight:
+                                1.4,
+
+                              wordBreak:
+                                'break-word',
+
+                              overflowWrap:
+                                'anywhere',
+                            }}
+                          >
+                            {
+                              request.requestNo
+                            }
+                          </Typography>
+                        </TableCell>
+
+                        {/* Employee */}
+
+                        <TableCell
                           sx={{
-                            minWidth:
-                              '190px',
-
                             padding:
-                              '16px 18px',
+                              '12px 7px',
 
                             borderBottom:
                               '1px solid #E5E7EB',
@@ -1472,10 +2106,16 @@ function HRReportsPage() {
                                 '#111827',
 
                               fontSize:
-                                '14px',
+                                '10px',
 
                               fontWeight:
                                 700,
+
+                              lineHeight:
+                                1.4,
+
+                              wordBreak:
+                                'break-word',
                             }}
                           >
                             {
@@ -1486,148 +2126,174 @@ function HRReportsPage() {
                           <Typography
                             sx={{
                               color:
-                                '#6B7280',
+                                '#94A3B8',
 
                               fontSize:
-                                '12px',
+                                '9px',
+
+                              lineHeight:
+                                1.35,
 
                               marginTop:
-                                '3px',
+                                '2px',
+
+                              wordBreak:
+                                'break-word',
                             }}
                           >
                             {
-                              request.employeeId
+                              request.employeeCode
                             }
                           </Typography>
-                        </Box>
+                        </TableCell>
 
-                        <Box
-                          component="td"
+                        {/* Department */}
+
+                        <TableCell
                           sx={{
                             padding:
-                              '16px 18px',
+                              '12px 7px',
+
+                            color:
+                              '#475569',
+
+                            fontSize:
+                              '9.5px',
+
+                            lineHeight:
+                              1.45,
+
+                            wordBreak:
+                              'break-word',
+
+                            overflowWrap:
+                              'anywhere',
 
                             borderBottom:
                               '1px solid #E5E7EB',
-
-                            color:
-                              '#4B5563',
-
-                            fontSize:
-                              '13px',
-
-                            whiteSpace:
-                              'nowrap',
                           }}
                         >
                           {
                             request.department
                           }
-                        </Box>
+                        </TableCell>
 
-                        <Box
-                          component="td"
+                        {/* Leave Type */}
+
+                        <TableCell
                           sx={{
                             padding:
-                              '16px 18px',
+                              '12px 7px',
+
+                            color:
+                              '#475569',
+
+                            fontSize:
+                              '9.5px',
+
+                            lineHeight:
+                              1.45,
+
+                            wordBreak:
+                              'break-word',
 
                             borderBottom:
                               '1px solid #E5E7EB',
-
-                            color:
-                              '#4B5563',
-
-                            fontSize:
-                              '13px',
-
-                            whiteSpace:
-                              'nowrap',
                           }}
                         >
-                          {
-                            request.leaveType
-                          }
-                        </Box>
+                          {translateLeaveType(
+                            request.leaveType,
+                          )}
+                        </TableCell>
 
-                        <Box
-                          component="td"
+                        {/* Date */}
+
+                        <TableCell
                           sx={{
                             padding:
-                              '16px 18px',
+                              '12px 7px',
+
+                            color:
+                              '#475569',
+
+                            fontSize:
+                              '9.5px',
+
+                            lineHeight:
+                              1.45,
+
+                            whiteSpace:
+                              'normal',
+
+                            wordBreak:
+                              'break-word',
 
                             borderBottom:
                               '1px solid #E5E7EB',
-
-                            color:
-                              '#4B5563',
-
-                            fontSize:
-                              '13px',
-
-                            whiteSpace:
-                              'nowrap',
                           }}
                         >
-                          {formatDate(
+                          {formatDateRange(
                             request.startDate,
-                          )}{' '}
-                          –{' '}
-                          {formatDate(
                             request.endDate,
                           )}
-                        </Box>
+                        </TableCell>
 
-                        <Box
-                          component="td"
+                        {/* Days */}
+
+                        <TableCell
+                          align="center"
                           sx={{
                             padding:
-                              '16px 18px',
-
-                            borderBottom:
-                              '1px solid #E5E7EB',
+                              '12px 5px',
 
                             color:
                               '#111827',
 
                             fontSize:
-                              '13px',
+                              '9.5px',
 
                             fontWeight:
                               700,
 
-                            textAlign:
-                              'center',
+                            lineHeight:
+                              1.4,
 
                             whiteSpace:
-                              'nowrap',
+                              'normal',
+
+                            borderBottom:
+                              '1px solid #E5E7EB',
                           }}
                         >
                           {
                             request.leaveDays
-                          }
-                        </Box>
+                          }{' '}
+                          วัน
+                        </TableCell>
 
-                        <Box
-                          component="td"
+                        {/* Status */}
+
+                        <TableCell
+                          align="center"
                           sx={{
                             padding:
-                              '16px 18px',
+                              '12px 5px',
 
                             borderBottom:
                               '1px solid #E5E7EB',
-
-                            whiteSpace:
-                              'nowrap',
                           }}
                         >
                           <Chip
-                            label={
-                              request.status
-                            }
+                            label={translateStatus(
+                              request.status,
+                            )}
                             size="small"
                             sx={{
-                              minWidth:
-                                '82px',
+                              maxWidth:
+                                '100%',
+
+                              height:
+                                '25px',
 
                               backgroundColor:
                                 statusStyle.backgroundColor,
@@ -1639,86 +2305,171 @@ function HRReportsPage() {
                                 '999px',
 
                               fontSize:
-                                '11px',
+                                '8.5px',
 
                               fontWeight:
                                 700,
+
+                              '& .MuiChip-label': {
+                                paddingLeft:
+                                  '7px',
+
+                                paddingRight:
+                                  '7px',
+                              },
                             }}
                           />
-                        </Box>
+                        </TableCell>
 
-                        <Box
-                          component="td"
+                        {/* Approver */}
+
+                        <TableCell
                           sx={{
                             padding:
-                              '16px 18px',
+                              '12px 7px',
+
+                            color:
+                              '#475569',
+
+                            fontSize:
+                              '9.5px',
+
+                            lineHeight:
+                              1.45,
+
+                            wordBreak:
+                              'break-word',
+
+                            overflowWrap:
+                              'anywhere',
 
                             borderBottom:
                               '1px solid #E5E7EB',
-
-                            color:
-                              '#4B5563',
-
-                            fontSize:
-                              '13px',
-
-                            whiteSpace:
-                              'nowrap',
                           }}
                         >
                           {
                             request.approver
                           }
-                        </Box>
-                      </Box>
+                        </TableCell>
+
+                        {/* Action */}
+
+                        <TableCell
+                          align="center"
+                          sx={{
+                            padding:
+                              '12px 3px',
+
+                            borderBottom:
+                              '1px solid #E5E7EB',
+                          }}
+                        >
+                          <Button
+                            type="button"
+                            disabled={
+                              !request.id
+                            }
+                            onClick={() =>
+                              handleViewRequest(
+                                request,
+                              )
+                            }
+                            sx={{
+                              minWidth:
+                                0,
+
+                              padding:
+                                '2px 4px',
+
+                              color:
+                                theme.primary,
+
+                              fontSize:
+                                '9.5px',
+
+                              fontWeight:
+                                700,
+
+                              textTransform:
+                                'none',
+
+                              '&:hover': {
+                                backgroundColor:
+                                  'transparent',
+
+                                textDecoration:
+                                  'underline',
+                              },
+                            }}
+                          >
+                            ดู
+                          </Button>
+                        </TableCell>
+                      </TableRow>
                     );
                   },
                 )}
-              </Box>
-            </Box>
+              </TableBody>
+            </Table>
           </Box>
         ) : (
+          /* Empty */
+
           <Box
             sx={{
-              minHeight: '300px',
+              minHeight:
+                '280px',
 
-              padding: '40px 24px',
+              padding:
+                '40px 24px',
 
-              display: 'flex',
+              display:
+                'flex',
 
-              flexDirection: 'column',
+              flexDirection:
+                'column',
 
-              alignItems: 'center',
+              alignItems:
+                'center',
 
               justifyContent:
                 'center',
 
-              textAlign: 'center',
+              textAlign:
+                'center',
             }}
           >
             <Box
               sx={{
-                width: '64px',
+                width:
+                  '58px',
 
-                height: '64px',
+                height:
+                  '58px',
 
-                backgroundColor:
-                  '#ECFDF5',
+                display:
+                  'flex',
 
-                color: '#059669',
-
-                borderRadius: '50%',
-
-                display: 'flex',
-
-                alignItems: 'center',
+                alignItems:
+                  'center',
 
                 justifyContent:
                   'center',
 
-                fontSize: '24px',
+                backgroundColor:
+                  theme.soft,
 
-                fontWeight: 800,
+                color:
+                  theme.primary,
+
+                borderRadius:
+                  '50%',
+
+                fontSize:
+                  '20px',
+
+                fontWeight:
+                  800,
               }}
             >
               0
@@ -1726,69 +2477,36 @@ function HRReportsPage() {
 
             <Typography
               sx={{
-                color: '#111827',
+                color:
+                  '#111827',
 
-                fontSize: '18px',
+                fontSize:
+                  '16px',
 
-                fontWeight: 800,
+                fontWeight:
+                  800,
 
-                marginTop: '16px',
+                marginTop:
+                  '14px',
               }}
             >
-              No report records found
+              ไม่พบข้อมูลการลา
             </Typography>
 
             <Typography
               sx={{
-                color: '#6B7280',
+                color:
+                  '#64748B',
 
-                fontSize: '14px',
+                fontSize:
+                  '12px',
 
-                marginTop: '6px',
+                marginTop:
+                  '5px',
               }}
             >
-              Try changing or clearing
-              the selected filters.
+              ลองเปลี่ยนหรือล้างตัวกรอง
             </Typography>
-
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={
-                handleClearFilters
-              }
-              sx={{
-                height: '42px',
-
-                marginTop: '20px',
-
-                padding: '0 18px',
-
-                color: '#059669',
-
-                borderColor:
-                  '#059669',
-
-                borderRadius: '8px',
-
-                fontSize: '14px',
-
-                fontWeight: 700,
-
-                textTransform:
-                  'none',
-
-                '&:hover': {
-                  backgroundColor:
-                    '#ECFDF5',
-
-                  borderColor:
-                    '#047857',
-                },
-              }}
-            >
-              Clear Filters
-            </Button>
           </Box>
         )}
       </Paper>

@@ -1,5 +1,4 @@
 import {
-  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -9,7 +8,7 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -19,114 +18,284 @@ import {
   MenuItem,
   Paper,
   Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from '@mui/material';
 
 import HRLayout from '../../layouts/hrlayout.jsx';
+import api from '../../api/axios.js';
 
-import {
-  createLeaveEntitlement,
-  getLeaveEntitlements,
-  updateLeaveEntitlement,
-} from '../../api/leave-entitlement-service.js';
-import { getEmployees } from '../../api/employee-service.js';
-import { getLeaveTypes } from '../../api/leave-type-service.js';
-
-import {
-  createAuditLog,
-} from '../../utils/auditlogstorage.js';
-
-const emptyDialogForm = {
-  role: 'employee',
-  leaveTypeId: 1,
-  year: new Date().getFullYear(),
-  totalDays: '',
-  usedDays: '0',
+const theme = {
+  primary: '#059669',
+  dark: '#047857',
+  soft: '#ECFDF5',
+  border: '#A7F3D0',
 };
 
-const tableCellSx = {
-  padding: '16px',
-  borderBottom:
-    '1px solid #E5E7EB',
-  whiteSpace: 'nowrap',
+const currentYear =
+  new Date().getFullYear();
+
+/* =========================
+   Helpers
+========================= */
+
+const translateLeaveType = (value) => {
+  const labels = {
+    'Annual Leave': 'ลาพักร้อน',
+    'Sick Leave': 'ลาป่วย',
+    'Personal Leave': 'ลากิจ',
+    'Maternity Leave': 'ลาคลอด',
+    'Paternity Leave': 'ลาเพื่อดูแลบุตร',
+    'Ordination Leave': 'ลาอุปสมบท',
+    'Military Leave':
+      'ลาเพื่อรับราชการทหาร',
+    'Other Leave': 'ลาอื่น ๆ',
+  };
+
+  return labels[value] || value || '-';
 };
 
-const tableTextCellSx = (
-  color,
-  fontWeight,
-) => ({
-  ...tableCellSx,
-  color,
-  fontSize: '13px',
-  fontWeight,
-});
-
-const tableNumberCellSx = (
-  color,
-) => ({
-  ...tableCellSx,
-  color,
-  fontSize: '13px',
-  fontWeight: 700,
-  textAlign: 'center',
-});
-
-const normalizeStatus = (value) =>
-  String(value || '')
-    .trim()
-    .toLowerCase();
-
-const toNumber = (value) => {
-  const numericValue =
-    Number(value);
-
-  return Number.isFinite(
-    numericValue,
-  )
-    ? numericValue
-    : 0;
-};
-
-const getRequestYear = (
-  request,
+const getResponseArray = (
+  response,
+  key,
 ) => {
-  const dateValue =
-    request.startDate ||
-    request.submittedAt ||
-    request.createdAt ||
-    request.updatedAt ||
-    '';
+  const data =
+    response?.data?.data;
 
-  const directYear = Number(
-    String(dateValue).slice(
-      0,
-      4,
-    ),
-  );
-
-  if (
-    Number.isInteger(
-      directYear,
-    ) &&
-    directYear > 0
-  ) {
-    return directYear;
+  if (Array.isArray(data?.[key])) {
+    return data[key];
   }
 
-  const date =
-    new Date(dateValue);
+  if (Array.isArray(data)) {
+    return data;
+  }
 
-  return Number.isNaN(
-    date.getTime(),
-  )
-    ? null
-    : date.getFullYear();
+  return [];
 };
 
+const normalizeEntitlement = (
+  item,
+) => {
+  const totalDays = Number(
+    item.totalDays ??
+      item.total_days ??
+      item.entitlement ??
+      0,
+  );
+
+  const usedDays = Number(
+    item.usedDays ??
+      item.used_days ??
+      item.used ??
+      0,
+  );
+
+  const remainingDays =
+    item.remainingDays ??
+    item.remaining_days ??
+    Math.max(
+      totalDays - usedDays,
+      0,
+    );
+
+  return {
+    id:
+      item.id ??
+      item.entitlementId ??
+      item.entitlement_id,
+
+    employeeId:
+      item.employeeId ??
+      item.employee_id,
+
+    employeeCode:
+      item.employeeCode ||
+      item.employee_code ||
+      '-',
+
+    employeeName:
+      item.employeeName ||
+      item.employee_name ||
+      item.fullName ||
+      [
+        item.firstName ||
+          item.first_name,
+        item.lastName ||
+          item.last_name,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .trim() ||
+      '-',
+
+    department:
+      item.departmentName ||
+      item.department_name ||
+      item.department ||
+      '-',
+
+    departmentId:
+      item.departmentId ??
+      item.department_id ??
+      null,
+
+    leaveTypeId:
+      item.leaveTypeId ??
+      item.leave_type_id,
+
+    leaveType:
+      item.leaveType ||
+      item.leaveTypeName ||
+      item.leave_type_name ||
+      '-',
+
+    year:
+      Number(
+        item.year ||
+          currentYear,
+      ),
+
+    totalDays:
+      Number.isFinite(
+        totalDays,
+      )
+        ? totalDays
+        : 0,
+
+    usedDays:
+      Number.isFinite(
+        usedDays,
+      )
+        ? usedDays
+        : 0,
+
+    remainingDays:
+      Number(
+        remainingDays,
+      ) || 0,
+  };
+};
+
+const normalizeEmployee = (
+  employee,
+) => ({
+  id:
+    employee.employeeId ??
+    employee.employee_id ??
+    employee.id,
+
+  code:
+    employee.employeeCode ||
+    employee.employee_code ||
+    employee.code ||
+    '-',
+
+  name:
+    employee.fullName ||
+    employee.employeeName ||
+    employee.employee_name ||
+    [
+      employee.firstName ||
+        employee.first_name,
+      employee.lastName ||
+        employee.last_name,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim() ||
+    '-',
+
+  department:
+    employee.departmentName ||
+    employee.department_name ||
+    employee.department ||
+    '-',
+
+  status:
+    String(
+      employee.status ||
+        'active',
+    ).toLowerCase(),
+});
+
+const normalizeLeaveType = (
+  leaveType,
+) => ({
+  id:
+    leaveType.leaveTypeId ??
+    leaveType.leave_type_id ??
+    leaveType.id,
+
+  name:
+    leaveType.leaveType ||
+    leaveType.leaveTypeName ||
+    leaveType.leave_type_name ||
+    leaveType.name ||
+    '-',
+
+  status:
+    String(
+      leaveType.status ||
+        (
+          leaveType.isActive ??
+          leaveType.is_active
+        )
+          ? 'active'
+          : 'inactive',
+    ).toLowerCase(),
+});
+
+/* =========================
+   Empty Form
+========================= */
+
+const createEmptyForm = () => ({
+  employeeId: '',
+  leaveTypeId: '',
+  year: String(currentYear),
+  totalDays: '',
+  usedDays: '0',
+});
+
+/* =========================
+   Component
+========================= */
+
 function LeaveEntitlementManagementPage() {
-  const currentYear =
-    new Date().getFullYear();
+  const [
+    entitlements,
+    setEntitlements,
+  ] = useState([]);
+
+  const [
+    employees,
+    setEmployees,
+  ] = useState([]);
+
+  const [
+    leaveTypes,
+    setLeaveTypes,
+  ] = useState([]);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    error,
+    setError,
+  ] = useState('');
+
+  const [
+    actionMessage,
+    setActionMessage,
+  ] = useState('');
 
   const [
     searchText,
@@ -136,29 +305,29 @@ function LeaveEntitlementManagementPage() {
   const [
     departmentFilter,
     setDepartmentFilter,
-  ] = useState('All');
+  ] = useState('all');
 
   const [
     leaveTypeFilter,
     setLeaveTypeFilter,
-  ] = useState('All');
+  ] = useState('all');
 
   const [
-    selectedYear,
-    setSelectedYear,
+    yearFilter,
+    setYearFilter,
   ] = useState(
     String(currentYear),
   );
 
   const [
-    entitlements,
-    setEntitlements,
-  ] = useState([]);
+    dialogOpen,
+    setDialogOpen,
+  ] = useState(false);
 
   const [
     dialogMode,
     setDialogMode,
-  ] = useState(null);
+  ] = useState('add');
 
   const [
     selectedEntitlement,
@@ -166,285 +335,140 @@ function LeaveEntitlementManagementPage() {
   ] = useState(null);
 
   const [
-    dialogForm,
-    setDialogForm,
-  ] = useState({
-    ...emptyDialogForm,
-    year: currentYear,
-  });
+    formData,
+    setFormData,
+  ] = useState(
+    createEmptyForm(),
+  );
 
   const [
-    dialogError,
-    setDialogError,
+    formError,
+    setFormError,
   ] = useState('');
 
   const [
-    actionMessage,
-    setActionMessage,
-  ] = useState(null);
-  const [employeeProfileOptions, setEmployeeProfileOptions] = useState({});
-  const [employeeOptionIds, setEmployeeOptionIds] = useState([]);
-  const [leaveTypeApiOptions, setLeaveTypeApiOptions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const [saving, setSaving] = useState(false);
+    saving,
+    setSaving,
+  ] = useState(false);
 
-  const loadEntitlementData =
-    useCallback(async () => {
-      /*
-       * เรียกคำขอลาก่อน เพื่อให้ระบบอัปเดต
-       * Used Days จากคำขอ Approved เดิม
-       * ก่อนอ่านข้อมูล Leave Entitlement
-       */
-      setLoading(true);
-      setLoadError('');
-      const requests = [];
-      let storedEntitlements = [];
-      let employeeProfiles = {};
-      try {
-        const [rows, employees, leaveTypes] = await Promise.all([
-          getLeaveEntitlements(),
-          getEmployees(),
-          getLeaveTypes(),
-        ]);
-        employeeProfiles = Object.fromEntries(employees.map((employee) => [
-          String(employee.employeeId),
-          {
-            employeeId: employee.employeeCode,
-            employeeName: employee.fullName,
-            department: employee.department,
-            roleLabel: employee.roleName,
-          },
-        ]));
-        storedEntitlements = rows.map((item) => ({
-          ...item,
-          id: item.entitlementId,
-          role: String(item.employeeId),
-          employeeId: item.employeeCode,
-        }));
-        setEmployeeProfileOptions(employeeProfiles);
-        setEmployeeOptionIds(employees.map((employee) => String(employee.employeeId)));
-        setLeaveTypeApiOptions(leaveTypes.filter((item) => item.isActive).map((item) => ({ id: item.leaveTypeId, name: item.name })));
-      } catch (error) {
-        setLoadError(error.response?.data?.message || 'Unable to load leave entitlements.');
-      } finally {
-        setLoading(false);
-      }
+  /* =========================
+     Load
+  ========================= */
 
-      const managementRows =
-        storedEntitlements.map(
-          (entitlement) => {
-            const role = String(
-              entitlement.role ||
-                'employee',
-            ).toLowerCase();
+  const loadData = async () => {
+    setLoading(true);
+    setError('');
 
-            const profile =
-              employeeProfiles[
-                role
-              ] ||
-              employeeProfiles
-                .employee;
+    try {
+      const [
+        entitlementResponse,
+        employeeResponse,
+        leaveTypeResponse,
+      ] = await Promise.all([
+        api.get(
+          '/hr/leave-entitlements',
+        ),
 
-            const leaveTypeId =
-              Number(
-                entitlement.leaveTypeId,
-              );
+        api.get(
+          '/hr/employees',
+        ),
 
-            const year =
-              Number(
-                entitlement.year,
-              );
-
-            const pendingDays =
-              requests
-                .filter(
-                  (request) =>
-                    String(
-                      request.role ||
-                        '',
-                    ).toLowerCase() ===
-                      role &&
-                    Number(
-                      request.leaveTypeId,
-                    ) ===
-                      leaveTypeId &&
-                    getRequestYear(
-                      request,
-                    ) === year &&
-                    normalizeStatus(
-                      request.status,
-                    ) ===
-                      'pending',
-                )
-                .reduce(
-                  (
-                    total,
-                    request,
-                  ) =>
-                    total +
-                    toNumber(
-                      request.leaveDays,
-                    ),
-                  0,
-                );
-
-            const totalDays =
-              Math.max(
-                toNumber(
-                  entitlement.totalDays,
-                ),
-                0,
-              );
-
-            const usedDays =
-              Math.min(
-                Math.max(
-                  toNumber(
-                    entitlement.usedDays,
-                  ),
-                  0,
-                ),
-                totalDays,
-              );
-
-            const remainingDays =
-              Math.max(
-                totalDays -
-                  usedDays,
-                0,
-              );
-
-            const availableDays =
-              Math.max(
-                remainingDays -
-                  pendingDays,
-                0,
-              );
-
-            return {
-              ...entitlement,
-              ...profile,
-
-              role,
-
-              leaveTypeId,
-
-              leaveType:
-                entitlement.leaveType ||
-                'Leave',
-
-              year,
-
-              totalDays,
-
-              usedDays,
-
-              pendingDays,
-
-              remainingDays,
-
-              availableDays,
-            };
-          },
-        );
-
-      const sortedRows = [
-        ...managementRows,
-      ].sort(
-        (
-          firstItem,
-          secondItem,
-        ) => {
-          if (
-            firstItem.year !==
-            secondItem.year
-          ) {
-            return (
-              secondItem.year -
-              firstItem.year
-            );
-          }
-
-          const employeeComparison =
-            firstItem.employeeId
-              .localeCompare(
-                secondItem.employeeId,
-              );
-
-          if (
-            employeeComparison !==
-            0
-          ) {
-            return employeeComparison;
-          }
-
-          return (
-            firstItem.leaveTypeId -
-            secondItem.leaveTypeId
-          );
-        },
-      );
+        api.get(
+          '/hr/leave-types',
+        ),
+      ]);
 
       setEntitlements(
-        sortedRows,
+        getResponseArray(
+          entitlementResponse,
+          'entitlements',
+        ).map(
+          normalizeEntitlement,
+        ),
       );
-    }, []);
+
+      setEmployees(
+        getResponseArray(
+          employeeResponse,
+          'employees',
+        ).map(
+          normalizeEmployee,
+        ),
+      );
+
+      setLeaveTypes(
+        getResponseArray(
+          leaveTypeResponse,
+          'leaveTypes',
+        ).map(
+          normalizeLeaveType,
+        ),
+      );
+    } catch (loadError) {
+      setError(
+        loadError.response?.data
+          ?.message ||
+          'ไม่สามารถโหลดข้อมูลสิทธิ์การลาได้',
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    loadEntitlementData();
-  }, [loadEntitlementData]);
+    loadData();
+  }, []);
 
-  const availableYears =
+  /* =========================
+     Filter Options
+  ========================= */
+
+  const departments =
     useMemo(() => {
-      const storedYears =
+      return [
+        ...new Set(
+          entitlements
+            .map(
+              (item) =>
+                item.department,
+            )
+            .filter(
+              (item) =>
+                item &&
+                item !== '-',
+            ),
+        ),
+      ].sort();
+    }, [entitlements]);
+
+  const years =
+    useMemo(() => {
+      const availableYears =
         entitlements
           .map(
             (item) =>
-              Number(
-                item.year,
-              ),
+              Number(item.year),
           )
           .filter(
-            Number.isInteger,
+            (year) =>
+              Number.isFinite(
+                year,
+              ),
           );
 
       return [
         ...new Set([
-          currentYear - 1,
           currentYear,
-          currentYear + 1,
-          ...storedYears,
+          ...availableYears,
         ]),
       ].sort(
-        (
-          firstYear,
-          secondYear,
-        ) =>
-          secondYear -
-          firstYear,
+        (a, b) => b - a,
       );
-    }, [
-      currentYear,
-      entitlements,
-    ]);
+    }, [entitlements]);
 
-  const departments =
-    useMemo(
-      () => [
-        'All',
-
-        ...new Set(
-          Object.values(
-            employeeProfileOptions,
-          ).map(
-            (profile) =>
-              profile.department,
-          ),
-        ),
-      ],
-      [employeeProfileOptions],
-    );
+  /* =========================
+     Filter
+  ========================= */
 
   const filteredEntitlements =
     useMemo(() => {
@@ -455,518 +479,519 @@ function LeaveEntitlementManagementPage() {
 
       return entitlements.filter(
         (item) => {
-          const matchesYear =
-            String(item.year) ===
-            selectedYear;
-
           const matchesSearch =
             !keyword ||
-            item.employeeId
+            item.employeeCode
               .toLowerCase()
-              .includes(
-                keyword,
-              ) ||
+              .includes(keyword) ||
             item.employeeName
               .toLowerCase()
-              .includes(
-                keyword,
-              ) ||
-            item.roleLabel
-              .toLowerCase()
-              .includes(
-                keyword,
-              );
+              .includes(keyword);
 
           const matchesDepartment =
             departmentFilter ===
-              'All' ||
+              'all' ||
             item.department ===
               departmentFilter;
 
           const matchesLeaveType =
             leaveTypeFilter ===
-              'All' ||
-            item.leaveType ===
-              leaveTypeFilter;
+              'all' ||
+            String(
+              item.leaveTypeId,
+            ) ===
+              String(
+                leaveTypeFilter,
+              );
+
+          const matchesYear =
+            yearFilter ===
+              'all' ||
+            String(item.year) ===
+              String(yearFilter);
 
           return (
-            matchesYear &&
             matchesSearch &&
             matchesDepartment &&
-            matchesLeaveType
+            matchesLeaveType &&
+            matchesYear
           );
         },
       );
     }, [
-      departmentFilter,
       entitlements,
-      leaveTypeFilter,
       searchText,
-      selectedYear,
+      departmentFilter,
+      leaveTypeFilter,
+      yearFilter,
     ]);
 
-  const summary =
-    useMemo(
-      () =>
-        filteredEntitlements.reduce(
-          (
-            result,
-            item,
-          ) => ({
-            records:
-              result.records +
-              1,
+  /* =========================
+     Summary
+  ========================= */
 
-            totalDays:
-              result.totalDays +
-              item.totalDays,
+  const summaryData =
+    useMemo(() => {
+      const records =
+        filteredEntitlements;
 
-            usedDays:
-              result.usedDays +
-              item.usedDays,
-
-            availableDays:
-              result.availableDays +
-              item.availableDays,
-          }),
-          {
-            records: 0,
-            totalDays: 0,
-            usedDays: 0,
-            availableDays: 0,
-          },
-        ),
-      [filteredEntitlements],
-    );
-
-  const handleClearFilters =
-    () => {
-      setSearchText('');
-
-      setDepartmentFilter(
-        'All',
-      );
-
-      setLeaveTypeFilter(
-        'All',
-      );
-
-      setSelectedYear(
-        String(currentYear),
-      );
-
-      setActionMessage(
-        null,
-      );
-    };
-
-  const handleOpenAddDialog =
-    () => {
-      setDialogMode(
-        'add',
-      );
-
-      setSelectedEntitlement(
-        null,
-      );
-
-      setDialogForm({
-        ...emptyDialogForm,
-
-        role: employeeOptionIds[0] || '',
-
-        leaveTypeId: leaveTypeApiOptions[0]?.id || '',
-
-        year: Number(
-          selectedYear,
-        ),
-      });
-
-      setDialogError('');
-
-      setActionMessage(
-        null,
-      );
-    };
-
-  const handleOpenEditDialog =
-    (item) => {
-      setDialogMode(
-        'edit',
-      );
-
-      setSelectedEntitlement(
-        item,
-      );
-
-      setDialogForm({
-        role:
-          item.role,
-
-        leaveTypeId:
-          item.leaveTypeId,
-
-        year:
-          item.year,
+      return {
+        totalRecords:
+          records.length,
 
         totalDays:
-          String(
-            item.totalDays,
+          records.reduce(
+            (total, item) =>
+              total +
+              Number(
+                item.totalDays ||
+                  0,
+              ),
+            0,
           ),
 
         usedDays:
-          String(
-            item.usedDays,
+          records.reduce(
+            (total, item) =>
+              total +
+              Number(
+                item.usedDays ||
+                  0,
+              ),
+            0,
           ),
-      });
 
-      setDialogError('');
+        remainingDays:
+          records.reduce(
+            (total, item) =>
+              total +
+              Math.max(
+                Number(
+                  item.totalDays ||
+                    0,
+                ) -
+                  Number(
+                    item.usedDays ||
+                      0,
+                  ),
+                0,
+              ),
+            0,
+          ),
+      };
+    }, [
+      filteredEntitlements,
+    ]);
 
-      setActionMessage(
-        null,
-      );
-    };
+  const summaryCards = [
+    {
+      title:
+        'รายการสิทธิ์ทั้งหมด',
 
-  const handleCloseDialog =
-    () => {
-      setDialogMode(null);
+      value:
+        summaryData.totalRecords,
 
-      setSelectedEntitlement(
-        null,
-      );
+      backgroundColor:
+        theme.soft,
 
-      setDialogForm({
-        ...emptyDialogForm,
+      color:
+        theme.primary,
+    },
 
-        year:
-          currentYear,
-      });
+    {
+      title:
+        'วันลาที่กำหนด',
 
-      setDialogError('');
-    };
+      value:
+        summaryData.totalDays,
 
-  const updateDialogField = (
-    fieldName,
+      backgroundColor:
+        '#DBEAFE',
+
+      color:
+        '#2563EB',
+    },
+
+    {
+      title:
+        'ใช้ไปแล้ว',
+
+      value:
+        summaryData.usedDays,
+
+      backgroundColor:
+        '#FEE2E2',
+
+      color:
+        '#DC2626',
+    },
+
+    {
+      title:
+        'คงเหลือ',
+
+      value:
+        summaryData.remainingDays,
+
+      backgroundColor:
+        '#DCFCE7',
+
+      color:
+        '#15803D',
+    },
+  ];
+
+  /* =========================
+     Dialog
+  ========================= */
+
+  const handleOpenAdd = () => {
+    setDialogMode('add');
+
+    setSelectedEntitlement(
+      null,
+    );
+
+    setFormData(
+      createEmptyForm(),
+    );
+
+    setFormError('');
+    setDialogOpen(true);
+  };
+
+  const handleOpenEdit = (
+    item,
+  ) => {
+    setDialogMode('edit');
+
+    setSelectedEntitlement(
+      item,
+    );
+
+    setFormData({
+      employeeId:
+        String(
+          item.employeeId ||
+            '',
+        ),
+
+      leaveTypeId:
+        String(
+          item.leaveTypeId ||
+            '',
+        ),
+
+      year:
+        String(
+          item.year ||
+            currentYear,
+        ),
+
+      totalDays:
+        String(
+          item.totalDays ??
+            '',
+        ),
+
+      usedDays:
+        String(
+          item.usedDays ??
+            0,
+        ),
+    });
+
+    setFormError('');
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    if (saving) {
+      return;
+    }
+
+    setDialogOpen(false);
+
+    setSelectedEntitlement(
+      null,
+    );
+
+    setFormData(
+      createEmptyForm(),
+    );
+
+    setFormError('');
+  };
+
+  const handleFormChange = (
+    field,
     value,
   ) => {
-    setDialogForm(
-      (
-        previousForm,
-      ) => ({
-        ...previousForm,
-
-        [fieldName]:
-          value,
+    setFormData(
+      (previous) => ({
+        ...previous,
+        [field]: value,
       }),
     );
 
-    setDialogError('');
+    setFormError('');
   };
 
-  const handleSaveEntitlement =
-    async () => {
-      const totalDays =
-        Number(
-          dialogForm.totalDays,
-        );
+  /* =========================
+     Save
+  ========================= */
 
-      const usedDays =
-        Number(
-          dialogForm.usedDays,
-        );
+  const handleSave = async () => {
+    setFormError('');
 
-      const year =
-        Number(
-          dialogForm.year,
-        );
+    const employeeId =
+      Number(
+        formData.employeeId,
+      );
 
-      const leaveTypeId =
-        Number(
-          dialogForm.leaveTypeId,
-        );
+    const leaveTypeId =
+      Number(
+        formData.leaveTypeId,
+      );
 
-      if (
-        String(
-          dialogForm.totalDays,
-        ).trim() === '' ||
-        String(
-          dialogForm.usedDays,
-        ).trim() === ''
-      ) {
-        setDialogError(
-          'Please enter Total Days and Used Days.',
-        );
+    const year =
+      Number(
+        formData.year,
+      );
 
-        return;
-      }
+    const totalDays =
+      Number(
+        formData.totalDays,
+      );
 
-      if (
-        !Number.isFinite(
-          totalDays,
-        ) ||
-        totalDays < 0 ||
-        totalDays > 365
-      ) {
-        setDialogError(
-          'Total Days must be between 0 and 365.',
-        );
+    const usedDays =
+      Number(
+        formData.usedDays,
+      );
 
-        return;
-      }
+    if (!employeeId) {
+      setFormError(
+        'กรุณาเลือกพนักงาน',
+      );
 
-      if (
-        !Number.isFinite(
-          usedDays,
-        ) ||
-        usedDays < 0 ||
-        usedDays > 365
-      ) {
-        setDialogError(
-          'Used Days must be between 0 and 365.',
-        );
+      return;
+    }
 
-        return;
-      }
+    if (!leaveTypeId) {
+      setFormError(
+        'กรุณาเลือกประเภทการลา',
+      );
 
-      if (
-        !Number.isInteger(
-          year,
-        ) ||
-        year < 2000 ||
-        year > 2100
-      ) {
-        setDialogError(
-          'Entitlement Year must be between 2000 and 2100.',
-        );
+      return;
+    }
 
-        return;
-      }
+    if (
+      !Number.isInteger(year) ||
+      year < 2000 ||
+      year > 2100
+    ) {
+      setFormError(
+        'กรุณาระบุปีให้ถูกต้อง',
+      );
 
-      if (
-        usedDays >
-        totalDays
-      ) {
-        setDialogError(
-          'Used Days cannot be greater than Total Days.',
-        );
+      return;
+    }
 
-        return;
-      }
+    if (
+      Number.isNaN(
+        totalDays,
+      ) ||
+      totalDays < 0 ||
+      totalDays > 365
+    ) {
+      setFormError(
+        'จำนวนวันลาต้องอยู่ระหว่าง 0 - 365 วัน',
+      );
 
-      const pendingDays =
-        dialogMode ===
-        'edit'
-          ? toNumber(
-              selectedEntitlement
-                ?.pendingDays,
-            )
-          : 0;
+      return;
+    }
+
+    if (
+      Number.isNaN(
+        usedDays,
+      ) ||
+      usedDays < 0
+    ) {
+      setFormError(
+        'จำนวนวันที่ใช้ไปต้องไม่ติดลบ',
+      );
+
+      return;
+    }
+
+    if (
+      usedDays >
+      totalDays
+    ) {
+      setFormError(
+        'จำนวนวันที่ใช้ไปต้องไม่มากกว่าสิทธิ์ทั้งหมด',
+      );
+
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const payload = {
+        employeeId,
+        leaveTypeId,
+        year,
+        totalDays,
+        usedDays,
+      };
 
       if (
         dialogMode ===
           'edit' &&
-        totalDays <
-          usedDays +
-            pendingDays
+        selectedEntitlement
+          ?.id
       ) {
-        setDialogError(
-          `Total Days cannot be lower than Used + Pending (${usedDays + pendingDays} days).`,
+        await api.put(
+          `/hr/leave-entitlements/${selectedEntitlement.id}`,
+          payload,
         );
 
-        return;
-      }
-
-      const duplicateEntitlement =
-        entitlements.find(
-          (item) =>
-            item.role ===
-              dialogForm.role &&
-            Number(
-              item.leaveTypeId,
-            ) ===
-              leaveTypeId &&
-            Number(
-              item.year,
-            ) === year &&
-            Number(
-              item.id,
-            ) !==
-              Number(
-                selectedEntitlement
-                  ?.id,
-              ),
+        setActionMessage(
+          'แก้ไขสิทธิ์การลาเรียบร้อยแล้ว',
+        );
+      } else {
+        await api.post(
+          '/hr/leave-entitlements',
+          payload,
         );
 
-      if (
-        duplicateEntitlement
-      ) {
-        setDialogError(
-          'This employee already has this leave entitlement for the selected year.',
+        setActionMessage(
+          'เพิ่มสิทธิ์การลาเรียบร้อยแล้ว',
         );
-
-        return;
       }
 
-      setSaving(true);
-      try {
-        const payload = {
-          employeeId: Number(dialogForm.role),
-          leaveTypeId,
-          year,
-          totalDays,
-          usedDays,
-        };
-        const result = dialogMode === 'edit'
-          ? await updateLeaveEntitlement(selectedEntitlement.id, payload)
-          : await createLeaveEntitlement(payload);
-        const savedEntitlement = result.data.leaveEntitlement;
-        const profile = employeeProfileOptions[dialogForm.role];
-        const leaveTypeName = leaveTypeApiOptions.find((item) => Number(item.id) === leaveTypeId)?.name || 'Leave';
+      setDialogOpen(false);
 
-      createAuditLog({
-        userId: 3,
+      setSelectedEntitlement(
+        null,
+      );
 
-        username:
-          'hr001',
+      setFormData(
+        createEmptyForm(),
+      );
 
-        role:
-          'hr',
+      await loadData();
+    } catch (saveError) {
+      setFormError(
+        saveError.response?.data
+          ?.message ||
+          'ไม่สามารถบันทึกสิทธิ์การลาได้',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
-        action:
-          dialogMode ===
-          'add'
-            ? 'create_leave_entitlement'
-            : 'update_leave_entitlement',
+  /* =========================
+     Clear Filter
+  ========================= */
 
-        tableName:
-          'leave_entitlements',
+  const handleClearFilters = () => {
+    setSearchText('');
 
-        recordId:
-          savedEntitlement.id,
+    setDepartmentFilter(
+      'all',
+    );
 
-        detail:
-          `${dialogMode === 'add' ? 'Created' : 'Updated'} ${profile.employeeId} ${leaveTypeName} entitlement for ${year}: total ${totalDays} day(s), used ${usedDays} day(s).`,
+    setLeaveTypeFilter(
+      'all',
+    );
 
-        ipAddress:
-          '127.0.0.1',
-      });
+    setYearFilter(
+      String(currentYear),
+    );
+  };
 
-      setActionMessage({
-        severity:
-          'success',
+  const activeEmployees =
+    employees.filter(
+      (employee) =>
+        employee.status ===
+          'active',
+    );
 
-        text:
-          `${profile.employeeName}'s ${leaveTypeName} entitlement for ${year} was saved successfully.`,
-      });
+  const activeLeaveTypes =
+    leaveTypes.filter(
+      (leaveType) =>
+        leaveType.status ===
+          'active',
+    );
 
-      handleCloseDialog();
-
-      await loadEntitlementData();
-
-      window.scrollTo({
-        top: 0,
-        behavior:
-          'smooth',
-      });
-      } catch (error) {
-        setDialogError(error.response?.data?.message || 'The leave entitlement could not be saved.');
-      } finally {
-        setSaving(false);
-      }
-    };
+  /* =========================
+     UI
+  ========================= */
 
   return (
-    <HRLayout
-      activeMenu="Leave Entitlement"
-    >
+    <HRLayout activeMenu="Leave Entitlement">
+      {/* Header */}
+
       <Box
         sx={{
-          display:
-            'flex',
+          display: 'flex',
 
           alignItems: {
-            xs:
-              'flex-start',
-
-            sm:
-              'center',
+            xs: 'flex-start',
+            sm: 'center',
           },
 
           justifyContent:
             'space-between',
 
           flexDirection: {
-            xs:
-              'column',
-
-            sm:
-              'row',
+            xs: 'column',
+            sm: 'row',
           },
 
-          gap:
-            '16px',
+          gap: '16px',
 
           marginBottom:
-            '28px',
+            '22px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color:
-                '#111827',
+        <Typography
+          component="h1"
+          sx={{
+            color: '#111827',
 
-              fontSize: {
-                xs:
-                  '26px',
+            fontSize: {
+              xs: '26px',
+              sm: '30px',
+            },
 
-                sm:
-                  '30px',
-              },
-
-              fontWeight:
-                800,
-            }}
-          >
-            Leave Entitlement Management
-          </Typography>
-
-          <Typography
-            sx={{
-              color:
-                '#6B7280',
-
-              fontSize:
-                '15px',
-
-              marginTop:
-                '6px',
-            }}
-          >
-            View and update employee leave entitlements and
-            available balances.
-          </Typography>
-        </Box>
+            fontWeight: 800,
+          }}
+        >
+          จัดการสิทธิ์การลา
+        </Typography>
 
         <Button
           type="button"
           variant="contained"
           onClick={
-            handleOpenAddDialog
+            handleOpenAdd
           }
           sx={{
             minWidth:
-              '170px',
+              '150px',
 
             height:
-              '44px',
+              '42px',
 
             padding:
-              '0 20px',
+              '0 18px',
 
             backgroundColor:
-              '#059669',
+              theme.primary,
 
             color:
               '#FFFFFF',
@@ -975,7 +1000,7 @@ function LeaveEntitlementManagementPage() {
               '8px',
 
             fontSize:
-              '14px',
+              '12px',
 
             fontWeight:
               700,
@@ -988,117 +1013,86 @@ function LeaveEntitlementManagementPage() {
 
             '&:hover': {
               backgroundColor:
-                '#047857',
+                theme.dark,
 
               boxShadow:
                 'none',
             },
           }}
         >
-          Add Entitlement
+          + เพิ่มสิทธิ์การลา
         </Button>
       </Box>
 
-      {actionMessage && (
+      {/* Messages */}
+
+      {error && (
         <Alert
-          severity={
-            actionMessage.severity
-          }
+          severity="error"
           onClose={() =>
-            setActionMessage(
-              null,
-            )
+            setError('')
           }
           sx={{
             marginBottom:
-              '24px',
+              '20px',
 
             borderRadius:
-              '8px',
+              '10px',
           }}
         >
-          {actionMessage.text}
+          {error}
         </Alert>
       )}
 
-      {(loading || loadError) && (
-        <Alert severity={loadError ? 'error' : 'info'} action={loadError ? <Button onClick={loadEntitlementData}>Retry</Button> : null} sx={{ marginBottom: '24px', borderRadius: '8px' }}>
-          {loadError || 'Loading leave entitlements...'}
+      {actionMessage && (
+        <Alert
+          severity="success"
+          onClose={() =>
+            setActionMessage('')
+          }
+          sx={{
+            marginBottom:
+              '20px',
+
+            borderRadius:
+              '10px',
+          }}
+        >
+          {actionMessage}
         </Alert>
       )}
+
+      {/* Summary Cards */}
 
       <Box
         sx={{
-          display:
-            'grid',
+          display: 'grid',
 
           gridTemplateColumns: {
-            xs:
-              '1fr',
+            xs: '1fr',
 
             sm:
-              'repeat(2, minmax(0, 1fr))',
+              'repeat(2, 1fr)',
 
             xl:
-              'repeat(4, minmax(0, 1fr))',
+              'repeat(4, 1fr)',
           },
 
-          gap:
-            '20px',
+          gap: '18px',
 
           marginBottom:
             '24px',
         }}
       >
-        {[
-          {
-            title:
-              'Entitlement Records',
-
-            value:
-              summary.records,
-
-            color:
-              '#2563EB',
-          },
-          {
-            title:
-              'Total Entitlement Days',
-
-            value:
-              summary.totalDays,
-
-            color:
-              '#7C3AED',
-          },
-          {
-            title:
-              'Used Leave Days',
-
-            value:
-              summary.usedDays,
-
-            color:
-              '#DC2626',
-          },
-          {
-            title:
-              'Available Leave Days',
-
-            value:
-              summary.availableDays,
-
-            color:
-              '#059669',
-          },
-        ].map(
+        {summaryCards.map(
           (card) => (
             <Paper
-              key={
-                card.title
-              }
+              key={card.title}
               elevation={0}
               sx={{
+                minHeight:
+                  '140px',
+
                 padding:
                   '20px',
 
@@ -1109,45 +1103,68 @@ function LeaveEntitlementManagementPage() {
                   '1px solid #E5E7EB',
 
                 borderRadius:
-                  '12px',
+                  '14px',
               }}
             >
+              <Box
+                sx={{
+                  width:
+                    '50px',
+
+                  height:
+                    '50px',
+
+                  display:
+                    'flex',
+
+                  alignItems:
+                    'center',
+
+                  justifyContent:
+                    'center',
+
+                  backgroundColor:
+                    card.backgroundColor,
+
+                  color:
+                    card.color,
+
+                  borderRadius:
+                    '11px',
+
+                  fontSize:
+                    '20px',
+
+                  fontWeight:
+                    800,
+                }}
+              >
+                {card.value}
+              </Box>
+
               <Typography
                 sx={{
                   color:
-                    '#6B7280',
+                    '#111827',
 
                   fontSize:
                     '14px',
 
                   fontWeight:
-                    600,
-                }}
-              >
-                {card.title}
-              </Typography>
-
-              <Typography
-                sx={{
-                  color:
-                    card.color,
-
-                  fontSize:
-                    '30px',
-
-                  fontWeight:
                     800,
 
                   marginTop:
-                    '8px',
+                    '13px',
                 }}
               >
-                {card.value}
+                {card.title}
               </Typography>
             </Paper>
           ),
         )}
       </Box>
+
+      {/* Main Card */}
 
       <Paper
         elevation={0}
@@ -1159,21 +1176,18 @@ function LeaveEntitlementManagementPage() {
             '1px solid #E5E7EB',
 
           borderRadius:
-            '12px',
+            '14px',
 
           overflow:
             'hidden',
         }}
       >
+        {/* Filters */}
+
         <Box
           sx={{
-            padding: {
-              xs:
-                '20px',
-
-              sm:
-                '24px',
-            },
+            padding:
+              '20px 24px',
 
             borderBottom:
               '1px solid #E5E7EB',
@@ -1191,23 +1205,28 @@ function LeaveEntitlementManagementPage() {
                 800,
             }}
           >
-            Employee Leave Entitlements
+            รายการสิทธิ์การลา
           </Typography>
 
           <Typography
             sx={{
               color:
-                '#6B7280',
+                '#64748B',
 
               fontSize:
-                '14px',
+                '12px',
 
               marginTop:
                 '4px',
             }}
           >
-            Showing {filteredEntitlements.length}{' '}
-            entitlement record(s)
+            แสดง{' '}
+            {
+              filteredEntitlements.length
+            }{' '}
+            จาก{' '}
+            {entitlements.length}{' '}
+            รายการ
           </Typography>
 
           <Box
@@ -1219,21 +1238,21 @@ function LeaveEntitlementManagementPage() {
                 xs:
                   '1fr',
 
-                lg:
-                  'minmax(240px, 2fr) repeat(3, minmax(170px, 1fr)) auto',
+                xl:
+                  'minmax(230px, 1.3fr) repeat(3, minmax(150px, 0.75fr)) auto',
               },
 
               gap:
-                '16px',
+                '14px',
 
               marginTop:
-                '22px',
+                '20px',
             }}
           >
             <TextField
               fullWidth
-              label="Search Employee"
-              placeholder="Employee ID, name or role"
+              label="ค้นหาพนักงาน"
+              placeholder="ชื่อหรือรหัสพนักงาน"
               value={
                 searchText
               }
@@ -1252,72 +1271,25 @@ function LeaveEntitlementManagementPage() {
                       '48px',
 
                     borderRadius:
-                      '8px',
+                      '9px',
                   },
               }}
             />
 
-            <FormControl
-              fullWidth
-            >
-              <InputLabel id="entitlement-year-label">
-                Year
-              </InputLabel>
-
-              <Select
-                labelId="entitlement-year-label"
-                value={
-                  selectedYear
-                }
-                label="Year"
-                onChange={(
-                  event,
-                ) =>
-                  setSelectedYear(
-                    event.target
-                      .value,
-                  )
-                }
-                sx={{
-                  height:
-                    '48px',
-
-                  borderRadius:
-                    '8px',
-                }}
-              >
-                {availableYears.map(
-                  (year) => (
-                    <MenuItem
-                      key={
-                        year
-                      }
-                      value={
-                        String(
-                          year,
-                        )
-                      }
-                    >
-                      {year}
-                    </MenuItem>
-                  ),
-                )}
-              </Select>
-            </FormControl>
+            {/* Department */}
 
             <FormControl
               fullWidth
             >
-              <InputLabel id="entitlement-department-label">
-                Department
+              <InputLabel>
+                แผนก
               </InputLabel>
 
               <Select
-                labelId="entitlement-department-label"
                 value={
                   departmentFilter
                 }
-                label="Department"
+                label="แผนก"
                 onChange={(
                   event,
                 ) =>
@@ -1331,9 +1303,13 @@ function LeaveEntitlementManagementPage() {
                     '48px',
 
                   borderRadius:
-                    '8px',
+                    '9px',
                 }}
               >
+                <MenuItem value="all">
+                  ทุกแผนก
+                </MenuItem>
+
                 {departments.map(
                   (
                     department,
@@ -1346,29 +1322,29 @@ function LeaveEntitlementManagementPage() {
                         department
                       }
                     >
-                      {department ===
-                      'All'
-                        ? 'All Departments'
-                        : department}
+                      {
+                        department
+                      }
                     </MenuItem>
                   ),
                 )}
               </Select>
             </FormControl>
 
+            {/* Leave Type */}
+
             <FormControl
               fullWidth
             >
-              <InputLabel id="entitlement-leave-type-label">
-                Leave Type
+              <InputLabel>
+                ประเภทการลา
               </InputLabel>
 
               <Select
-                labelId="entitlement-leave-type-label"
                 value={
                   leaveTypeFilter
                 }
-                label="Leave Type"
+                label="ประเภทการลา"
                 onChange={(
                   event,
                 ) =>
@@ -1382,14 +1358,14 @@ function LeaveEntitlementManagementPage() {
                     '48px',
 
                   borderRadius:
-                    '8px',
+                    '9px',
                 }}
               >
-                <MenuItem value="All">
-                  All Leave Types
+                <MenuItem value="all">
+                  ทุกประเภท
                 </MenuItem>
 
-                {leaveTypeApiOptions.map(
+                {leaveTypes.map(
                   (
                     leaveType,
                   ) => (
@@ -1398,15 +1374,70 @@ function LeaveEntitlementManagementPage() {
                         leaveType.id
                       }
                       value={
-                        leaveType.name
+                        String(
+                          leaveType.id,
+                        )
                       }
                     >
-                      {leaveType.name}
+                      {translateLeaveType(
+                        leaveType.name,
+                      )}
                     </MenuItem>
                   ),
                 )}
               </Select>
             </FormControl>
+
+            {/* Year */}
+
+            <FormControl
+              fullWidth
+            >
+              <InputLabel>
+                ปี
+              </InputLabel>
+
+              <Select
+                value={
+                  yearFilter
+                }
+                label="ปี"
+                onChange={(
+                  event,
+                ) =>
+                  setYearFilter(
+                    event.target
+                      .value,
+                  )
+                }
+                sx={{
+                  height:
+                    '48px',
+
+                  borderRadius:
+                    '9px',
+                }}
+              >
+                <MenuItem value="all">
+                  ทุกปี
+                </MenuItem>
+
+                {years.map(
+                  (year) => (
+                    <MenuItem
+                      key={year}
+                      value={String(
+                        year,
+                      )}
+                    >
+                      {year}
+                    </MenuItem>
+                  ),
+                )}
+              </Select>
+            </FormControl>
+
+            {/* Clear */}
 
             <Button
               type="button"
@@ -1415,9 +1446,6 @@ function LeaveEntitlementManagementPage() {
                 handleClearFilters
               }
               sx={{
-                minWidth:
-                  '110px',
-
                 height:
                   '48px',
 
@@ -1425,360 +1453,372 @@ function LeaveEntitlementManagementPage() {
                   '0 18px',
 
                 color:
-                  '#374151',
+                  '#475569',
 
                 borderColor:
-                  '#D1D5DB',
+                  '#CBD5E1',
 
                 borderRadius:
-                  '8px',
+                  '9px',
 
                 fontSize:
-                  '14px',
+                  '12px',
 
                 fontWeight:
                   700,
 
                 textTransform:
                   'none',
+
+                '&:hover':
+                  {
+                    backgroundColor:
+                      '#F8FAFC',
+
+                    borderColor:
+                      '#94A3B8',
+                  },
               }}
             >
-              Clear
+              ล้างตัวกรอง
             </Button>
           </Box>
         </Box>
 
-        {filteredEntitlements.length >
-        0 ? (
+        {/* Loading */}
+
+        {loading ? (
+          <Box
+            sx={{
+              minHeight:
+                '300px',
+
+              display:
+                'flex',
+
+              alignItems:
+                'center',
+
+              justifyContent:
+                'center',
+            }}
+          >
+            <CircularProgress
+              sx={{
+                color:
+                  theme.primary,
+              }}
+            />
+          </Box>
+        ) : filteredEntitlements.length >
+          0 ? (
+          /* Table */
+
           <Box
             sx={{
               overflowX:
                 'auto',
             }}
           >
-            <Box
-              component="table"
+            <Table
               sx={{
-                width:
-                  '100%',
-
                 minWidth:
-                  '1320px',
-
-                borderCollapse:
-                  'collapse',
+                  '1050px',
               }}
             >
-              <Box component="thead">
-                <Box
-                  component="tr"
+              <TableHead>
+                <TableRow
                   sx={{
                     backgroundColor:
-                      '#F9FAFB',
+                      '#F8FAFC',
                   }}
                 >
                   {[
-                    'Employee ID',
-                    'Employee',
-                    'Role',
-                    'Department',
-                    'Leave Type',
-                    'Year',
-                    'Total',
-                    'Used',
-                    'Pending',
-                    'Remaining',
-                    'Available',
-                    'Action',
+                    'รหัสพนักงาน',
+                    'ชื่อพนักงาน',
+                    'แผนก',
+                    'ประเภทการลา',
+                    'ปี',
+                    'สิทธิ์ทั้งหมด',
+                    'ใช้ไปแล้ว',
+                    'คงเหลือ',
+                    'การดำเนินการ',
                   ].map(
                     (
                       heading,
                     ) => (
-                      <Box
+                      <TableCell
                         key={
                           heading
                         }
-                        component="th"
                         sx={{
-                          padding:
-                            '14px 16px',
-
                           color:
-                            '#6B7280',
-
-                          borderBottom:
-                            '1px solid #E5E7EB',
+                            '#64748B',
 
                           fontSize:
-                            '12px',
+                            '11px',
 
                           fontWeight:
                             700,
 
-                          textAlign:
-                            'left',
-
                           whiteSpace:
                             'nowrap',
+
+                          borderBottom:
+                            '1px solid #E5E7EB',
                         }}
                       >
-                        {heading}
-                      </Box>
+                        {
+                          heading
+                        }
+                      </TableCell>
                     ),
                   )}
-                </Box>
-              </Box>
+                </TableRow>
+              </TableHead>
 
-              <Box component="tbody">
+              <TableBody>
                 {filteredEntitlements.map(
-                  (item) => (
-                    <Box
-                      key={
-                        item.id
-                      }
-                      component="tr"
-                      sx={{
-                        '&:hover':
-                          {
-                            backgroundColor:
-                              '#F9FAFB',
-                          },
-                      }}
-                    >
-                      <Box
-                        component="td"
-                        sx={tableTextCellSx(
-                          '#059669',
-                          700,
-                        )}
-                      >
-                        {item.employeeId}
-                      </Box>
-
-                      <Box
-                        component="td"
-                        sx={tableTextCellSx(
-                          '#111827',
-                          700,
-                        )}
-                      >
-                        {item.employeeName}
-                      </Box>
-
-                      <Box
-                        component="td"
-                        sx={
-                          tableCellSx
-                        }
-                      >
-                        <Chip
-                          label={
-                            item.roleLabel
-                          }
-                          size="small"
-                          sx={{
-                            backgroundColor:
-                              '#EFF6FF',
-
-                            color:
-                              '#1D4ED8',
-
-                            borderRadius:
-                              '999px',
-
-                            fontSize:
-                              '11px',
-
-                            fontWeight:
-                              700,
-                          }}
-                        />
-                      </Box>
-
-                      <Box
-                        component="td"
-                        sx={tableTextCellSx(
-                          '#4B5563',
-                          400,
-                        )}
-                      >
-                        {item.department}
-                      </Box>
-
-                      <Box
-                        component="td"
-                        sx={
-                          tableCellSx
-                        }
-                      >
-                        <Chip
-                          label={
-                            item.leaveType
-                          }
-                          size="small"
-                          sx={{
-                            minWidth:
-                              '110px',
-
-                            backgroundColor:
-                              '#ECFDF5',
-
-                            color:
-                              '#047857',
-
-                            borderRadius:
-                              '999px',
-
-                            fontSize:
-                              '11px',
-
-                            fontWeight:
-                              700,
-                          }}
-                        />
-                      </Box>
-
-                      <Box
-                        component="td"
-                        sx={tableNumberCellSx(
-                          '#374151',
-                        )}
-                      >
-                        {item.year}
-                      </Box>
-
-                      <Box
-                        component="td"
-                        sx={tableNumberCellSx(
-                          '#111827',
-                        )}
-                      >
-                        {item.totalDays}
-                      </Box>
-
-                      <Box
-                        component="td"
-                        sx={tableNumberCellSx(
-                          '#DC2626',
-                        )}
-                      >
-                        {item.usedDays}
-                      </Box>
-
-                      <Box
-                        component="td"
-                        sx={tableNumberCellSx(
-                          '#B45309',
-                        )}
-                      >
-                        {item.pendingDays}
-                      </Box>
-
-                      <Box
-                        component="td"
-                        sx={tableNumberCellSx(
-                          '#374151',
-                        )}
-                      >
-                        {item.remainingDays}
-                      </Box>
-
-                      <Box
-                        component="td"
-                        sx={
-                          tableCellSx
-                        }
-                      >
-                        <Chip
-                          label={`${item.availableDays} Days`}
-                          size="small"
-                          sx={{
-                            minWidth:
-                              '84px',
-
-                            backgroundColor:
-                              item.availableDays >
-                              0
-                                ? '#DCFCE7'
-                                : '#FEE2E2',
-
-                            color:
-                              item.availableDays >
-                              0
-                                ? '#15803D'
-                                : '#B91C1C',
-
-                            borderRadius:
-                              '999px',
-
-                            fontSize:
-                              '11px',
-
-                            fontWeight:
-                              700,
-                          }}
-                        />
-                      </Box>
-
-                      <Box
-                        component="td"
-                        sx={
-                          tableCellSx
-                        }
-                      >
-                        <Button
-                          type="button"
-                          onClick={() =>
-                            handleOpenEditDialog(
-                              item,
-                            )
-                          }
-                          sx={{
-                            minWidth:
+                  (item) => {
+                    const remaining =
+                      Math.max(
+                        Number(
+                          item.totalDays ||
+                            0,
+                        ) -
+                          Number(
+                            item.usedDays ||
                               0,
+                          ),
+                        0,
+                      );
 
-                            padding:
-                              0,
+                    return (
+                      <TableRow
+                        key={
+                          item.id
+                        }
+                        hover
+                      >
+                        <TableCell>
+                          <Typography
+                            sx={{
+                              color:
+                                theme.primary,
 
+                              fontSize:
+                                '12px',
+
+                              fontWeight:
+                                800,
+
+                              whiteSpace:
+                                'nowrap',
+                            }}
+                          >
+                            {
+                              item.employeeCode
+                            }
+                          </Typography>
+                        </TableCell>
+
+                        <TableCell
+                          sx={{
                             color:
-                              '#059669',
+                              '#111827',
 
                             fontSize:
-                              '13px',
+                              '12px',
 
                             fontWeight:
                               700,
 
-                            textTransform:
-                              'none',
-
-                            '&:hover':
-                              {
-                                backgroundColor:
-                                  'transparent',
-
-                                textDecoration:
-                                  'underline',
-                              },
+                            whiteSpace:
+                              'nowrap',
                           }}
                         >
-                          Edit
-                        </Button>
-                      </Box>
-                    </Box>
-                  ),
+                          {
+                            item.employeeName
+                          }
+                        </TableCell>
+
+                        <TableCell
+                          sx={{
+                            color:
+                              '#475569',
+
+                            fontSize:
+                              '12px',
+
+                            whiteSpace:
+                              'nowrap',
+                          }}
+                        >
+                          {
+                            item.department
+                          }
+                        </TableCell>
+
+                        <TableCell
+                          sx={{
+                            color:
+                              '#475569',
+
+                            fontSize:
+                              '12px',
+
+                            whiteSpace:
+                              'nowrap',
+                          }}
+                        >
+                          {translateLeaveType(
+                            item.leaveType,
+                          )}
+                        </TableCell>
+
+                        <TableCell
+                          sx={{
+                            fontSize:
+                              '12px',
+
+                            whiteSpace:
+                              'nowrap',
+                          }}
+                        >
+                          {
+                            item.year
+                          }
+                        </TableCell>
+
+                        <TableCell
+                          sx={{
+                            fontSize:
+                              '12px',
+
+                            fontWeight:
+                              700,
+                          }}
+                        >
+                          {
+                            item.totalDays
+                          }{' '}
+                          วัน
+                        </TableCell>
+
+                        <TableCell
+                          sx={{
+                            color:
+                              '#DC2626',
+
+                            fontSize:
+                              '12px',
+
+                            fontWeight:
+                              700,
+                          }}
+                        >
+                          {
+                            item.usedDays
+                          }{' '}
+                          วัน
+                        </TableCell>
+
+                        <TableCell>
+                          <Box
+                            component="span"
+                            sx={{
+                              display:
+                                'inline-flex',
+
+                              minWidth:
+                                '64px',
+
+                              justifyContent:
+                                'center',
+
+                              padding:
+                                '5px 10px',
+
+                              backgroundColor:
+                                '#DCFCE7',
+
+                              color:
+                                '#15803D',
+
+                              borderRadius:
+                                '999px',
+
+                              fontSize:
+                                '10px',
+
+                              fontWeight:
+                                700,
+
+                              whiteSpace:
+                                'nowrap',
+                            }}
+                          >
+                            {
+                              remaining
+                            }{' '}
+                            วัน
+                          </Box>
+                        </TableCell>
+
+                        <TableCell>
+                          <Button
+                            type="button"
+                            onClick={() =>
+                              handleOpenEdit(
+                                item,
+                              )
+                            }
+                            sx={{
+                              minWidth:
+                                0,
+
+                              padding:
+                                0,
+
+                              color:
+                                theme.primary,
+
+                              fontSize:
+                                '11px',
+
+                              fontWeight:
+                                700,
+
+                              textTransform:
+                                'none',
+
+                              '&:hover':
+                                {
+                                  backgroundColor:
+                                    'transparent',
+
+                                  textDecoration:
+                                    'underline',
+                                },
+                            }}
+                          >
+                            แก้ไข
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  },
                 )}
-              </Box>
-            </Box>
+              </TableBody>
+            </Table>
           </Box>
         ) : (
+          /* Empty */
+
           <Box
             sx={{
               minHeight:
-                '300px',
-
-              padding:
-                '40px 24px',
+                '280px',
 
               display:
                 'flex',
@@ -1799,19 +1839,10 @@ function LeaveEntitlementManagementPage() {
             <Box
               sx={{
                 width:
-                  '64px',
+                  '58px',
 
                 height:
-                  '64px',
-
-                backgroundColor:
-                  '#ECFDF5',
-
-                color:
-                  '#059669',
-
-                borderRadius:
-                  '50%',
+                  '58px',
 
                 display:
                   'flex',
@@ -1822,8 +1853,17 @@ function LeaveEntitlementManagementPage() {
                 justifyContent:
                   'center',
 
+                backgroundColor:
+                  theme.soft,
+
+                color:
+                  theme.primary,
+
+                borderRadius:
+                  '50%',
+
                 fontSize:
-                  '24px',
+                  '20px',
 
                 fontWeight:
                   800,
@@ -1838,40 +1878,42 @@ function LeaveEntitlementManagementPage() {
                   '#111827',
 
                 fontSize:
-                  '18px',
+                  '16px',
 
                 fontWeight:
                   800,
 
                 marginTop:
-                  '16px',
+                  '14px',
               }}
             >
-              No entitlement records found
+              ไม่พบข้อมูลสิทธิ์การลา
             </Typography>
 
             <Typography
               sx={{
                 color:
-                  '#6B7280',
+                  '#64748B',
 
                 fontSize:
-                  '14px',
+                  '12px',
 
                 marginTop:
-                  '6px',
+                  '5px',
               }}
             >
-              Try changing or clearing the selected filters.
+              ลองเปลี่ยนหรือล้างตัวกรอง
             </Typography>
           </Box>
         )}
       </Paper>
 
+      {/* =====================
+          Add / Edit Dialog
+      ====================== */}
+
       <Dialog
-        open={Boolean(
-          dialogMode,
-        )}
+        open={dialogOpen}
         onClose={
           handleCloseDialog
         }
@@ -1886,78 +1928,46 @@ function LeaveEntitlementManagementPage() {
       >
         <DialogTitle
           sx={{
-            padding: {
-              xs:
-                '20px',
+            padding:
+              '20px 24px',
 
-              sm:
-                '24px',
-            },
+            color:
+              '#111827',
+
+            fontSize:
+              '20px',
+
+            fontWeight:
+              800,
 
             borderBottom:
               '1px solid #E5E7EB',
           }}
         >
-          <Typography
-            component="div"
-            sx={{
-              color:
-                '#111827',
-
-              fontSize:
-                '20px',
-
-              fontWeight:
-                800,
-            }}
-          >
-            {dialogMode ===
-            'add'
-              ? 'Add Leave Entitlement'
-              : 'Edit Leave Entitlement'}
-          </Typography>
-
-          <Typography
-            component="div"
-            sx={{
-              color:
-                '#6B7280',
-
-              fontSize:
-                '14px',
-
-              marginTop:
-                '6px',
-            }}
-          >
-            Total and Used Days will update the shared leave
-            balance storage.
-          </Typography>
+          {dialogMode ===
+          'add'
+            ? 'เพิ่มสิทธิ์การลา'
+            : 'แก้ไขสิทธิ์การลา'}
         </DialogTitle>
 
         <DialogContent
           sx={{
-            padding: {
-              xs:
-                '20px',
-
-              sm:
-                '24px',
-            },
+            padding:
+              '24px !important',
           }}
         >
-          {dialogError && (
+          {formError && (
             <Alert
               severity="error"
               sx={{
                 marginBottom:
-                  '20px',
+                  '18px',
 
                 borderRadius:
-                  '8px',
+                  '9px',
               }}
             >
-              {dialogError}
+              {formError}
             </Alert>
           )}
 
@@ -1971,13 +1981,15 @@ function LeaveEntitlementManagementPage() {
                   '1fr',
 
                 sm:
-                  'repeat(2, minmax(0, 1fr))',
+                  'repeat(2, 1fr)',
               },
 
               gap:
-                '18px',
+                '16px',
             }}
           >
+            {/* Employee */}
+
             <FormControl
               fullWidth
               disabled={
@@ -1986,66 +1998,56 @@ function LeaveEntitlementManagementPage() {
               }
               sx={{
                 gridColumn: {
-                  xs:
-                    'auto',
-
-                  sm:
-                    '1 / -1',
+                  xs: 'auto',
+                  sm: '1 / -1',
                 },
               }}
             >
-              <InputLabel id="dialog-employee-label">
-                Employee
+              <InputLabel>
+                พนักงาน
               </InputLabel>
 
               <Select
-                labelId="dialog-employee-label"
                 value={
-                  dialogForm.role
+                  formData.employeeId
                 }
-                label="Employee"
+                label="พนักงาน"
                 onChange={(
                   event,
                 ) =>
-                  updateDialogField(
-                    'role',
+                  handleFormChange(
+                    'employeeId',
                     event.target
                       .value,
                   )
                 }
-                sx={{
-                  borderRadius:
-                    '8px',
-                }}
               >
-                {employeeOptionIds.map(
-                  (role) => {
-                    const profile =
-                      employeeProfileOptions[
-                        role
-                      ];
-
-                    return (
-                      <MenuItem
-                        key={
-                          role
-                        }
-                        value={
-                          role
-                        }
-                      >
-                        {profile.employeeId}{' '}
-                        —{' '}
-                        {profile.employeeName}{' '}
-                        (
-                        {profile.roleLabel}
-                        )
-                      </MenuItem>
-                    );
-                  },
+                {activeEmployees.map(
+                  (
+                    employee,
+                  ) => (
+                    <MenuItem
+                      key={
+                        employee.id
+                      }
+                      value={String(
+                        employee.id,
+                      )}
+                    >
+                      {
+                        employee.code
+                      }{' '}
+                      -{' '}
+                      {
+                        employee.name
+                      }
+                    </MenuItem>
+                  ),
                 )}
               </Select>
             </FormControl>
+
+            {/* Leave Type */}
 
             <FormControl
               fullWidth
@@ -2054,34 +2056,26 @@ function LeaveEntitlementManagementPage() {
                 'edit'
               }
             >
-              <InputLabel id="dialog-leave-type-label">
-                Leave Type
+              <InputLabel>
+                ประเภทการลา
               </InputLabel>
 
               <Select
-                labelId="dialog-leave-type-label"
                 value={
-                  dialogForm.leaveTypeId
+                  formData.leaveTypeId
                 }
-                label="Leave Type"
+                label="ประเภทการลา"
                 onChange={(
                   event,
                 ) =>
-                  updateDialogField(
+                  handleFormChange(
                     'leaveTypeId',
-
-                    Number(
-                      event.target
-                        .value,
-                    ),
+                    event.target
+                      .value,
                   )
                 }
-                sx={{
-                  borderRadius:
-                    '8px',
-                }}
               >
-                {leaveTypeApiOptions.map(
+                {activeLeaveTypes.map(
                   (
                     leaveType,
                   ) => (
@@ -2089,24 +2083,27 @@ function LeaveEntitlementManagementPage() {
                       key={
                         leaveType.id
                       }
-                      value={
-                        leaveType.id
-                      }
+                      value={String(
+                        leaveType.id,
+                      )}
                     >
-                      {leaveType.name}
+                      {translateLeaveType(
+                        leaveType.name,
+                      )}
                     </MenuItem>
                   ),
                 )}
               </Select>
             </FormControl>
 
+            {/* Year */}
+
             <TextField
               fullWidth
-              required
               type="number"
-              label="Entitlement Year"
+              label="ปี"
               value={
-                dialogForm.year
+                formData.year
               }
               disabled={
                 dialogMode ===
@@ -2115,108 +2112,161 @@ function LeaveEntitlementManagementPage() {
               onChange={(
                 event,
               ) =>
-                updateDialogField(
+                handleFormChange(
                   'year',
-
                   event.target
                     .value,
                 )
               }
-              inputProps={{
-                min: 2000,
-                max: 2100,
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    borderRadius:
-                      '8px',
-                  },
+              slotProps={{
+                htmlInput: {
+                  min: 2000,
+                  max: 2100,
+                },
               }}
             />
 
+            {/* Total */}
+
             <TextField
               fullWidth
-              required
               type="number"
-              label="Total Days"
+              label="สิทธิ์ทั้งหมด (วัน)"
               value={
-                dialogForm.totalDays
+                formData.totalDays
               }
               onChange={(
                 event,
               ) =>
-                updateDialogField(
+                handleFormChange(
                   'totalDays',
-
                   event.target
                     .value,
                 )
               }
-              inputProps={{
-                min: 0,
-                max: 365,
-                step: 0.5,
-              }}
-              helperText="Maximum leave days granted"
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    borderRadius:
-                      '8px',
-                  },
+              slotProps={{
+                htmlInput: {
+                  min: 0,
+                  max: 365,
+                },
               }}
             />
 
+            {/* Used */}
+
             <TextField
               fullWidth
-              required
               type="number"
-              label="Used Days"
+              label="ใช้ไปแล้ว (วัน)"
               value={
-                dialogForm.usedDays
+                formData.usedDays
               }
               onChange={(
                 event,
               ) =>
-                updateDialogField(
+                handleFormChange(
                   'usedDays',
-
                   event.target
                     .value,
                 )
               }
-              inputProps={{
-                min: 0,
-                max: 365,
-                step: 0.5,
-              }}
-              helperText={
-                dialogMode ===
-                'edit'
-                  ? `Pending: ${selectedEntitlement?.pendingDays || 0} day(s)`
-                  : 'Approved leave already used'
-              }
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    borderRadius:
-                      '8px',
-                  },
+              slotProps={{
+                htmlInput: {
+                  min: 0,
+                  max: 365,
+                },
               }}
             />
           </Box>
+
+          {dialogMode ===
+            'edit' &&
+            selectedEntitlement && (
+              <Box
+                sx={{
+                  marginTop:
+                    '18px',
+
+                  padding:
+                    '14px 16px',
+
+                  backgroundColor:
+                    '#F8FAFC',
+
+                  border:
+                    '1px solid #E5E7EB',
+
+                  borderRadius:
+                    '10px',
+                }}
+              >
+                <Typography
+                  sx={{
+                    color:
+                      '#64748B',
+
+                    fontSize:
+                      '11px',
+                  }}
+                >
+                  กำลังแก้ไข
+                </Typography>
+
+                <Typography
+                  sx={{
+                    color:
+                      '#111827',
+
+                    fontSize:
+                      '13px',
+
+                    fontWeight:
+                      800,
+
+                    marginTop:
+                      '3px',
+                  }}
+                >
+                  {
+                    selectedEntitlement.employeeCode
+                  }{' '}
+                  -{' '}
+                  {
+                    selectedEntitlement.employeeName
+                  }
+                </Typography>
+
+                <Typography
+                  sx={{
+                    color:
+                      theme.primary,
+
+                    fontSize:
+                      '12px',
+
+                    fontWeight:
+                      700,
+
+                    marginTop:
+                      '4px',
+                  }}
+                >
+                  {translateLeaveType(
+                    selectedEntitlement.leaveType,
+                  )}{' '}
+                  · ปี{' '}
+                  {
+                    selectedEntitlement.year
+                  }
+                </Typography>
+              </Box>
+            )}
         </DialogContent>
 
         <DialogActions
           sx={{
-            padding: {
-              xs:
-                '16px 20px 20px',
-
-              sm:
-                '16px 24px 24px',
-            },
+            padding:
+              '16px 24px 22px',
 
             borderTop:
               '1px solid #E5E7EB',
@@ -2228,6 +2278,7 @@ function LeaveEntitlementManagementPage() {
           <Button
             type="button"
             variant="outlined"
+            disabled={saving}
             onClick={
               handleCloseDialog
             }
@@ -2239,16 +2290,16 @@ function LeaveEntitlementManagementPage() {
                 '42px',
 
               color:
-                '#374151',
+                '#475569',
 
               borderColor:
-                '#D1D5DB',
+                '#CBD5E1',
 
               borderRadius:
                 '8px',
 
               fontSize:
-                '14px',
+                '12px',
 
               fontWeight:
                 700,
@@ -2257,7 +2308,7 @@ function LeaveEntitlementManagementPage() {
                 'none',
             }}
           >
-            Cancel
+            ยกเลิก
           </Button>
 
           <Button
@@ -2265,17 +2316,17 @@ function LeaveEntitlementManagementPage() {
             variant="contained"
             disabled={saving}
             onClick={
-              handleSaveEntitlement
+              handleSave
             }
             sx={{
               minWidth:
-                '130px',
+                '120px',
 
               height:
                 '42px',
 
               backgroundColor:
-                '#059669',
+                theme.primary,
 
               color:
                 '#FFFFFF',
@@ -2284,7 +2335,7 @@ function LeaveEntitlementManagementPage() {
                 '8px',
 
               fontSize:
-                '14px',
+                '12px',
 
               fontWeight:
                 700,
@@ -2297,14 +2348,16 @@ function LeaveEntitlementManagementPage() {
 
               '&:hover': {
                 backgroundColor:
-                  '#047857',
+                  theme.dark,
 
                 boxShadow:
                   'none',
               },
             }}
           >
-            Save Changes
+            {saving
+              ? 'กำลังบันทึก...'
+              : 'บันทึก'}
           </Button>
         </DialogActions>
       </Dialog>

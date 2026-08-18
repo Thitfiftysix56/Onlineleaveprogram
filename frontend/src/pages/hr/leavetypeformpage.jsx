@@ -228,7 +228,9 @@ function LeaveTypeFormPage({ mode = 'add' }) {
             fontWeight: 800,
           }}
         >
-          Add Leave Type
+          {isEditMode
+            ? 'Edit Leave Type'
+            : 'Add Leave Type'}
         </Typography>
 
         <Typography
@@ -238,8 +240,9 @@ function LeaveTypeFormPage({ mode = 'add' }) {
             marginTop: '6px',
           }}
         >
-          Create a new leave type and define its entitlement
-          and request conditions.
+          {isEditMode
+            ? 'Update the leave type entitlement and request conditions.'
+            : 'Create a new leave type and define its entitlement and request conditions.'}
         </Typography>
 
 <Button

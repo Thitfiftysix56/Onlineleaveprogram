@@ -92,6 +92,12 @@ test('OTP request sends to the database email and stores only an HMAC hash', asy
   setEmailTransportForTests({
     async sendMail(message) {
       sentMail = message
+      return {
+        accepted: [message.to],
+        rejected: [],
+        messageId: 'test-otp-message',
+        response: '250 Message accepted',
+      }
     },
   })
   const results = [
@@ -166,6 +172,12 @@ test('resend after cooldown creates a different OTP and sends a second email', a
   setEmailTransportForTests({
     async sendMail(message) {
       sentMail = message
+      return {
+        accepted: [message.to],
+        rejected: [],
+        messageId: 'test-resend-message',
+        response: '250 Message accepted',
+      }
     },
   })
   pool.execute = async (sql) => {

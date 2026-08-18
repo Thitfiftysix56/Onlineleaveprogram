@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+
 import {
   Alert,
   Box,
   Button,
-  Chip,
+  CircularProgress,
   FormControl,
   InputLabel,
   MenuItem,
@@ -13,180 +14,264 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TablePagination,
   TableRow,
   TextField,
   Typography,
 } from '@mui/material';
+
+import { useNavigate } from 'react-router-dom';
+
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
-import { getTeamReport } from '../../api/leave-service.js';
+import api from '../../api/axios.js';
 
-/* Legacy demo rows are intentionally disabled; production data comes from getTeamReport().
-const legacyTeamLeaveRequests = [
-  {
-    id: 1,
-    requestNo: 'LR-20260720-0013',
-    employeeCode: 'EMP001',
-    employeeName: 'Employee User',
-    department: 'Information Technology',
-    leaveType: 'Annual Leave',
-    startDate: '2026-07-30',
-    endDate: '2026-07-31',
-    leaveDays: 2,
-    status: 'pending',
-    submittedAt: '2026-07-20T14:05:00',
-  },
-  {
-    id: 2,
-    requestNo: 'LR-20260718-0011',
-    employeeCode: 'EMP005',
-    employeeName: 'Kanya Somjai',
-    department: 'Information Technology',
-    leaveType: 'Sick Leave',
-    startDate: '2026-07-18',
-    endDate: '2026-07-18',
-    leaveDays: 1,
-    status: 'approved',
-    submittedAt: '2026-07-18T08:20:00',
-  },
-  {
-    id: 3,
-    requestNo: 'LR-20260715-0009',
-    employeeCode: 'EMP007',
-    employeeName: 'Thana Prasert',
-    department: 'Information Technology',
-    leaveType: 'Personal Leave',
-    startDate: '2026-07-16',
-    endDate: '2026-07-16',
-    leaveDays: 1,
-    status: 'rejected',
-    submittedAt: '2026-07-15T10:15:00',
-  },
-  {
-    id: 4,
-    requestNo: 'LR-20260710-0006',
-    employeeCode: 'EMP003',
-    employeeName: 'Nicha Charoen',
-    department: 'Information Technology',
-    leaveType: 'Annual Leave',
-    startDate: '2026-07-22',
-    endDate: '2026-07-24',
-    leaveDays: 3,
-    status: 'approved',
-    submittedAt: '2026-07-10T13:40:00',
-  },
-  {
-    id: 5,
-    requestNo: 'LR-20260708-0005',
-    employeeCode: 'EMP009',
-    employeeName: 'Pasin Wattanakul',
-    department: 'Information Technology',
-    leaveType: 'Sick Leave',
-    startDate: '2026-07-09',
-    endDate: '2026-07-10',
-    leaveDays: 2,
-    status: 'cancelled',
-    submittedAt: '2026-07-08T09:30:00',
-  },
-  {
-    id: 6,
-    requestNo: 'LR-20260628-0004',
-    employeeCode: 'EMP006',
-    employeeName: 'Mali Suksan',
-    department: 'Information Technology',
-    leaveType: 'Annual Leave',
-    startDate: '2026-07-01',
-    endDate: '2026-07-03',
-    leaveDays: 3,
-    status: 'approved',
-    submittedAt: '2026-06-28T11:10:00',
-  },
-  {
-    id: 7,
-    requestNo: 'LR-20260620-0002',
-    employeeCode: 'EMP002',
-    employeeName: 'Arthit Boonmee',
-    department: 'Information Technology',
-    leaveType: 'Personal Leave',
-    startDate: '2026-06-23',
-    endDate: '2026-06-23',
-    leaveDays: 1,
-    status: 'rejected',
-    submittedAt: '2026-06-20T15:25:00',
-  },
-]; */
+const theme = {
+  primary: '#7C3AED',
+  dark: '#6D28D9',
+  soft: '#F3E8FF',
+  border: '#DDD6FE',
+};
 
-const statusStyles = {
+const statusLabels = {
+  pending: 'รออนุมัติ',
+  approved: 'อนุมัติแล้ว',
+  rejected: 'ปฏิเสธแล้ว',
+  cancelled: 'ยกเลิกแล้ว',
+};
+
+const statusColors = {
   pending: {
     backgroundColor: '#FEF3C7',
     color: '#B45309',
   },
+
   approved: {
     backgroundColor: '#DCFCE7',
     color: '#15803D',
   },
+
   rejected: {
     backgroundColor: '#FEE2E2',
     color: '#B91C1C',
   },
+
   cancelled: {
     backgroundColor: '#E5E7EB',
-    color: '#6B7280',
+    color: '#64748B',
   },
 };
 
+const leaveTypeLabels = {
+  'Annual Leave': 'ลาพักร้อน',
+  'Sick Leave': 'ลาป่วย',
+  'Personal Leave': 'ลากิจ',
+  'Maternity Leave': 'ลาคลอด',
+  'Paternity Leave': 'ลาเพื่อดูแลบุตร',
+  'Ordination Leave': 'ลาอุปสมบท',
+  'Military Leave': 'ลาเพื่อรับราชการทหาร',
+  Other: 'ลาอื่น ๆ',
+};
+
+const translateLeaveType = (value) =>
+  leaveTypeLabels[value] || value || '-';
+
+const formatDate = (value) => {
+  if (!value) {
+    return '-';
+  }
+
+  const match = String(value).match(
+    /^(\d{4})-(\d{2})-(\d{2})/,
+  );
+
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}`;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+
+  return `${day}/${month}/${date.getFullYear()}`;
+};
+
+const formatDateRange = (startDate, endDate) => {
+  if (!startDate && !endDate) {
+    return '-';
+  }
+
+  if (!endDate || startDate === endDate) {
+    return formatDate(startDate);
+  }
+
+  return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+};
+
+/* =========================
+   ช่องวันที่ภาษาไทย
+========================= */
+
+function ThaiDateField({
+  label,
+  value,
+  onChange,
+}) {
+  const formatDisplayDate = (dateValue) => {
+    if (!dateValue) {
+      return '';
+    }
+
+    const [year, month, day] =
+      dateValue.split('-');
+
+    if (!year || !month || !day) {
+      return '';
+    }
+
+    return `${day}/${month}/${year}`;
+  };
+
+  return (
+    <Box
+      sx={{
+        position: 'relative',
+      }}
+    >
+      <TextField
+        fullWidth
+        label={label}
+        value={formatDisplayDate(value)}
+        placeholder="วว/ดด/ปปปป"
+        slotProps={{
+          input: {
+            readOnly: true,
+          },
+
+          inputLabel: {
+            shrink: true,
+          },
+        }}
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            height: '48px',
+            borderRadius: '9px',
+          },
+
+          '& .MuiOutlinedInput-input': {
+            fontSize: '14px',
+          },
+
+          '& .MuiInputBase-input::placeholder': {
+            opacity: 1,
+            color: '#64748B',
+          },
+        }}
+      />
+
+      <input
+        type="date"
+        value={value}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          opacity: 0,
+          cursor: 'pointer',
+        }}
+      />
+    </Box>
+  );
+}
+
 function SupervisorReportsPage() {
-  const [teamLeaveRequests, setTeamLeaveRequests] = useState([]);
+  const navigate = useNavigate();
+
+  const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [leaveTypeFilter, setLeaveTypeFilter] =
-    useState('all');
-  const [startDateFilter, setStartDateFilter] =
-    useState('');
-  const [endDateFilter, setEndDateFilter] =
-    useState('');
-  const [message, setMessage] = useState(null);
+  const [error, setError] = useState('');
 
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [status, setStatus] = useState('all');
+  const [leaveType, setLeaveType] = useState('all');
 
-  useEffect(() => { let active=true; setLoading(true); setLoadError(''); getTeamReport({ status:statusFilter, startDate:startDateFilter||undefined, endDate:endDateFilter||undefined }).then((data)=>{if(active)setTeamLeaveRequests(data?.leaveRequests||[])}).catch((error)=>{if(active)setLoadError(error.response?.data?.message||'Unable to load team report.')}).finally(()=>{if(active)setLoading(false)}); return()=>{active=false}; }, [statusFilter,startDateFilter,endDateFilter]);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  useEffect(() => {
+    const loadReport = async () => {
+      setLoading(true);
+      setError('');
+
+      try {
+        const response = await api.get(
+          '/supervisor/team-report',
+        );
+
+        setRequests(
+          response.data?.data?.leaveRequests || [],
+        );
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+            'ไม่สามารถโหลดรายงานทีมได้',
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadReport();
+  }, []);
+
+  const leaveTypes = useMemo(() => {
+    const map = new Map();
+
+    requests.forEach((request) => {
+      if (
+        request.leaveTypeId &&
+        request.leaveType
+      ) {
+        map.set(
+          String(request.leaveTypeId),
+          request.leaveType,
+        );
+      }
+    });
+
+    return Array.from(map.entries());
+  }, [requests]);
 
   const filteredRequests = useMemo(() => {
-    const keyword = searchText.trim().toLowerCase();
-
-    return teamLeaveRequests.filter((request) => {
-      const matchesSearch =
-        !keyword ||
-        request.requestNo.toLowerCase().includes(keyword) ||
-        request.employeeCode
-          .toLowerCase()
-          .includes(keyword) ||
-        request.employeeName
-          .toLowerCase()
-          .includes(keyword) ||
-        request.leaveType.toLowerCase().includes(keyword);
+    return requests.filter((request) => {
+      const requestStatus = String(
+        request.status || '',
+      ).toLowerCase();
 
       const matchesStatus =
-        statusFilter === 'all' ||
-        request.status === statusFilter;
+        status === 'all' ||
+        requestStatus === status;
 
       const matchesLeaveType =
-        leaveTypeFilter === 'all' ||
-        request.leaveType === leaveTypeFilter;
+        leaveType === 'all' ||
+        String(request.leaveTypeId) ===
+          String(leaveType);
 
       const matchesStartDate =
-        !startDateFilter ||
-        request.startDate >= startDateFilter;
+        !startDate ||
+        request.startDate >= startDate;
 
       const matchesEndDate =
-        !endDateFilter ||
-        request.endDate <= endDateFilter;
+        !endDate ||
+        request.endDate <= endDate;
 
       return (
-        matchesSearch &&
         matchesStatus &&
         matchesLeaveType &&
         matchesStartDate &&
@@ -194,295 +279,110 @@ function SupervisorReportsPage() {
       );
     });
   }, [
-    searchText,
-    statusFilter,
-    leaveTypeFilter,
-    startDateFilter,
-    endDateFilter,
-    teamLeaveRequests,
+    requests,
+    status,
+    leaveType,
+    startDate,
+    endDate,
   ]);
 
-  const paginatedRequests = useMemo(() => {
-    const startIndex = page * rowsPerPage;
+  const summary = useMemo(() => {
+    const count = (selectedStatus) =>
+      filteredRequests.filter(
+        (request) =>
+          String(
+            request.status || '',
+          ).toLowerCase() === selectedStatus,
+      ).length;
 
-    return filteredRequests.slice(
-      startIndex,
-      startIndex + rowsPerPage,
-    );
-  }, [filteredRequests, page, rowsPerPage]);
-
-  const summary = useMemo(
-    () => ({
+    return {
       total: filteredRequests.length,
-
-      pending: filteredRequests.filter(
-        (request) => request.status === 'pending',
-      ).length,
-
-      approved: filteredRequests.filter(
-        (request) => request.status === 'approved',
-      ).length,
-
-      rejected: filteredRequests.filter(
-        (request) => request.status === 'rejected',
-      ).length,
-
-      leaveDays: filteredRequests.reduce(
-        (total, request) =>
-          total + Number(request.leaveDays),
-        0,
-      ),
-    }),
-    [filteredRequests],
-  );
-
-  const leaveTypes = useMemo(
-    () => [
-      ...new Set(
-        teamLeaveRequests.map(
-          (request) => request.leaveType,
-        ),
-      ),
-    ],
-    [teamLeaveRequests],
-  );
-
-  const formatStatus = (status) =>
-    status.charAt(0).toUpperCase() +
-    status.slice(1);
-
-  const formatDate = (dateString) => {
-    if (!dateString) {
-      return '-';
-    }
-
-    const date = new Date(`${dateString}T00:00:00`);
-
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  const formatDateTime = (dateTimeString) => {
-    if (!dateTimeString) {
-      return '-';
-    }
-
-    const date = new Date(dateTimeString);
-
-    return date.toLocaleString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const handleClearFilters = () => {
-    setSearchText('');
-    setStatusFilter('all');
-    setLeaveTypeFilter('all');
-    setStartDateFilter('');
-    setEndDateFilter('');
-    setPage(0);
-    setMessage(null);
-  };
-
-  const handleViewDetail = (request) => {
-    setMessage({
-      severity: 'info',
-      text: `${request.requestNo} was selected. The team Leave Request Detail page will open after routing is connected.`,
-    });
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
-  };
-
-  const handleExportExcel = () => {
-    if (filteredRequests.length === 0) {
-      setMessage({
-        severity: 'warning',
-        text: 'There is no report data to export with the selected filters.',
-      });
-
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth',
-      });
-
-      return;
-    }
-
-    console.log({
-      action: 'export-supervisor-team-report',
-      filters: {
-        searchText,
-        statusFilter,
-        leaveTypeFilter,
-        startDateFilter,
-        endDateFilter,
-      },
-      requests: filteredRequests,
-    });
-
-    setMessage({
-      severity: 'success',
-      text: `${filteredRequests.length} team leave request record(s) are ready for Excel export. The file will be generated after the report API is connected.`,
-    });
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
-  };
-
-  const handlePageChange = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleRowsPerPageChange = (event) => {
-    setRowsPerPage(Number(event.target.value));
-    setPage(0);
-  };
-
-  const handleFilterChange = (setter, value) => {
-    setter(value);
-    setPage(0);
-    setMessage(null);
-  };
+      pending: count('pending'),
+      approved: count('approved'),
+      rejected: count('rejected'),
+    };
+  }, [filteredRequests]);
 
   const summaryCards = [
     {
-      title: 'Total Requests',
+      title: 'คำขอทั้งหมด',
       value: summary.total,
-      backgroundColor: '#F5F3FF',
-      color: '#7C3AED',
+      backgroundColor: theme.soft,
+      color: theme.primary,
     },
+
     {
-      title: 'Pending',
+      title: 'รออนุมัติ',
       value: summary.pending,
       backgroundColor: '#FEF3C7',
       color: '#B45309',
     },
+
     {
-      title: 'Approved',
+      title: 'อนุมัติแล้ว',
       value: summary.approved,
       backgroundColor: '#DCFCE7',
       color: '#15803D',
     },
+
     {
-      title: 'Rejected',
+      title: 'ปฏิเสธแล้ว',
       value: summary.rejected,
       backgroundColor: '#FEE2E2',
       color: '#B91C1C',
     },
-    {
-      title: 'Total Leave Days',
-      value: summary.leaveDays,
-      backgroundColor: '#EFF6FF',
-      color: '#2563EB',
-    },
   ];
+
+  const clearFilters = () => {
+    setStatus('all');
+    setLeaveType('all');
+    setStartDate('');
+    setEndDate('');
+  };
 
   return (
     <SupervisorLayout activeMenu="Team Reports">
-      {(loading || loadError) && <Alert severity={loadError ? 'error' : 'info'} sx={{ marginBottom:'16px' }}>{loadError || 'Loading team report...'}</Alert>}
-      <Box
+      {/* หัวข้อ */}
+      <Typography
+        component="h1"
         sx={{
-          display: 'flex',
-          alignItems: {
-            xs: 'flex-start',
-            md: 'center',
+          color: '#111827',
+
+          fontSize: {
+            xs: '26px',
+            sm: '30px',
           },
-          justifyContent: 'space-between',
-          flexDirection: {
-            xs: 'column',
-            md: 'row',
-          },
-          gap: '18px',
-          marginBottom: '28px',
+
+          fontWeight: 800,
+          marginBottom: '22px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color: '#111827',
-              fontSize: {
-                xs: '26px',
-                sm: '30px',
-              },
-              fontWeight: 800,
-            }}
-          >
-            Team Reports
-          </Typography>
+        รายงานทีม
+      </Typography>
 
-          <Typography
-            sx={{
-              color: '#6B7280',
-              fontSize: '15px',
-              marginTop: '6px',
-            }}
-          >
-            Review and export leave request information
-            for employees under your supervision.
-          </Typography>
-        </Box>
-
-        <Button
-          type="button"
-          variant="contained"
-          onClick={handleExportExcel}
-          sx={{
-            minWidth: '145px',
-            height: '44px',
-            padding: '0 20px',
-            backgroundColor: '#7C3AED',
-            color: '#FFFFFF',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: 700,
-            textTransform: 'none',
-            boxShadow: 'none',
-
-            '&:hover': {
-              backgroundColor: '#6D28D9',
-              boxShadow: 'none',
-            },
-          }}
-        >
-          Export Excel
-        </Button>
-      </Box>
-
-      {message && (
+      {error && (
         <Alert
-          severity={message.severity}
-          onClose={() => setMessage(null)}
+          severity="error"
           sx={{
-            marginBottom: '24px',
-            borderRadius: '8px',
+            marginBottom: '20px',
+            borderRadius: '10px',
           }}
         >
-          {message.text}
+          {error}
         </Alert>
       )}
 
+      {/* Summary Cards */}
       <Box
         sx={{
           display: 'grid',
+
           gridTemplateColumns: {
             xs: '1fr',
-            sm: 'repeat(2, minmax(0, 1fr))',
-            lg: 'repeat(3, minmax(0, 1fr))',
-            xl: 'repeat(5, minmax(0, 1fr))',
+            sm: 'repeat(2, 1fr)',
+            xl: 'repeat(4, 1fr)',
           },
+
           gap: '18px',
           marginBottom: '24px',
         }}
@@ -492,23 +392,32 @@ function SupervisorReportsPage() {
             key={card.title}
             elevation={0}
             sx={{
-              padding: '18px',
+              minHeight: '140px',
+              padding: '20px',
+
               backgroundColor: '#FFFFFF',
+
               border: '1px solid #E5E7EB',
-              borderRadius: '12px',
+              borderRadius: '14px',
             }}
           >
             <Box
               sx={{
-                width: '44px',
-                height: '44px',
+                width: '50px',
+                height: '50px',
+
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: card.backgroundColor,
+
+                backgroundColor:
+                  card.backgroundColor,
+
                 color: card.color,
+
                 borderRadius: '11px',
-                fontSize: '18px',
+
+                fontSize: '20px',
                 fontWeight: 800,
               }}
             >
@@ -518,8 +427,10 @@ function SupervisorReportsPage() {
             <Typography
               sx={{
                 color: '#111827',
+
                 fontSize: '14px',
                 fontWeight: 800,
+
                 marginTop: '13px',
               }}
             >
@@ -529,534 +440,503 @@ function SupervisorReportsPage() {
         ))}
       </Box>
 
+      {/* รายงาน */}
       <Paper
         elevation={0}
         sx={{
           backgroundColor: '#FFFFFF',
+
           border: '1px solid #E5E7EB',
-          borderRadius: '12px',
+          borderRadius: '14px',
+
           overflow: 'hidden',
         }}
       >
+        {/* Filter */}
         <Box
           sx={{
-            padding: {
-              xs: '20px',
-              sm: '24px',
-            },
-            borderBottom: '1px solid #E5E7EB',
+            padding: '20px 24px',
+
+            borderBottom:
+              '1px solid #E5E7EB',
           }}
         >
           <Typography
             sx={{
               color: '#111827',
+
               fontSize: '18px',
               fontWeight: 800,
             }}
           >
-            Team Leave Request Report
+            ประวัติการลาของลูกทีม
           </Typography>
 
           <Typography
             sx={{
-              color: '#6B7280',
-              fontSize: '14px',
+              color: '#64748B',
+
+              fontSize: '12px',
+
               marginTop: '4px',
             }}
           >
-            Showing {filteredRequests.length} of{' '}
-            {teamLeaveRequests.length} records
+            แสดง {filteredRequests.length} รายการ
           </Typography>
 
           <Box
             sx={{
               display: 'grid',
+
               gridTemplateColumns: {
                 xs: '1fr',
-                lg: 'repeat(2, minmax(0, 1fr))',
-                xl: 'minmax(250px, 1.5fr) repeat(4, minmax(150px, 0.8fr))',
+
+                md: 'repeat(2, 1fr)',
               },
+
               gap: '16px',
-              marginTop: '22px',
+
+              marginTop: '20px',
             }}
           >
-            <TextField
-              fullWidth
-              label="Search"
-              placeholder="Request number, employee or leave type"
-              value={searchText}
-              onChange={(event) =>
-                handleFilterChange(
-                  setSearchText,
-                  event.target.value,
-                )
-              }
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  height: '48px',
-                  borderRadius: '8px',
-
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#7C3AED',
-                  },
-                },
-
-                '& .MuiInputLabel-root.Mui-focused': {
-                  color: '#7C3AED',
-                },
-              }}
-            />
-
+            {/* สถานะ */}
             <FormControl fullWidth>
-              <InputLabel id="team-report-status-label">
-                Status
+              <InputLabel>
+                สถานะ
               </InputLabel>
 
               <Select
-                labelId="team-report-status-label"
-                value={statusFilter}
-                label="Status"
+                value={status}
+                label="สถานะ"
                 onChange={(event) =>
-                  handleFilterChange(
-                    setStatusFilter,
+                  setStatus(
                     event.target.value,
                   )
                 }
                 sx={{
                   height: '48px',
-                  borderRadius: '8px',
-
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline':
-                    {
-                      borderColor: '#7C3AED',
-                    },
+                  borderRadius: '9px',
                 }}
               >
                 <MenuItem value="all">
-                  All Statuses
+                  ทุกสถานะ
                 </MenuItem>
 
                 <MenuItem value="pending">
-                  Pending
+                  รออนุมัติ
                 </MenuItem>
 
                 <MenuItem value="approved">
-                  Approved
+                  อนุมัติแล้ว
                 </MenuItem>
 
                 <MenuItem value="rejected">
-                  Rejected
+                  ปฏิเสธแล้ว
                 </MenuItem>
 
                 <MenuItem value="cancelled">
-                  Cancelled
+                  ยกเลิกแล้ว
                 </MenuItem>
               </Select>
             </FormControl>
 
+            {/* ประเภทการลา */}
             <FormControl fullWidth>
-              <InputLabel id="team-report-leave-type-label">
-                Leave Type
+              <InputLabel>
+                ประเภทการลา
               </InputLabel>
 
               <Select
-                labelId="team-report-leave-type-label"
-                value={leaveTypeFilter}
-                label="Leave Type"
+                value={leaveType}
+                label="ประเภทการลา"
                 onChange={(event) =>
-                  handleFilterChange(
-                    setLeaveTypeFilter,
+                  setLeaveType(
                     event.target.value,
                   )
                 }
                 sx={{
                   height: '48px',
-                  borderRadius: '8px',
-
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline':
-                    {
-                      borderColor: '#7C3AED',
-                    },
+                  borderRadius: '9px',
                 }}
               >
                 <MenuItem value="all">
-                  All Leave Types
+                  ทุกประเภท
                 </MenuItem>
 
-                {leaveTypes.map((leaveType) => (
-                  <MenuItem
-                    key={leaveType}
-                    value={leaveType}
-                  >
-                    {leaveType}
-                  </MenuItem>
-                ))}
+                {leaveTypes.map(
+                  ([id, name]) => (
+                    <MenuItem
+                      key={id}
+                      value={id}
+                    >
+                      {translateLeaveType(
+                        name,
+                      )}
+                    </MenuItem>
+                  ),
+                )}
               </Select>
             </FormControl>
 
-            <TextField
-              fullWidth
-              type="date"
-              label="Start Date"
-              value={startDateFilter}
-              onChange={(event) =>
-                handleFilterChange(
-                  setStartDateFilter,
-                  event.target.value,
-                )
-              }
-              slotProps={{
-                inputLabel: {
-                  shrink: true,
-                },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  height: '48px',
-                  borderRadius: '8px',
-
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#7C3AED',
-                  },
-                },
-
-                '& .MuiInputLabel-root.Mui-focused': {
-                  color: '#7C3AED',
-                },
-              }}
+            {/* วันที่เริ่มต้น */}
+            <ThaiDateField
+              label="วันที่เริ่มต้น"
+              value={startDate}
+              onChange={setStartDate}
             />
 
-            <TextField
-              fullWidth
-              type="date"
-              label="End Date"
-              value={endDateFilter}
-              onChange={(event) =>
-                handleFilterChange(
-                  setEndDateFilter,
-                  event.target.value,
-                )
-              }
-              slotProps={{
-                inputLabel: {
-                  shrink: true,
-                },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  height: '48px',
-                  borderRadius: '8px',
-
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#7C3AED',
-                  },
-                },
-
-                '& .MuiInputLabel-root.Mui-focused': {
-                  color: '#7C3AED',
-                },
-              }}
+            {/* วันที่สิ้นสุด */}
+            <ThaiDateField
+              label="วันที่สิ้นสุด"
+              value={endDate}
+              onChange={setEndDate}
             />
-          </Box>
 
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'flex-end',
-              marginTop: '14px',
-            }}
-          >
+            {/* ล้างตัวกรอง */}
             <Button
               type="button"
               variant="outlined"
-              onClick={handleClearFilters}
+              onClick={clearFilters}
               sx={{
-                minWidth: '110px',
-                height: '42px',
-                color: '#374151',
-                borderColor: '#D1D5DB',
-                borderRadius: '8px',
-                fontSize: '13px',
+                height: '48px',
+
+                gridColumn: {
+                  xs: 'auto',
+                  md: '1 / 2',
+                },
+
+                color: '#475569',
+
+                borderColor: '#CBD5E1',
+                borderRadius: '9px',
+
+                fontSize: '12px',
                 fontWeight: 700,
+
                 textTransform: 'none',
 
                 '&:hover': {
-                  backgroundColor: '#F9FAFB',
-                  borderColor: '#9CA3AF',
+                  backgroundColor: '#F8FAFC',
+                  borderColor: '#94A3B8',
                 },
               }}
             >
-              Clear Filters
+              ล้างตัวกรอง
             </Button>
           </Box>
         </Box>
 
-        {filteredRequests.length > 0 ? (
-          <>
-            <Box
+        {/* Loading */}
+        {loading ? (
+          <Box
+            sx={{
+              minHeight: '280px',
+
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <CircularProgress
               sx={{
-                width: '100%',
-                overflowX: 'auto',
+                color: theme.primary,
+              }}
+            />
+          </Box>
+        ) : filteredRequests.length > 0 ? (
+          /* Table */
+          <Box
+            sx={{
+              overflowX: 'auto',
+            }}
+          >
+            <Table
+              sx={{
+                minWidth: '950px',
               }}
             >
-              <Table
-                sx={{
-                  minWidth: '1250px',
-                }}
-              >
-                <TableHead>
-                  <TableRow
-                    sx={{
-                      backgroundColor: '#F9FAFB',
-                    }}
-                  >
-                    {[
-                      'Request Number',
-                      'Employee',
-                      'Leave Type',
-                      'Date Range',
-                      'Days',
-                      'Status',
-                      'Submitted',
-                      'Action',
-                    ].map((heading) => (
-                      <TableCell
-                        key={heading}
-                        align={
-                          heading === 'Action'
-                            ? 'right'
-                            : heading === 'Days'
-                              ? 'center'
-                              : 'left'
-                        }
-                        sx={{
-                          color: '#6B7280',
-                          fontSize: '12px',
-                          fontWeight: 800,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.4px',
-                          whiteSpace: 'nowrap',
-                          borderBottom:
-                            '1px solid #E5E7EB',
-                        }}
-                      >
-                        {heading}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
+              <TableHead>
+                <TableRow
+                  sx={{
+                    backgroundColor:
+                      '#F8FAFC',
+                  }}
+                >
+                  {[
+                    'เลขที่คำขอ',
+                    'พนักงาน',
+                    'ประเภทการลา',
+                    'ช่วงวันที่',
+                    'จำนวนวัน',
+                    'สถานะ',
+                    'การดำเนินการ',
+                  ].map((heading) => (
+                    <TableCell
+                      key={heading}
+                      sx={{
+                        color: '#64748B',
 
-                <TableBody>
-                  {paginatedRequests.map((request) => {
-                    const statusStyle =
-                      statusStyles[request.status];
+                        fontSize: '11px',
+                        fontWeight: 700,
+
+                        whiteSpace: 'nowrap',
+
+                        borderBottom:
+                          '1px solid #E5E7EB',
+                      }}
+                    >
+                      {heading}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+
+              <TableBody>
+                {filteredRequests.map(
+                  (request) => {
+                    const requestStatus =
+                      String(
+                        request.status ||
+                          '',
+                      ).toLowerCase();
+
+                    const style =
+                      statusColors[
+                        requestStatus
+                      ] || {
+                        backgroundColor:
+                          '#E5E7EB',
+
+                        color:
+                          '#64748B',
+                      };
 
                     return (
                       <TableRow
                         key={request.id}
                         hover
-                        sx={{
-                          '&:last-child td': {
-                            borderBottom: 'none',
-                          },
-                        }}
                       >
-                        <TableCell
-                          sx={{
-                            color: '#111827',
-                            fontSize: '13px',
-                            fontWeight: 800,
-                            whiteSpace: 'nowrap',
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          {request.requestNo}
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
+                        {/* เลขที่ */}
+                        <TableCell>
                           <Typography
                             sx={{
-                              color: '#111827',
-                              fontSize: '13px',
-                              fontWeight: 800,
-                              whiteSpace: 'nowrap',
+                              color:
+                                theme.primary,
+
+                              fontSize:
+                                '12px',
+
+                              fontWeight:
+                                800,
+
+                              whiteSpace:
+                                'nowrap',
                             }}
                           >
-                            {request.employeeName}
+                            {request.requestNo ||
+                              `#${request.id}`}
+                          </Typography>
+                        </TableCell>
+
+                        {/* พนักงาน */}
+                        <TableCell>
+                          <Typography
+                            sx={{
+                              color:
+                                '#111827',
+
+                              fontSize:
+                                '12px',
+
+                              fontWeight:
+                                700,
+
+                              whiteSpace:
+                                'nowrap',
+                            }}
+                          >
+                            {request.employeeName ||
+                              '-'}
                           </Typography>
 
                           <Typography
                             sx={{
-                              color: '#9CA3AF',
-                              fontSize: '11px',
-                              marginTop: '3px',
+                              color:
+                                '#94A3B8',
+
+                              fontSize:
+                                '10px',
                             }}
                           >
-                            {request.employeeCode}
+                            {request.employeeCode ||
+                              '-'}
                           </Typography>
                         </TableCell>
 
+                        {/* ประเภทลา */}
                         <TableCell
                           sx={{
-                            color: '#374151',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            whiteSpace: 'nowrap',
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          {request.leaveType}
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            color: '#4B5563',
                             fontSize: '12px',
                             whiteSpace: 'nowrap',
-                            borderBottom:
-                              '1px solid #E5E7EB',
                           }}
                         >
-                          {formatDate(request.startDate)} –{' '}
-                          {formatDate(request.endDate)}
-                        </TableCell>
-
-                        <TableCell
-                          align="center"
-                          sx={{
-                            color: '#111827',
-                            fontSize: '13px',
-                            fontWeight: 800,
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          {request.leaveDays}
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          <Chip
-                            label={formatStatus(
-                              request.status,
-                            )}
-                            size="small"
-                            sx={{
-                              minWidth: '80px',
-                              backgroundColor:
-                                statusStyle.backgroundColor,
-                              color: statusStyle.color,
-                              borderRadius: '999px',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                            }}
-                          />
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            color: '#6B7280',
-                            fontSize: '12px',
-                            whiteSpace: 'nowrap',
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          {formatDateTime(
-                            request.submittedAt,
+                          {translateLeaveType(
+                            request.leaveType,
                           )}
                         </TableCell>
 
+                        {/* วันที่ */}
                         <TableCell
-                          align="right"
                           sx={{
+                            fontSize: '12px',
                             whiteSpace: 'nowrap',
-                            borderBottom:
-                              '1px solid #E5E7EB',
                           }}
                         >
+                          {formatDateRange(
+                            request.startDate,
+                            request.endDate,
+                          )}
+                        </TableCell>
+
+                        {/* จำนวนวัน */}
+                        <TableCell
+                          sx={{
+                            fontSize: '12px',
+                            fontWeight: 700,
+                          }}
+                        >
+                          {Number(
+                            request.leaveDays ||
+                              0,
+                          )}{' '}
+                          วัน
+                        </TableCell>
+
+                        {/* สถานะ */}
+                        <TableCell>
+                          <Box
+                            component="span"
+                            sx={{
+                              display:
+                                'inline-flex',
+
+                              alignItems:
+                                'center',
+
+                              justifyContent:
+                                'center',
+
+                              padding:
+                                '5px 10px',
+
+                              backgroundColor:
+                                style.backgroundColor,
+
+                              color:
+                                style.color,
+
+                              borderRadius:
+                                '999px',
+
+                              fontSize:
+                                '10px',
+
+                              fontWeight: 700,
+
+                              whiteSpace:
+                                'nowrap',
+                            }}
+                          >
+                            {statusLabels[
+                              requestStatus
+                            ] ||
+                              request.status ||
+                              '-'}
+                          </Box>
+                        </TableCell>
+
+                        {/* Action */}
+                        <TableCell>
                           <Button
                             type="button"
                             variant="outlined"
                             onClick={() =>
-                              handleViewDetail(request)
+                              navigate(
+                                `/supervisor/approval/${request.id}`,
+                              )
                             }
                             sx={{
-                              minWidth: '76px',
-                              height: '36px',
-                              padding: '0 12px',
-                              color: '#7C3AED',
-                              borderColor: '#7C3AED',
-                              borderRadius: '8px',
-                              fontSize: '12px',
+                              height: '34px',
+
+                              color:
+                                theme.primary,
+
+                              borderColor:
+                                theme.border,
+
+                              borderRadius:
+                                '8px',
+
+                              fontSize:
+                                '11px',
+
                               fontWeight: 700,
-                              textTransform: 'none',
+
+                              textTransform:
+                                'none',
 
                               '&:hover': {
-                                backgroundColor: '#F5F3FF',
-                                borderColor: '#6D28D9',
+                                backgroundColor:
+                                  theme.soft,
+
+                                borderColor:
+                                  theme.primary,
                               },
                             }}
                           >
-                            View
+                            ดู
                           </Button>
                         </TableCell>
                       </TableRow>
                     );
-                  })}
-                </TableBody>
-              </Table>
-            </Box>
-
-            <TablePagination
-              component="div"
-              count={filteredRequests.length}
-              page={page}
-              onPageChange={handlePageChange}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={
-                handleRowsPerPageChange
-              }
-              rowsPerPageOptions={[5, 10]}
-              sx={{
-                borderTop: '1px solid #E5E7EB',
-              }}
-            />
-          </>
+                  },
+                )}
+              </TableBody>
+            </Table>
+          </Box>
         ) : (
+          /* Empty */
           <Box
             sx={{
-              minHeight: '300px',
-              padding: '40px 24px',
+              minHeight: '260px',
+
               display: 'flex',
               flexDirection: 'column',
+
               alignItems: 'center',
               justifyContent: 'center',
+
               textAlign: 'center',
             }}
           >
             <Box
               sx={{
-                width: '64px',
-                height: '64px',
+                width: '58px',
+                height: '58px',
+
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: '#F5F3FF',
-                color: '#7C3AED',
+
+                backgroundColor:
+                  theme.soft,
+
+                color:
+                  theme.primary,
+
                 borderRadius: '50%',
-                fontSize: '24px',
+
+                fontSize: '20px',
                 fontWeight: 800,
               }}
             >
@@ -1066,86 +946,29 @@ function SupervisorReportsPage() {
             <Typography
               sx={{
                 color: '#111827',
-                fontSize: '18px',
+
+                fontSize: '16px',
                 fontWeight: 800,
-                marginTop: '16px',
+
+                marginTop: '14px',
               }}
             >
-              No report data found
+              ไม่พบข้อมูลการลาของลูกทีม
             </Typography>
 
             <Typography
               sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '6px',
+                color: '#64748B',
+
+                fontSize: '12px',
+
+                marginTop: '5px',
               }}
             >
-              Try changing or clearing the selected filters.
+              ลองเปลี่ยนหรือล้างตัวกรอง
             </Typography>
-
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={handleClearFilters}
-              sx={{
-                height: '42px',
-                marginTop: '20px',
-                padding: '0 18px',
-                color: '#7C3AED',
-                borderColor: '#7C3AED',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 700,
-                textTransform: 'none',
-
-                '&:hover': {
-                  backgroundColor: '#F5F3FF',
-                  borderColor: '#6D28D9',
-                },
-              }}
-            >
-              Clear Filters
-            </Button>
           </Box>
         )}
-      </Paper>
-
-      <Paper
-        elevation={0}
-        sx={{
-          padding: {
-            xs: '20px',
-            sm: '24px',
-          },
-          marginTop: '24px',
-          backgroundColor: '#F5F3FF',
-          border: '1px solid #DDD6FE',
-          borderRadius: '12px',
-        }}
-      >
-        <Typography
-          sx={{
-            color: '#6D28D9',
-            fontSize: '15px',
-            fontWeight: 800,
-          }}
-        >
-          Report Access
-        </Typography>
-
-        <Typography
-          sx={{
-            color: '#5B21B6',
-            fontSize: '13px',
-            lineHeight: 1.8,
-            marginTop: '8px',
-          }}
-        >
-          This report contains leave requests only from
-          employees assigned to the current supervisor.
-          Organization-wide reports remain available to HR.
-        </Typography>
       </Paper>
     </SupervisorLayout>
   );

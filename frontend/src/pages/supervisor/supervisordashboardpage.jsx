@@ -13,226 +13,471 @@ import {
   Typography,
 } from '@mui/material';
 
-import { useNavigate } from 'react-router-dom';
+import {
+  useNavigate,
+} from 'react-router-dom';
 
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
 
+import { getTeamReport } from '../../api/leave-service.js';
+import { getNotifications, markNotificationRead as markNotificationAsRead } from '../../api/notification-service.js';
 import {
-  getLeaveRequests,
-  leaveRequestStorageKey,
-} from '../../utils/leaverequeststorage.js';
+  formatNotificationMessage,
+  formatNotificationTitle,
+} from '../../utils/presentationformatter.js';
 
-import {
-  getNotifications,
-  markNotificationAsRead,
-  notificationStorageKey,
-} from '../../utils/notificationstorage.js';
-
-const employeeProfiles = {
-  employee: {
-    employeeId: 'EMP001',
-    employeeName: 'Employee User',
-  },
-  supervisor: {
-    employeeId: 'SUP001',
-    employeeName: 'Supervisor User',
-  },
-  hr: {
-    employeeId: 'HR001',
-    employeeName: 'HR User',
-  },
-  admin: {
-    employeeId: 'ADM001',
-    employeeName: 'Admin User',
-  },
+const supervisorTheme = {
+  primary: '#7C3AED',
+  dark: '#6D28D9',
+  soft: '#F3E8FF',
+  border: '#DDD6FE',
+  text: '#5B21B6',
 };
 
-const capitalizeStatus = (status) => {
-  const normalizedStatus = String(status || '')
+const normalizeStatus = (status) =>
+  String(status || '')
     .trim()
     .toLowerCase();
 
-  if (!normalizedStatus) {
-    return 'Pending';
-  }
+const toNumber = (value) => {
+  const numericValue = Number(value);
 
-  return (
-    normalizedStatus.charAt(0).toUpperCase() +
-    normalizedStatus.slice(1)
-  );
-};
-
-const parseDate = (dateValue) => {
-  if (!dateValue) {
-    return null;
-  }
-
-  const value = String(dateValue);
-
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(value)
-    ? new Date(`${value}T00:00:00`)
-    : new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date;
+  return Number.isFinite(numericValue)
+    ? numericValue
+    : 0;
 };
 
 const getRequestDateValue = (request) => {
-  const date =
-    parseDate(request.updatedAt) ||
-    parseDate(request.approvedAt) ||
-    parseDate(request.rejectedAt) ||
-    parseDate(request.submittedAt) ||
-    parseDate(request.createdAt) ||
-    parseDate(request.startDate);
+  const dateValue =
+    request.submittedAt ||
+    request.updatedAt ||
+    request.createdAt ||
+    request.startDate;
 
-  return date ? date.getTime() : 0;
+  const timestamp = new Date(
+    dateValue || 0,
+  ).getTime();
+
+  return Number.isNaN(timestamp)
+    ? 0
+    : timestamp;
 };
 
-const getApprovalDateValue = (request) => {
-  const status = String(request.status || '').toLowerCase();
+const getRequestYear = (request) => {
+  const value =
+    request.startDate ||
+    request.submittedAt ||
+    request.createdAt ||
+    request.updatedAt;
 
-  let date = null;
-
-  if (status === 'approved') {
-    date =
-      parseDate(request.approvedAt) ||
-      parseDate(request.updatedAt);
+  if (!value) {
+    return null;
   }
 
-  if (status === 'rejected') {
-    date =
-      parseDate(request.rejectedAt) ||
-      parseDate(request.updatedAt);
+  const directYear = Number(
+    String(value).slice(0, 4),
+  );
+
+  if (
+    Number.isInteger(directYear) &&
+    directYear > 0
+  ) {
+    return directYear;
   }
 
-  date =
-    date ||
-    parseDate(request.submittedAt) ||
-    parseDate(request.createdAt) ||
-    parseDate(request.startDate);
+  const date = new Date(value);
 
-  return date ? date.getTime() : 0;
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return null;
+  }
+
+  return date.getFullYear();
 };
 
-const normalizeRequest = (request) => {
-  const requestRole = String(
-    request.role || 'employee',
-  ).toLowerCase();
+const formatDate = (dateValue) => {
+  if (!dateValue) {
+    return '-';
+  }
 
-  const profile =
-    employeeProfiles[requestRole] ||
-    employeeProfiles.employee;
+  const text = String(
+    dateValue,
+  ).trim();
 
-  return {
-    ...request,
+  const directMatch =
+    text.match(
+      /^(\d{4})-(\d{2})-(\d{2})/,
+    );
 
-    id: request.id,
+  if (directMatch) {
+    const [
+      ,
+      year,
+      month,
+      day,
+    ] = directMatch;
 
-    requestNo:
-      request.requestNo ||
-      `Request #${request.id}`,
+    return `${day}/${month}/${year}`;
+  }
 
-    employeeId:
-      request.employeeId ||
-      request.employeeCode ||
-      profile.employeeId,
+  const date = new Date(
+    dateValue,
+  );
 
-    employeeName:
-      request.employeeName ||
-      profile.employeeName,
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return '-';
+  }
 
-    leaveType:
-      request.leaveType ||
-      'Not specified',
+  const day = String(
+    date.getDate(),
+  ).padStart(2, '0');
 
-    leaveDays:
-      Number(request.leaveDays) || 0,
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, '0');
 
-    statusLabel:
-      capitalizeStatus(request.status),
+  return `${day}/${month}/${date.getFullYear()}`;
+};
 
-    approver:
-      request.approver ||
-      request.approverName ||
-      'Supervisor User',
+const formatDateRange = (
+  startDate,
+  endDate,
+) => {
+  if (
+    !startDate &&
+    !endDate
+  ) {
+    return '-';
+  }
 
-    rejectionReason:
-      request.rejectionReason ||
-      request.comment ||
-      '',
+  if (
+    !endDate ||
+    startDate === endDate
+  ) {
+    return formatDate(
+      startDate,
+    );
+  }
+
+  return `${formatDate(
+    startDate,
+  )} - ${formatDate(
+    endDate,
+  )}`;
+};
+
+const formatDateTime = (dateValue) => {
+  if (!dateValue) {
+    return '-';
+  }
+
+  const date = new Date(
+    dateValue,
+  );
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return '-';
+  }
+
+  const day = String(
+    date.getDate(),
+  ).padStart(2, '0');
+
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, '0');
+
+  const hours = String(
+    date.getHours(),
+  ).padStart(2, '0');
+
+  const minutes = String(
+    date.getMinutes(),
+  ).padStart(2, '0');
+
+  return `${day}/${month}/${date.getFullYear()} ${hours}:${minutes}`;
+};
+
+const translateLeaveType = (
+  leaveType,
+) => {
+  const text = String(
+    leaveType || '',
+  ).trim();
+
+  const leaveTypeMap = {
+    'Annual Leave':
+      'ลาพักร้อน',
+
+    'Sick Leave':
+      'ลาป่วย',
+
+    'Personal Leave':
+      'ลากิจ',
+
+    'Maternity Leave':
+      'ลาคลอด',
+
+    'Paternity Leave':
+      'ลาเพื่อดูแลบุตร',
+
+    'Ordination Leave':
+      'ลาอุปสมบท',
+
+    'Military Leave':
+      'ลาเพื่อรับราชการทหาร',
+
+    Other:
+      'ลาอื่น ๆ',
   };
+
+  return (
+    leaveTypeMap[text] ||
+    text ||
+    '-'
+  );
 };
+
+const _translateNotificationTitle = (
+  title,
+) => {
+  const text = String(
+    title || '',
+  ).trim();
+
+  const titleMap = {
+    'New leave request':
+      'มีคำขอลาใหม่',
+
+    'New leave request submitted':
+      'มีคำขอลาใหม่',
+
+    'New Leave Request':
+      'มีคำขอลาใหม่',
+
+    'Pending approval reminder':
+      'แจ้งเตือนคำขอที่รออนุมัติ',
+
+    'Leave request approved':
+      'คำขอลาได้รับการอนุมัติ',
+
+    'Leave request rejected':
+      'คำขอลาถูกปฏิเสธ',
+
+    'Leave request cancelled':
+      'คำขอลาถูกยกเลิก',
+
+    Notification:
+      'การแจ้งเตือน',
+  };
+
+  return (
+    titleMap[text] ||
+    text ||
+    'การแจ้งเตือน'
+  );
+};
+
+const _translateNotificationMessage = (
+  message,
+) => {
+  const text = String(
+    message || '',
+  ).trim();
+
+  if (!text) {
+    return '-';
+  }
+
+  /*
+   * ตัวอย่าง:
+   * Employee User submitted leave request
+   * LR-20260724-0008 for approval.
+   */
+  const submittedRequestMatch =
+    text.match(
+      /^(.+?) submitted leave request (.+?) for approval\.?$/i,
+    );
+
+  if (
+    submittedRequestMatch
+  ) {
+    const rawEmployeeName =
+      String(
+        submittedRequestMatch[1] ||
+          '',
+      ).trim();
+
+    const requestNumber =
+      String(
+        submittedRequestMatch[2] ||
+          '',
+      ).trim();
+
+    const employeeName =
+      rawEmployeeName.toLowerCase() ===
+      'employee user'
+        ? 'พนักงาน'
+        : rawEmployeeName;
+
+    return `${employeeName} ส่งคำขอลา ${requestNumber} เพื่อขออนุมัติ`;
+  }
+
+  return text
+    .replace(
+      /Employee User/gi,
+      'พนักงาน',
+    )
+    .replace(
+      /submitted leave request/gi,
+      'ส่งคำขอลา',
+    )
+    .replace(
+      /for approval/gi,
+      'เพื่อขออนุมัติ',
+    )
+    .replace(
+      /New leave request/gi,
+      'มีคำขอลาใหม่',
+    )
+    .replace(
+      /Pending approval/gi,
+      'คำขอที่รออนุมัติ',
+    )
+    .replace(
+      /Annual Leave/gi,
+      'ลาพักร้อน',
+    )
+    .replace(
+      /Sick Leave/gi,
+      'ลาป่วย',
+    )
+    .replace(
+      /Personal Leave/gi,
+      'ลากิจ',
+    )
+    .replace(
+      /Maternity Leave/gi,
+      'ลาคลอด',
+    );
+};
+
+const getEmployeeName = (
+  request,
+) =>
+  request.employeeName ||
+  request.fullName ||
+  request.employee?.fullName ||
+  request.employee?.name ||
+  'ไม่ระบุชื่อ';
+
+const getEmployeeCode = (
+  request,
+) =>
+  request.employeeCode ||
+  request.employeeId ||
+  request.employee?.employeeCode ||
+  request.employee?.code ||
+  '-';
+
+const getRequestReference = (
+  request,
+) =>
+  request.requestNo ||
+  request.requestNumber ||
+  request.requestId ||
+  (request.id
+    ? `#${request.id}`
+    : '-');
 
 function SupervisorDashboardPage() {
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
-  const [leaveRequests, setLeaveRequests] =
-    useState([]);
+  const [
+    leaveRequests,
+    setLeaveRequests,
+  ] = useState([]);
 
-  const [notifications, setNotifications] =
-    useState([]);
+  const [
+    notifications,
+    setNotifications,
+  ] = useState([]);
 
-  const loadDashboardData = useCallback(() => {
-    const storedRequests = getLeaveRequests()
-      .filter(
-        (request) =>
-          String(request.status || '').toLowerCase() !==
-          'draft',
-      )
-      .map(normalizeRequest)
-      .sort(
-        (firstRequest, secondRequest) =>
-          getRequestDateValue(secondRequest) -
-          getRequestDateValue(firstRequest),
+  const currentYear =
+    new Date().getFullYear();
+
+  const loadDashboardData =
+    useCallback(async () => {
+      const [report, notificationData] = await Promise.all([getTeamReport({}), getNotifications()]);
+      const requests =
+        (report?.leaveRequests || [])
+          .map((request) => ({
+            ...request,
+
+            normalizedStatus:
+              normalizeStatus(
+                request.status,
+              ),
+          }))
+          .sort(
+            (
+              firstRequest,
+              secondRequest,
+            ) =>
+              getRequestDateValue(
+                secondRequest,
+              ) -
+              getRequestDateValue(
+                firstRequest,
+              ),
+          );
+
+      const supervisorNotifications =
+        (notificationData?.notifications || []).map((notification) => ({ ...notification, isRead: Boolean(notification.read) })).sort(
+          (
+            firstNotification,
+            secondNotification,
+          ) =>
+            new Date(
+              secondNotification
+                .createdAt || 0,
+            ).getTime() -
+            new Date(
+              firstNotification
+                .createdAt || 0,
+            ).getTime(),
+        );
+
+      setLeaveRequests(
+        requests,
       );
 
-    const supervisorNotifications =
-      getNotifications({
-        role: 'supervisor',
-      })
-        .map((notification) => ({
-          ...notification,
-
-          isRead: Boolean(
-            notification.isRead ??
-              notification.read,
-          ),
-        }))
-        .sort((firstNotification, secondNotification) => {
-          const firstDate =
-            parseDate(firstNotification.createdAt)?.getTime() ||
-            0;
-
-          const secondDate =
-            parseDate(secondNotification.createdAt)?.getTime() ||
-            0;
-
-          return secondDate - firstDate;
-        });
-
-    setLeaveRequests(storedRequests);
-    setNotifications(supervisorNotifications);
-  }, []);
+      setNotifications(
+        supervisorNotifications,
+      );
+    }, []);
 
   useEffect(() => {
     loadDashboardData();
 
-    const handleStorageChange = (event) => {
-      if (
-        !event.key ||
-        event.key === leaveRequestStorageKey ||
-        event.key === notificationStorageKey
-      ) {
+    const handleStorageChange = (
+      event,
+    ) => {
+      if (!event.key) {
         loadDashboardData();
       }
-    };
-
-    const handleWindowFocus = () => {
-      loadDashboardData();
     };
 
     window.addEventListener(
@@ -242,7 +487,7 @@ function SupervisorDashboardPage() {
 
     window.addEventListener(
       'focus',
-      handleWindowFocus,
+      loadDashboardData,
     );
 
     return () => {
@@ -253,206 +498,181 @@ function SupervisorDashboardPage() {
 
       window.removeEventListener(
         'focus',
-        handleWindowFocus,
+        loadDashboardData,
       );
     };
-  }, [loadDashboardData]);
+  }, [
+    loadDashboardData,
+  ]);
 
-  const currentDate = new Date();
-
-  const isCurrentMonth = (request) => {
-    const dateValue =
-      getApprovalDateValue(request);
-
-    if (!dateValue) {
-      return false;
-    }
-
-    const date = new Date(dateValue);
-
-    return (
-      date.getFullYear() ===
-        currentDate.getFullYear() &&
-      date.getMonth() === currentDate.getMonth()
-    );
-  };
-
-  const pendingRequests = useMemo(
-    () =>
-      leaveRequests
-        .filter(
-          (request) =>
-            String(
-              request.status || '',
-            ).toLowerCase() === 'pending',
-        )
-        .sort(
-          (firstRequest, secondRequest) =>
-            getRequestDateValue(secondRequest) -
-            getRequestDateValue(firstRequest),
-        ),
-    [leaveRequests],
-  );
-
-  const approvedThisMonth =
-    leaveRequests.filter(
-      (request) =>
-        String(
-          request.status || '',
-        ).toLowerCase() === 'approved' &&
-        isCurrentMonth(request),
-    ).length;
-
-  const rejectedThisMonth =
-    leaveRequests.filter(
-      (request) =>
-        String(
-          request.status || '',
-        ).toLowerCase() === 'rejected' &&
-        isCurrentMonth(request),
-    ).length;
-
-  const recentPendingRequests =
-    pendingRequests.slice(0, 5);
-
-  const recentApprovalActivity =
+  const pendingRequests =
     useMemo(
       () =>
-        leaveRequests
-          .filter((request) =>
-            ['approved', 'rejected'].includes(
-              String(
-                request.status || '',
-              ).toLowerCase(),
-            ),
-          )
-          .sort(
-            (firstRequest, secondRequest) =>
-              getApprovalDateValue(secondRequest) -
-              getApprovalDateValue(firstRequest),
-          )
-          .slice(0, 5),
-      [leaveRequests],
+        leaveRequests.filter(
+          (request) =>
+            request.normalizedStatus ===
+            'pending',
+        ),
+      [
+        leaveRequests,
+      ],
+    );
+
+  const approvedRequestCount =
+    useMemo(
+      () =>
+        leaveRequests.filter(
+          (request) =>
+            request.normalizedStatus ===
+              'approved' &&
+            getRequestYear(
+              request,
+            ) ===
+              currentYear,
+        ).length,
+      [
+        currentYear,
+        leaveRequests,
+      ],
+    );
+
+  const rejectedRequestCount =
+    useMemo(
+      () =>
+        leaveRequests.filter(
+          (request) =>
+            request.normalizedStatus ===
+              'rejected' &&
+            getRequestYear(
+              request,
+            ) ===
+              currentYear,
+        ).length,
+      [
+        currentYear,
+        leaveRequests,
+      ],
+    );
+
+  const unreadNotificationCount =
+    useMemo(
+      () =>
+        notifications.filter(
+          (notification) =>
+            !notification.isRead,
+        ).length,
+      [
+        notifications,
+      ],
+    );
+
+  const recentPendingRequests =
+    useMemo(
+      () =>
+        pendingRequests.slice(
+          0,
+          5,
+        ),
+      [
+        pendingRequests,
+      ],
     );
 
   const recentNotifications =
     useMemo(
-      () => notifications.slice(0, 4),
-      [notifications],
+      () =>
+        notifications.slice(
+          0,
+          4,
+        ),
+      [
+        notifications,
+      ],
     );
-
-  const unreadNotificationCount =
-    notifications.filter(
-      (notification) => !notification.isRead,
-    ).length;
 
   const summaryCards = [
     {
-      title: 'Pending Approval',
-      value: pendingRequests.length,
-      description: 'Waiting for your review',
-      backgroundColor: '#FEF3C7',
-      textColor: '#B45309',
-      symbol: 'P',
+      title: 'รออนุมัติ',
+
+      value:
+        pendingRequests.length,
+
+      description:
+        'รายการที่รอตรวจสอบ',
+
+      backgroundColor:
+        supervisorTheme.soft,
+
+      color:
+        supervisorTheme.primary,
     },
+
     {
-      title: 'Approved',
-      value: approvedThisMonth,
-      description: 'Approved this month',
-      backgroundColor: '#DCFCE7',
-      textColor: '#15803D',
-      symbol: 'A',
+      title:
+        'อนุมัติแล้ว',
+
+      value:
+        approvedRequestCount,
+
+      description:
+        `รายการในปี ${currentYear}`,
+
+      backgroundColor:
+        '#DCFCE7',
+
+      color:
+        '#15803D',
     },
+
     {
-      title: 'Rejected',
-      value: rejectedThisMonth,
-      description: 'Rejected this month',
-      backgroundColor: '#FEE2E2',
-      textColor: '#B91C1C',
-      symbol: 'R',
+      title:
+        'ปฏิเสธแล้ว',
+
+      value:
+        rejectedRequestCount,
+
+      description:
+        `รายการในปี ${currentYear}`,
+
+      backgroundColor:
+        '#FEE2E2',
+
+      color:
+        '#B91C1C',
+    },
+
+    {
+      title:
+        'ยังไม่ได้อ่าน',
+
+      value:
+        unreadNotificationCount,
+
+      description:
+        'การแจ้งเตือนใหม่',
+
+      backgroundColor:
+        '#EDE9FE',
+
+      color:
+        '#6D28D9',
     },
   ];
 
-  const formatDate = (dateValue) => {
-    const date = parseDate(dateValue);
-
-    if (!date) {
-      return '-';
-    }
-
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  const formatDateRange = (
-    startDate,
-    endDate,
+  const handleOpenRequest = (
+    request,
   ) => {
-    if (!startDate && !endDate) {
-      return '-';
-    }
-
-    if (!endDate || startDate === endDate) {
-      return formatDate(startDate);
-    }
-
-    return `${formatDate(startDate)} - ${formatDate(
-      endDate,
-    )}`;
-  };
-
-  const formatDateTime = (dateValue) => {
-    const date = parseDate(dateValue);
-
-    if (!date) {
-      return '-';
-    }
-
-    return date.toLocaleString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const getStatusStyle = (status) => {
-    const styles = {
-      Approved: {
-        backgroundColor: '#DCFCE7',
-        color: '#15803D',
-      },
-      Pending: {
-        backgroundColor: '#FEF3C7',
-        color: '#B45309',
-      },
-      Rejected: {
-        backgroundColor: '#FEE2E2',
-        color: '#B91C1C',
-      },
-      Cancelled: {
-        backgroundColor: '#F3F4F6',
-        color: '#6B7280',
-      },
-    };
-
-    return styles[status] || styles.Cancelled;
-  };
-
-  const handleReviewRequest = (requestId) => {
     navigate(
-      `/supervisor/approval/${requestId}`,
+      `/supervisor/approval/${request.id}`,
     );
   };
 
   const handleOpenNotification = (
     notification,
   ) => {
-    if (!notification.isRead) {
+    if (
+      !notification.isRead
+    ) {
       markNotificationAsRead(
         notification.id,
       );
@@ -462,193 +682,260 @@ function SupervisorDashboardPage() {
 
     navigate(
       notification.path ||
-        '/supervisor/notification',
+        '/supervisor/notifications',
     );
   };
 
   return (
-    <SupervisorLayout activeMenu="Dashboard">
+    <SupervisorLayout
+      activeMenu="Dashboard"
+    >
       <Box
         sx={{
-          marginBottom: '28px',
-          display: 'flex',
-          alignItems: {
-            xs: 'flex-start',
-            sm: 'center',
-          },
-          justifyContent: 'space-between',
-          flexDirection: {
-            xs: 'column',
-            sm: 'row',
-          },
-          gap: '16px',
+          marginBottom:
+            '22px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color: '#111827',
-              fontSize: {
-                xs: '26px',
-                sm: '30px',
-              },
-              fontWeight: 800,
-            }}
-          >
-            Supervisor Dashboard
-          </Typography>
+        <Typography
+          component="h1"
+          sx={{
+            color:
+              '#111827',
 
-          <Typography
-            sx={{
-              color: '#6B7280',
-              fontSize: '15px',
-              marginTop: '6px',
-            }}
-          >
-            Review pending leave requests and monitor
-            recent approval activity.
-          </Typography>
-        </Box>
+            fontSize: {
+              xs:
+                '26px',
 
+              sm:
+                '30px',
+            },
 
+            fontWeight:
+              800,
+          }}
+        >
+          Dashboard
+        </Typography>
       </Box>
 
+      {/* Summary Cards */}
       <Box
         sx={{
-          display: 'grid',
+          display:
+            'grid',
+
           gridTemplateColumns: {
-            xs: '1fr',
-            sm: 'repeat(3, minmax(0, 1fr))',
+            xs:
+              '1fr',
+
+            sm:
+              'repeat(2, minmax(0, 1fr))',
+
+            xl:
+              'repeat(4, minmax(0, 1fr))',
           },
-          gap: '20px',
-          marginBottom: '28px',
+
+          gap:
+            '18px',
+
+          marginBottom:
+            '24px',
         }}
       >
-        {summaryCards.map((card) => (
-          <Paper
-            key={card.title}
-            elevation={0}
-            sx={{
-              padding: '24px',
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #E5E7EB',
-              borderRadius: '12px',
-            }}
-          >
-            <Box
+        {summaryCards.map(
+          (card) => (
+            <Paper
+              key={
+                card.title
+              }
+              elevation={0}
               sx={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                gap: '16px',
+                minHeight:
+                  '140px',
+
+                padding:
+                  '20px',
+
+                backgroundColor:
+                  '#FFFFFF',
+
+                border:
+                  '1px solid #E5E7EB',
+
+                borderRadius:
+                  '14px',
               }}
             >
-              <Box>
-                <Typography
-                  sx={{
-                    color: '#6B7280',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                  }}
-                >
-                  {card.title}
-                </Typography>
-
-                <Typography
-                  sx={{
-                    color: '#111827',
-                    fontSize: '30px',
-                    fontWeight: 800,
-                    marginTop: '8px',
-                  }}
-                >
-                  {card.value}
-                </Typography>
-
-                <Typography
-                  sx={{
-                    color: '#9CA3AF',
-                    fontSize: '13px',
-                    marginTop: '4px',
-                  }}
-                >
-                  {card.description}
-                </Typography>
-              </Box>
-
               <Box
                 sx={{
-                  width: '46px',
-                  height: '46px',
-                  minWidth: '46px',
+                  width:
+                    '50px',
+
+                  height:
+                    '50px',
+
+                  display:
+                    'flex',
+
+                  alignItems:
+                    'center',
+
+                  justifyContent:
+                    'center',
+
                   backgroundColor:
                     card.backgroundColor,
-                  color: card.textColor,
-                  borderRadius: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                  fontWeight: 800,
+
+                  color:
+                    card.color,
+
+                  borderRadius:
+                    '11px',
+
+                  fontSize:
+                    '20px',
+
+                  fontWeight:
+                    800,
                 }}
               >
-                {card.symbol}
+                {
+                  card.value
+                }
               </Box>
-            </Box>
-          </Paper>
-        ))}
+
+              <Typography
+                sx={{
+                  color:
+                    '#111827',
+
+                  fontSize:
+                    '14px',
+
+                  fontWeight:
+                    800,
+
+                  marginTop:
+                    '13px',
+                }}
+              >
+                {
+                  card.title
+                }
+              </Typography>
+
+              <Typography
+                sx={{
+                  color:
+                    '#94A3B8',
+
+                  fontSize:
+                    '11px',
+
+                  marginTop:
+                    '3px',
+                }}
+              >
+                {
+                  card.description
+                }
+              </Typography>
+            </Paper>
+          ),
+        )}
       </Box>
 
+      {/* Pending Requests */}
       <Paper
         elevation={0}
         sx={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E5E7EB',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          marginBottom: '24px',
+          marginBottom:
+            '24px',
+
+          backgroundColor:
+            '#FFFFFF',
+
+          border:
+            '1px solid #E5E7EB',
+
+          borderRadius:
+            '14px',
+
+          overflow:
+            'hidden',
         }}
       >
         <Box
           sx={{
-            padding: {
-              xs: '20px',
-              sm: '24px',
-            },
-            borderBottom: '1px solid #E5E7EB',
-            display: 'flex',
+            padding:
+              '20px 24px',
+
+            display:
+              'flex',
+
             alignItems: {
-              xs: 'flex-start',
-              sm: 'center',
+              xs:
+                'flex-start',
+
+              sm:
+                'center',
             },
-            justifyContent: 'space-between',
+
+            justifyContent:
+              'space-between',
+
             flexDirection: {
-              xs: 'column',
-              sm: 'row',
+              xs:
+                'column',
+
+              sm:
+                'row',
             },
-            gap: '16px',
+
+            gap:
+              '14px',
+
+            borderBottom:
+              '1px solid #E5E7EB',
           }}
         >
           <Box>
             <Typography
               sx={{
-                color: '#111827',
-                fontSize: '18px',
-                fontWeight: 800,
+                color:
+                  '#111827',
+
+                fontSize:
+                  '18px',
+
+                fontWeight:
+                  800,
               }}
             >
-              Pending Leave Requests
+              คำขอลาที่รออนุมัติ
             </Typography>
 
             <Typography
               sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '4px',
+                color:
+                  '#64748B',
+
+                fontSize:
+                  '12px',
+
+                marginTop:
+                  '4px',
               }}
             >
-              Leave requests waiting for your approval.
+              แสดง{' '}
+              {
+                recentPendingRequests.length
+              }{' '}
+              จาก{' '}
+              {
+                pendingRequests.length
+              }{' '}
+              รายการ
             </Typography>
           </Box>
 
@@ -656,133 +943,253 @@ function SupervisorDashboardPage() {
             type="button"
             variant="outlined"
             onClick={() =>
-              navigate('/supervisor/approval')
+              navigate(
+                '/supervisor/approval',
+              )
             }
             sx={{
-              height: '42px',
-              padding: '0 18px',
-              color: '#7C3AED',
-              borderColor: '#7C3AED',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 700,
-              textTransform: 'none',
+              height:
+                '40px',
+
+              padding:
+                '0 16px',
+
+              color:
+                supervisorTheme.primary,
+
+              borderColor:
+                supervisorTheme.border,
+
+              borderRadius:
+                '8px',
+
+              fontSize:
+                '12px',
+
+              fontWeight:
+                700,
+
+              textTransform:
+                'none',
 
               '&:hover': {
-                borderColor: '#6D28D9',
-                backgroundColor: '#F5F3FF',
+                backgroundColor:
+                  supervisorTheme.soft,
+
+                borderColor:
+                  supervisorTheme.primary,
               },
             }}
           >
-            View All Requests
+            ดูทั้งหมด
           </Button>
         </Box>
 
-        {recentPendingRequests.length > 0 ? (
-          <Box sx={{ overflowX: 'auto' }}>
-            <Box sx={{ minWidth: '1050px' }}>
+        {recentPendingRequests.length >
+        0 ? (
+          <Box
+            sx={{
+              overflowX:
+                'auto',
+            }}
+          >
+            <Box
+              sx={{
+                minWidth:
+                  '900px',
+              }}
+            >
               <Box
                 sx={{
-                  display: 'grid',
+                  display:
+                    'grid',
+
                   gridTemplateColumns:
-                    '1.1fr 1.5fr 1.2fr 1.8fr 0.8fr 1fr 0.8fr',
-                  gap: '16px',
-                  padding: '14px 24px',
-                  backgroundColor: '#F9FAFB',
+                    '1.2fr 1.5fr 1.2fr 1.7fr 0.8fr 0.8fr',
+
+                  gap:
+                    '16px',
+
+                  padding:
+                    '13px 24px',
+
+                  backgroundColor:
+                    '#F8FAFC',
+
                   borderBottom:
                     '1px solid #E5E7EB',
                 }}
               >
                 {[
-                  'Request ID',
-                  'Employee',
-                  'Leave Type',
-                  'Leave Period',
-                  'Total',
-                  'Submitted',
-                  'Action',
-                ].map((heading) => (
-                  <Typography
-                    key={heading}
-                    sx={{
-                      color: '#6B7280',
-                      fontSize: '13px',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {heading}
-                  </Typography>
-                ))}
+                  'เลขที่คำขอ',
+                  'พนักงาน',
+                  'ประเภทการลา',
+                  'ช่วงวันที่',
+                  'จำนวนวัน',
+                  'การดำเนินการ',
+                ].map(
+                  (heading) => (
+                    <Typography
+                      key={
+                        heading
+                      }
+                      sx={{
+                        color:
+                          '#64748B',
+
+                        fontSize:
+                          '11px',
+
+                        fontWeight:
+                          700,
+                      }}
+                    >
+                      {
+                        heading
+                      }
+                    </Typography>
+                  ),
+                )}
               </Box>
 
               {recentPendingRequests.map(
                 (request) => (
                   <Box
-                    key={request.id}
+                    key={
+                      request.id ||
+                      getRequestReference(
+                        request,
+                      )
+                    }
                     sx={{
-                      display: 'grid',
+                      display:
+                        'grid',
+
                       gridTemplateColumns:
-                        '1.1fr 1.5fr 1.2fr 1.8fr 0.8fr 1fr 0.8fr',
-                      gap: '16px',
-                      alignItems: 'center',
-                      padding: '17px 24px',
+                        '1.2fr 1.5fr 1.2fr 1.7fr 0.8fr 0.8fr',
+
+                      gap:
+                        '16px',
+
+                      alignItems:
+                        'center',
+
+                      minHeight:
+                        '68px',
+
+                      padding:
+                        '14px 24px',
+
                       borderBottom:
-                        '1px solid #E5E7EB',
+                        '1px solid #EEF0F3',
 
-                      '&:last-child': {
-                        borderBottom: 0,
-                      },
+                      '&:last-child':
+                        {
+                          borderBottom:
+                            'none',
+                        },
 
-                      '&:hover': {
-                        backgroundColor: '#F9FAFB',
-                      },
+                      '&:hover':
+                        {
+                          backgroundColor:
+                            '#FAFAFC',
+                        },
                     }}
                   >
                     <Typography
                       sx={{
-                        color: '#7C3AED',
-                        fontSize: '14px',
-                        fontWeight: 700,
+                        color:
+                          supervisorTheme.primary,
+
+                        fontSize:
+                          '12px',
+
+                        fontWeight:
+                          800,
+
+                        wordBreak:
+                          'break-word',
                       }}
                     >
-                      {request.requestNo}
+                      {getRequestReference(
+                        request,
+                      )}
                     </Typography>
 
-                    <Box>
+                    <Box
+                      sx={{
+                        minWidth:
+                          0,
+                      }}
+                    >
                       <Typography
                         sx={{
-                          color: '#111827',
-                          fontSize: '14px',
-                          fontWeight: 700,
+                          color:
+                            '#111827',
+
+                          fontSize:
+                            '12px',
+
+                          fontWeight:
+                            700,
+
+                          overflow:
+                            'hidden',
+
+                          textOverflow:
+                            'ellipsis',
+
+                          whiteSpace:
+                            'nowrap',
                         }}
                       >
-                        {request.employeeName}
+                        {getEmployeeName(
+                          request,
+                        )}
                       </Typography>
 
                       <Typography
                         sx={{
-                          color: '#9CA3AF',
-                          fontSize: '12px',
-                          marginTop: '3px',
+                          color:
+                            '#94A3B8',
+
+                          fontSize:
+                            '10px',
+
+                          marginTop:
+                            '2px',
                         }}
                       >
-                        {request.employeeId}
+                        {getEmployeeCode(
+                          request,
+                        )}
                       </Typography>
                     </Box>
 
                     <Typography
                       sx={{
-                        color: '#374151',
-                        fontSize: '14px',
+                        color:
+                          '#374151',
+
+                        fontSize:
+                          '12px',
                       }}
                     >
-                      {request.leaveType}
+                      {translateLeaveType(
+                        request.leaveType,
+                      )}
                     </Typography>
 
                     <Typography
                       sx={{
-                        color: '#374151',
-                        fontSize: '14px',
+                        color:
+                          '#374151',
+
+                        fontSize:
+                          '12px',
+
+                        whiteSpace:
+                          'nowrap',
                       }}
                     >
                       {formatDateRange(
@@ -793,67 +1200,72 @@ function SupervisorDashboardPage() {
 
                     <Typography
                       sx={{
-                        color: '#374151',
-                        fontSize: '14px',
+                        color:
+                          '#111827',
+
+                        fontSize:
+                          '12px',
+
+                        fontWeight:
+                          700,
                       }}
                     >
-                      {request.leaveDays}{' '}
-                      {request.leaveDays === 1
-                        ? 'Day'
-                        : 'Days'}
+                      {toNumber(
+                        request.leaveDays,
+                      )}{' '}
+                      วัน
                     </Typography>
-
-                    <Box>
-                      <Typography
-                        sx={{
-                          color: '#374151',
-                          fontSize: '14px',
-                        }}
-                      >
-                        {formatDate(
-                          request.submittedAt ||
-                            request.createdAt,
-                        )}
-                      </Typography>
-
-                      <Chip
-                        label="Pending"
-                        size="small"
-                        sx={{
-                          minWidth: '72px',
-                          marginTop: '6px',
-                          backgroundColor: '#FEF3C7',
-                          color: '#B45309',
-                          borderRadius: '999px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                        }}
-                      />
-                    </Box>
 
                     <Button
                       type="button"
+                      variant="outlined"
                       onClick={() =>
-                        handleReviewRequest(request.id)
+                        handleOpenRequest(
+                          request,
+                        )
                       }
                       sx={{
-                        width: 'fit-content',
-                        minWidth: 0,
-                        padding: 0,
-                        color: '#7C3AED',
-                        fontSize: '14px',
-                        fontWeight: 700,
-                        textTransform: 'none',
+                        width:
+                          'fit-content',
 
-                        '&:hover': {
-                          backgroundColor:
-                            'transparent',
-                          textDecoration:
-                            'underline',
-                        },
+                        minWidth:
+                          '78px',
+
+                        height:
+                          '34px',
+
+                        padding:
+                          '0 12px',
+
+                        color:
+                          supervisorTheme.primary,
+
+                        borderColor:
+                          supervisorTheme.border,
+
+                        borderRadius:
+                          '8px',
+
+                        fontSize:
+                          '11px',
+
+                        fontWeight:
+                          700,
+
+                        textTransform:
+                          'none',
+
+                        '&:hover':
+                          {
+                            backgroundColor:
+                              supervisorTheme.soft,
+
+                            borderColor:
+                              supervisorTheme.primary,
+                          },
                       }}
                     >
-                      Review
+                      ตรวจสอบ
                     </Button>
                   </Box>
                 ),
@@ -863,27 +1275,59 @@ function SupervisorDashboardPage() {
         ) : (
           <Box
             sx={{
-              minHeight: '220px',
-              padding: '36px 24px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
+              minHeight:
+                '190px',
+
+              padding:
+                '32px 24px',
+
+              display:
+                'flex',
+
+              flexDirection:
+                'column',
+
+              alignItems:
+                'center',
+
+              justifyContent:
+                'center',
+
+              textAlign:
+                'center',
             }}
           >
             <Box
               sx={{
-                width: '58px',
-                height: '58px',
-                backgroundColor: '#F5F3FF',
-                color: '#7C3AED',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '22px',
-                fontWeight: 800,
+                width:
+                  '52px',
+
+                height:
+                  '52px',
+
+                display:
+                  'flex',
+
+                alignItems:
+                  'center',
+
+                justifyContent:
+                  'center',
+
+                backgroundColor:
+                  supervisorTheme.soft,
+
+                color:
+                  supervisorTheme.primary,
+
+                borderRadius:
+                  '50%',
+
+                fontSize:
+                  '18px',
+
+                fontWeight:
+                  800,
               }}
             >
               0
@@ -891,310 +1335,145 @@ function SupervisorDashboardPage() {
 
             <Typography
               sx={{
-                color: '#111827',
-                fontSize: '17px',
-                fontWeight: 800,
-                marginTop: '14px',
+                color:
+                  '#111827',
+
+                fontSize:
+                  '15px',
+
+                fontWeight:
+                  800,
+
+                marginTop:
+                  '12px',
               }}
             >
-              No pending requests
+              ไม่มีคำขอที่รออนุมัติ
             </Typography>
 
             <Typography
               sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '5px',
+                color:
+                  '#64748B',
+
+                fontSize:
+                  '12px',
+
+                marginTop:
+                  '4px',
               }}
             >
-              All submitted leave requests have been
-              reviewed.
-            </Typography>
-          </Box>
-        )}
-
-        <Box
-          sx={{
-            padding: '16px 24px',
-            backgroundColor: '#F9FAFB',
-            borderTop: '1px solid #E5E7EB',
-          }}
-        >
-          <Typography
-            sx={{
-              color: '#6B7280',
-              fontSize: '13px',
-            }}
-          >
-            Showing {recentPendingRequests.length} of{' '}
-            {pendingRequests.length} pending leave requests
-          </Typography>
-        </Box>
-      </Paper>
-
-      <Paper
-        elevation={0}
-        sx={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E5E7EB',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          marginBottom: '24px',
-        }}
-      >
-        <Box
-          sx={{
-            padding: '20px 24px',
-            borderBottom: '1px solid #E5E7EB',
-          }}
-        >
-          <Typography
-            sx={{
-              color: '#111827',
-              fontSize: '18px',
-              fontWeight: 800,
-            }}
-          >
-            Recent Approval Activity
-          </Typography>
-
-          <Typography
-            sx={{
-              color: '#6B7280',
-              fontSize: '14px',
-              marginTop: '4px',
-            }}
-          >
-            Recently approved and rejected leave requests.
-          </Typography>
-        </Box>
-
-        {recentApprovalActivity.length > 0 ? (
-          <Box>
-            {recentApprovalActivity.map(
-              (request, index) => (
-                <Box
-                  key={request.id}
-                  sx={{
-                    padding: '18px 24px',
-                    display: 'flex',
-                    alignItems: {
-                      xs: 'flex-start',
-                      sm: 'center',
-                    },
-                    justifyContent: 'space-between',
-                    flexDirection: {
-                      xs: 'column',
-                      sm: 'row',
-                    },
-                    gap: '16px',
-                    borderBottom:
-                      index ===
-                      recentApprovalActivity.length - 1
-                        ? 'none'
-                        : '1px solid #E5E7EB',
-
-                    '&:hover': {
-                      backgroundColor: '#F9FAFB',
-                    },
-                  }}
-                >
-                  <Box>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <Typography
-                        sx={{
-                          color: '#111827',
-                          fontSize: '14px',
-                          fontWeight: 800,
-                        }}
-                      >
-                        {request.requestNo}
-                      </Typography>
-
-                      <Chip
-                        label={request.statusLabel}
-                        size="small"
-                        sx={{
-                          ...getStatusStyle(
-                            request.statusLabel,
-                          ),
-                          minWidth: '80px',
-                          borderRadius: '999px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                        }}
-                      />
-                    </Box>
-
-                    <Typography
-                      sx={{
-                        color: '#4B5563',
-                        fontSize: '13px',
-                        marginTop: '7px',
-                      }}
-                    >
-                      {request.employeeName} ·{' '}
-                      {request.leaveType} ·{' '}
-                      {request.leaveDays}{' '}
-                      {request.leaveDays === 1
-                        ? 'day'
-                        : 'days'}
-                    </Typography>
-
-                    <Typography
-                      sx={{
-                        color: '#9CA3AF',
-                        fontSize: '12px',
-                        marginTop: '5px',
-                      }}
-                    >
-                      {formatDateTime(
-                        request.approvedAt ||
-                          request.rejectedAt ||
-                          request.updatedAt ||
-                          request.submittedAt,
-                      )}
-                    </Typography>
-
-                    {request.statusLabel ===
-                      'Rejected' &&
-                      request.rejectionReason && (
-                        <Typography
-                          sx={{
-                            color: '#B91C1C',
-                            fontSize: '12px',
-                            marginTop: '5px',
-                          }}
-                        >
-                          Reason:{' '}
-                          {request.rejectionReason}
-                        </Typography>
-                      )}
-                  </Box>
-
-                  <Button
-                    type="button"
-                    onClick={() =>
-                      handleReviewRequest(request.id)
-                    }
-                    sx={{
-                      minWidth: 0,
-                      padding: 0,
-                      color: '#7C3AED',
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      textTransform: 'none',
-
-                      '&:hover': {
-                        backgroundColor: 'transparent',
-                        textDecoration: 'underline',
-                      },
-                    }}
-                  >
-                    View
-                  </Button>
-                </Box>
-              ),
-            )}
-          </Box>
-        ) : (
-          <Box
-            sx={{
-              minHeight: '170px',
-              padding: '32px 24px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-            }}
-          >
-            <Typography
-              sx={{
-                color: '#111827',
-                fontSize: '16px',
-                fontWeight: 800,
-              }}
-            >
-              No approval activity
-            </Typography>
-
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '13px',
-                marginTop: '5px',
-              }}
-            >
-              Approved and rejected requests will appear
-              here.
+              คำขอลาใหม่ของทีมจะแสดงในส่วนนี้
             </Typography>
           </Box>
         )}
       </Paper>
 
+      {/* Notifications */}
       <Paper
         elevation={0}
         sx={{
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #E5E7EB',
-          borderRadius: '12px',
-          overflow: 'hidden',
+          backgroundColor:
+            '#FFFFFF',
+
+          border:
+            '1px solid #E5E7EB',
+
+          borderRadius:
+            '14px',
+
+          overflow:
+            'hidden',
         }}
       >
         <Box
           sx={{
-            padding: '20px 24px',
-            borderBottom: '1px solid #E5E7EB',
-            display: 'flex',
+            padding:
+              '20px 24px',
+
+            display:
+              'flex',
+
             alignItems: {
-              xs: 'flex-start',
-              sm: 'center',
+              xs:
+                'flex-start',
+
+              sm:
+                'center',
             },
-            justifyContent: 'space-between',
+
+            justifyContent:
+              'space-between',
+
             flexDirection: {
-              xs: 'column',
-              sm: 'row',
+              xs:
+                'column',
+
+              sm:
+                'row',
             },
-            gap: '14px',
+
+            gap:
+              '14px',
+
+            borderBottom:
+              '1px solid #E5E7EB',
           }}
         >
           <Box>
             <Box
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                flexWrap: 'wrap',
+                display:
+                  'flex',
+
+                alignItems:
+                  'center',
+
+                flexWrap:
+                  'wrap',
+
+                gap:
+                  '9px',
               }}
             >
               <Typography
                 sx={{
-                  color: '#111827',
-                  fontSize: '18px',
-                  fontWeight: 800,
+                  color:
+                    '#111827',
+
+                  fontSize:
+                    '18px',
+
+                  fontWeight:
+                    800,
                 }}
               >
-                Recent Notifications
+                การแจ้งเตือนล่าสุด
               </Typography>
 
-              {unreadNotificationCount > 0 && (
+              {unreadNotificationCount >
+                0 && (
                 <Chip
-                  label={`${unreadNotificationCount} unread`}
+                  label={`${unreadNotificationCount} ยังไม่ได้อ่าน`}
                   size="small"
                   sx={{
-                    backgroundColor: '#FEE2E2',
-                    color: '#B91C1C',
-                    borderRadius: '999px',
-                    fontSize: '11px',
-                    fontWeight: 700,
+                    height:
+                      '25px',
+
+                    backgroundColor:
+                      supervisorTheme.soft,
+
+                    color:
+                      supervisorTheme.primary,
+
+                    borderRadius:
+                      '999px',
+
+                    fontSize:
+                      '10px',
+
+                    fontWeight:
+                      700,
                   }}
                 />
               )}
@@ -1202,12 +1481,17 @@ function SupervisorDashboardPage() {
 
             <Typography
               sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '4px',
+                color:
+                  '#64748B',
+
+                fontSize:
+                  '12px',
+
+                marginTop:
+                  '4px',
               }}
             >
-              Updates about newly submitted leave requests.
+              ข่าวสารและรายการที่เกี่ยวข้องกับการอนุมัติ
             </Typography>
           </Box>
 
@@ -1215,119 +1499,191 @@ function SupervisorDashboardPage() {
             type="button"
             variant="outlined"
             onClick={() =>
-              navigate('/supervisor/notification')
+              navigate(
+                '/supervisor/notifications',
+              )
             }
             sx={{
-              height: '40px',
-              padding: '0 16px',
-              color: '#7C3AED',
-              borderColor: '#7C3AED',
-              borderRadius: '8px',
-              fontSize: '13px',
-              fontWeight: 700,
-              textTransform: 'none',
+              height:
+                '40px',
+
+              padding:
+                '0 16px',
+
+              color:
+                supervisorTheme.primary,
+
+              borderColor:
+                supervisorTheme.border,
+
+              borderRadius:
+                '8px',
+
+              fontSize:
+                '12px',
+
+              fontWeight:
+                700,
+
+              textTransform:
+                'none',
 
               '&:hover': {
-                backgroundColor: '#F5F3FF',
-                borderColor: '#6D28D9',
+                backgroundColor:
+                  supervisorTheme.soft,
+
+                borderColor:
+                  supervisorTheme.primary,
               },
             }}
           >
-            View All
+            ดูทั้งหมด
           </Button>
         </Box>
 
-        {recentNotifications.length > 0 ? (
+        {recentNotifications.length >
+        0 ? (
           <Box>
             {recentNotifications.map(
-              (notification, index) => (
+              (
+                notification,
+                index,
+              ) => (
                 <Box
-                  key={notification.id}
+                  key={
+                    notification.id
+                  }
                   onClick={() =>
-                    handleOpenNotification(notification)
+                    handleOpenNotification(
+                      notification,
+                    )
                   }
                   sx={{
-                    padding: '18px 24px',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '14px',
-                    cursor: 'pointer',
+                    minHeight:
+                      '82px',
+
+                    padding:
+                      '16px 24px',
+
+                    display:
+                      'flex',
+
+                    alignItems:
+                      'flex-start',
+
+                    gap:
+                      '13px',
+
+                    cursor:
+                      'pointer',
 
                     backgroundColor:
                       notification.isRead
                         ? '#FFFFFF'
-                        : '#F5F3FF',
+                        : '#FAF5FF',
 
                     borderLeft:
                       notification.isRead
                         ? '4px solid transparent'
-                        : '4px solid #7C3AED',
+                        : `4px solid ${supervisorTheme.primary}`,
 
                     borderBottom:
                       index ===
-                      recentNotifications.length - 1
+                      recentNotifications.length -
+                        1
                         ? 'none'
-                        : '1px solid #E5E7EB',
+                        : '1px solid #EEF0F3',
 
                     '&:hover': {
                       backgroundColor:
                         notification.isRead
-                          ? '#F9FAFB'
-                          : '#EDE9FE',
+                          ? '#FAFAFC'
+                          : supervisorTheme.soft,
                     },
                   }}
                 >
                   <Box
                     sx={{
-                      width: '10px',
-                      height: '10px',
-                      flexShrink: 0,
-                      marginTop: '6px',
+                      width:
+                        '9px',
+
+                      height:
+                        '9px',
+
+                      flexShrink:
+                        0,
+
+                      marginTop:
+                        '6px',
 
                       backgroundColor:
                         notification.isRead
-                          ? '#D1D5DB'
-                          : '#7C3AED',
+                          ? '#CBD5E1'
+                          : supervisorTheme.primary,
 
-                      borderRadius: '50%',
+                      borderRadius:
+                        '50%',
                     }}
                   />
 
                   <Box
                     sx={{
-                      minWidth: 0,
-                      flex: 1,
+                      flex:
+                        1,
+
+                      minWidth:
+                        0,
                     }}
                   >
                     <Typography
                       sx={{
-                        color: '#111827',
-                        fontSize: '14px',
-                        fontWeight: notification.isRead
-                          ? 700
-                          : 800,
+                        color:
+                          '#111827',
+
+                        fontSize:
+                          '13px',
+
+                        fontWeight:
+                          notification.isRead
+                            ? 700
+                            : 800,
                       }}
                     >
-                      {notification.title ||
-                        'Notification'}
+                      {formatNotificationTitle(
+                        notification.title,
+                      )}
                     </Typography>
 
                     <Typography
                       sx={{
-                        color: '#4B5563',
-                        fontSize: '13px',
-                        lineHeight: 1.6,
-                        marginTop: '5px',
+                        color:
+                          '#475569',
+
+                        fontSize:
+                          '12px',
+
+                        lineHeight:
+                          1.6,
+
+                        marginTop:
+                          '4px',
                       }}
                     >
-                      {notification.message || '-'}
+                      {formatNotificationMessage(
+                        notification.message,
+                      )}
                     </Typography>
 
                     <Typography
                       sx={{
-                        color: '#9CA3AF',
-                        fontSize: '11px',
-                        marginTop: '7px',
+                        color:
+                          '#94A3B8',
+
+                        fontSize:
+                          '10px',
+
+                        marginTop:
+                          '6px',
                       }}
                     >
                       {formatDateTime(
@@ -1338,15 +1694,29 @@ function SupervisorDashboardPage() {
 
                   {!notification.isRead && (
                     <Chip
-                      label="New"
+                      label="ใหม่"
                       size="small"
                       sx={{
-                        flexShrink: 0,
-                        backgroundColor: '#EDE9FE',
-                        color: '#6D28D9',
-                        borderRadius: '999px',
-                        fontSize: '10px',
-                        fontWeight: 700,
+                        height:
+                          '24px',
+
+                        flexShrink:
+                          0,
+
+                        backgroundColor:
+                          supervisorTheme.soft,
+
+                        color:
+                          supervisorTheme.primary,
+
+                        borderRadius:
+                          '999px',
+
+                        fontSize:
+                          '9px',
+
+                        fontWeight:
+                          700,
                       }}
                     />
                   )}
@@ -1357,34 +1727,95 @@ function SupervisorDashboardPage() {
         ) : (
           <Box
             sx={{
-              minHeight: '170px',
-              padding: '32px 24px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
+              minHeight:
+                '170px',
+
+              padding:
+                '30px 24px',
+
+              display:
+                'flex',
+
+              flexDirection:
+                'column',
+
+              alignItems:
+                'center',
+
+              justifyContent:
+                'center',
+
+              textAlign:
+                'center',
             }}
           >
-            <Typography
+            <Box
               sx={{
-                color: '#111827',
-                fontSize: '16px',
-                fontWeight: 800,
+                width:
+                  '50px',
+
+                height:
+                  '50px',
+
+                display:
+                  'flex',
+
+                alignItems:
+                  'center',
+
+                justifyContent:
+                  'center',
+
+                backgroundColor:
+                  supervisorTheme.soft,
+
+                color:
+                  supervisorTheme.primary,
+
+                borderRadius:
+                  '50%',
+
+                fontSize:
+                  '18px',
+
+                fontWeight:
+                  800,
               }}
             >
-              No notifications
+              0
+            </Box>
+
+            <Typography
+              sx={{
+                color:
+                  '#111827',
+
+                fontSize:
+                  '15px',
+
+                fontWeight:
+                  800,
+
+                marginTop:
+                  '12px',
+              }}
+            >
+              ไม่มีการแจ้งเตือน
             </Typography>
 
             <Typography
               sx={{
-                color: '#6B7280',
-                fontSize: '13px',
-                marginTop: '5px',
+                color:
+                  '#64748B',
+
+                fontSize:
+                  '12px',
+
+                marginTop:
+                  '4px',
               }}
             >
-              New leave request notifications will appear
-              here.
+              การแจ้งเตือนใหม่จะแสดงในส่วนนี้
             </Typography>
           </Box>
         )}

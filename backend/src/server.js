@@ -74,6 +74,7 @@ import {
   updateProfile,
 } from './controllers/profile-controller.js'
 import { uploadProfileImage } from './middleware/profile-upload.js'
+import { listAuditLogs, listLeaveReport } from './controllers/integration-read-controller.js'
 
 export const expressApp = express()
 const adminAccess = [
@@ -170,6 +171,8 @@ expressApp.get('/api/notifications', ...authenticated, listNotifications)
 expressApp.patch('/api/notifications/read-all', ...authenticated, markAllNotificationsRead)
 expressApp.patch('/api/notifications/:notificationId/read', ...authenticated, markNotificationRead)
 expressApp.delete('/api/notifications/:notificationId', ...authenticated, deleteNotification)
+expressApp.get('/api/reports/leave-requests', ...authenticated, requireHrOrAdmin, listLeaveReport)
+expressApp.get('/api/admin/audit-logs', ...adminAccess, listAuditLogs)
 expressApp.get(
   '/api/admin/users',
   ...adminAccess,
