@@ -957,17 +957,6 @@ function RoleProfilePage({
                     }}
                   />
 
-                  <Typography
-                    sx={{
-                      color:
-                        '#94A3B8',
-
-                      fontSize:
-                        '10px',
-                    }}
-                  >
-                    คลิกที่รูปเพื่อเปลี่ยนรูปโปรไฟล์
-                  </Typography>
                 </Box>
               </Box>
             </Box>

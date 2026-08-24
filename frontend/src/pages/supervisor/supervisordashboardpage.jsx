@@ -18,6 +18,10 @@ import {
 } from 'react-router-dom';
 
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
+import RequestNumberText from '../../components/requestnumbertext.jsx';
+import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
+import { StatCard } from '../../components/shareduiprimitives.jsx';
+import { roleAccentTokens } from '../../theme/tokens.js';
 
 import { getTeamReport } from '../../api/leave-service.js';
 import { getNotifications, markNotificationRead as markNotificationAsRead } from '../../api/notification-service.js';
@@ -26,13 +30,7 @@ import {
   formatNotificationTitle,
 } from '../../utils/presentationformatter.js';
 
-const supervisorTheme = {
-  primary: '#7C3AED',
-  dark: '#6D28D9',
-  soft: '#F3E8FF',
-  border: '#DDD6FE',
-  text: '#5B21B6',
-};
+const supervisorTheme = roleAccentTokens.supervisor;
 
 const normalizeStatus = (status) =>
   String(status || '')
@@ -605,6 +603,7 @@ function SupervisorDashboardPage() {
 
       color:
         supervisorTheme.primary,
+      accent: 'warning',
     },
 
     {
@@ -622,6 +621,7 @@ function SupervisorDashboardPage() {
 
       color:
         '#15803D',
+      accent: 'success',
     },
 
     {
@@ -639,6 +639,7 @@ function SupervisorDashboardPage() {
 
       color:
         '#B91C1C',
+      accent: 'error',
     },
 
     {
@@ -656,6 +657,7 @@ function SupervisorDashboardPage() {
 
       color:
         '#6D28D9',
+      accent: 'error',
     },
   ];
 
@@ -690,33 +692,7 @@ function SupervisorDashboardPage() {
     <SupervisorLayout
       activeMenu="Dashboard"
     >
-      <Box
-        sx={{
-          marginBottom:
-            '22px',
-        }}
-      >
-        <Typography
-          component="h1"
-          sx={{
-            color:
-              '#111827',
-
-            fontSize: {
-              xs:
-                '26px',
-
-              sm:
-                '30px',
-            },
-
-            fontWeight:
-              800,
-          }}
-        >
-          Dashboard
-        </Typography>
-      </Box>
+      <PageHeader title="Dashboard" />
 
       {/* Summary Cards */}
       <Box
@@ -738,109 +714,19 @@ function SupervisorDashboardPage() {
           gap:
             '18px',
 
-          marginBottom:
-            '24px',
         }}
       >
         {summaryCards.map(
           (card) => (
-            <Paper
+            <StatCard
               key={
                 card.title
               }
-              elevation={0}
-              sx={{
-                minHeight:
-                  '140px',
-
-                padding:
-                  '20px',
-
-                backgroundColor:
-                  '#FFFFFF',
-
-                border:
-                  '1px solid #E5E7EB',
-
-                borderRadius:
-                  '14px',
-              }}
-            >
-              <Box
-                sx={{
-                  width:
-                    '50px',
-
-                  height:
-                    '50px',
-
-                  display:
-                    'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'center',
-
-                  backgroundColor:
-                    card.backgroundColor,
-
-                  color:
-                    card.color,
-
-                  borderRadius:
-                    '11px',
-
-                  fontSize:
-                    '20px',
-
-                  fontWeight:
-                    800,
-                }}
-              >
-                {
-                  card.value
-                }
-              </Box>
-
-              <Typography
-                sx={{
-                  color:
-                    '#111827',
-
-                  fontSize:
-                    '14px',
-
-                  fontWeight:
-                    800,
-
-                  marginTop:
-                    '13px',
-                }}
-              >
-                {
-                  card.title
-                }
-              </Typography>
-
-              <Typography
-                sx={{
-                  color:
-                    '#94A3B8',
-
-                  fontSize:
-                    '11px',
-
-                  marginTop:
-                    '3px',
-                }}
-              >
-                {
-                  card.description
-                }
-              </Typography>
-            </Paper>
+              title={card.title}
+              value={card.value}
+              supportingText={card.description}
+              accent={card.accent}
+            />
           ),
         )}
       </Box>
@@ -1649,9 +1535,9 @@ function SupervisorDashboardPage() {
                             : 800,
                       }}
                     >
-                      {formatNotificationTitle(
-                        notification.title,
-                      )}
+                      <RequestNumberText>
+                        {formatNotificationTitle(notification.title)}
+                      </RequestNumberText>
                     </Typography>
 
                     <Typography
@@ -1669,9 +1555,9 @@ function SupervisorDashboardPage() {
                           '4px',
                       }}
                     >
-                      {formatNotificationMessage(
-                        notification.message,
-                      )}
+                      <RequestNumberText>
+                        {formatNotificationMessage(notification.message)}
+                      </RequestNumberText>
                     </Typography>
 
                     <Typography

@@ -21,6 +21,7 @@ function HRNotificationPage() {
       theme={
         hrTheme
       }
+      summaryTotalColor="#2563EB"
     />
   );
 }

@@ -14,7 +14,9 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
+  IconButton,
   InputLabel,
+  Menu,
   MenuItem,
   Paper,
   Select,
@@ -27,6 +29,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
+import RequestNumberText from './requestnumbertext.jsx';
 
 import {
   useLocation,
@@ -182,6 +186,7 @@ const formatDays = (
 function RoleMyRequestsPage({
   LayoutComponent,
   theme,
+  visualCalibration = true,
 }) {
   void legacyRequestSamples;
   const navigate =
@@ -251,6 +256,9 @@ function RoleMyRequestsPage({
     message,
     setMessage,
   ] = useState(null);
+
+  const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
+  const [actionMenuRequest, setActionMenuRequest] = useState(null);
 
   const [
     selectedRequest,
@@ -539,6 +547,17 @@ function RoleMyRequestsPage({
     );
   };
 
+  const openActionMenu = (event, request) => {
+    event.stopPropagation();
+    setActionMenuAnchor(event.currentTarget);
+    setActionMenuRequest(request);
+  };
+
+  const closeActionMenu = () => {
+    setActionMenuAnchor(null);
+    setActionMenuRequest(null);
+  };
+
   const handleEditDraft = (
     request,
   ) => {
@@ -764,6 +783,11 @@ function RoleMyRequestsPage({
     >
       <Box
         sx={{
+          display: 'flex',
+          alignItems: { xs: 'stretch', sm: 'center' },
+          justifyContent: 'space-between',
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: '16px',
           marginBottom:
             '24px',
         }}
@@ -833,6 +857,13 @@ function RoleMyRequestsPage({
 
           marginBottom:
             '22px',
+          ...(visualCalibration && {
+            gap: 0,
+            overflow: 'hidden',
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E6EAF0',
+            borderRadius: '12px',
+          }),
         }}
       >
         {summaryCards.map(
@@ -866,6 +897,14 @@ function RoleMyRequestsPage({
 
                 gap:
                   '14px',
+                ...(visualCalibration && {
+                  minHeight: '80px',
+                  padding: '13px 16px',
+                  border: 'none',
+                  borderRight: '1px solid #EBEEF2',
+                  borderRadius: 0,
+                  boxShadow: 'none',
+                }),
               }}
             >
               <Box
@@ -899,6 +938,12 @@ function RoleMyRequestsPage({
 
                   fontSize:
                     '20px',
+                  ...(visualCalibration && {
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                  }),
 
                   fontWeight:
                     800,
@@ -1072,46 +1117,7 @@ function RoleMyRequestsPage({
                 '18px',
             }}
           >
-            <TextField
-              fullWidth
-              size="small"
-              label="ค้นหาคำขอ"
-              placeholder="เลขที่คำขอ ประเภทการลา หรือเหตุผล"
-              value={
-                searchText
-              }
-              onChange={(
-                event,
-              ) =>
-                handleSearchChange(
-                  event.target
-                    .value,
-                )
-              }
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    height:
-                      '46px',
-
-                    borderRadius:
-                      '9px',
-
-                    '&.Mui-focused fieldset':
-                      {
-                        borderColor:
-                          theme.primary,
-                      },
-                  },
-
-                '& .MuiInputLabel-root.Mui-focused':
-                  {
-                    color:
-                      theme.primary,
-                  },
-              }}
-            />
-
+            <TextField fullWidth size="small" label="ค้นหาคำขอ" placeholder="เลขที่คำขอ ประเภทการลา หรือเหตุผล" value={searchText} onChange={(event) => handleSearchChange(event.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: '46px', borderRadius: '9px', '&.Mui-focused fieldset': { borderColor: theme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: theme.primary } }} />
             <FormControl
               fullWidth
               size="small"
@@ -1299,7 +1305,7 @@ function RoleMyRequestsPage({
               <Table
                 sx={{
                   minWidth:
-                    '900px',
+                    theme.primary === '#2563EB' ? '780px' : '900px',
                 }}
               >
                 <TableHead>
@@ -1421,7 +1427,20 @@ function RoleMyRequestsPage({
                             request.id
                           }
                           hover
+                          tabIndex={0}
+                          onClick={() => handleViewRequest(request)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              handleViewRequest(request);
+                            }
+                          }}
                           sx={{
+                            cursor: 'pointer',
+                            '&:focus-visible': {
+                              outline: `2px solid ${theme.primary}`,
+                              outlineOffset: -2,
+                            },
                             '&:last-child td':
                               {
                                 borderBottom:
@@ -1459,29 +1478,11 @@ function RoleMyRequestsPage({
                                   'nowrap',
                               }}
                             >
-                              {request.requestNo ||
-                                `แบบร่าง #${request.id}`}
+                              <RequestNumberText>
+                                {request.requestNo || `แบบร่าง #${request.id}`}
+                              </RequestNumberText>
                             </Typography>
 
-                            {!request.requestNo && (
-                              <Typography
-                                sx={{
-                                  color:
-                                    '#94A3B8',
-
-                                  fontSize:
-                                    '10px',
-
-                                  marginTop:
-                                    '3px',
-
-                                  whiteSpace:
-                                    'nowrap',
-                                }}
-                              >
-                                ระบบจะสร้างเลขคำขอหลังจากส่งอนุมัติ
-                              </Typography>
-                            )}
                           </TableCell>
 
                           <TableCell
@@ -1634,216 +1635,37 @@ function RoleMyRequestsPage({
                                   'center',
 
                                 gap:
-                                  '7px',
+                                  theme.primary === '#2563EB' ? '2px' : '7px',
+
+                                flexWrap:
+                                  theme.primary === '#2563EB' ? 'nowrap' : 'wrap',
+
+                                '@media (max-width: 600px)': {
+                                  justifyContent:
+                                    'flex-start',
+                                  gap:
+                                    '4px',
+                                },
                               }}
                             >
-                              <Button
-                                type="button"
-                                variant="outlined"
-                                onClick={() =>
-                                  handleViewRequest(
-                                    request,
-                                  )
-                                }
-                                sx={{
-                                  minWidth:
-                                    '54px',
-
-                                  height:
-                                    '34px',
-
-                                  padding:
-                                    '0 12px',
-
-                                  color:
-                                    theme.primary,
-
-                                  borderColor:
-                                    theme.border ||
-                                    theme.primary,
-
-                                  borderRadius:
-                                    '8px',
-
-                                  fontSize:
-                                    '12px',
-
-                                  fontWeight:
-                                    700,
-
-                                  textTransform:
-                                    'none',
-
-                                  '&:hover':
-                                    {
-                                      backgroundColor:
-                                        theme.soft,
-
-                                      borderColor:
-                                        theme.primary,
-                                    },
-                                }}
-                              >
-                                ดู
-                              </Button>
-
-                              {request.status ===
-                                'draft' && (
-                                <>
-                                  <Button
-                                    type="button"
-                                    variant="outlined"
-                                    onClick={() =>
-                                      handleEditDraft(
-                                        request,
-                                      )
-                                    }
-                                    sx={{
-                                      minWidth:
-                                        '58px',
-
-                                      height:
-                                        '34px',
-
-                                      padding:
-                                        '0 12px',
-
-                                      color:
-                                        theme.primary,
-
-                                      borderColor:
-                                        theme.border ||
-                                        theme.primary,
-
-                                      borderRadius:
-                                        '8px',
-
-                                      fontSize:
-                                        '12px',
-
-                                      fontWeight:
-                                        700,
-
-                                      textTransform:
-                                        'none',
-
-                                      '&:hover':
-                                        {
-                                          backgroundColor:
-                                            theme.soft,
-
-                                          borderColor:
-                                            theme.primary,
-                                        },
-                                    }}
-                                  >
-                                    แก้ไข
-                                  </Button>
-
-                                  <Button
-                                    type="button"
-                                    variant="outlined"
-                                    onClick={() =>
-                                      openConfirmation(
-                                        'delete',
-                                        request,
-                                      )
-                                    }
-                                    sx={{
-                                      minWidth:
-                                        '50px',
-
-                                      height:
-                                        '34px',
-
-                                      padding:
-                                        '0 12px',
-
-                                      color:
-                                        '#DC2626',
-
-                                      borderColor:
-                                        '#FCA5A5',
-
-                                      borderRadius:
-                                        '8px',
-
-                                      fontSize:
-                                        '12px',
-
-                                      fontWeight:
-                                        700,
-
-                                      textTransform:
-                                        'none',
-
-                                      '&:hover':
-                                        {
-                                          backgroundColor:
-                                            '#FEF2F2',
-
-                                          borderColor:
-                                            '#DC2626',
-                                        },
-                                    }}
-                                  >
-                                    ลบ
-                                  </Button>
-                                </>
-                              )}
-
-                              {request.status ===
-                                'pending' && (
-                                <Button
+                              {['draft', 'pending'].includes(request.status) ? (
+                                <IconButton
                                   type="button"
-                                  variant="outlined"
-                                  onClick={() =>
-                                    openConfirmation(
-                                      'cancel',
-                                      request,
-                                    )
-                                  }
+                                  size="small"
+                                  aria-label="การดำเนินการ"
+                                  aria-haspopup="menu"
+                                  onClick={(event) => openActionMenu(event, request)}
                                   sx={{
-                                    minWidth:
-                                      '62px',
-
-                                    height:
-                                      '34px',
-
-                                    padding:
-                                      '0 12px',
-
-                                    color:
-                                      '#B45309',
-
-                                    borderColor:
-                                      '#FCD34D',
-
-                                    borderRadius:
-                                      '8px',
-
-                                    fontSize:
-                                      '12px',
-
-                                    fontWeight:
-                                      700,
-
-                                    textTransform:
-                                      'none',
-
-                                    '&:hover':
-                                      {
-                                        backgroundColor:
-                                          '#FFFBEB',
-
-                                        borderColor:
-                                          '#F59E0B',
-                                      },
+                                    width: 36,
+                                    height: 36,
+                                    color: '#64748B',
+                                    borderRadius: '8px',
+                                    '&:hover': { backgroundColor: theme.soft, color: theme.dark },
                                   }}
                                 >
-                                  ยกเลิก
-                                </Button>
-                              )}
+                                  <MoreVertRounded sx={{ fontSize: '20px' }} />
+                                </IconButton>
+                              ) : null}
                             </Box>
                           </TableCell>
                         </TableRow>
@@ -1853,6 +1675,49 @@ function RoleMyRequestsPage({
                 </TableBody>
               </Table>
             </Box>
+
+            <Menu
+              anchorEl={actionMenuAnchor}
+              open={Boolean(actionMenuAnchor && actionMenuRequest)}
+              onClose={closeActionMenu}
+              slotProps={{ paper: { sx: { minWidth: 140, borderRadius: '10px' } } }}
+            >
+              {actionMenuRequest?.status === 'draft' ? (
+                <MenuItem
+                  onClick={() => {
+                    const request = actionMenuRequest;
+                    closeActionMenu();
+                    handleEditDraft(request);
+                  }}
+                >
+                  แก้ไข
+                </MenuItem>
+              ) : null}
+              {actionMenuRequest?.status === 'draft' ? (
+                <MenuItem
+                  onClick={() => {
+                    const request = actionMenuRequest;
+                    closeActionMenu();
+                    openConfirmation('delete', request);
+                  }}
+                  sx={{ color: '#B42318' }}
+                >
+                  ลบ
+                </MenuItem>
+              ) : null}
+              {actionMenuRequest?.status === 'pending' ? (
+                <MenuItem
+                  onClick={() => {
+                    const request = actionMenuRequest;
+                    closeActionMenu();
+                    openConfirmation('cancel', request);
+                  }}
+                  sx={{ color: '#A16207' }}
+                >
+                  ยกเลิก
+                </MenuItem>
+              ) : null}
+            </Menu>
 
             <TablePagination
               component="div"
@@ -1895,6 +1760,15 @@ function RoleMyRequestsPage({
                     fontSize:
                       '12px',
                   },
+                '& .MuiTablePagination-toolbar': {
+                  minHeight: '50px',
+                  paddingInline: { xs: '10px', sm: '16px' },
+                },
+                '& .MuiTablePagination-actions .MuiIconButton-root': {
+                  width: '32px',
+                  height: '32px',
+                  border: 'none',
+                },
               }}
             />
           </>
@@ -2134,8 +2008,9 @@ function RoleMyRequestsPage({
                     800,
                 }}
               >
-                {selectedRequest.requestNo ||
-                  `แบบร่าง #${selectedRequest.id}`}
+                <RequestNumberText>
+                  {selectedRequest.requestNo || `แบบร่าง #${selectedRequest.id}`}
+                </RequestNumberText>
               </Typography>
 
               <Typography

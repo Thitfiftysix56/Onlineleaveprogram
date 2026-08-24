@@ -378,6 +378,7 @@ const getBalanceStatus = (
 function RoleLeaveBalancePage({
   LayoutComponent,
   theme,
+  visualCalibration = true,
 }) {
   void legacyLeaveBalanceSamples;
   const currentYear = new Date().getFullYear();
@@ -781,6 +782,13 @@ function RoleLeaveBalancePage({
 
           marginBottom:
             '26px',
+          ...(visualCalibration && {
+            gap: 0,
+            overflow: 'hidden',
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E6EAF0',
+            borderRadius: '12px',
+          }),
         }}
       >
         {summaryCards.map(
@@ -816,6 +824,14 @@ function RoleLeaveBalancePage({
 
                 borderRadius:
                   '12px',
+                ...(visualCalibration && {
+                  minHeight: '88px',
+                  padding: '14px 18px',
+                  border: 'none',
+                  borderRight: '1px solid #EBEEF2',
+                  borderRadius: 0,
+                  boxShadow: 'none',
+                }),
               }}
             >
               <Box
@@ -855,6 +871,9 @@ function RoleLeaveBalancePage({
 
                   fontWeight:
                     800,
+                  ...(visualCalibration && {
+                    display: 'none',
+                  }),
                 }}
               >
                 {formatDays(
@@ -970,6 +989,10 @@ function RoleLeaveBalancePage({
 
               gap:
                 '18px',
+              ...(visualCalibration && {
+                gridTemplateColumns: '1fr',
+                gap: '10px',
+              }),
             }}
           >
             {selectedBalances.map(
@@ -1034,6 +1057,15 @@ function RoleLeaveBalancePage({
 
                       borderRadius:
                         '14px',
+                      ...(visualCalibration && {
+                        padding: '18px 20px',
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(220px, 1.2fr) 170px minmax(300px, 1.4fr)' },
+                        alignItems: 'center',
+                        gap: { xs: '14px', md: '20px' },
+                        borderRadius: '10px',
+                        boxShadow: 'none',
+                      }),
                     }}
                   >
                     <Box
@@ -1211,6 +1243,13 @@ function RoleLeaveBalancePage({
 
                         textAlign:
                           'center',
+                        ...(visualCalibration && {
+                          marginTop: 0,
+                          padding: '10px 14px',
+                          border: 'none',
+                          borderLeft: `3px solid ${leaveTypeStyle.color}`,
+                          borderRadius: '4px',
+                        }),
                       }}
                     >
                       <Typography
@@ -1265,6 +1304,10 @@ function RoleLeaveBalancePage({
 
                         marginTop:
                           '16px',
+                        ...(visualCalibration && {
+                          marginTop: 0,
+                          gap: 0,
+                        }),
                       }}
                     >
                       {[
@@ -1323,6 +1366,13 @@ function RoleLeaveBalancePage({
 
                               textAlign:
                                 'center',
+                              ...(visualCalibration && {
+                                padding: '8px 6px',
+                                backgroundColor: 'transparent',
+                                border: 'none',
+                                borderLeft: '1px solid #E5EAF0',
+                                borderRadius: 0,
+                              }),
                             }}
                           >
                             <Typography

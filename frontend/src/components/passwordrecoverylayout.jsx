@@ -11,6 +11,12 @@ import {
   SecurityRounded,
 } from '@mui/icons-material';
 
+import {
+  colorTokens,
+  radiusTokens,
+  shadowTokens,
+} from '../theme/tokens.js';
+
 function PasswordRecoveryLayout({
   title,
   description,
@@ -28,12 +34,11 @@ function PasswordRecoveryLayout({
         overflowX: 'hidden',
         overflowY: 'auto',
         padding: {
-          xs: '24px 16px',
-          sm: '32px 24px',
-          lg: '40px',
+          xs: '16px',
+          sm: '24px',
+          lg: '32px',
         },
-        background:
-          'linear-gradient(180deg, #EAF5FF 0%, #F4F7FC 48%, #FFF1F4 100%)',
+        backgroundColor: colorTokens.background,
 
         '&::before': {
           content: '""',
@@ -43,7 +48,7 @@ function PasswordRecoveryLayout({
           top: '-190px',
           left: '-140px',
           borderRadius: '50%',
-          backgroundColor: 'rgba(37, 99, 235, 0.08)',
+          backgroundColor: 'rgba(37, 99, 235, 0.045)',
           pointerEvents: 'none',
         },
 
@@ -55,7 +60,7 @@ function PasswordRecoveryLayout({
           right: '-180px',
           bottom: '-220px',
           borderRadius: '50%',
-          backgroundColor: 'rgba(244, 114, 182, 0.08)',
+          backgroundColor: 'rgba(37, 99, 235, 0.03)',
           pointerEvents: 'none',
         },
       }}
@@ -73,26 +78,23 @@ function PasswordRecoveryLayout({
             md: 'minmax(0, 1.05fr) minmax(390px, 0.95fr)',
           },
           overflow: 'hidden',
-          borderRadius: {
-            xs: '22px',
-            md: '26px',
-          },
-          backgroundColor: '#FFFFFF',
-          border: '1px solid rgba(148, 163, 184, 0.22)',
-          boxShadow: '0 28px 70px rgba(51, 65, 85, 0.16)',
+          borderRadius: `${radiusTokens.dialog}px`,
+          backgroundColor: colorTokens.surface,
+          border: `1px solid ${colorTokens.border}`,
+          boxShadow: shadowTokens.floating,
         }}
       >
         {/* Left panel */}
         <Box
           sx={{
             minHeight: {
-              xs: '300px',
-              md: '570px',
+              xs: '240px',
+              md: '520px',
             },
             padding: {
-              xs: '30px 26px',
-              sm: '38px',
-              md: '48px',
+              xs: '24px',
+              sm: '32px',
+              md: '40px',
             },
             display: 'flex',
             flexDirection: 'column',
@@ -173,10 +175,10 @@ function PasswordRecoveryLayout({
               zIndex: 1,
               width: '100%',
               maxWidth: '410px',
-              minHeight: '190px',
+              minHeight: '160px',
               margin: {
-                xs: '32px auto 0',
-                md: '36px auto',
+                xs: '24px auto 0',
+                md: '28px auto',
               },
               display: 'flex',
               alignItems: 'center',
@@ -327,17 +329,17 @@ function PasswordRecoveryLayout({
           sx={{
             minHeight: {
               xs: 'auto',
-              md: '570px',
+              md: '520px',
             },
             padding: {
-              xs: '30px 24px 34px',
-              sm: '38px',
-              md: '46px 44px',
+              xs: '26px 24px 30px',
+              sm: '34px',
+              md: '40px',
             },
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: colorTokens.surface,
           }}
         >
           <Typography

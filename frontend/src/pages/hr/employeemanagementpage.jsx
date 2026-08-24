@@ -29,6 +29,7 @@ import {
 } from 'react-router-dom';
 
 import HRLayout from '../../layouts/hrlayout.jsx';
+import { RowActionMenu } from '../../components/shareduiprimitives.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -368,7 +369,7 @@ function EmployeeManagementPage() {
         theme.soft,
 
       color:
-        theme.primary,
+        '#2563EB',
     },
 
     {
@@ -396,7 +397,7 @@ function EmployeeManagementPage() {
         '#FEE2E2',
 
       color:
-        '#B91C1C',
+        '#BE123C',
     },
   ];
 
@@ -646,29 +647,25 @@ function EmployeeManagementPage() {
               key={card.title}
               elevation={0}
               sx={{
-                minHeight:
-                  '140px',
+                minHeight: '116px',
 
                 padding:
                   '20px',
 
-                backgroundColor:
-                  '#FFFFFF',
+                backgroundColor: `${card.color}18`,
 
-                border:
-                  '1px solid #E5E7EB',
+                border: `1px solid ${card.color}45`,
 
-                borderRadius:
-                  '14px',
+                borderRadius: '9px',
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
               <Box
                 sx={{
-                  width:
-                    '50px',
+                  width: 'auto',
 
-                  height:
-                    '50px',
+                  height: 'auto',
 
                   display:
                     'flex',
@@ -677,22 +674,21 @@ function EmployeeManagementPage() {
                     'center',
 
                   justifyContent:
-                    'center',
+                    'flex-start',
+                  textAlign: 'left',
 
-                  backgroundColor:
-                    card.backgroundColor,
+                  backgroundColor: 'transparent',
 
-                  color:
-                    card.color,
+                  color: '#172033',
 
                   borderRadius:
-                    '11px',
+                    0,
 
-                  fontSize:
-                    '20px',
+                  fontSize: '26px',
 
-                  fontWeight:
-                    800,
+                  fontWeight: 700,
+                  order: 2,
+                  marginTop: '7px',
                 }}
               >
                 {card.value}
@@ -700,17 +696,15 @@ function EmployeeManagementPage() {
 
               <Typography
                 sx={{
-                  color:
-                    '#111827',
+                  color: '#64748B',
 
-                  fontSize:
-                    '14px',
+                  fontSize: '12px',
 
                   fontWeight:
                     800,
 
-                  marginTop:
-                    '13px',
+                  marginTop: 0,
+                  order: 1,
                 }}
               >
                 {card.title}
@@ -1258,99 +1252,19 @@ function EmployeeManagementPage() {
                                 'nowrap',
                             }}
                           >
-                            <Button
-                              type="button"
-                              onClick={() =>
-                                handleEditEmployee(
-                                  employee,
-                                )
-                              }
-                              sx={{
-                                minWidth:
-                                  0,
-
-                                padding:
-                                  0,
-
-                                color:
-                                  theme.primary,
-
-                                fontSize:
-                                  '11px',
-
-                                fontWeight:
-                                  700,
-
-                                textTransform:
-                                  'none',
-
-                                '&:hover':
-                                  {
-                                    backgroundColor:
-                                      'transparent',
-
-                                    textDecoration:
-                                      'underline',
-                                  },
-                              }}
-                            >
-                              แก้ไข
-                            </Button>
-
-                            {employee.status !==
-                              'resigned' && (
-                              <Button
-                                type="button"
-                                disabled={
-                                  updatingId ===
-                                  employee.id
-                                }
-                                onClick={() =>
-                                  handleToggleStatus(
-                                    employee,
-                                  )
-                                }
-                                sx={{
-                                  minWidth:
-                                    0,
-
-                                  padding:
-                                    0,
-
-                                  color:
-                                    employee.status ===
-                                    'active'
-                                      ? '#DC2626'
-                                      : '#2563EB',
-
-                                  fontSize:
-                                    '11px',
-
-                                  fontWeight:
-                                    700,
-
-                                  textTransform:
-                                    'none',
-
-                                  '&:hover':
-                                    {
-                                      backgroundColor:
-                                        'transparent',
-
-                                      textDecoration:
-                                        'underline',
-                                    },
-                                }}
-                              >
-                                {updatingId ===
-                                employee.id
-                                  ? 'กำลังบันทึก...'
-                                  : employee.status ===
-                                      'active'
-                                    ? 'ปิดใช้งาน'
-                                    : 'เปิดใช้งาน'}
-                              </Button>
-                            )}
+                            <RowActionMenu
+                              actions={[
+                                { label: 'แก้ไข', onClick: () => handleEditEmployee(employee) },
+                                employee.status !== 'resigned'
+                                  ? {
+                                      label: updatingId === employee.id ? 'กำลังบันทึก...' : employee.status === 'active' ? 'ปิดใช้งาน' : 'เปิดใช้งาน',
+                                      disabled: updatingId === employee.id,
+                                      tone: employee.status === 'active' ? 'danger' : 'success',
+                                      onClick: () => handleToggleStatus(employee),
+                                    }
+                                  : null,
+                              ]}
+                            />
                           </Box>
                         </TableCell>
                       </TableRow>

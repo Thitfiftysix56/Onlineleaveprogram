@@ -18,6 +18,65 @@ async function identity(connection, request) {
   return rows[0]?.employee_id || null
 }
 
+export async function validateSubmissionParticipants(connection, employeeId) {
+  const [rows] = await connection.execute(
+    `SELECT e.employee_id, e.status AS employee_status, e.supervisor_id,
+            s.status AS supervisor_employee_status,
+            u.user_id AS supervisor_user_id, u.status AS supervisor_user_status,
+            r.role_name AS supervisor_role_name
+     FROM employees e
+     LEFT JOIN employees s ON s.employee_id = e.supervisor_id
+     LEFT JOIN users u ON u.employee_id = s.employee_id
+     LEFT JOIN roles r ON r.role_id = u.role_id
+     WHERE e.employee_id = ?
+     LIMIT 1`,
+    [employeeId],
+  )
+  const participant = rows[0]
+  if (!participant || String(participant.employee_status).toLowerCase() !== 'active') {
+    return { error: 'The submitting employee is invalid or inactive.' }
+  }
+  if (!participant.supervisor_id || String(participant.supervisor_employee_status).toLowerCase() !== 'active') {
+    return { error: 'A valid active supervisor employee is required before submission.' }
+  }
+  if (!participant.supervisor_user_id || String(participant.supervisor_user_status).toLowerCase() !== 'active') {
+    return { error: 'A valid active supervisor account is required before submission.' }
+  }
+  if (String(participant.supervisor_role_name).toLowerCase() !== 'supervisor') {
+    return { error: 'The direct supervisor account must have the Supervisor role.' }
+  }
+  return { supervisorUserId: participant.supervisor_user_id }
+}
+
+export function calculateApprovalAvailability(entitlement, pendingDaysExcludingCurrent) {
+  return Number(entitlement.total_days)
+    - Number(entitlement.used_days)
+    - Number(pendingDaysExcludingCurrent)
+}
+
+export async function recheckApprovalBalance(connection, row, requestId) {
+  const year = Number(dateOnly(row.start_date).slice(0, 4))
+  const [entitlements] = await connection.execute(
+    'SELECT entitlement_id, total_days, used_days FROM leave_entitlements WHERE employee_id = ? AND leave_type_id = ? AND year = ? FOR UPDATE',
+    [row.employee_id, row.leave_type_id, year],
+  )
+  const entitlement = entitlements[0]
+  if (!entitlement) return { allowed: false, entitlement: null }
+  const [[pending]] = await connection.execute(
+    `SELECT COALESCE(SUM(leave_days), 0) AS pending_days
+     FROM leave_requests
+     WHERE employee_id = ? AND leave_type_id = ? AND YEAR(start_date) = ?
+       AND status = 'pending' AND leave_request_id <> ?`,
+    [row.employee_id, row.leave_type_id, year, requestId],
+  )
+  const availableForCurrent = calculateApprovalAvailability(entitlement, pending.pending_days)
+  return {
+    allowed: Number(row.leave_days) <= availableForCurrent,
+    entitlement,
+    availableForCurrent,
+  }
+}
+
 const select = `SELECT lr.leave_request_id, lr.request_no, lr.employee_id, lr.leave_type_id,
  lr.start_date, lr.end_date, lr.leave_days, lr.reason, lr.status, lr.submitted_at,
  lr.approver_employee_id, lr.approved_at, lr.rejected_at, lr.rejection_reason,
@@ -128,9 +187,10 @@ async function save(request,response,submitting) {
   const connection=await pool.getConnection(); try { await connection.beginTransaction(); const employeeId=await identity(connection,request); const requestId=positiveId(request.params.requestId); let existing=null
     if(requestId){ existing=await byId(connection,requestId); if(!existing||existing.employee_id!==employeeId)return rollbackError(connection,response,404,'Draft was not found.'); if(existing.status!=='draft')return rollbackError(connection,response,409,'Only draft requests can be updated.') }
     const checked=await validate(connection,employeeId,request.body,requestId||0,submitting); if(checked.error)return rollbackError(connection,response,400,checked.error); const v=checked.value
+    const participants=submitting?await validateSubmissionParticipants(connection,employeeId):null; if(participants?.error)return rollbackError(connection,response,400,participants.error)
     let id=requestId; if(id) await connection.execute(`UPDATE leave_requests SET leave_type_id=?,start_date=?,end_date=?,leave_days=?,reason=?,status=?,submitted_at=${submitting?'NOW()':'NULL'} WHERE leave_request_id=?`,[v.leaveTypeId,v.startDate,v.endDate,v.days||0,v.reason,submitting?'pending':'draft',id])
     else { const [result]=await connection.execute(`INSERT INTO leave_requests(employee_id,leave_type_id,start_date,end_date,leave_days,reason,status,submitted_at) VALUES(?,?,?,?,?,?,?,${submitting?'NOW()':'NULL'})`,[employeeId,v.leaveTypeId,v.startDate,v.endDate,v.days||0,v.reason,submitting?'pending':'draft']); id=result.insertId }
-    if(submitting){ const [[storedCount]]=await connection.execute('SELECT COUNT(*) attachment_count FROM leave_request_attachments WHERE leave_request_id=?',[id]); const mustAttach=Boolean(v.type.requires_attachment)&&Number(v.days)>=Number(v.type.attachment_required_after_days||0); if(mustAttach&&!request.files?.length&&!Number(storedCount.attachment_count))return rollbackError(connection,response,400,'An attachment is required for this leave request.'); const requestNo=`LR-${new Date().toISOString().slice(0,10).replaceAll('-','')}-${String(id).padStart(6,'0')}`; await connection.execute('UPDATE leave_requests SET request_no=? WHERE leave_request_id=?',[requestNo,id]); const [supervisors]=await connection.execute(`SELECT u.user_id FROM employees e JOIN users u ON u.employee_id=e.supervisor_id WHERE e.employee_id=? LIMIT 1`,[employeeId]); if(!supervisors.length)return rollbackError(connection,response,400,'A valid supervisor account is required before submission.'); await createNotification(connection,{userId:supervisors[0].user_id,type:'leave-submitted',title:'New leave request',message:`Leave request ${requestNo} is waiting for approval.`,leaveRequestId:id}) }
+    if(submitting){ const [[storedCount]]=await connection.execute('SELECT COUNT(*) attachment_count FROM leave_request_attachments WHERE leave_request_id=?',[id]); const mustAttach=Boolean(v.type.requires_attachment)&&Number(v.days)>=Number(v.type.attachment_required_after_days||0); if(mustAttach&&!request.files?.length&&!Number(storedCount.attachment_count))return rollbackError(connection,response,400,'An attachment is required for this leave request.'); const requestNo=`LR-${new Date().toISOString().slice(0,10).replaceAll('-','')}-${String(id).padStart(6,'0')}`; await connection.execute('UPDATE leave_requests SET request_no=? WHERE leave_request_id=?',[requestNo,id]); await createNotification(connection,{userId:participants.supervisorUserId,type:'leave-submitted',title:'New leave request',message:`Leave request ${requestNo} is waiting for approval.`,leaveRequestId:id}) }
     await storeFiles(connection,id,request.files)
     const row=await byId(connection,id)
     if(!row) throw new Error('Saved leave request could not be reloaded.')
@@ -167,17 +227,13 @@ export async function decide(request, response) {
     if (!team.length || row.employee_id === supervisorId) return rollbackError(connection, response, 403, 'Forbidden')
 
     if (decision === 'approved') {
-      const [entitlements] = await connection.execute(
-        'SELECT entitlement_id, total_days, used_days FROM leave_entitlements WHERE employee_id = ? AND leave_type_id = ? AND year = ? FOR UPDATE',
-        [row.employee_id, row.leave_type_id, Number(dateOnly(row.start_date).slice(0, 4))],
-      )
-      const entitlement = entitlements[0]
-      if (!entitlement || Number(entitlement.used_days) + Number(row.leave_days) > Number(entitlement.total_days)) {
+      const balanceCheck = await recheckApprovalBalance(connection, row, requestId)
+      if (!balanceCheck.allowed) {
         return rollbackError(connection, response, 409, 'Insufficient leave balance.')
       }
       await connection.execute(
         'UPDATE leave_entitlements SET used_days = used_days + ? WHERE entitlement_id = ?',
-        [row.leave_days, entitlement.entitlement_id],
+        [row.leave_days, balanceCheck.entitlement.entitlement_id],
       )
       await connection.execute(
         `UPDATE leave_requests

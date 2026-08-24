@@ -18,7 +18,10 @@ import {
 } from 'react-router-dom';
 
 import EmployeeLayout from '../../layouts/employeelayout.jsx';
-
+import RequestNumberText from '../../components/requestnumbertext.jsx';
+import {
+  PageHeader,
+} from '../../components/sharedvisualfoundation.jsx';
 import { getLeaveBalance, getMyLeaveRequests } from '../../api/leave-service.js';
 import { getNotifications, markNotificationRead as markNotificationAsRead } from '../../api/notification-service.js';
 import {
@@ -1005,34 +1008,39 @@ function EmployeeDashboardPage() {
   return (
     <EmployeeLayout
       activeMenu="Dashboard"
+      calibrated
     >
-      <Box
-        sx={{
-          marginBottom:
-            '24px',
-        }}
-      >
-        <Typography
-          component="h1"
-          sx={{
-            color:
-              '#111827',
-
-            fontSize: {
-              xs:
-                '26px',
-
-              sm:
-                '30px',
-            },
-
-            fontWeight:
-              800,
-          }}
-        >
-          Dashboard
-        </Typography>
-      </Box>
+      <PageHeader
+        title="Dashboard"
+        actions={(
+          <Button
+            type="button"
+            variant="contained"
+            onClick={() =>
+              navigate(
+                '/employee/leave-request',
+              )
+            }
+            sx={{
+              height: '40px',
+              padding: '0 16px',
+              backgroundColor: '#2563EB',
+              color: '#FFFFFF',
+              borderRadius: '9px',
+              fontSize: '13px',
+              fontWeight: 700,
+              textTransform: 'none',
+              boxShadow: 'none',
+              '&:hover': {
+                backgroundColor: '#1D4ED8',
+                boxShadow: 'none',
+              },
+            }}
+          >
+            + สร้างคำขอลา
+          </Button>
+        )}
+      />
 
       <Box
         sx={{
@@ -1041,168 +1049,48 @@ function EmployeeDashboardPage() {
 
           gridTemplateColumns: {
             xs:
-              '1fr',
+              'repeat(2, minmax(0, 1fr))',
 
             sm:
               'repeat(2, minmax(0, 1fr))',
 
-            xl:
+            md:
               'repeat(4, minmax(0, 1fr))',
           },
-
-          gap:
-            '18px',
-
-          marginBottom:
-            '24px',
+          gap: '12px',
         }}
       >
         {summaryCards.map(
           (
             card,
+            index,
           ) => (
-            <Paper
-              key={
-                card.title
-              }
-              elevation={0}
-              sx={{
-                padding:
-                  '20px',
-
-                display:
-                  'flex',
-
-                alignItems:
-                  'center',
-
-                gap:
-                  '16px',
-
-                backgroundColor:
-                  '#FFFFFF',
-
-                border:
-                  '1px solid #E5E7EB',
-
-                borderRadius:
-                  '14px',
-              }}
-            >
-              <Box
-                sx={{
-                  width:
-                    '54px',
-
-                  height:
-                    '54px',
-
-                  flexShrink:
-                    0,
-
-                  display:
-                    'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'center',
-
-                  backgroundColor:
-                    card.backgroundColor,
-
-                  color:
-                    card.color,
-
-                  border:
-                    `1px solid ${card.borderColor}`,
-
-                  borderRadius:
-                    '12px',
-
-                  fontSize:
-                    '18px',
-
-                  fontWeight:
-                    800,
-                }}
-              >
-                {typeof card.value ===
-                'number'
-                  ? card.value
-                  : String(
-                      card.value,
-                    )
-                      .split(
-                        ' ',
-                      )[0]}
-              </Box>
-
-              <Box
-                sx={{
-                  minWidth:
-                    0,
-                }}
-              >
-                <Typography
-                  sx={{
-                    color:
-                      '#6B7280',
-
-                    fontSize:
-                      '13px',
-
-                    fontWeight:
-                      600,
-                  }}
-                >
-                  {
-                    card.title
-                  }
-                </Typography>
-
-                <Typography
-                  sx={{
-                    color:
-                      '#111827',
-
-                    fontSize:
-                      '24px',
-
-                    lineHeight:
-                      1.25,
-
-                    fontWeight:
-                      800,
-
-                    marginTop:
-                      '3px',
-                  }}
-                >
-                  {
-                    card.value
-                  }
-                </Typography>
-
-                <Typography
-                  sx={{
-                    color:
-                      '#9CA3AF',
-
-                    fontSize:
-                      '11px',
-
-                    marginTop:
-                      '3px',
-                  }}
-                >
-                  {
-                    card.description
-                  }
-                </Typography>
-              </Box>
-            </Paper>
+            <Box key={card.title} sx={{
+              minWidth: 0,
+              padding: { xs: '18px 16px', sm: '22px 24px' },
+              borderRight: {
+                xs: index % 2 === 0 ? '1px solid #E5EAF0' : 'none',
+                md: index < summaryCards.length - 1 ? '1px solid #E5EAF0' : 'none',
+              },
+              borderBottom: {
+                xs: index < 2 ? '1px solid #E5EAF0' : 'none',
+                md: 'none',
+              },
+              backgroundColor: card.backgroundColor,
+              border: `1px solid ${card.borderColor}`,
+              borderRadius: '9px',
+              boxShadow: 'none',
+            }}>
+              <Typography sx={{ color: '#64748B', fontSize: '12px', fontWeight: 600 }}>
+                {card.title}
+              </Typography>
+              <Typography sx={{ color: '#172033', fontSize: { xs: '22px', sm: '26px' }, fontWeight: 700, lineHeight: 1.25, marginTop: '7px' }}>
+                {card.value}
+              </Typography>
+              <Typography sx={{ color: '#64748B', fontSize: '12px', lineHeight: 1.5, marginTop: '5px' }}>
+                {card.description}
+              </Typography>
+            </Box>
           ),
         )}
       </Box>
@@ -1349,53 +1237,6 @@ function EmployeeDashboardPage() {
               ดูทั้งหมด
             </Button>
 
-            <Button
-              type="button"
-              variant="contained"
-              onClick={() =>
-                navigate(
-                  '/employee/leave-request',
-                )
-              }
-              sx={{
-                height:
-                  '40px',
-
-                padding:
-                  '0 16px',
-
-                backgroundColor:
-                  '#2563EB',
-
-                color:
-                  '#FFFFFF',
-
-                borderRadius:
-                  '9px',
-
-                fontSize:
-                  '13px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
-
-                boxShadow:
-                  'none',
-
-                '&:hover': {
-                  backgroundColor:
-                    '#1D4ED8',
-
-                  boxShadow:
-                    'none',
-                },
-              }}
-            >
-              + สร้างคำขอลา
-            </Button>
           </Box>
         </Box>
 
@@ -1419,7 +1260,7 @@ function EmployeeDashboardPage() {
                     'grid',
 
                   gridTemplateColumns:
-                    '1.2fr 1.1fr 2fr 0.9fr 1fr 1fr',
+                    '1.2fr 1.1fr 2fr 0.9fr 1fr',
 
                   padding:
                     '13px 24px',
@@ -1437,7 +1278,6 @@ function EmployeeDashboardPage() {
                   'ช่วงวันที่',
                   'จำนวนวัน',
                   'สถานะ',
-                  'การดำเนินการ',
                 ].map(
                   (
                     heading,
@@ -1479,12 +1319,22 @@ function EmployeeDashboardPage() {
                       key={
                         request.id
                       }
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleOpenRequest(request.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          handleOpenRequest(request.id);
+                        }
+                      }}
                       sx={{
+                        cursor: 'pointer',
                         display:
                           'grid',
 
                         gridTemplateColumns:
-                          '1.2fr 1.1fr 2fr 0.9fr 1fr 1fr',
+                          '1.2fr 1.1fr 2fr 0.9fr 1fr',
 
                         alignItems:
                           'center',
@@ -1506,6 +1356,10 @@ function EmployeeDashboardPage() {
                             backgroundColor:
                               '#FAFBFD',
                           },
+                        '&:focus-visible': {
+                          outline: '2px solid #2563EB',
+                          outlineOffset: -2,
+                        },
                       }}
                     >
                       <Typography
@@ -1523,8 +1377,9 @@ function EmployeeDashboardPage() {
                             'nowrap',
                         }}
                       >
-                        {request.requestNo ||
-                          `#${request.id}`}
+                        <RequestNumberText>
+                          {request.requestNo || `#${request.id}`}
+                        </RequestNumberText>
                       </Typography>
 
                       <Typography
@@ -1611,47 +1466,6 @@ function EmployeeDashboardPage() {
                         />
                       </Box>
 
-                      <Button
-                        type="button"
-                        onClick={() =>
-                          handleOpenRequest(
-                            request.id,
-                          )
-                        }
-                        sx={{
-                          width:
-                            'fit-content',
-
-                          minWidth:
-                            0,
-
-                          padding:
-                            0,
-
-                          color:
-                            '#2563EB',
-
-                          fontSize:
-                            '12px',
-
-                          fontWeight:
-                            700,
-
-                          textTransform:
-                            'none',
-
-                          '&:hover':
-                            {
-                              backgroundColor:
-                                'transparent',
-
-                              textDecoration:
-                                'underline',
-                            },
-                        }}
-                      >
-                        ดูรายละเอียด
-                      </Button>
                     </Box>
                   );
                 },
@@ -2080,9 +1894,9 @@ function EmployeeDashboardPage() {
                             : 800,
                       }}
                     >
-                      {formatNotificationTitle(
-                        notification.title,
-                      )}
+                      <RequestNumberText>
+                        {formatNotificationTitle(notification.title)}
+                      </RequestNumberText>
                     </Typography>
 
                     <Typography
@@ -2100,9 +1914,9 @@ function EmployeeDashboardPage() {
                           '4px',
                       }}
                     >
-                      {formatNotificationMessage(
-                        notification.message,
-                      )}
+                      <RequestNumberText>
+                        {formatNotificationMessage(notification.message)}
+                      </RequestNumberText>
                     </Typography>
 
                     <Typography

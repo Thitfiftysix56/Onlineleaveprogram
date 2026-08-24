@@ -35,6 +35,7 @@ import {
 } from 'react-router-dom';
 
 import HRLayout from '../../layouts/hrlayout.jsx';
+import RequestNumberText from '../../components/requestnumbertext.jsx';
 import api from '../../api/axios.js';
 
 import {
@@ -927,7 +928,7 @@ function HRReportsPage() {
         theme.soft,
 
       color:
-        theme.primary,
+        '#2563EB',
     },
 
     {
@@ -1254,6 +1255,7 @@ function HRReportsPage() {
           รายงานการลา
         </Typography>
 
+        <Box sx={{ width: { xs: '100%', sm: 'auto' }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: '10px' }}>
         <Button
           type="button"
           variant="contained"
@@ -1305,6 +1307,7 @@ function HRReportsPage() {
         >
           ส่งออก Excel
         </Button>
+        </Box>
       </Box>
 
       {/* Messages */}
@@ -1384,29 +1387,25 @@ function HRReportsPage() {
               }
               elevation={0}
               sx={{
-                minHeight:
-                  '140px',
+                minHeight: '116px',
 
                 padding:
                   '20px',
 
-                backgroundColor:
-                  '#FFFFFF',
+                backgroundColor: `${card.color}18`,
 
-                border:
-                  '1px solid #E5E7EB',
+                border: `1px solid ${card.color}45`,
 
-                borderRadius:
-                  '14px',
+                borderRadius: '9px',
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
               <Box
                 sx={{
-                  width:
-                    '50px',
+                  width: 'auto',
 
-                  height:
-                    '50px',
+                  height: 'auto',
 
                   display:
                     'flex',
@@ -1415,22 +1414,21 @@ function HRReportsPage() {
                     'center',
 
                   justifyContent:
-                    'center',
+                    'flex-start',
+                  textAlign: 'left',
 
-                  backgroundColor:
-                    card.backgroundColor,
+                  backgroundColor: 'transparent',
 
-                  color:
-                    card.color,
+                  color: '#172033',
 
                   borderRadius:
-                    '11px',
+                    0,
 
-                  fontSize:
-                    '20px',
+                  fontSize: '26px',
 
-                  fontWeight:
-                    800,
+                  fontWeight: 700,
+                  order: 2,
+                  marginTop: '7px',
                 }}
               >
                 {card.value}
@@ -1438,17 +1436,15 @@ function HRReportsPage() {
 
               <Typography
                 sx={{
-                  color:
-                    '#111827',
+                  color: '#64748B',
 
-                  fontSize:
-                    '14px',
+                  fontSize: '12px',
 
                   fontWeight:
                     800,
 
-                  marginTop:
-                    '13px',
+                  marginTop: 0,
+                  order: 1,
                 }}
               >
                 {card.title}
@@ -1538,7 +1534,7 @@ function HRReportsPage() {
                   'repeat(2, 1fr)',
 
                 xl:
-                  'repeat(3, 1fr)',
+                  'minmax(240px, 1fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) minmax(130px, 0.6fr) minmax(170px, 0.75fr) minmax(170px, 0.75fr) auto',
               },
 
               gap:
@@ -1548,46 +1544,7 @@ function HRReportsPage() {
                 '20px',
             }}
           >
-            {/* Search */}
-
-            <TextField
-              fullWidth
-              label="ค้นหา"
-              placeholder="เลขที่คำขอ ชื่อ หรือรหัสพนักงาน"
-              value={
-                searchText
-              }
-              onChange={(
-                event,
-              ) =>
-                setSearchText(
-                  event.target
-                    .value,
-                )
-              }
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    height:
-                      '48px',
-
-                    borderRadius:
-                      '9px',
-
-                    '&.Mui-focused fieldset':
-                      {
-                        borderColor:
-                          theme.primary,
-                      },
-                  },
-
-                '& .MuiInputLabel-root.Mui-focused':
-                  {
-                    color:
-                      theme.primary,
-                  },
-              }}
-            />
+            <TextField fullWidth label="ค้นหา" placeholder="เลขที่คำขอ ชื่อ หรือรหัสพนักงาน" value={searchText} onChange={(event) => setSearchText(event.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: '48px', borderRadius: '9px', '&.Mui-focused fieldset': { borderColor: theme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: theme.primary } }} />
 
             {/* Department */}
 
@@ -1977,7 +1934,6 @@ function HRReportsPage() {
                     'จำนวนวัน',
                     'สถานะ',
                     'ผู้อนุมัติ',
-                    'การดำเนินการ',
                   ].map(
                     (
                       heading,
@@ -2050,6 +2006,21 @@ function HRReportsPage() {
                           `${request.requestNo}-${index}`
                         }
                         hover
+                        tabIndex={request.id ? 0 : undefined}
+                        onClick={() => request.id && handleViewRequest(request)}
+                        onKeyDown={(event) => {
+                          if (request.id && (event.key === 'Enter' || event.key === ' ')) {
+                            event.preventDefault();
+                            handleViewRequest(request);
+                          }
+                        }}
+                        sx={{
+                          cursor: request.id ? 'pointer' : 'default',
+                          '&:focus-visible': {
+                            outline: `2px solid ${theme.primary}`,
+                            outlineOffset: -2,
+                          },
+                        }}
                       >
                         {/* Request */}
 
@@ -2083,9 +2054,7 @@ function HRReportsPage() {
                                 'anywhere',
                             }}
                           >
-                            {
-                              request.requestNo
-                            }
+                            <RequestNumberText>{request.requestNo}</RequestNumberText>
                           </Typography>
                         </TableCell>
 
@@ -2352,59 +2321,6 @@ function HRReportsPage() {
                           }
                         </TableCell>
 
-                        {/* Action */}
-
-                        <TableCell
-                          align="center"
-                          sx={{
-                            padding:
-                              '12px 3px',
-
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          <Button
-                            type="button"
-                            disabled={
-                              !request.id
-                            }
-                            onClick={() =>
-                              handleViewRequest(
-                                request,
-                              )
-                            }
-                            sx={{
-                              minWidth:
-                                0,
-
-                              padding:
-                                '2px 4px',
-
-                              color:
-                                theme.primary,
-
-                              fontSize:
-                                '9.5px',
-
-                              fontWeight:
-                                700,
-
-                              textTransform:
-                                'none',
-
-                              '&:hover': {
-                                backgroundColor:
-                                  'transparent',
-
-                                textDecoration:
-                                  'underline',
-                              },
-                            }}
-                          >
-                            ดู
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     );
                   },

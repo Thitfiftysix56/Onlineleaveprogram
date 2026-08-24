@@ -29,6 +29,7 @@ import {
 } from 'react-router-dom';
 
 import HRLayout from '../../layouts/hrlayout.jsx';
+import { RowActionMenu } from '../../components/shareduiprimitives.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -378,7 +379,7 @@ function LeaveTypeManagementPage() {
         theme.soft,
 
       color:
-        theme.primary,
+        '#2563EB',
     },
 
     {
@@ -406,7 +407,7 @@ function LeaveTypeManagementPage() {
         '#FEE2E2',
 
       color:
-        '#DC2626',
+        '#BE123C',
     },
 
     {
@@ -420,7 +421,7 @@ function LeaveTypeManagementPage() {
         '#F3E8FF',
 
       color:
-        '#7C3AED',
+        '#D97706',
     },
   ];
 
@@ -696,29 +697,25 @@ function LeaveTypeManagementPage() {
               }
               elevation={0}
               sx={{
-                minHeight:
-                  '140px',
+                minHeight: '116px',
 
                 padding:
                   '20px',
 
-                backgroundColor:
-                  '#FFFFFF',
+                backgroundColor: `${card.color}18`,
 
-                border:
-                  '1px solid #E5E7EB',
+                border: `1px solid ${card.color}45`,
 
-                borderRadius:
-                  '14px',
+                borderRadius: '9px',
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
               <Box
                 sx={{
-                  width:
-                    '50px',
+                  width: 'auto',
 
-                  height:
-                    '50px',
+                  height: 'auto',
 
                   display:
                     'flex',
@@ -727,22 +724,21 @@ function LeaveTypeManagementPage() {
                     'center',
 
                   justifyContent:
-                    'center',
+                    'flex-start',
+                  textAlign: 'left',
 
-                  backgroundColor:
-                    card.backgroundColor,
+                  backgroundColor: 'transparent',
 
-                  color:
-                    card.color,
+                  color: '#172033',
 
                   borderRadius:
-                    '11px',
+                    0,
 
-                  fontSize:
-                    '20px',
+                  fontSize: '26px',
 
-                  fontWeight:
-                    800,
+                  fontWeight: 700,
+                  order: 2,
+                  marginTop: '7px',
                 }}
               >
                 {card.value}
@@ -750,17 +746,15 @@ function LeaveTypeManagementPage() {
 
               <Typography
                 sx={{
-                  color:
-                    '#111827',
+                  color: '#64748B',
 
-                  fontSize:
-                    '14px',
+                  fontSize: '12px',
 
                   fontWeight:
                     800,
 
-                  marginTop:
-                    '13px',
+                  marginTop: 0,
+                  order: 1,
                 }}
               >
                 {card.title}
@@ -1334,96 +1328,17 @@ function LeaveTypeManagementPage() {
                               'nowrap',
                           }}
                         >
-                          <Button
-                            type="button"
-                            onClick={() =>
-                              handleEditLeaveType(
-                                leaveType,
-                              )
-                            }
-                            sx={{
-                              minWidth:
-                                0,
-
-                              padding:
-                                0,
-
-                              color:
-                                theme.primary,
-
-                              fontSize:
-                                '11px',
-
-                              fontWeight:
-                                700,
-
-                              textTransform:
-                                'none',
-
-                              '&:hover':
-                                {
-                                  backgroundColor:
-                                    'transparent',
-
-                                  textDecoration:
-                                    'underline',
-                                },
-                            }}
-                          >
-                            แก้ไข
-                          </Button>
-
-                          <Button
-                            type="button"
-                            disabled={
-                              updatingId ===
-                              leaveType.id
-                            }
-                            onClick={() =>
-                              handleToggleStatus(
-                                leaveType,
-                              )
-                            }
-                            sx={{
-                              minWidth:
-                                0,
-
-                              padding:
-                                0,
-
-                              color:
-                                leaveType.status ===
-                                'Active'
-                                  ? '#DC2626'
-                                  : '#2563EB',
-
-                              fontSize:
-                                '11px',
-
-                              fontWeight:
-                                700,
-
-                              textTransform:
-                                'none',
-
-                              '&:hover':
-                                {
-                                  backgroundColor:
-                                    'transparent',
-
-                                  textDecoration:
-                                    'underline',
-                                },
-                            }}
-                          >
-                            {updatingId ===
-                            leaveType.id
-                              ? 'กำลังบันทึก...'
-                              : leaveType.status ===
-                                  'Active'
-                                ? 'ปิดใช้งาน'
-                                : 'เปิดใช้งาน'}
-                          </Button>
+                          <RowActionMenu
+                            actions={[
+                              { label: 'แก้ไข', onClick: () => handleEditLeaveType(leaveType) },
+                              {
+                                label: updatingId === leaveType.id ? 'กำลังบันทึก...' : leaveType.status === 'Active' ? 'ปิดใช้งาน' : 'เปิดใช้งาน',
+                                disabled: updatingId === leaveType.id,
+                                tone: leaveType.status === 'Active' ? 'danger' : 'success',
+                                onClick: () => handleToggleStatus(leaveType),
+                              },
+                            ]}
+                          />
                         </Box>
                       </TableCell>
                     </TableRow>

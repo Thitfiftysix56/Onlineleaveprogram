@@ -228,7 +228,7 @@ const getAttachmentRuleText =
     leaveType,
   ) => {
     if (!leaveType) {
-      return 'ยังไม่ได้เลือก';
+      return '';
     }
 
     if (
@@ -2359,10 +2359,10 @@ function RoleCreateLeaveRequestPage({
                     '4px',
                 }}
               >
-                {getAttachmentRuleText(
-                  selectedLeaveType,
-                )}{' '}
-                • รองรับ PDF, JPG, JPEG และ PNG
+                {getAttachmentRuleText(selectedLeaveType)
+                  ? `${getAttachmentRuleText(selectedLeaveType)} • `
+                  : ''}
+                รองรับ PDF, JPG, JPEG และ PNG
                 ขนาดไม่เกิน 10 MB ต่อไฟล์
               </Typography>
 

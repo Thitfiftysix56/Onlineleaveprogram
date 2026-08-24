@@ -27,6 +27,7 @@ import {
 
 import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
 import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
+import RequestNumberText from './requestnumbertext.jsx';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -953,6 +954,8 @@ function RoleNotificationPage({
     emptyInitialNotifications,
 
   theme,
+  visualCalibration = true,
+  summaryTotalColor,
 }) {
   const navigate = useNavigate();
   const [
@@ -1504,8 +1507,11 @@ function RoleNotificationPage({
         notifications.length,
 
       color:
+        summaryTotalColor ||
         theme?.primary ||
         '#2563EB',
+      backgroundColor: '#F2F6FC',
+      borderColor: '#CCDDF3',
     },
 
     {
@@ -1517,6 +1523,8 @@ function RoleNotificationPage({
 
       color:
         '#DC2626',
+      backgroundColor: '#FCF4F3',
+      borderColor: '#EFCFCB',
     },
 
     {
@@ -1528,6 +1536,8 @@ function RoleNotificationPage({
 
       color:
         '#059669',
+      backgroundColor: '#F2FAF5',
+      borderColor: '#CDEBD7',
     },
 
     {
@@ -1539,6 +1549,8 @@ function RoleNotificationPage({
 
       color:
         '#D97706',
+      backgroundColor: '#FCF8EC',
+      borderColor: '#EEDFAF',
     },
   ];
 
@@ -1581,6 +1593,10 @@ function RoleNotificationPage({
 
           marginBottom:
             '24px',
+          ...(visualCalibration && {
+            gap: { xs: '12px', sm: '16px' },
+            paddingBottom: '2px',
+          }),
         }}
       >
         <Typography
@@ -1604,57 +1620,6 @@ function RoleNotificationPage({
           {displayPageTitle}
         </Typography>
 
-        <Button
-          type="button"
-          variant="contained"
-          onClick={
-            handleMarkAllAsRead
-          }
-          disabled={
-            unreadCount === 0
-          }
-          sx={{
-            minWidth:
-              '140px',
-
-            height:
-              '42px',
-
-            padding:
-              '0 18px',
-
-            backgroundColor:
-              theme?.primary,
-
-            color:
-              '#FFFFFF',
-
-            borderRadius:
-              '9px',
-
-            fontSize:
-              '12px',
-
-            fontWeight:
-              700,
-
-            textTransform:
-              'none',
-
-            boxShadow:
-              'none',
-
-            '&:hover': {
-              backgroundColor:
-                theme?.dark,
-
-              boxShadow:
-                'none',
-            },
-          }}
-        >
-          อ่านทั้งหมด
-        </Button>
       </Box>
 
       {/* Message */}
@@ -1706,6 +1671,10 @@ function RoleNotificationPage({
 
           marginBottom:
             '24px',
+          ...(visualCalibration && {
+            gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
+            gap: { xs: '10px', sm: '12px' },
+          }),
         }}
       >
         {summaryCards.map(
@@ -1733,6 +1702,14 @@ function RoleNotificationPage({
 
                 boxSizing:
                   'border-box',
+                ...(visualCalibration && {
+                  minHeight: '106px',
+                  padding: { xs: '14px', sm: '16px 18px' },
+                  backgroundColor: card.backgroundColor,
+                  border: `1px solid ${card.borderColor}`,
+                  borderRadius: '10px',
+                  boxShadow: 'none',
+                }),
               }}
             >
               <Box
@@ -1768,10 +1745,10 @@ function RoleNotificationPage({
                 <Box
                   sx={{
                     width:
-                      '9px',
+                      visualCalibration ? '4px' : '9px',
 
                     height:
-                      '9px',
+                      visualCalibration ? '28px' : '9px',
 
                     flexShrink:
                       0,
@@ -1780,10 +1757,10 @@ function RoleNotificationPage({
                       card.color,
 
                     borderRadius:
-                      '50%',
+                      visualCalibration ? '999px' : '50%',
 
                     boxShadow:
-                      `0 0 0 4px ${card.color}14`,
+                      visualCalibration ? 'none' : `0 0 0 4px ${card.color}14`,
                   }}
                 />
               </Box>
@@ -1804,6 +1781,10 @@ function RoleNotificationPage({
 
                   marginTop:
                     '14px',
+                  ...(visualCalibration && {
+                    fontSize: '24px',
+                    marginTop: '5px',
+                  }),
                 }}
               >
                 {card.value}
@@ -1819,6 +1800,12 @@ function RoleNotificationPage({
 
                   marginTop:
                     '13px',
+                  ...(visualCalibration && {
+                    display: 'block',
+                    color: '#667085',
+                    lineHeight: 1.45,
+                    marginTop: '6px',
+                  }),
                 }}
               >
                 {card.title ===
@@ -1856,6 +1843,12 @@ function RoleNotificationPage({
 
           overflow:
             'hidden',
+          ...(visualCalibration && {
+            backgroundColor: 'transparent',
+            border: 'none',
+            borderRadius: 0,
+            overflow: 'visible',
+          }),
         }}
       >
         {/* Filters */}
@@ -1867,22 +1860,41 @@ function RoleNotificationPage({
 
             borderBottom:
               '1px solid #E5E7EB',
+            ...(visualCalibration && {
+              padding: { xs: '0 0 16px', sm: '2px 0 18px' },
+              backgroundColor: 'transparent',
+              borderBottom: '1px solid #E5EAF0',
+              borderRadius: 0,
+              marginBottom: 0,
+            }),
           }}
         >
-          <Typography
-            sx={{
-              color:
-                '#111827',
-
-              fontSize:
-                '17px',
-
-              fontWeight:
-                800,
-            }}
-          >
-            รายการแจ้งเตือน
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'space-between', flexDirection: { xs: 'column', sm: 'row' }, gap: '10px' }}>
+            <Typography sx={{ color: '#111827', fontSize: '17px', fontWeight: 800 }}>
+              รายการแจ้งเตือน
+            </Typography>
+            <Button
+              type="button"
+              variant="contained"
+              onClick={handleMarkAllAsRead}
+              disabled={unreadCount === 0}
+              sx={{
+                minWidth: '118px',
+                height: '38px',
+                padding: '0 18px',
+                backgroundColor: visualCalibration ? theme?.soft : theme?.primary,
+                color: visualCalibration ? theme?.dark : '#FFFFFF',
+                borderRadius: '9px',
+                fontSize: '12px',
+                fontWeight: 700,
+                textTransform: 'none',
+                boxShadow: 'none',
+                '&:hover': { backgroundColor: theme?.dark, color: '#FFFFFF', boxShadow: 'none' },
+              }}
+            >
+              อ่านทั้งหมด
+            </Button>
+          </Box>
 
           <Typography
             sx={{
@@ -1925,47 +1937,25 @@ function RoleNotificationPage({
 
               marginTop:
                 '18px',
+              ...(visualCalibration && {
+                marginTop: '14px',
+                gap: '10px',
+                '& .MuiOutlinedInput-root': {
+                  height: '42px',
+                  backgroundColor: '#FFFFFF',
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#DCE3EA',
+                },
+                '& .MuiButton-root': {
+                  height: '42px',
+                  borderColor: '#D4DCE5',
+                  backgroundColor: 'transparent',
+                },
+              }),
             }}
           >
-            {/* Search */}
-
-            <TextField
-              fullWidth
-              label="ค้นหาการแจ้งเตือน"
-              placeholder="หัวข้อหรือรายละเอียด"
-              value={
-                searchText
-              }
-              onChange={(
-                event,
-              ) =>
-                setSearchText(
-                  event.target.value,
-                )
-              }
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    height:
-                      '46px',
-
-                    borderRadius:
-                      '9px',
-
-                    '&.Mui-focused fieldset':
-                      {
-                        borderColor:
-                          theme?.primary,
-                      },
-                  },
-
-                '& .MuiInputLabel-root.Mui-focused':
-                  {
-                    color:
-                      theme?.primary,
-                  },
-              }}
-            />
+            <TextField fullWidth label="ค้นหาการแจ้งเตือน" placeholder="หัวข้อหรือรายละเอียด" value={searchText} onChange={(event) => setSearchText(event.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: '42px', borderRadius: '9px', backgroundColor: '#FFFFFF', '&.Mui-focused fieldset': { borderColor: theme?.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: theme?.primary } }} />
 
             {/* Status */}
 
@@ -2164,6 +2154,19 @@ function RoleNotificationPage({
 
                       gap:
                         '16px',
+                      ...(visualCalibration && {
+                        alignItems: 'flex-start',
+                        flexDirection: 'row',
+                        gap: { xs: '11px', sm: '14px' },
+                        padding: { xs: '15px 10px', sm: '17px 14px' },
+                        borderLeft: notification.isRead
+                          ? '2px solid transparent'
+                          : `2px solid ${theme?.primary || '#2563EB'}`,
+                        borderBottom: index === filteredNotifications.length - 1
+                          ? 'none'
+                          : '1px solid #E8ECF1',
+                        backgroundColor: notification.isRead ? 'transparent' : '#F5F8FC',
+                      }),
 
                       cursor: notification.path ? 'pointer' : 'default',
 
@@ -2242,6 +2245,12 @@ function RoleNotificationPage({
 
                         fontWeight:
                           800,
+                        ...(visualCalibration && {
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '9px',
+                          fontSize: '13px',
+                        }),
                       }}
                     >
                       {getCategorySymbol(
@@ -2289,9 +2298,9 @@ function RoleNotificationPage({
                                 : 800,
                           }}
                         >
-                          {formatNotificationTitle(
-                            notification.title,
-                          )}
+                          <RequestNumberText>
+                            {formatNotificationTitle(notification.title)}
+                          </RequestNumberText>
                         </Typography>
 
                         {!notification.isRead && (
@@ -2365,9 +2374,9 @@ function RoleNotificationPage({
                             'break-word',
                         }}
                       >
-                        {formatNotificationMessage(
-                          notification.message,
-                        )}
+                        <RequestNumberText>
+                          {formatNotificationMessage(notification.message)}
+                        </RequestNumberText>
                       </Typography>
 
                       <Typography
@@ -2398,6 +2407,11 @@ function RoleNotificationPage({
                         alignItems: 'center',
                         justifyContent: { xs: 'flex-end', md: 'flex-start' },
                         gap: '6px',
+                        ...(visualCalibration && {
+                          width: 'auto',
+                          alignSelf: 'center',
+                          justifyContent: 'flex-start',
+                        }),
                       }}
                     >
                       {notification.isRead ? (
@@ -2438,6 +2452,12 @@ function RoleNotificationPage({
                               backgroundColor: theme?.soft,
                               borderColor: theme?.dark,
                             },
+                            ...(visualCalibration && {
+                              minWidth: '96px',
+                              height: '32px',
+                              backgroundColor: 'transparent',
+                              borderColor: '#CBD8E8',
+                            }),
                           }}
                         >
                           ทำเครื่องหมายว่าอ่านแล้ว
@@ -2722,7 +2742,9 @@ function RoleNotificationPage({
                   lineHeight: 1.6,
                 }}
               >
-                {formatNotificationTitle(deleteTarget.title)}
+                <RequestNumberText>
+                  {formatNotificationTitle(deleteTarget.title)}
+                </RequestNumberText>
               </Typography>
             </Box>
           )}

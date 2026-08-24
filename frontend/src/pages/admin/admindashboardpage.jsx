@@ -1076,19 +1076,19 @@ function AdminDashboardPage() {
               elevation={0}
               sx={{
                 minHeight:
-                  '148px',
+                  '116px',
 
                 padding:
                   '20px',
 
                 backgroundColor:
-                  '#FFFFFF',
+                  `${card.color}0D`,
 
                 border:
-                  '1px solid #E5E7EB',
+                  `1px solid ${card.color}2E`,
 
                 borderRadius:
-                  '14px',
+                  '9px',
               }}
             >
               <Box

@@ -28,6 +28,7 @@ import {
 } from '@mui/material';
 
 import HRLayout from '../../layouts/hrlayout.jsx';
+import { RowActionMenu } from '../../components/shareduiprimitives.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -595,7 +596,7 @@ function LeaveEntitlementManagementPage() {
         theme.soft,
 
       color:
-        theme.primary,
+        '#0F766E',
     },
 
     {
@@ -609,7 +610,7 @@ function LeaveEntitlementManagementPage() {
         '#DBEAFE',
 
       color:
-        '#2563EB',
+        '#7C3AED',
     },
 
     {
@@ -623,7 +624,7 @@ function LeaveEntitlementManagementPage() {
         '#FEE2E2',
 
       color:
-        '#DC2626',
+        '#EA580C',
     },
 
     {
@@ -1090,29 +1091,25 @@ function LeaveEntitlementManagementPage() {
               key={card.title}
               elevation={0}
               sx={{
-                minHeight:
-                  '140px',
+                minHeight: '116px',
 
                 padding:
                   '20px',
 
-                backgroundColor:
-                  '#FFFFFF',
+                backgroundColor: `${card.color}18`,
 
-                border:
-                  '1px solid #E5E7EB',
+                border: `1px solid ${card.color}45`,
 
-                borderRadius:
-                  '14px',
+                borderRadius: '9px',
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
               <Box
                 sx={{
-                  width:
-                    '50px',
+                  width: 'auto',
 
-                  height:
-                    '50px',
+                  height: 'auto',
 
                   display:
                     'flex',
@@ -1121,22 +1118,21 @@ function LeaveEntitlementManagementPage() {
                     'center',
 
                   justifyContent:
-                    'center',
+                    'flex-start',
+                  textAlign: 'left',
 
-                  backgroundColor:
-                    card.backgroundColor,
+                  backgroundColor: 'transparent',
 
-                  color:
-                    card.color,
+                  color: '#172033',
 
                   borderRadius:
-                    '11px',
+                    0,
 
-                  fontSize:
-                    '20px',
+                  fontSize: '26px',
 
-                  fontWeight:
-                    800,
+                  fontWeight: 700,
+                  order: 2,
+                  marginTop: '7px',
                 }}
               >
                 {card.value}
@@ -1144,17 +1140,15 @@ function LeaveEntitlementManagementPage() {
 
               <Typography
                 sx={{
-                  color:
-                    '#111827',
+                  color: '#64748B',
 
-                  fontSize:
-                    '14px',
+                  fontSize: '12px',
 
                   fontWeight:
                     800,
 
-                  marginTop:
-                    '13px',
+                  marginTop: 0,
+                  order: 1,
                 }}
               >
                 {card.title}
@@ -1766,44 +1760,9 @@ function LeaveEntitlementManagementPage() {
                         </TableCell>
 
                         <TableCell>
-                          <Button
-                            type="button"
-                            onClick={() =>
-                              handleOpenEdit(
-                                item,
-                              )
-                            }
-                            sx={{
-                              minWidth:
-                                0,
-
-                              padding:
-                                0,
-
-                              color:
-                                theme.primary,
-
-                              fontSize:
-                                '11px',
-
-                              fontWeight:
-                                700,
-
-                              textTransform:
-                                'none',
-
-                              '&:hover':
-                                {
-                                  backgroundColor:
-                                    'transparent',
-
-                                  textDecoration:
-                                    'underline',
-                                },
-                            }}
-                          >
-                            แก้ไข
-                          </Button>
+                          <RowActionMenu
+                            actions={[{ label: 'แก้ไข', onClick: () => handleOpenEdit(item) }]}
+                          />
                         </TableCell>
                       </TableRow>
                     );

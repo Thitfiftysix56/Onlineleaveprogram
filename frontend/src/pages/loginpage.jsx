@@ -17,8 +17,6 @@ import {
 
 import {
   CalendarMonthRounded,
-  CheckCircleRounded,
-  DescriptionRounded,
   VisibilityOffRounded,
   VisibilityRounded,
 } from '@mui/icons-material'
@@ -36,10 +34,12 @@ import {
 
 import api from '../api/axios.js'
 
+
 const emptyFormData = {
   username: '',
   password: '',
 }
+
 
 function LoginPage() {
   const navigate = useNavigate()
@@ -57,12 +57,17 @@ function LoginPage() {
     location.state?.successMessage || '',
   )
 
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
+  const [isSubmitting, setIsSubmitting] =
+    useState(false)
+
+  const [showPassword, setShowPassword] =
+    useState(false)
+
 
   useEffect(() => {
     clearAuthSession()
   }, [])
+
 
   const handleInputChange = (
     fieldName,
@@ -75,6 +80,7 @@ function LoginPage() {
 
     setErrorMessage('')
   }
+
 
   const handleSubmit = async (
     event,
@@ -179,46 +185,28 @@ function LoginPage() {
     }
   }
 
+
   return (
     <Box
       sx={{
         minHeight: '100vh',
+        width: '100%',
         boxSizing: 'border-box',
+
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+
         padding: {
-          xs: '24px 16px',
+          xs: '20px 14px',
           sm: '32px 24px',
         },
+
         overflowX: 'hidden',
         overflowY: 'auto',
+
         background:
-          'linear-gradient(180deg, #EAF5FF 0%, #F4F7FC 46%, #FFF1F4 100%)',
-        position: 'relative',
-
-        '&::before': {
-          content: '""',
-          position: 'fixed',
-          width: '420px',
-          height: '420px',
-          top: '-180px',
-          left: '-130px',
-          borderRadius: '50%',
-          background:
-            'rgba(37, 99, 235, 0.08)',
-          pointerEvents: 'none',
-        },
-
-        '&::after': {
-          content: '""',
-          position: 'fixed',
-          width: '460px',
-          height: '460px',
-          right: '-170px',
-          bottom: '-210px',
-          borderRadius: '50%',
-          background:
-            'rgba(244, 114, 182, 0.08)',
-          pointerEvents: 'none',
-        },
+          'linear-gradient(135deg, #E9EEF6 0%, #F7F8FB 48%, #ECEEF6 100%)',
       }}
     >
       <Paper
@@ -227,303 +215,495 @@ function LoginPage() {
         elevation={0}
         sx={{
           width: '100%',
-          maxWidth: '470px',
-          margin: '0 auto',
-          position: 'relative',
-          zIndex: 1,
-          overflow: 'hidden',
-          borderRadius: {
-            xs: '22px',
-            sm: '26px',
+          maxWidth: '920px',
+
+          display: 'grid',
+
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: '0.92fr 1.08fr',
           },
+
+          overflow: 'hidden',
+
+          borderRadius: {
+            xs: '20px',
+            sm: '24px',
+          },
+
           backgroundColor: '#FFFFFF',
+
           border:
-            '1px solid rgba(148, 163, 184, 0.22)',
+            '1px solid rgba(100, 116, 139, 0.20)',
+
           boxShadow:
-            '0 28px 70px rgba(51, 65, 85, 0.16)',
+            '0 28px 70px rgba(30, 41, 59, 0.18)',
         }}
       >
+
+        {/* =========================
+            SYSTEM BRANDING
+        ========================== */}
         <Box
           sx={{
-            padding: {
-              xs: '24px 24px 22px',
-              sm: '26px 36px 24px',
+            position: 'relative',
+
+            minHeight: {
+              xs: 'auto',
+              sm: '560px',
             },
+
+            padding: {
+              xs: '30px 24px',
+              sm: '40px 30px',
+              md: '48px 42px',
+            },
+
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+
             textAlign: 'center',
-            color: '#FFFFFF',
-            background:
-              'linear-gradient(135deg, #2563EB 0%, #3B82F6 55%, #60A5FA 100%)',
+
+            overflow: 'hidden',
+
+            background: `
+              radial-gradient(
+                ellipse at 0% 0%,
+                rgba(14, 165, 233, 0.84) 0%,
+                rgba(14, 165, 233, 0.28) 32%,
+                transparent 58%
+              ),
+
+              radial-gradient(
+                ellipse at 100% 5%,
+                rgba(139, 92, 246, 0.88) 0%,
+                rgba(139, 92, 246, 0.30) 36%,
+                transparent 62%
+              ),
+
+              radial-gradient(
+                ellipse at 0% 100%,
+                rgba(16, 185, 129, 0.82) 0%,
+                rgba(16, 185, 129, 0.34) 40%,
+                transparent 66%
+              ),
+
+              radial-gradient(
+                ellipse at 48% 92%,
+                rgba(5, 150, 105, 0.36) 0%,
+                rgba(5, 150, 105, 0.16) 32%,
+                transparent 60%
+              ),
+
+              radial-gradient(
+                ellipse at 100% 100%,
+                rgba(249, 115, 22, 0.52) 0%,
+                rgba(249, 115, 22, 0.17) 32%,
+                transparent 58%
+              ),
+
+              linear-gradient(
+                140deg,
+                #3B82F6 0%,
+                #6366F1 34%,
+                #6D5FE7 58%,
+                #8B5CF6 100%
+              )
+            `,
+
+            borderRight: {
+              xs: 'none',
+              sm:
+                '1px solid rgba(99, 102, 241, 0.22)',
+            },
+
+            borderBottom: {
+              xs:
+                '1px solid rgba(99, 102, 241, 0.22)',
+              sm: 'none',
+            },
           }}
         >
+
+          {/* Large transparent circle */}
+          <Box
+            aria-hidden="true"
+            sx={{
+              position: 'absolute',
+
+              width: '300px',
+              height: '300px',
+
+              top: '-165px',
+              left: '-145px',
+
+              borderRadius: '50%',
+
+              backgroundColor:
+                'rgba(255,255,255,0.11)',
+
+              pointerEvents: 'none',
+            }}
+          />
+
+
+          {/* Bottom transparent circle */}
+          <Box
+            aria-hidden="true"
+            sx={{
+              position: 'absolute',
+
+              width: '270px',
+              height: '270px',
+
+              right: '-135px',
+              bottom: '-135px',
+
+              borderRadius: '50%',
+
+              backgroundColor:
+                'rgba(255,255,255,0.085)',
+
+              pointerEvents: 'none',
+            }}
+          />
+
+
+          {/* Small circle */}
+          <Box
+            aria-hidden="true"
+            sx={{
+              position: 'absolute',
+
+              width: '90px',
+              height: '90px',
+
+              right: '34px',
+              top: '50px',
+
+              borderRadius: '50%',
+
+              border:
+                '1px solid rgba(255,255,255,0.12)',
+
+              backgroundColor:
+                'rgba(255,255,255,0.035)',
+
+              pointerEvents: 'none',
+            }}
+          />
+
+
+          {/* Soft diagonal shine */}
+          <Box
+            aria-hidden="true"
+            sx={{
+              position: 'absolute',
+
+              width: '190px',
+              height: '650px',
+
+              top: '-110px',
+              left: '125px',
+
+              transform:
+                'rotate(24deg)',
+
+              background:
+                'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.085) 50%, transparent 100%)',
+
+              pointerEvents: 'none',
+            }}
+          />
+
+
+          {/* =========================
+              SYSTEM ICON
+          ========================== */}
           <Box
             sx={{
-              width: '52px',
-              height: '52px',
-              margin: '0 auto 14px',
+              position: 'relative',
+              zIndex: 2,
+
+              width: {
+                xs: '60px',
+                sm: '68px',
+                md: '72px',
+              },
+
+              height: {
+                xs: '60px',
+                sm: '68px',
+                md: '72px',
+              },
+
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              borderRadius: '16px',
+
+              borderRadius: {
+                xs: '17px',
+                md: '20px',
+              },
+
+              color: '#6366F1',
+
               backgroundColor:
-                'rgba(255, 255, 255, 0.18)',
+                'rgba(255,255,255,0.95)',
+
               border:
-                '1px solid rgba(255, 255, 255, 0.28)',
-              backdropFilter: 'blur(8px)',
+                '1px solid rgba(255,255,255,0.80)',
+
+              boxShadow:
+                '0 18px 38px rgba(15,23,42,0.19)',
+
+              backdropFilter:
+                'blur(10px)',
             }}
           >
             <CalendarMonthRounded
               sx={{
-                fontSize: '29px',
+                fontSize: {
+                  xs: '33px',
+                  sm: '37px',
+                  md: '40px',
+                },
               }}
             />
           </Box>
 
+
+          {/* =========================
+              SYSTEM NAME
+          ========================== */}
           <Typography
             component="h1"
             sx={{
+              position: 'relative',
+              zIndex: 2,
+
+              maxWidth: '330px',
+
+              marginTop: {
+                xs: '20px',
+                sm: '24px',
+              },
+
+              color: '#FFFFFF',
+
               fontSize: {
                 xs: '21px',
                 sm: '24px',
+                md: '28px',
               },
+
               fontWeight: 900,
-              lineHeight: 1.25,
-              letterSpacing: '-0.3px',
+
+              lineHeight: 1.3,
+
+              letterSpacing:
+                '-0.35px',
+
+              textShadow:
+                '0 2px 10px rgba(15,23,42,0.16)',
             }}
           >
             Online Leave Approval System
           </Typography>
 
+
           <Typography
             sx={{
-              marginTop: '8px',
-              fontSize: '13px',
-              lineHeight: 1.6,
+              position: 'relative',
+              zIndex: 2,
+
+              marginTop: '10px',
+
               color:
-                'rgba(255, 255, 255, 0.88)',
+                'rgba(255,255,255,0.90)',
+
+              fontSize: {
+                xs: '13px',
+                sm: '14px',
+              },
+
+              fontWeight: 600,
+
+              lineHeight: 1.7,
             }}
           >
             ระบบอนุมัติใบลาออนไลน์
           </Typography>
-        </Box>
 
-        <Box
-          sx={{
-            position: 'relative',
-            height: {
-              xs: '160px',
-              sm: '180px',
-            },
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            background:
-              'linear-gradient(180deg, #EFF7FF 0%, #F8FBFF 100%)',
-            borderBottom:
-              '1px solid #E7EEF7',
-          }}
-        >
-          <Box
-            sx={{
-              position: 'absolute',
-              width: '230px',
-              height: '230px',
-              borderRadius: '50%',
-              background:
-                'rgba(96, 165, 250, 0.11)',
-            }}
-          />
 
+          {/* =========================
+              ROLE COLOR DOTS
+          ========================== */}
           <Box
-            sx={{
-              position: 'absolute',
-              width: '155px',
-              height: '155px',
-              borderRadius: '50%',
-              background:
-                'rgba(37, 99, 235, 0.08)',
-            }}
-          />
-
-          <Box
+            aria-hidden="true"
             sx={{
               position: 'relative',
-              width: '170px',
-              height: '118px',
-              borderRadius: '18px',
-              backgroundColor: '#FFFFFF',
-              border:
-                '1px solid #D8E7FA',
-              boxShadow:
-                '0 18px 35px rgba(37, 99, 235, 0.14)',
-              transform: 'rotate(-2deg)',
-            }}
-          >
-            <Box
-              sx={{
-                height: '30px',
-                display: 'flex',
-                alignItems: 'center',
-                padding: '0 14px',
-                borderRadius:
-                  '17px 17px 0 0',
-                background:
-                  'linear-gradient(90deg, #2563EB, #60A5FA)',
-              }}
-            >
-              <Box
-                sx={{
-                  width: '7px',
-                  height: '7px',
-                  marginRight: '6px',
-                  borderRadius: '50%',
-                  backgroundColor:
-                    'rgba(255,255,255,0.85)',
-                }}
-              />
+              zIndex: 2,
 
-              <Box
-                sx={{
-                  width: '7px',
-                  height: '7px',
-                  borderRadius: '50%',
-                  backgroundColor:
-                    'rgba(255,255,255,0.55)',
-                }}
-              />
-            </Box>
-
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns:
-                  'repeat(4, 1fr)',
-                gap: '8px',
-                padding: '15px',
-              }}
-            >
-              {Array.from({
-                length: 12,
-              }).map((_, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    height: '9px',
-                    borderRadius: '4px',
-                    backgroundColor:
-                      index === 5 ||
-                      index === 6
-                        ? '#60A5FA'
-                        : '#E5EDF8',
-                  }}
-                />
-              ))}
-            </Box>
-          </Box>
-
-          <Box
-            sx={{
-              position: 'absolute',
-              right: {
-                xs: '38px',
-                sm: '66px',
-              },
-              bottom: '24px',
-              width: '54px',
-              height: '54px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '17px',
-              color: '#FFFFFF',
-              background:
-                'linear-gradient(135deg, #10B981, #34D399)',
+
+              gap: '8px',
+
+              marginTop: '22px',
+
+              padding: '7px 11px',
+
+              borderRadius: '999px',
+
+              backgroundColor:
+                'rgba(255,255,255,0.13)',
+
+              border:
+                '1px solid rgba(255,255,255,0.18)',
+
+              backdropFilter:
+                'blur(9px)',
+
               boxShadow:
-                '0 12px 24px rgba(16, 185, 129, 0.25)',
-              transform: 'rotate(6deg)',
+                '0 6px 16px rgba(15,23,42,0.07)',
             }}
           >
-            <CheckCircleRounded
+            {/* Employee */}
+            <Box
               sx={{
-                fontSize: '32px',
+                width: '8px',
+                height: '8px',
+
+                borderRadius: '50%',
+
+                backgroundColor:
+                  '#93C5FD',
               }}
             />
-          </Box>
 
-          <Box
-            sx={{
-              position: 'absolute',
-              left: {
-                xs: '38px',
-                sm: '66px',
-              },
-              top: '28px',
-              width: '46px',
-              height: '46px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '14px',
-              color: '#2563EB',
-              backgroundColor: '#FFFFFF',
-              border:
-                '1px solid #DBEAFE',
-              boxShadow:
-                '0 10px 22px rgba(37, 99, 235, 0.14)',
-              transform: 'rotate(-7deg)',
-            }}
-          >
-            <DescriptionRounded
+
+            {/* Supervisor */}
+            <Box
               sx={{
-                fontSize: '26px',
+                width: '8px',
+                height: '8px',
+
+                borderRadius: '50%',
+
+                backgroundColor:
+                  '#C4B5FD',
+              }}
+            />
+
+
+            {/* HR */}
+            <Box
+              sx={{
+                width: '8px',
+                height: '8px',
+
+                borderRadius: '50%',
+
+                backgroundColor:
+                  '#6EE7B7',
+              }}
+            />
+
+
+            {/* Admin */}
+            <Box
+              sx={{
+                width: '8px',
+                height: '8px',
+
+                borderRadius: '50%',
+
+                backgroundColor:
+                  '#FDBA74',
               }}
             />
           </Box>
         </Box>
 
+
+        {/* =========================
+            LOGIN FORM
+        ========================== */}
         <Box
           sx={{
             padding: {
-              xs: '26px 24px 30px',
-              sm: '30px 38px 34px',
+              xs: '30px 24px 34px',
+              sm: '40px 36px',
+              md: '46px 52px',
             },
+
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+
+            minWidth: 0,
+
+            backgroundColor: '#FFFFFF',
           }}
         >
           <Typography
             component="h2"
             sx={{
-              color: '#111827',
-              fontSize: '25px',
+              color: '#0F172A',
+
+              fontSize: {
+                xs: '24px',
+                sm: '27px',
+              },
+
               fontWeight: 900,
-              textAlign: 'center',
+
+              lineHeight: 1.3,
+
               letterSpacing: '-0.3px',
+
+              textAlign: 'left',
             }}
           >
             Login
           </Typography>
 
+
           <Typography
             sx={{
-              color: '#6B7280',
+              color: '#64748B',
+
               fontSize: '13px',
+
               lineHeight: 1.7,
-              textAlign: 'center',
+
+              textAlign: 'left',
+
               marginTop: '6px',
-              marginBottom: '24px',
+              marginBottom: '26px',
             }}
           >
             กรุณากรอก Username และ Password เพื่อเข้าใช้งานระบบ
           </Typography>
 
+
+          {/* ERROR */}
           {errorMessage && (
             <Alert
               severity="error"
+
               onClose={() =>
                 setErrorMessage('')
               }
+
               sx={{
                 marginBottom: '18px',
+
                 borderRadius: '10px',
+
                 fontSize: '13px',
               }}
             >
@@ -531,13 +711,18 @@ function LoginPage() {
             </Alert>
           )}
 
+
+          {/* SUCCESS */}
           {successMessage &&
             !errorMessage && (
               <Alert
                 severity="success"
+
                 sx={{
                   marginBottom: '18px',
+
                   borderRadius: '10px',
+
                   fontSize: '13px',
                 }}
               >
@@ -545,63 +730,92 @@ function LoginPage() {
               </Alert>
             )}
 
+
+          {/* =========================
+              USERNAME
+          ========================== */}
           <Typography
             component="label"
             htmlFor="username"
+
             sx={{
               display: 'block',
-              color: '#374151',
+
+              color: '#334155',
+
               fontSize: '13px',
+
               fontWeight: 800,
+
               marginBottom: '7px',
             }}
           >
             Username
           </Typography>
 
+
           <TextField
             id="username"
+
             fullWidth
             required
+
             placeholder="Enter Username"
-            value={formData.username}
+
+            value={
+              formData.username
+            }
+
             onChange={(event) =>
               handleInputChange(
                 'username',
                 event.target.value.toLowerCase(),
               )
             }
-            disabled={isSubmitting}
+
+            disabled={
+              isSubmitting
+            }
+
             autoComplete="username"
+
             autoFocus
+
             slotProps={{
               htmlInput: {
                 maxLength: 50,
               },
             }}
+
             sx={{
               '& .MuiOutlinedInput-root':
                 {
                   height: '48px',
-                  borderRadius: '10px',
+
+                  borderRadius:
+                    '10px',
+
                   backgroundColor:
-                    '#FAFCFF',
+                    '#F8FAFC',
 
                   '& fieldset': {
                     borderColor:
-                      '#DCE3ED',
+                      '#CBD5E1',
                   },
 
-                  '&:hover fieldset': {
-                    borderColor:
-                      '#93B4E8',
-                  },
+                  '&:hover fieldset':
+                    {
+                      borderColor:
+                        '#A78BFA',
+                    },
 
                   '&.Mui-focused fieldset':
                     {
                       borderColor:
-                        '#2563EB',
-                      borderWidth: '1.5px',
+                        '#6366F1',
+
+                      borderWidth:
+                        '1.5px',
                     },
                 },
 
@@ -611,61 +825,91 @@ function LoginPage() {
             }}
           />
 
+
+          {/* =========================
+              PASSWORD
+          ========================== */}
           <Typography
             component="label"
             htmlFor="password"
+
             sx={{
               display: 'block',
-              color: '#374151',
+
+              color: '#334155',
+
               fontSize: '13px',
+
               fontWeight: 800,
+
               marginTop: '18px',
+
               marginBottom: '7px',
             }}
           >
             Password
           </Typography>
 
+
           <TextField
             id="password"
+
             fullWidth
             required
+
             type={
               showPassword
                 ? 'text'
                 : 'password'
             }
+
             placeholder="Enter Password"
-            value={formData.password}
+
+            value={
+              formData.password
+            }
+
             onChange={(event) =>
               handleInputChange(
                 'password',
                 event.target.value,
               )
             }
-            disabled={isSubmitting}
+
+            disabled={
+              isSubmitting
+            }
+
             autoComplete="current-password"
+
             slotProps={{
               input: {
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
                       edge="end"
+
                       type="button"
+
                       aria-label={
                         showPassword
                           ? 'Hide password'
                           : 'Show password'
                       }
+
                       onClick={() =>
                         setShowPassword(
-                          (previousValue) =>
+                          (
+                            previousValue,
+                          ) =>
                             !previousValue,
                         )
                       }
+
                       disabled={
                         isSubmitting
                       }
+
                       sx={{
                         color:
                           '#64748B',
@@ -695,29 +939,36 @@ function LoginPage() {
                 maxLength: 128,
               },
             }}
+
             sx={{
               '& .MuiOutlinedInput-root':
                 {
                   height: '48px',
-                  borderRadius: '10px',
+
+                  borderRadius:
+                    '10px',
+
                   backgroundColor:
-                    '#FAFCFF',
+                    '#F8FAFC',
 
                   '& fieldset': {
                     borderColor:
-                      '#DCE3ED',
+                      '#CBD5E1',
                   },
 
-                  '&:hover fieldset': {
-                    borderColor:
-                      '#93B4E8',
-                  },
+                  '&:hover fieldset':
+                    {
+                      borderColor:
+                        '#A78BFA',
+                    },
 
                   '&.Mui-focused fieldset':
                     {
                       borderColor:
-                        '#2563EB',
-                      borderWidth: '1.5px',
+                        '#6366F1',
+
+                      borderWidth:
+                        '1.5px',
                     },
                 },
 
@@ -725,37 +976,62 @@ function LoginPage() {
                 fontSize: '14px',
               },
 
-              '& input::-ms-reveal': {
-                display: 'none',
-              },
+              '& input::-ms-reveal':
+                {
+                  display: 'none',
+                },
 
-              '& input::-ms-clear': {
-                display: 'none',
-              },
+              '& input::-ms-clear':
+                {
+                  display: 'none',
+                },
             }}
           />
 
+
+          {/* =========================
+              FORGOT PASSWORD
+          ========================== */}
           <Button
             type="button"
-            disabled={isSubmitting}
-            onClick={() =>
-              navigate('/forgot-password')
+
+            disabled={
+              isSubmitting
             }
+
+            onClick={() =>
+              navigate(
+                '/forgot-password',
+              )
+            }
+
             sx={{
               display: 'block',
+
               width: 'fit-content',
+
               minWidth: 0,
+
               marginTop: '9px',
+
               marginLeft: 'auto',
+
               padding: 0,
-              color: '#2563EB',
+
+              color: '#6366F1',
+
               fontSize: '12px',
+
               fontWeight: 800,
+
               textTransform: 'none',
 
               '&:hover': {
                 backgroundColor:
                   'transparent',
+
+                color: '#7C3AED',
+
                 textDecoration:
                   'underline',
               },
@@ -764,34 +1040,55 @@ function LoginPage() {
             Forgot Password?
           </Button>
 
+
+          {/* =========================
+              SIGN IN
+          ========================== */}
           <Button
             fullWidth
+
             type="submit"
+
             variant="contained"
-            disabled={isSubmitting}
+
+            disabled={
+              isSubmitting
+            }
+
             sx={{
               height: '50px',
+
               marginTop: '24px',
+
               borderRadius: '11px',
+
               background:
-                'linear-gradient(90deg, #2563EB 0%, #3B82F6 100%)',
+                'linear-gradient(100deg, #3B82F6 0%, #6366F1 48%, #8B5CF6 100%)',
+
               color: '#FFFFFF',
+
               fontSize: '14px',
+
               fontWeight: 900,
+
               textTransform: 'none',
+
               boxShadow:
-                '0 12px 22px rgba(37, 99, 235, 0.22)',
+                '0 12px 27px rgba(99,102,241,0.28)',
 
               '&:hover': {
                 background:
-                  'linear-gradient(90deg, #1D4ED8 0%, #2563EB 100%)',
+                  'linear-gradient(100deg, #2563EB 0%, #4F46E5 48%, #7C3AED 100%)',
+
                 boxShadow:
-                  '0 14px 26px rgba(37, 99, 235, 0.28)',
+                  '0 15px 32px rgba(99,102,241,0.34)',
               },
 
               '&.Mui-disabled': {
                 color: '#FFFFFF',
-                background: '#AFCBF5',
+
+                background:
+                  '#A5B4FC',
               },
             }}
           >
@@ -799,15 +1096,21 @@ function LoginPage() {
               <Box
                 sx={{
                   display: 'flex',
-                  alignItems: 'center',
+
+                  alignItems:
+                    'center',
+
                   gap: '10px',
                 }}
               >
                 <CircularProgress
                   size={19}
+
                   thickness={5}
+
                   sx={{
-                    color: '#FFFFFF',
+                    color:
+                      '#FFFFFF',
                   }}
                 />
 
@@ -817,12 +1120,11 @@ function LoginPage() {
               'Sign In'
             )}
           </Button>
-
-         
         </Box>
       </Paper>
     </Box>
   )
 }
+
 
 export default LoginPage

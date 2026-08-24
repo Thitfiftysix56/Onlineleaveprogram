@@ -22,14 +22,13 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
+import RequestNumberText from '../../components/requestnumbertext.jsx';
+import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
+import { StatCard } from '../../components/shareduiprimitives.jsx';
+import { roleAccentTokens } from '../../theme/tokens.js';
 import api from '../../api/axios.js';
 
-const theme = {
-  primary: '#7C3AED',
-  dark: '#6D28D9',
-  soft: '#F3E8FF',
-  border: '#DDD6FE',
-};
+const theme = roleAccentTokens.supervisor;
 
 const statusLabels = {
   pending: 'รออนุมัติ',
@@ -309,6 +308,7 @@ function SupervisorReportsPage() {
       value: summary.total,
       backgroundColor: theme.soft,
       color: theme.primary,
+      accent: 'info',
     },
 
     {
@@ -316,6 +316,7 @@ function SupervisorReportsPage() {
       value: summary.pending,
       backgroundColor: '#FEF3C7',
       color: '#B45309',
+      accent: 'warning',
     },
 
     {
@@ -323,6 +324,7 @@ function SupervisorReportsPage() {
       value: summary.approved,
       backgroundColor: '#DCFCE7',
       color: '#15803D',
+      accent: 'success',
     },
 
     {
@@ -330,6 +332,7 @@ function SupervisorReportsPage() {
       value: summary.rejected,
       backgroundColor: '#FEE2E2',
       color: '#B91C1C',
+      accent: 'error',
     },
   ];
 
@@ -342,23 +345,7 @@ function SupervisorReportsPage() {
 
   return (
     <SupervisorLayout activeMenu="Team Reports">
-      {/* หัวข้อ */}
-      <Typography
-        component="h1"
-        sx={{
-          color: '#111827',
-
-          fontSize: {
-            xs: '26px',
-            sm: '30px',
-          },
-
-          fontWeight: 800,
-          marginBottom: '22px',
-        }}
-      >
-        รายงานทีม
-      </Typography>
+      <PageHeader title="รายงานทีม" />
 
       {error && (
         <Alert
@@ -384,59 +371,15 @@ function SupervisorReportsPage() {
           },
 
           gap: '18px',
-          marginBottom: '24px',
         }}
       >
         {summaryCards.map((card) => (
-          <Paper
+          <StatCard
             key={card.title}
-            elevation={0}
-            sx={{
-              minHeight: '140px',
-              padding: '20px',
-
-              backgroundColor: '#FFFFFF',
-
-              border: '1px solid #E5E7EB',
-              borderRadius: '14px',
-            }}
-          >
-            <Box
-              sx={{
-                width: '50px',
-                height: '50px',
-
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-
-                backgroundColor:
-                  card.backgroundColor,
-
-                color: card.color,
-
-                borderRadius: '11px',
-
-                fontSize: '20px',
-                fontWeight: 800,
-              }}
-            >
-              {card.value}
-            </Box>
-
-            <Typography
-              sx={{
-                color: '#111827',
-
-                fontSize: '14px',
-                fontWeight: 800,
-
-                marginTop: '13px',
-              }}
-            >
-              {card.title}
-            </Typography>
-          </Paper>
+            title={card.title}
+            value={card.value}
+            accent={card.accent}
+          />
         ))}
       </Box>
 
@@ -492,6 +435,8 @@ function SupervisorReportsPage() {
                 xs: '1fr',
 
                 md: 'repeat(2, 1fr)',
+
+                lg: 'minmax(140px, 0.75fr) minmax(180px, 1fr) minmax(170px, 0.9fr) minmax(170px, 0.9fr) auto',
               },
 
               gap: '16px',
@@ -602,8 +547,10 @@ function SupervisorReportsPage() {
 
                 gridColumn: {
                   xs: 'auto',
-                  md: '1 / 2',
+                  md: 'auto',
                 },
+
+                minWidth: '120px',
 
                 color: '#475569',
 
@@ -652,7 +599,7 @@ function SupervisorReportsPage() {
           >
             <Table
               sx={{
-                minWidth: '950px',
+                minWidth: '850px',
               }}
             >
               <TableHead>
@@ -669,7 +616,6 @@ function SupervisorReportsPage() {
                     'ช่วงวันที่',
                     'จำนวนวัน',
                     'สถานะ',
-                    'การดำเนินการ',
                   ].map((heading) => (
                     <TableCell
                       key={heading}
@@ -715,6 +661,18 @@ function SupervisorReportsPage() {
                       <TableRow
                         key={request.id}
                         hover
+                        tabIndex={0}
+                        onClick={() => navigate(`/supervisor/approval/${request.id}`)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            navigate(`/supervisor/approval/${request.id}`);
+                          }
+                        }}
+                        sx={{
+                          cursor: 'pointer',
+                          '&:focus-visible': { outline: `2px solid ${theme.primary}`, outlineOffset: -2 },
+                        }}
                       >
                         {/* เลขที่ */}
                         <TableCell>
@@ -733,8 +691,9 @@ function SupervisorReportsPage() {
                                 'nowrap',
                             }}
                           >
-                            {request.requestNo ||
-                              `#${request.id}`}
+                            <RequestNumberText>
+                              {request.requestNo || `#${request.id}`}
+                            </RequestNumberText>
                           </Typography>
                         </TableCell>
 
@@ -855,48 +814,6 @@ function SupervisorReportsPage() {
                           </Box>
                         </TableCell>
 
-                        {/* Action */}
-                        <TableCell>
-                          <Button
-                            type="button"
-                            variant="outlined"
-                            onClick={() =>
-                              navigate(
-                                `/supervisor/approval/${request.id}`,
-                              )
-                            }
-                            sx={{
-                              height: '34px',
-
-                              color:
-                                theme.primary,
-
-                              borderColor:
-                                theme.border,
-
-                              borderRadius:
-                                '8px',
-
-                              fontSize:
-                                '11px',
-
-                              fontWeight: 700,
-
-                              textTransform:
-                                'none',
-
-                              '&:hover': {
-                                backgroundColor:
-                                  theme.soft,
-
-                                borderColor:
-                                  theme.primary,
-                              },
-                            }}
-                          >
-                            ดู
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     );
                   },

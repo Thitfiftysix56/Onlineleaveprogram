@@ -32,6 +32,7 @@ import {
 } from '@mui/icons-material';
 
 import AdminLayout from '../../layouts/adminlayout.jsx';
+import RequestNumberText from '../../components/requestnumbertext.jsx';
 import api from '../../api/axios.js';
 import {
   formatAuditActivity,
@@ -1469,6 +1470,11 @@ function AuditLogPage() {
 
       <Box
         sx={{
+          display: 'flex',
+          alignItems: { xs: 'stretch', sm: 'center' },
+          justifyContent: 'space-between',
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: '16px',
           marginBottom:
             '24px',
         }}
@@ -1529,19 +1535,19 @@ function AuditLogPage() {
               elevation={0}
               sx={{
                 minHeight:
-                  '142px',
+                  '116px',
 
                 padding:
                   '20px',
 
                 backgroundColor:
-                  '#FFFFFF',
+                  `${card.color}0D`,
 
                 border:
-                  '1px solid #E5E7EB',
+                  `1px solid ${card.color}2E`,
 
                 borderRadius:
-                  '14px',
+                  '9px',
               }}
             >
               <Box
@@ -1777,43 +1783,7 @@ function AuditLogPage() {
                 '18px',
             }}
           >
-            <TextField
-              fullWidth
-              label="ค้นหาประวัติ"
-              placeholder="ผู้ใช้งาน กิจกรรม รายละเอียด หรือ IP"
-              value={
-                searchText
-              }
-              onChange={(
-                event,
-              ) =>
-                setSearchText(
-                  event.target.value,
-                )
-              }
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    height:
-                      '46px',
-
-                    borderRadius:
-                      '9px',
-
-                    '&.Mui-focused fieldset':
-                      {
-                        borderColor:
-                          adminTheme.primary,
-                      },
-                  },
-
-                '& .MuiInputLabel-root.Mui-focused':
-                  {
-                    color:
-                      adminTheme.primary,
-                  },
-              }}
-            />
+            <TextField fullWidth label="ค้นหาประวัติ" placeholder="ผู้ใช้งาน กิจกรรม รายละเอียด หรือ IP" value={searchText} onChange={(event) => setSearchText(event.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: '46px', borderRadius: '9px', '&.Mui-focused fieldset': { borderColor: adminTheme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: adminTheme.primary } }} />
 
             <FormControl
               fullWidth
@@ -2084,16 +2054,10 @@ function AuditLogPage() {
                 <col
                   style={{
                     width:
-                      '21%',
+                      '26%',
                   }}
                 />
 
-                <col
-                  style={{
-                    width:
-                      '5%',
-                  }}
-                />
               </colgroup>
 
               <TableHead>
@@ -2152,14 +2116,6 @@ function AuditLogPage() {
                     รายละเอียด
                   </TableCell>
 
-                  <TableCell
-                    align="center"
-                    sx={
-                      headerCellStyle
-                    }
-                  >
-                    ดู
-                  </TableCell>
                 </TableRow>
               </TableHead>
 
@@ -2182,7 +2138,17 @@ function AuditLogPage() {
                           log.id
                         }
                         hover
+                        tabIndex={0}
+                        onClick={() => setSelectedLog(log)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setSelectedLog(log);
+                          }
+                        }}
                         sx={{
+                          cursor: 'pointer',
+                          '&:focus-visible': { outline: `2px solid ${adminTheme.primary}`, outlineOffset: -2 },
                           '&:last-child td':
                             {
                               borderBottom:
@@ -2457,61 +2423,10 @@ function AuditLogPage() {
                                 'break-word',
                             }}
                           >
-                            {formatAuditDetail(log)}
+                            <RequestNumberText>{formatAuditDetail(log)}</RequestNumberText>
                           </Typography>
                         </TableCell>
 
-                        {/* View */}
-
-                        <TableCell
-                          align="center"
-                          sx={{
-                            padding:
-                              '10px 3px',
-
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          <Button
-                            type="button"
-                            onClick={() =>
-                              setSelectedLog(
-                                log,
-                              )
-                            }
-                            sx={{
-                              minWidth:
-                                0,
-
-                              padding:
-                                '2px 4px',
-
-                              color:
-                                adminTheme.primary,
-
-                              fontSize:
-                                '10px',
-
-                              fontWeight:
-                                700,
-
-                              textTransform:
-                                'none',
-
-                              '&:hover':
-                                {
-                                  backgroundColor:
-                                    'transparent',
-
-                                  textDecoration:
-                                    'underline',
-                                },
-                            }}
-                          >
-                            ดู
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     );
                   },

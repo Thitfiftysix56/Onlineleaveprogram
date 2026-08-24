@@ -1,4 +1,5 @@
 import RoleLayout from '../components/rolelayout.jsx';
+import { PageContainer } from '../components/sharedvisualfoundation.jsx';
 
 function SupervisorLayout({
   children,
@@ -17,19 +18,12 @@ function SupervisorLayout({
     'Logout',
   ];
 
-  const supervisorTheme = {
-    primary: '#7C3AED',
-    dark: '#6D28D9',
-    soft: '#F5F3FF',
-  };
-
   return (
     <RoleLayout
       activeMenu={activeMenu}
       menuItems={supervisorMenuItems}
-      theme={supervisorTheme}
     >
-      {children}
+      <PageContainer>{children}</PageContainer>
     </RoleLayout>
   );
 }

@@ -17,6 +17,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import RequestNumberText from './requestnumbertext.jsx';
 
 import {
   useLocation,
@@ -1018,7 +1019,7 @@ function RoleLeaveRequestDetailPage({
                 fontWeight: 700,
               }}
             >
-              {requestReference}
+              <RequestNumberText>{requestReference}</RequestNumberText>
             </Typography>
 
             <Chip
@@ -1100,7 +1101,7 @@ function RoleLeaveRequestDetailPage({
             borderRadius: '8px',
           }}
         >
-          {message.text}
+          <RequestNumberText>{message.text}</RequestNumberText>
         </Alert>
       )}
 
@@ -1148,7 +1149,11 @@ function RoleLeaveRequestDetailPage({
                   xs: '20px',
                   sm: '24px',
                 },
-
+                display: 'flex',
+                alignItems: { xs: 'stretch', sm: 'center' },
+                justifyContent: 'space-between',
+                flexDirection: { xs: 'column', sm: 'row' },
+                gap: '12px',
                 borderBottom:
                   '1px solid #E5E7EB',
               }}
@@ -1164,6 +1169,50 @@ function RoleLeaveRequestDetailPage({
               >
                 Request Information
               </Typography>
+              {isSupervisor && (canApprove || canReject) ? (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {canApprove && (
+                    <Button
+                      type="button"
+                      size="small"
+                      variant="contained"
+                      onClick={() => openActionDialog('approve')}
+                      sx={{
+                        height: '36px',
+                        backgroundColor: '#059669',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        textTransform: 'none',
+                        boxShadow: 'none',
+                        '&:hover': { backgroundColor: '#047857', boxShadow: 'none' },
+                      }}
+                    >
+                      Approve Request
+                    </Button>
+                  )}
+                  {canReject && (
+                    <Button
+                      type="button"
+                      size="small"
+                      variant="outlined"
+                      onClick={() => openActionDialog('reject')}
+                      sx={{
+                        height: '36px',
+                        color: '#DC2626',
+                        borderColor: '#DC2626',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        textTransform: 'none',
+                        '&:hover': { backgroundColor: '#FEF2F2', borderColor: '#DC2626' },
+                      }}
+                    >
+                      Reject Request
+                    </Button>
+                  )}
+                </Box>
+              ) : null}
             </Box>
 
             <Box
@@ -1229,7 +1278,7 @@ function RoleLeaveRequestDetailPage({
                           'break-word',
                       }}
                     >
-                      {item.value}
+                      <RequestNumberText>{item.value}</RequestNumberText>
                     </Typography>
                   </Box>
                 ),
@@ -1386,7 +1435,7 @@ function RoleLeaveRequestDetailPage({
                           '5px',
                       }}
                     >
-                      {item.value}
+                      <RequestNumberText>{item.value}</RequestNumberText>
                     </Typography>
                   </Box>
                 ),
@@ -1806,6 +1855,7 @@ function RoleLeaveRequestDetailPage({
           <Paper
             elevation={0}
             sx={{
+              display: isSupervisor ? 'none' : 'block',
               padding: {
                 xs: '20px',
                 sm: '24px',
@@ -2161,7 +2211,7 @@ function RoleLeaveRequestDetailPage({
                 fontWeight: 800,
               }}
             >
-              {requestReference}
+              <RequestNumberText>{requestReference}</RequestNumberText>
             </Typography>
 
             <Typography

@@ -1,4 +1,5 @@
 import RoleLayout from '../components/rolelayout.jsx';
+import { PageContainer } from '../components/sharedvisualfoundation.jsx';
 
 function HRLayout({
   children,
@@ -20,19 +21,12 @@ function HRLayout({
     'Logout',
   ];
 
-  const hrTheme = {
-    primary: '#059669',
-    dark: '#047857',
-    soft: '#ECFDF5',
-  };
-
   return (
     <RoleLayout
       activeMenu={activeMenu}
       menuItems={hrMenuItems}
-      theme={hrTheme}
     >
-      {children}
+      <PageContainer>{children}</PageContainer>
     </RoleLayout>
   );
 }

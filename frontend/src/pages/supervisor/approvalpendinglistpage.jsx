@@ -29,16 +29,14 @@ import {
 } from 'react-router-dom';
 
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
+import RequestNumberText from '../../components/requestnumbertext.jsx';
+import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
+import { StatCard } from '../../components/shareduiprimitives.jsx';
+import { roleAccentTokens } from '../../theme/tokens.js';
 
 import api from '../../api/axios.js';
 
-const supervisorTheme = {
-  primary: '#7C3AED',
-  dark: '#6D28D9',
-  soft: '#F3E8FF',
-  border: '#DDD6FE',
-  text: '#5B21B6',
-};
+const supervisorTheme = roleAccentTokens.supervisor;
 
 const translateLeaveType = (
   leaveType,
@@ -503,6 +501,7 @@ function ApprovalPendingListPage() {
 
       color:
         supervisorTheme.primary,
+      accent: 'warning',
     },
 
     {
@@ -520,6 +519,7 @@ function ApprovalPendingListPage() {
 
       color:
         '#2563EB',
+      accent: 'info',
     },
 
     {
@@ -537,6 +537,7 @@ function ApprovalPendingListPage() {
 
       color:
         '#B45309',
+      accent: 'warning',
     },
   ];
 
@@ -563,33 +564,7 @@ function ApprovalPendingListPage() {
     <SupervisorLayout
       activeMenu="Approval"
     >
-      <Box
-        sx={{
-          marginBottom:
-            '22px',
-        }}
-      >
-        <Typography
-          component="h1"
-          sx={{
-            color:
-              '#111827',
-
-            fontSize: {
-              xs:
-                '26px',
-
-              sm:
-                '30px',
-            },
-
-            fontWeight:
-              800,
-          }}
-        >
-          รายการรออนุมัติ
-        </Typography>
-      </Box>
+      <PageHeader title="รายการรออนุมัติ" />
 
       {loadError && (
         <Alert
@@ -628,99 +603,15 @@ function ApprovalPendingListPage() {
       >
         {summaryCards.map(
           (card) => (
-            <Paper
+            <StatCard
               key={
                 card.title
               }
-              elevation={0}
-              sx={{
-                minHeight:
-                  '138px',
-
-                padding:
-                  '20px',
-
-                backgroundColor:
-                  '#FFFFFF',
-
-                border:
-                  '1px solid #E5E7EB',
-
-                borderRadius:
-                  '14px',
-              }}
-            >
-              <Box
-                sx={{
-                  width:
-                    '50px',
-
-                  height:
-                    '50px',
-
-                  display:
-                    'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'center',
-
-                  backgroundColor:
-                    card.backgroundColor,
-
-                  color:
-                    card.color,
-
-                  borderRadius:
-                    '11px',
-
-                  fontSize:
-                    '20px',
-
-                  fontWeight:
-                    800,
-                }}
-              >
-                {card.value}
-              </Box>
-
-              <Typography
-                sx={{
-                  color:
-                    '#111827',
-
-                  fontSize:
-                    '14px',
-
-                  fontWeight:
-                    800,
-
-                  marginTop:
-                    '13px',
-                }}
-              >
-                {card.title}
-              </Typography>
-
-              <Typography
-                sx={{
-                  color:
-                    '#94A3B8',
-
-                  fontSize:
-                    '11px',
-
-                  marginTop:
-                    '3px',
-                }}
-              >
-                {
-                  card.description
-                }
-              </Typography>
-            </Paper>
+              title={card.title}
+              value={card.value}
+              supportingText={card.description}
+              accent={card.accent}
+            />
           ),
         )}
       </Box>
@@ -808,47 +699,7 @@ function ApprovalPendingListPage() {
                 '20px',
             }}
           >
-            <TextField
-              fullWidth
-              label="ค้นหาคำขอ"
-              placeholder="เลขที่คำขอ ชื่อพนักงาน หรือประเภทการลา"
-              value={
-                searchText
-              }
-              onChange={(
-                event,
-              ) => {
-                setSearchText(
-                  event.target
-                    .value,
-                );
-
-                setPage(0);
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    height:
-                      '48px',
-
-                    borderRadius:
-                      '9px',
-
-                    '&.Mui-focused fieldset':
-                      {
-                        borderColor:
-                          supervisorTheme.primary,
-                      },
-                  },
-
-                '& .MuiInputLabel-root.Mui-focused':
-                  {
-                    color:
-                      supervisorTheme.primary,
-                  },
-              }}
-            />
-
+            <TextField fullWidth label="ค้นหาคำขอ" placeholder="เลขที่คำขอ ชื่อพนักงาน หรือประเภทการลา" value={searchText} onChange={(event) => { setSearchText(event.target.value); setPage(0); }} sx={{ '& .MuiOutlinedInput-root': { height: '48px', borderRadius: '9px', '&.Mui-focused fieldset': { borderColor: supervisorTheme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: supervisorTheme.primary } }} />
             <FormControl
               fullWidth
             >
@@ -1070,7 +921,6 @@ function ApprovalPendingListPage() {
                       'ช่วงวันที่',
                       'จำนวนวัน',
                       'ส่งคำขอเมื่อ',
-                      'การดำเนินการ',
                     ].map(
                       (
                         heading,
@@ -1124,7 +974,20 @@ function ApprovalPendingListPage() {
                           request.id
                         }
                         hover
+                        tabIndex={0}
+                        onClick={() => handleViewRequest(request)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleViewRequest(request);
+                          }
+                        }}
                         sx={{
+                          cursor: 'pointer',
+                          '&:focus-visible': {
+                            outline: `2px solid ${supervisorTheme.primary}`,
+                            outlineOffset: -2,
+                          },
                           '&:last-child td':
                             {
                               borderBottom:
@@ -1153,8 +1016,9 @@ function ApprovalPendingListPage() {
                                 'nowrap',
                             }}
                           >
-                            {request.requestNo ||
-                              `#${request.id}`}
+                            <RequestNumberText>
+                              {request.requestNo || `#${request.id}`}
+                            </RequestNumberText>
                           </Typography>
                         </TableCell>
 
@@ -1305,65 +1169,6 @@ function ApprovalPendingListPage() {
                           )}
                         </TableCell>
 
-                        <TableCell
-                          align="right"
-                          sx={{
-                            whiteSpace:
-                              'nowrap',
-
-                            borderBottom:
-                              '1px solid #EEF0F3',
-                          }}
-                        >
-                          <Button
-                            type="button"
-                            variant="outlined"
-                            onClick={() =>
-                              handleViewRequest(
-                                request,
-                              )
-                            }
-                            sx={{
-                              minWidth:
-                                '84px',
-
-                              height:
-                                '34px',
-
-                              padding:
-                                '0 13px',
-
-                              color:
-                                supervisorTheme.primary,
-
-                              borderColor:
-                                supervisorTheme.border,
-
-                              borderRadius:
-                                '8px',
-
-                              fontSize:
-                                '11px',
-
-                              fontWeight:
-                                700,
-
-                              textTransform:
-                                'none',
-
-                              '&:hover':
-                                {
-                                  backgroundColor:
-                                    supervisorTheme.soft,
-
-                                  borderColor:
-                                    supervisorTheme.primary,
-                                },
-                            }}
-                          >
-                            ตรวจสอบ
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     ),
                   )}

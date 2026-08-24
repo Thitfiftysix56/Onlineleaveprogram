@@ -391,7 +391,7 @@ function HRDashboardPage() {
         theme.soft,
 
       color:
-        theme.primary,
+        '#2563EB',
     },
 
     {
@@ -419,7 +419,7 @@ function HRDashboardPage() {
         '#DBEAFE',
 
       color:
-        '#2563EB',
+        '#7C3AED',
     },
 
     {
@@ -530,28 +530,30 @@ function HRDashboardPage() {
                   elevation={0}
                   sx={{
                     minHeight:
-                      '140px',
+                      '116px',
 
                     padding:
                       '20px',
 
                     backgroundColor:
-                      '#FFFFFF',
+                      `${card.color}18`,
 
                     border:
-                      '1px solid #E5E7EB',
+                      `1px solid ${card.color}45`,
 
                     borderRadius:
-                      '14px',
+                      '9px',
+                    display: 'flex',
+                    flexDirection: 'column',
                   }}
                 >
                   <Box
                     sx={{
                       width:
-                        '50px',
+                        'auto',
 
                       height:
-                        '50px',
+                        'auto',
 
                       display:
                         'flex',
@@ -560,22 +562,25 @@ function HRDashboardPage() {
                         'center',
 
                       justifyContent:
-                        'center',
+                        'flex-start',
+                      textAlign: 'left',
 
                       backgroundColor:
-                        card.backgroundColor,
+                        'transparent',
 
                       color:
-                        card.color,
+                        '#172033',
 
                       borderRadius:
-                        '11px',
+                        0,
 
                       fontSize:
-                        '20px',
+                        '26px',
 
                       fontWeight:
-                        800,
+                        700,
+                      order: 2,
+                      marginTop: '7px',
                     }}
                   >
                     {card.value}
@@ -584,16 +589,17 @@ function HRDashboardPage() {
                   <Typography
                     sx={{
                       color:
-                        '#111827',
+                        '#64748B',
 
                       fontSize:
-                        '14px',
+                        '12px',
 
                       fontWeight:
                         800,
 
                       marginTop:
-                        '13px',
+                        0,
+                      order: 1,
                     }}
                   >
                     {card.title}

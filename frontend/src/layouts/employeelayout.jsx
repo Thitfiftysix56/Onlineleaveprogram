@@ -1,4 +1,5 @@
 import RoleLayout from '../components/rolelayout.jsx';
+import { PageContainer } from '../components/sharedvisualfoundation.jsx';
 
 function EmployeeLayout({
   children,
@@ -15,19 +16,12 @@ function EmployeeLayout({
     'Logout',
   ];
 
-  const employeeTheme = {
-    primary: '#2563EB',
-    dark: '#1D4ED8',
-    soft: '#EFF6FF',
-  };
-
   return (
     <RoleLayout
       activeMenu={activeMenu}
       menuItems={employeeMenuItems}
-      theme={employeeTheme}
     >
-      {children}
+      <PageContainer>{children}</PageContainer>
     </RoleLayout>
   );
 }
