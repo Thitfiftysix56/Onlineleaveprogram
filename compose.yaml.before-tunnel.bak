@@ -9,7 +9,6 @@ services:
     environment:
       VITE_API_PROXY_TARGET: http://backend:3000
       CHOKIDAR_USEPOLLING: "true"
-      __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: "${TUNNEL_HOST:-}"
     ports:
       - "8080:5173"
     volumes:
@@ -58,8 +57,9 @@ services:
       SMTP_USER: "${SMTP_USER:-}"
       SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
       SMTP_FROM: "${SMTP_FROM:-Online Leave Approval System <no-reply@organization.local>}"
-      FRONTEND_URL: "${TUNNEL_URL:-http://localhost:8080}"
-      CORS_ORIGINS: http://localhost:8080,http://localhost:5173,http://127.0.0.1:5173,https://directories-necessary-spa-surge.trycloudflare.com
+
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:8080}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:8080,http://localhost:5173,http://127.0.0.1:5173}"
 
     ports:
       - "8082:3000"
@@ -138,4 +138,3 @@ volumes:
 
   backend_node_modules:
     name: online-leave-system_backend_node_modules
-

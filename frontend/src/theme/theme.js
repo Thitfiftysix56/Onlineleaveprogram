@@ -53,33 +53,39 @@ const theme = createTheme({
 
   typography: {
     fontFamily:
-      "'Noto Sans Thai', 'Noto Sans', system-ui, 'Segoe UI', sans-serif",
+      "'IBM Plex Sans Thai', 'IBM Plex Sans', 'Noto Sans Thai', system-ui, 'Segoe UI', sans-serif",
     htmlFontSize: 16,
     fontSize: 15,
     fontWeightRegular: 400,
-    fontWeightMedium: 600,
-    fontWeightBold: 700,
+    fontWeightMedium: 500,
+    fontWeightBold: 600,
     h1: {
       fontSize: '1.875rem',
-      fontWeight: 700,
+      fontWeight: 600,
       lineHeight: 1.25,
       letterSpacing: '-0.025em',
     },
     h2: {
       fontSize: '1.5rem',
-      fontWeight: 700,
+      fontWeight: 600,
       lineHeight: 1.3,
       letterSpacing: '-0.02em',
     },
     h3: {
       fontSize: '1.125rem',
-      fontWeight: 700,
+      fontWeight: 600,
       lineHeight: 1.45,
     },
     h4: {
       fontSize: '1rem',
-      fontWeight: 700,
+      fontWeight: 600,
       lineHeight: 1.5,
+    },
+    h6: {
+      fontSize: '1rem',
+      fontWeight: 600,
+      lineHeight: 1.5,
+      color: colorTokens.text.primary,
     },
     body1: {
       fontSize: '0.9375rem',
@@ -91,18 +97,18 @@ const theme = createTheme({
     },
     subtitle1: {
       fontSize: '0.9375rem',
-      fontWeight: 600,
+      fontWeight: 500,
       lineHeight: 1.6,
     },
     subtitle2: {
       fontSize: '0.8125rem',
-      fontWeight: 600,
+      fontWeight: 500,
       lineHeight: 1.6,
     },
     button: {
       textTransform: 'none',
       fontSize: '0.875rem',
-      fontWeight: 600,
+      fontWeight: 500,
       lineHeight: 1.5,
     },
     caption: {
@@ -148,6 +154,7 @@ const theme = createTheme({
           backgroundColor: colorTokens.background,
           color: colorTokens.text.primary,
           lineHeight: 1.7,
+          WebkitFontSmoothing: 'antialiased',
         },
       },
     },
@@ -163,7 +170,7 @@ const theme = createTheme({
           paddingInline: spacingTokens.lg,
           boxShadow: shadowTokens.none,
           transition:
-            'background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, opacity 180ms ease',
+            'background-color 180ms ease, border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, opacity 180ms ease, transform 180ms ease',
           '&:focus-visible': {
             outline: '3px solid currentColor',
             outlineOffset: 2,
@@ -179,11 +186,20 @@ const theme = createTheme({
         },
         outlined: {
           color: colorTokens.text.secondary,
-          borderColor: colorTokens.borderStrong,
+          borderColor: colorTokens.border,
+          backgroundColor: 'rgba(255, 255, 255, 0.72)',
           '&:hover': {
             color: colorTokens.text.primary,
-            borderColor: colorTokens.text.muted,
-            backgroundColor: colorTokens.surfaceSubtle,
+            borderColor: 'var(--role-border, #CBD5E1)',
+            backgroundColor: '#FFFFFF',
+          },
+        },
+        containedPrimary: {
+          background: '#2563EB',
+          boxShadow: 'none',
+          '&:hover': {
+            background: '#1D4ED8',
+            boxShadow: 'none',
           },
         },
         textError: {
@@ -198,8 +214,12 @@ const theme = createTheme({
     MuiIconButton: {
       styleOverrides: {
         root: {
+          borderRadius: radiusTokens.control,
           transition:
-            'background-color 180ms ease, color 180ms ease, box-shadow 180ms ease, opacity 180ms ease',
+            'background-color 180ms ease, color 180ms ease, box-shadow 180ms ease, opacity 180ms ease, transform 180ms ease',
+          '&:hover': {
+            backgroundColor: 'var(--role-hover, #F1F5F9)',
+          },
           '&:focus-visible': {
             outline: '3px solid currentColor',
             outlineOffset: 2,
@@ -215,6 +235,16 @@ const theme = createTheme({
       defaultProps: {
         fullWidth: true,
         size: 'medium',
+      },
+    },
+
+    MuiSelect: {
+      styleOverrides: {
+        select: {
+          minHeight: 'auto',
+          display: 'flex',
+          alignItems: 'center',
+        },
       },
     },
 
@@ -237,13 +267,22 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: radiusTokens.control,
-          backgroundColor: '#FCFDFE',
+          backgroundColor: '#FFFFFF',
+          transition: 'background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
           '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: colorTokens.borderStrong,
+            borderColor: 'var(--role-border, #CBD5E1)',
+          },
+          '&.Mui-focused': {
+            backgroundColor: '#FFFFFF',
+            boxShadow: '0 0 0 3px var(--role-focus, rgba(37, 99, 235, 0.10))',
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'var(--role-primary, #2563EB)',
+            borderWidth: 1,
           },
         },
         notchedOutline: {
-          borderColor: colorTokens.border,
+          borderColor: '#CBD5E1',
         },
       },
     },
@@ -274,6 +313,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: 'none',
+          backgroundColor: '#FFFFFF',
         },
         outlined: {
           borderColor: colorTokens.border,
@@ -289,7 +329,8 @@ const theme = createTheme({
         root: {
           borderRadius: radiusTokens.surface,
           border: `1px solid ${colorTokens.border}`,
-          boxShadow: shadowTokens.subtle,
+          boxShadow: shadowTokens.none,
+          backgroundColor: '#FFFFFF',
         },
       },
     },
@@ -307,7 +348,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           fontSize: '1.125rem',
-          fontWeight: 700,
+          fontWeight: 600,
           lineHeight: 1.45,
         },
       },
@@ -326,7 +367,7 @@ const theme = createTheme({
     MuiChip: {
       styleOverrides: {
         root: {
-          borderRadius: radiusTokens.control,
+          borderRadius: radiusTokens.pill,
           fontWeight: 600,
         },
         label: {
@@ -342,10 +383,10 @@ const theme = createTheme({
           color: colorTokens.text.secondary,
           fontSize: '0.8125rem',
           lineHeight: 1.6,
-          padding: `${spacingTokens.md}px ${spacingTokens.lg}px`,
+          padding: `${spacingTokens.lg}px ${spacingTokens.lg}px`,
         },
         head: {
-          backgroundColor: colorTokens.surfaceSubtle,
+          backgroundColor: '#EEF3F8',
           color: colorTokens.text.primary,
           fontWeight: 700,
           height: 44,
@@ -357,7 +398,10 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           '&.MuiTableRow-hover:hover': {
-            backgroundColor: colorTokens.surfaceSubtle,
+            backgroundColor: 'var(--role-row-hover, #F1F5F9)',
+          },
+          '&.Mui-selected, &.Mui-selected:hover': {
+            backgroundColor: 'var(--role-hover, #EAF2FF)',
           },
         },
       },

@@ -19,6 +19,7 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
@@ -29,7 +30,7 @@ import {
 } from 'react-router-dom';
 
 import HRLayout from '../../layouts/hrlayout.jsx';
-import { RowActionMenu } from '../../components/shareduiprimitives.jsx';
+import { ConfirmationDialog, DataListToolbar } from '../../components/shareduiprimitives.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -236,6 +237,9 @@ function LeaveTypeManagementPage() {
     statusFilter,
     setStatusFilter,
   ] = useState('all');
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 5;
+  const [disableTarget, setDisableTarget] = useState(null);
 
   /* =========================
      Load Data
@@ -341,6 +345,8 @@ function LeaveTypeManagementPage() {
       searchText,
       statusFilter,
     ]);
+  const paginatedLeaveTypes = useMemo(() => filteredLeaveTypes.slice(page * rowsPerPage, (page + 1) * rowsPerPage), [filteredLeaveTypes, page]);
+  useEffect(() => { setPage(0); }, [searchText, statusFilter]);
 
   /* =========================
      Summary
@@ -550,7 +556,7 @@ function LeaveTypeManagementPage() {
           gap: '16px',
 
           marginBottom:
-            '22px',
+            '16px',
         }}
       >
         <Typography
@@ -591,7 +597,7 @@ function LeaveTypeManagementPage() {
               '0 18px',
 
             backgroundColor:
-              theme.primary,
+              '#2563EB',
 
             color:
               '#FFFFFF',
@@ -613,7 +619,7 @@ function LeaveTypeManagementPage() {
 
             '&:hover': {
               backgroundColor:
-                theme.dark,
+                '#1D4ED8',
 
               boxShadow:
                 'none',
@@ -831,10 +837,21 @@ function LeaveTypeManagementPage() {
             รายการ
           </Typography>
 
+          <DataListToolbar
+            searchValue={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="ค้นหาชื่อหรือรหัสประเภทลา"
+            resultLabel={searchText ? `พบ ${filteredLeaveTypes.length} รายการจากคำค้น “${searchText}”` : `พบ ${filteredLeaveTypes.length} รายการ`}
+            activeFilters={statusFilter !== 'all' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}`, onDelete: () => setStatusFilter('all') }] : []}
+            onClearFilters={handleClearFilters}
+            filters={<FormControl size="small"><Select value={statusFilter === 'all' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'active' ? 'ใช้งานอยู่' : value === 'inactive' ? 'ไม่ใช้งาน' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'all')}><MenuItem value="active">ใช้งานอยู่</MenuItem><MenuItem value="inactive">ไม่ใช้งาน</MenuItem></Select></FormControl>}
+            sx={{ marginTop: '16px' }}
+          />
+
           <Box
             sx={{
               display:
-                'grid',
+                'none',
 
               gridTemplateColumns: {
                 xs:
@@ -1078,7 +1095,7 @@ function LeaveTypeManagementPage() {
               </TableHead>
 
               <TableBody>
-                {filteredLeaveTypes.map(
+                {paginatedLeaveTypes.map(
                   (
                     leaveType,
                   ) => (
@@ -1087,6 +1104,10 @@ function LeaveTypeManagementPage() {
                         leaveType.id
                       }
                       hover
+                      tabIndex={0}
+                      onClick={() => handleEditLeaveType(leaveType)}
+                      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleEditLeaveType(leaveType); } }}
+                      sx={{ cursor: 'pointer', '&:focus-visible': { outline: '2px solid #2563EB', outlineOffset: -2 } }}
                     >
                       {/* Code */}
 
@@ -1328,17 +1349,7 @@ function LeaveTypeManagementPage() {
                               'nowrap',
                           }}
                         >
-                          <RowActionMenu
-                            actions={[
-                              { label: 'แก้ไข', onClick: () => handleEditLeaveType(leaveType) },
-                              {
-                                label: updatingId === leaveType.id ? 'กำลังบันทึก...' : leaveType.status === 'Active' ? 'ปิดใช้งาน' : 'เปิดใช้งาน',
-                                disabled: updatingId === leaveType.id,
-                                tone: leaveType.status === 'Active' ? 'danger' : 'success',
-                                onClick: () => handleToggleStatus(leaveType),
-                              },
-                            ]}
-                          />
+                          <Button type="button" size="small" variant="outlined" disabled={updatingId === leaveType.id} onClick={(event) => { event.stopPropagation(); if (leaveType.status === 'Active') setDisableTarget(leaveType); else handleToggleStatus(leaveType); }} sx={{ color: leaveType.status === 'Active' ? '#DC2626' : '#15803D', borderColor: leaveType.status === 'Active' ? '#FECACA' : '#BBF7D0' }}>{updatingId === leaveType.id ? 'กำลังบันทึก...' : leaveType.status === 'Active' ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}</Button>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1346,6 +1357,7 @@ function LeaveTypeManagementPage() {
                 )}
               </TableBody>
             </Table>
+            {filteredLeaveTypes.length > rowsPerPage ? <TablePagination component="div" count={filteredLeaveTypes.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} /> : null}
           </Box>
         ) : (
           /* Empty */
@@ -1445,6 +1457,7 @@ function LeaveTypeManagementPage() {
           </Box>
         )}
       </Paper>
+      <ConfirmationDialog open={Boolean(disableTarget)} title="ยืนยันการปิดใช้งานประเภทการลา" description={`ต้องการปิดใช้งาน ${disableTarget?.name || ''} ใช่หรือไม่`} loading={updatingId === disableTarget?.id} onCancel={() => setDisableTarget(null)} onConfirm={async () => { const target = disableTarget; if (!target) return; await handleToggleStatus(target); setDisableTarget(null); }} />
     </HRLayout>
   );
 }

@@ -22,6 +22,7 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
@@ -1052,6 +1053,8 @@ const headerCellStyle = {
 function AuditLogPage() {
   void auditLogs;
   const [loadedAuditLogs, setLoadedAuditLogs] = useState([]);
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 5;
   const [loadError, setLoadError] = useState('');
   void loadError;
 
@@ -1313,6 +1316,15 @@ function AuditLogPage() {
       loadedAuditLogs,
     ]);
 
+  const paginatedAuditLogs = useMemo(
+    () => filteredAuditLogs.slice(page * rowsPerPage, (page + 1) * rowsPerPage),
+    [filteredAuditLogs, page],
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [searchText, roleFilter, actionFilter, startDate, endDate]);
+
   /* =========================
      Summary
   ========================= */
@@ -1476,7 +1488,7 @@ function AuditLogPage() {
           flexDirection: { xs: 'column', sm: 'row' },
           gap: '16px',
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
         <Typography
@@ -1712,53 +1724,7 @@ function AuditLogPage() {
                 รายการประวัติการใช้งาน
               </Typography>
 
-              <Typography
-                sx={{
-                  color:
-                    '#64748B',
-
-                  fontSize:
-                    '12px',
-
-                  marginTop:
-                    '4px',
-                }}
-              >
-                แสดง{' '}
-                {
-                  filteredAuditLogs.length
-                }{' '}
-                จาก{' '}
-                {
-                  loadedAuditLogs.length
-                }{' '}
-                รายการ
-              </Typography>
             </Box>
-
-            <Chip
-              label="อ่านอย่างเดียว"
-              size="small"
-              sx={{
-                backgroundColor:
-                  '#FFF7ED',
-
-                color:
-                  '#C2410C',
-
-                border:
-                  '1px solid #FED7AA',
-
-                borderRadius:
-                  '999px',
-
-                fontSize:
-                  '10px',
-
-                fontWeight:
-                  700,
-              }}
-            />
           </Box>
 
           {/* Filter Row 1 */}
@@ -1796,15 +1762,14 @@ function AuditLogPage() {
 
               <Select
                 labelId="audit-role-filter-label"
-                value={
-                  roleFilter
-                }
-                label="บทบาท"
+                value={roleFilter === 'All' ? '' : roleFilter}
+                displayEmpty
+                renderValue={(value) => value ? translateRole(value) : 'บทบาท'}
                 onChange={(
                   event,
                 ) =>
                   setRoleFilter(
-                    event.target.value,
+                    event.target.value || 'All',
                   )
                 }
                 sx={{
@@ -1815,10 +1780,6 @@ function AuditLogPage() {
                     '9px',
                 }}
               >
-                <MenuItem value="All">
-                  ทุกบทบาท
-                </MenuItem>
-
                 <MenuItem value="Employee">
                   พนักงาน
                 </MenuItem>
@@ -1848,15 +1809,14 @@ function AuditLogPage() {
 
               <Select
                 labelId="audit-action-filter-label"
-                value={
-                  actionFilter
-                }
-                label="ประเภทกิจกรรม"
+                value={actionFilter === 'All' ? '' : actionFilter}
+                displayEmpty
+                renderValue={(value) => value ? actionGroups.find((group) => group.value === value)?.label || value : 'ประเภทกิจกรรม'}
                 onChange={(
                   event,
                 ) =>
                   setActionFilter(
-                    event.target.value,
+                    event.target.value || 'All',
                   )
                 }
                 sx={{
@@ -1867,10 +1827,6 @@ function AuditLogPage() {
                     '9px',
                 }}
               >
-                <MenuItem value="All">
-                  ทุกกิจกรรม
-                </MenuItem>
-
                 {actionGroups.map(
                   (group) => (
                     <MenuItem
@@ -2072,14 +2028,6 @@ function AuditLogPage() {
                       headerCellStyle
                     }
                   >
-                    วันที่ / เวลา
-                  </TableCell>
-
-                  <TableCell
-                    sx={
-                      headerCellStyle
-                    }
-                  >
                     ผู้ใช้งาน
                   </TableCell>
 
@@ -2105,6 +2053,14 @@ function AuditLogPage() {
                       headerCellStyle
                     }
                   >
+                    วันที่ / เวลา
+                  </TableCell>
+
+                  <TableCell
+                    sx={
+                      headerCellStyle
+                    }
+                  >
                     ข้อมูลที่เกี่ยวข้อง
                   </TableCell>
 
@@ -2120,7 +2076,7 @@ function AuditLogPage() {
               </TableHead>
 
               <TableBody>
-                {filteredAuditLogs.map(
+                {paginatedAuditLogs.map(
                   (log) => {
                     const roleStyle =
                       getRoleStyle(
@@ -2156,34 +2112,6 @@ function AuditLogPage() {
                             },
                         }}
                       >
-                        {/* Date */}
-
-                        <TableCell
-                          sx={{
-                            padding:
-                              '13px 8px',
-
-                            color:
-                              '#64748B',
-
-                            fontSize:
-                              '10.5px',
-
-                            lineHeight:
-                              1.45,
-
-                            whiteSpace:
-                              'normal',
-
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          {formatDateTime(
-                            log.createdAt,
-                          )}
-                        </TableCell>
-
                         {/* User */}
 
                         <TableCell
@@ -2352,6 +2280,21 @@ function AuditLogPage() {
                           />
                         </TableCell>
 
+                        {/* Date */}
+
+                        <TableCell
+                          sx={{
+                            padding: '13px 8px',
+                            color: '#64748B',
+                            fontSize: '10.5px',
+                            lineHeight: 1.45,
+                            whiteSpace: 'normal',
+                            borderBottom: '1px solid #E5E7EB',
+                          }}
+                        >
+                          {formatDateTime(log.createdAt)}
+                        </TableCell>
+
                         {/* Target */}
 
                         <TableCell
@@ -2433,6 +2376,9 @@ function AuditLogPage() {
                 )}
               </TableBody>
             </Table>
+            {filteredAuditLogs.length > rowsPerPage ? (
+              <TablePagination component="div" count={filteredAuditLogs.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} />
+            ) : null}
           </Box>
         ) : (
           /* Empty */
@@ -2839,7 +2785,7 @@ function AuditLogPage() {
         >
           <Button
             type="button"
-            variant="contained"
+            variant="outlined"
             onClick={
               handleCloseDialog
             }
@@ -2851,10 +2797,13 @@ function AuditLogPage() {
                 '40px',
 
               backgroundColor:
-                adminTheme.primary,
+                '#FFFFFF',
 
               color:
-                '#FFFFFF',
+                '#475569',
+
+              borderColor:
+                '#CBD5E1',
 
               borderRadius:
                 '8px',

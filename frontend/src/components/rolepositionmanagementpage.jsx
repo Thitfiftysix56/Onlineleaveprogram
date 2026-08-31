@@ -12,7 +12,6 @@ import {
   Chip,
   CircularProgress,
   FormControl,
-  IconButton,
   InputLabel,
   Menu,
   MenuItem,
@@ -22,12 +21,13 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
 } from '@mui/material';
 
-import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
+import { ConfirmationDialog, DataListToolbar } from './shareduiprimitives.jsx';
 
 import {
   useNavigate,
@@ -153,6 +153,9 @@ function RolePositionManagementPage({
     statusFilter,
     setStatusFilter,
   ] = useState('All');
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 5;
+  const [disableTarget, setDisableTarget] = useState(null);
 
   const [
     actionMessage,
@@ -272,6 +275,8 @@ function RolePositionManagementPage({
       searchText,
       statusFilter,
     ]);
+  const paginatedPositions = useMemo(() => filteredPositions.slice(page * rowsPerPage, (page + 1) * rowsPerPage), [filteredPositions, page]);
+  useEffect(() => { setPage(0); }, [searchText, statusFilter]);
 
   /* =========================
      Summary
@@ -451,19 +456,6 @@ function RolePositionManagementPage({
      Action Menu
   ========================= */
 
-  const handleOpenActionMenu = (
-    event,
-    position,
-  ) => {
-    setActionMenuAnchor(
-      event.currentTarget,
-    );
-
-    setActionMenuPosition(
-      position,
-    );
-  };
-
   const handleCloseActionMenu =
     () => {
       setActionMenuAnchor(
@@ -545,7 +537,7 @@ function RolePositionManagementPage({
             '16px',
 
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
         <Typography
@@ -586,7 +578,7 @@ function RolePositionManagementPage({
               '0 18px',
 
             backgroundColor:
-              theme.primary,
+              '#2563EB',
 
             color:
               '#FFFFFF',
@@ -608,7 +600,7 @@ function RolePositionManagementPage({
 
             '&:hover': {
               backgroundColor:
-                theme.dark,
+                '#1D4ED8',
 
               boxShadow:
                 'none',
@@ -888,10 +880,21 @@ function RolePositionManagementPage({
             ตำแหน่ง
           </Typography>
 
+          <DataListToolbar
+            searchValue={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="ค้นหาชื่อหรือตำแหน่ง"
+            resultLabel={searchText ? `พบ ${filteredPositions.length} รายการจากคำค้น “${searchText}”` : `พบ ${filteredPositions.length} รายการ`}
+            activeFilters={statusFilter !== 'All' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'Active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}`, onDelete: () => setStatusFilter('All') }] : []}
+            onClearFilters={handleClearFilters}
+            filters={<FormControl size="small"><Select value={statusFilter === 'All' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'Active' ? 'ใช้งานอยู่' : value === 'Inactive' ? 'ไม่ใช้งาน' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'All')}><MenuItem value="Active">ใช้งานอยู่</MenuItem><MenuItem value="Inactive">ไม่ใช้งาน</MenuItem></Select></FormControl>}
+            sx={{ marginTop: '16px' }}
+          />
+
           <Box
             sx={{
               display:
-                'grid',
+                'none',
 
               gridTemplateColumns: {
                 xs:
@@ -1230,7 +1233,7 @@ function RolePositionManagementPage({
               </TableHead>
 
               <TableBody>
-                {filteredPositions.map(
+                {paginatedPositions.map(
                   (position) => {
                     const isActive =
                       position.status ===
@@ -1242,7 +1245,9 @@ function RolePositionManagementPage({
                           position.id
                         }
                         hover
+                        onClick={() => handleEditPosition(position)}
                         sx={{
+                          cursor: 'pointer',
                           '&:last-child td':
                             {
                               borderBottom:
@@ -1427,9 +1432,10 @@ function RolePositionManagementPage({
                               '1px solid #E5E7EB',
                           }}
                         >
-                          <IconButton
+                          <Button
                             type="button"
-                            aria-label="เปิดเมนูจัดการตำแหน่ง"
+                            size="small"
+                            variant="outlined"
                             disabled={
                               Number(
                                 updatingId,
@@ -1438,44 +1444,16 @@ function RolePositionManagementPage({
                                 position.id,
                               )
                             }
-                            onClick={(
-                              event,
-                            ) =>
-                              handleOpenActionMenu(
-                                event,
-                                position,
-                              )
-                            }
+                            onClick={(event) => { event.stopPropagation(); if (isActive) setDisableTarget(position); else handleStatusChange(position); }}
                             sx={{
-                              width:
-                                '34px',
-
-                              height:
-                                '34px',
-
-                              color:
-                                '#64748B',
-
-                              borderRadius:
-                                '8px',
-
-                              '&:hover':
-                                {
-                                  color:
-                                    theme.primary,
-
-                                  backgroundColor:
-                                    theme.soft,
-                                },
+                              minWidth: 0,
+                              color: isActive ? '#B42318' : '#15803D',
+                              borderColor: isActive ? '#FCA5A5' : '#86EFAC',
+                              '&:hover': { backgroundColor: isActive ? '#FEE2E2' : '#DCFCE7' },
                             }}
                           >
-                            <MoreVertRoundedIcon
-                              sx={{
-                                fontSize:
-                                  '20px',
-                              }}
-                            />
-                          </IconButton>
+                            {isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -1483,6 +1461,7 @@ function RolePositionManagementPage({
                 )}
               </TableBody>
             </Table>
+            {filteredPositions.length > rowsPerPage ? <TablePagination component="div" count={filteredPositions.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} /> : null}
           </Box>
         ) : (
           /* Empty */
@@ -1638,6 +1617,15 @@ function RolePositionManagementPage({
       </Paper>
 
       {/* Action Menu */}
+
+      <ConfirmationDialog
+        open={Boolean(disableTarget)}
+        title="ยืนยันการปิดใช้งานตำแหน่ง"
+        description={`ต้องการปิดใช้งานตำแหน่ง ${disableTarget?.positionName || ''} ใช่หรือไม่`}
+        loading={Number(updatingId) === Number(disableTarget?.id)}
+        onCancel={() => setDisableTarget(null)}
+        onConfirm={async () => { const target = disableTarget; if (!target) return; await handleStatusChange(target); setDisableTarget(null); }}
+      />
 
       <Menu
         anchorEl={

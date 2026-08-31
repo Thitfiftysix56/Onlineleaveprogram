@@ -64,7 +64,7 @@ function ApprovedStatePage() {
     <SupervisorLayout activeMenu="Approval">
       <Box
         sx={{
-          marginBottom: '28px',
+          marginBottom: '16px',
         }}
       >
         <Box
@@ -144,7 +144,7 @@ function ApprovedStatePage() {
     },
   }}
 >
-  ← Back
+  ← กลับ
 </Button>
       </Box>
 
@@ -404,7 +404,7 @@ function ApprovedStatePage() {
                     fontWeight: 600,
                   }}
                 >
-                  Reason for Leave
+                  เหตุผลการลา
                 </Typography>
 
                 <Typography
@@ -836,7 +836,7 @@ function ApprovedStatePage() {
                   fontWeight: 800,
                 }}
               >
-                Approval Timeline
+                ลำดับเหตุการณ์การอนุมัติ
               </Typography>
 
               <Typography

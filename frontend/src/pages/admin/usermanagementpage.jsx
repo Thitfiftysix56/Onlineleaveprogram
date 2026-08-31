@@ -14,7 +14,6 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
-  IconButton,
   InputLabel,
   Menu,
   MenuItem,
@@ -24,12 +23,12 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
 } from '@mui/material';
 
-import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
 
 import {
   useNavigate,
@@ -38,6 +37,7 @@ import {
 import AdminLayout from '../../layouts/adminlayout.jsx';
 import api from '../../api/axios.js';
 import TemporaryPasswordDialog from '../../components/temporarypassworddialog.jsx';
+import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
 
 import {
   updateAuthUserRole,
@@ -305,6 +305,8 @@ function UserManagementPage() {
     setResetConfirmationUser,
   ] = useState(null);
 
+  const [statusConfirmation, setStatusConfirmation] = useState(null);
+
   const [
     temporaryPasswordResult,
     setTemporaryPasswordResult,
@@ -324,6 +326,9 @@ function UserManagementPage() {
     statusFilter,
     setStatusFilter,
   ] = useState('All');
+
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 5;
 
   const [
     actionMessage,
@@ -533,6 +538,15 @@ function UserManagementPage() {
       statusFilter,
     ]);
 
+  const paginatedUsers = useMemo(
+    () => filteredUsers.slice(page * rowsPerPage, (page + 1) * rowsPerPage),
+    [filteredUsers, page],
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [searchText, roleFilter, statusFilter]);
+
   /* =========================
      Summary
   ========================= */
@@ -736,22 +750,17 @@ function UserManagementPage() {
       }
     };
 
+  const requestStatusChange = (selectedUser, nextStatus) => {
+    if (nextStatus === 'Inactive' || nextStatus === 'Locked') {
+      setStatusConfirmation({ user: selectedUser, nextStatus });
+      return;
+    }
+    handleStatusChange(selectedUser, nextStatus);
+  };
+
   /* =========================
      Action Menu
   ========================= */
-
-  const handleOpenActionMenu = (
-    event,
-    user,
-  ) => {
-    setActionMenuAnchor(
-      event.currentTarget,
-    );
-
-    setActionMenuUser(
-      user,
-    );
-  };
 
   const handleCloseActionMenu =
     () => {
@@ -929,7 +938,7 @@ function UserManagementPage() {
             '16px',
 
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
         <Typography
@@ -973,7 +982,7 @@ function UserManagementPage() {
               '0 18px',
 
             backgroundColor:
-              '#EA580C',
+              '#2563EB',
 
             color:
               '#FFFFFF',
@@ -995,7 +1004,7 @@ function UserManagementPage() {
 
             '&:hover': {
               backgroundColor:
-                '#C2410C',
+                '#1D4ED8',
 
               boxShadow:
                 'none',
@@ -1278,10 +1287,24 @@ function UserManagementPage() {
             บัญชี
           </Typography>
 
+          <DataListToolbar
+            searchValue={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="ค้นหาชื่อ Username หรือ Email"
+            resultLabel={searchText ? `พบ ${filteredUsers.length} รายการจากคำค้น “${searchText}”` : `พบ ${filteredUsers.length} รายการ`}
+            activeFilters={[
+              ...(roleFilter !== 'All' ? [{ key: 'role', label: `บทบาท: ${translateRole(roleFilter)}`, onDelete: () => setRoleFilter('All') }] : []),
+              ...(statusFilter !== 'All' ? [{ key: 'status', label: `สถานะ: ${translateStatus(statusFilter)}`, onDelete: () => setStatusFilter('All') }] : []),
+            ]}
+            onClearFilters={handleClearFilters}
+            filters={<><FormControl size="small"><Select value={roleFilter === 'All' ? '' : roleFilter} displayEmpty renderValue={(value) => value ? translateRole(value) : 'บทบาท'} inputProps={{ 'aria-label': 'บทบาท' }} onChange={(event) => setRoleFilter(event.target.value || 'All')}>{roleOptions.map((role) => <MenuItem key={role} value={role}>{translateRole(role)}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={statusFilter === 'All' ? '' : statusFilter} displayEmpty renderValue={(value) => value ? translateStatus(value) : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'All')}>{statusOptions.map((status) => <MenuItem key={status} value={status}>{translateStatus(status)}</MenuItem>)}</Select></FormControl></>}
+            sx={{ marginTop: '16px' }}
+          />
+
           <Box
             sx={{
               display:
-                'grid',
+                'none',
 
               gridTemplateColumns: {
                 xs:
@@ -1635,7 +1658,7 @@ function UserManagementPage() {
               </TableHead>
 
               <TableBody>
-                {filteredUsers.map(
+                {paginatedUsers.map(
                   (user) => {
                     const roleStyle =
                       getRoleStyle(
@@ -1653,7 +1676,12 @@ function UserManagementPage() {
                           user.id
                         }
                         hover
+                        onClick={(event) => {
+                          if (event.target.closest('button, input, [role="combobox"]')) return;
+                          navigate(`/admin/user-management/${user.id}/edit`);
+                        }}
                         sx={{
+                          cursor: 'pointer',
                           '&:last-child td':
                             {
                               borderBottom:
@@ -1897,7 +1925,7 @@ function UserManagementPage() {
                               onChange={(
                                 event,
                               ) =>
-                                handleStatusChange(
+                                requestStatusChange(
                                   user,
                                   event.target.value,
                                 )
@@ -2013,51 +2041,24 @@ function UserManagementPage() {
                               '1px solid #E5E7EB',
                           }}
                         >
-                          <IconButton
+                          <Button
                             type="button"
-                            aria-label="เปิดเมนูจัดการผู้ใช้งาน"
-                            onClick={(
-                              event,
-                            ) =>
-                              handleOpenActionMenu(
-                                event,
-                                user,
-                              )
-                            }
+                            size="small"
+                            variant="outlined"
+                            onClick={(event) => { event.stopPropagation(); handleOpenResetConfirmation(user); }}
                             disabled={
                               resettingPasswordUserId !==
                               null
                             }
                             sx={{
-                              width:
-                                '34px',
-
-                              height:
-                                '34px',
-
-                              color:
-                                '#64748B',
-
-                              borderRadius:
-                                '8px',
-
-                              '&:hover':
-                                {
-                                  color:
-                                    '#EA580C',
-
-                                  backgroundColor:
-                                    '#FFF7ED',
-                                },
+                              minWidth: 0,
+                              color: '#1D4ED8',
+                              borderColor: '#BFDBFE',
+                              '&:hover': { backgroundColor: '#EFF6FF', borderColor: '#93C5FD' },
                             }}
                           >
-                            <MoreVertRoundedIcon
-                              sx={{
-                                fontSize:
-                                  '20px',
-                              }}
-                            />
-                          </IconButton>
+                            รีเซ็ตรหัสผ่าน
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -2065,6 +2066,9 @@ function UserManagementPage() {
                 )}
               </TableBody>
             </Table>
+            {filteredUsers.length > rowsPerPage ? (
+              <TablePagination component="div" count={filteredUsers.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} />
+            ) : null}
           </Box>
         ) : (
           /* Empty */
@@ -2281,6 +2285,37 @@ function UserManagementPage() {
         </MenuItem>
       </Menu>
 
+      <Dialog
+        open={Boolean(statusConfirmation)}
+        fullWidth
+        maxWidth="sm"
+        onClose={() => updatingStatusUserId === null && setStatusConfirmation(null)}
+      >
+        <DialogTitle>ยืนยันการเปลี่ยนสถานะบัญชี</DialogTitle>
+        <DialogContent dividers>
+          <Typography>
+            ต้องการเปลี่ยนสถานะบัญชี <strong>{statusConfirmation?.user?.username}</strong> เป็น{' '}
+            <strong>{translateStatus(statusConfirmation?.nextStatus)}</strong> ใช่หรือไม่
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ padding: '14px 20px' }}>
+          <Button variant="outlined" disabled={updatingStatusUserId !== null} onClick={() => setStatusConfirmation(null)}>ยกเลิก</Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={updatingStatusUserId !== null}
+            onClick={async () => {
+              const pending = statusConfirmation;
+              if (!pending) return;
+              await handleStatusChange(pending.user, pending.nextStatus);
+              setStatusConfirmation(null);
+            }}
+          >
+            {updatingStatusUserId !== null ? 'กำลังบันทึก...' : 'ยืนยัน'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Reset Password Confirmation */}
 
       <Dialog
@@ -2475,7 +2510,7 @@ function UserManagementPage() {
                 '130px',
 
               backgroundColor:
-                '#7C3AED',
+                '#2563EB',
 
               borderRadius:
                 '8px',
@@ -2494,7 +2529,7 @@ function UserManagementPage() {
 
               '&:hover': {
                 backgroundColor:
-                  '#6D28D9',
+                  '#1D4ED8',
 
                 boxShadow:
                   'none',

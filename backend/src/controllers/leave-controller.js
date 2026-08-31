@@ -12,6 +12,16 @@ const date = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? String
 const role = (request) => String(request.user?.roleName || '').toLowerCase()
 const error = (response, status, message) => response.status(status).json({ status: 'error', message })
 const dateOnly = (value) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value || '').slice(0, 10)
+const leaveReasonPattern = /^[A-Za-z\u0E01-\u0E3A\u0E40-\u0E4E\s]+$/u
+
+export function isValidLeaveReason(value) {
+  const reason = String(value || '').trim()
+  return reason.length >= 5 && reason.length <= 500 && leaveReasonPattern.test(reason)
+}
+
+export function calculateDisplayedRemaining(entitlement) {
+  return Number(entitlement.total_days) - Number(entitlement.used_days)
+}
 
 async function identity(connection, request) {
   const [rows] = await connection.execute('SELECT employee_id FROM users WHERE user_id = ? LIMIT 1', [request.user.userId])
@@ -34,16 +44,19 @@ export async function validateSubmissionParticipants(connection, employeeId) {
   )
   const participant = rows[0]
   if (!participant || String(participant.employee_status).toLowerCase() !== 'active') {
-    return { error: 'The submitting employee is invalid or inactive.' }
+    return { error: 'บัญชีผู้ยื่นคำขอไม่ถูกต้องหรือไม่ได้เปิดใช้งาน' }
   }
   if (!participant.supervisor_id || String(participant.supervisor_employee_status).toLowerCase() !== 'active') {
-    return { error: 'A valid active supervisor employee is required before submission.' }
+    return { error: 'ไม่สามารถส่งคำขอได้ กรุณาให้ฝ่ายบุคคลตรวจสอบหัวหน้างานโดยตรงที่เปิดใช้งานของคุณ' }
+  }
+  if (Number(participant.supervisor_id) === Number(participant.employee_id)) {
+    return { error: 'ไม่สามารถส่งคำขอได้ เนื่องจากไม่สามารถกำหนดตนเองเป็นหัวหน้างานโดยตรง กรุณาติดต่อฝ่ายบุคคล' }
   }
   if (!participant.supervisor_user_id || String(participant.supervisor_user_status).toLowerCase() !== 'active') {
-    return { error: 'A valid active supervisor account is required before submission.' }
+    return { error: 'ไม่สามารถส่งคำขอได้ บัญชีของหัวหน้างานโดยตรงไม่พร้อมใช้งาน กรุณาติดต่อฝ่ายบุคคล' }
   }
   if (String(participant.supervisor_role_name).toLowerCase() !== 'supervisor') {
-    return { error: 'The direct supervisor account must have the Supervisor role.' }
+    return { error: 'ไม่สามารถส่งคำขอได้ บัญชีของหัวหน้างานโดยตรงต้องได้รับบทบาทหัวหน้างาน กรุณาติดต่อฝ่ายบุคคล' }
   }
   return { supervisorUserId: participant.supervisor_user_id }
 }
@@ -108,9 +121,9 @@ async function byId(connection, requestId) {
   return rows[0] || null
 }
 
-async function workingDays(connection, startDate, endDate) {
+export async function calculateWorkingDays(connection, startDate, endDate) {
   const [holidays] = await connection.execute('SELECT holiday_date FROM holidays WHERE is_active = 1 AND holiday_date BETWEEN ? AND ?', [startDate, endDate])
-  const excluded = new Set(holidays.map((x) => String(x.holiday_date).slice(0, 10)))
+  const excluded = new Set(holidays.map((x) => dateOnly(x.holiday_date)))
   let total = 0
   for (let cursor = new Date(`${startDate}T00:00:00Z`), end = new Date(`${endDate}T00:00:00Z`); cursor <= end; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
     const day = cursor.getUTCDay(); const key = cursor.toISOString().slice(0, 10)
@@ -131,10 +144,10 @@ async function validate(connection, employeeId, body, currentId = 0, submitting 
   if (!leaveTypeId || !startDate || !endDate || !reason) return { error: 'Leave type, start date, end date and reason are required.' }
   if (startDate > endDate) return { error: 'End date must be on or after start date.' }
   if (startDate.slice(0, 4) !== endDate.slice(0, 4)) return { error: 'Leave requests across different years are not supported.' }
-  if (reason.length < 5 || reason.length > 500) return { error: 'Reason must contain 5 to 500 characters.' }
+  if (!isValidLeaveReason(reason)) return { error: 'เหตุผลการลาต้องเป็นตัวอักษรภาษาไทยหรือภาษาอังกฤษเท่านั้น' }
   const [types] = await connection.execute('SELECT * FROM leave_types WHERE leave_type_id = ? AND is_active = 1 LIMIT 1', [leaveTypeId])
   if (!types.length) return { error: 'The selected leave type is invalid or inactive.' }
-  const days = await workingDays(connection, startDate, endDate)
+  const days = await calculateWorkingDays(connection, startDate, endDate)
   if (!days) return { error: 'The selected period contains no working days.' }
   const type = types[0]
   if (days < Number(type.minimum_days || 0) || days > Number(type.maximum_days_per_request || 365)) return { error: 'Requested days do not comply with leave type policy.' }
@@ -165,7 +178,7 @@ export async function options(request, response) {
     FROM leave_types lt LEFT JOIN leave_entitlements le ON le.leave_type_id=lt.leave_type_id AND le.employee_id=? AND le.year=?
     LEFT JOIN leave_requests lr ON lr.employee_id=? AND lr.leave_type_id=lt.leave_type_id AND YEAR(lr.start_date)=? WHERE lt.is_active=1 GROUP BY lt.leave_type_id, le.entitlement_id ORDER BY lt.leave_type_name`, [employeeId, year, employeeId, year])
   const [holidays] = await pool.execute('SELECT holiday_id, holiday_date, holiday_name FROM holidays WHERE is_active=1 AND year=? ORDER BY holiday_date', [year])
-  response.json({ status: 'ok', data: { leaveTypes: types.map((x) => ({ id:x.leave_type_id, leaveTypeId:x.leave_type_id, code:x.leave_type_code, name:x.leave_type_name, status:'Active', minimumDays:Number(x.minimum_days), maximumDaysPerRequest:Number(x.maximum_days_per_request), requiresAttachment:Boolean(x.requires_attachment), attachmentRequiredAfterDays:Number(x.attachment_required_after_days), totalDays:Number(x.total_days||0), usedDays:Number(x.used_days||0), pendingDays:Number(x.pending_days||0), availableDays:Number(x.total_days||0)-Number(x.used_days||0)-Number(x.pending_days||0), hasEntitlement:Boolean(x.total_days!==null) })), holidays: holidays.map((x)=>({ id:x.holiday_id, date:String(x.holiday_date).slice(0,10), name:x.holiday_name })) } })
+  response.json({ status: 'ok', data: { leaveTypes: types.map((x) => ({ id:x.leave_type_id, leaveTypeId:x.leave_type_id, code:x.leave_type_code, name:x.leave_type_name, status:'Active', minimumDays:Number(x.minimum_days), maximumDaysPerRequest:Number(x.maximum_days_per_request), requiresAttachment:Boolean(x.requires_attachment), attachmentRequiredAfterDays:Number(x.attachment_required_after_days), totalDays:Number(x.total_days||0), usedDays:Number(x.used_days||0), pendingDays:Number(x.pending_days||0), availableDays:calculateDisplayedRemaining(x), hasEntitlement:Boolean(x.total_days!==null) })), holidays: holidays.map((x)=>({ id:x.holiday_id, date:String(x.holiday_date).slice(0,10), name:x.holiday_name })) } })
 }
 
 export async function listOwn(request, response) {
@@ -202,7 +215,7 @@ async function save(request,response,submitting) {
 export async function deleteDraft(request,response){const employeeId=await identity(pool,request);const [result]=await pool.execute(`DELETE FROM leave_requests WHERE leave_request_id=? AND employee_id=? AND status='draft'`,[positiveId(request.params.requestId),employeeId]);if(!result.affectedRows)return error(response,409,'Only an owned draft can be deleted.');response.json({status:'ok',message:'Draft deleted.'})}
 export async function cancelOwn(request,response){const employeeId=await identity(pool,request);const [result]=await pool.execute(`UPDATE leave_requests SET status='cancelled',cancelled_at=NOW() WHERE leave_request_id=? AND employee_id=? AND status='pending'`,[positiveId(request.params.requestId),employeeId]);if(!result.affectedRows)return error(response,409,'Only an owned pending request can be cancelled.');response.json({status:'ok',message:'Leave request cancelled.'})}
 
-export async function balance(request,response){const employeeId=await identity(pool,request);const year=Number(request.query.year||new Date().getFullYear());const [rows]=await pool.execute(`SELECT le.entitlement_id,lt.leave_type_id,lt.leave_type_name,le.total_days,le.used_days,COALESCE(SUM(CASE WHEN lr.status='pending' THEN lr.leave_days ELSE 0 END),0) pending_days FROM leave_entitlements le JOIN leave_types lt ON lt.leave_type_id=le.leave_type_id LEFT JOIN leave_requests lr ON lr.employee_id=le.employee_id AND lr.leave_type_id=le.leave_type_id AND YEAR(lr.start_date)=le.year WHERE le.employee_id=? AND le.year=? GROUP BY le.entitlement_id ORDER BY lt.leave_type_name`,[employeeId,year]);response.json({status:'ok',data:{year,balances:rows.map(x=>({id:x.entitlement_id,leaveTypeId:x.leave_type_id,leaveType:x.leave_type_name,total:Number(x.total_days),used:Number(x.used_days),pending:Number(x.pending_days),remaining:Number(x.total_days)-Number(x.used_days)-Number(x.pending_days)}))}})}
+export async function balance(request,response){const employeeId=await identity(pool,request);const year=Number(request.query.year||new Date().getFullYear());const [rows]=await pool.execute(`SELECT le.entitlement_id,lt.leave_type_id,lt.leave_type_name,le.total_days,le.used_days,COALESCE(SUM(CASE WHEN lr.status='pending' THEN lr.leave_days ELSE 0 END),0) pending_days FROM leave_entitlements le JOIN leave_types lt ON lt.leave_type_id=le.leave_type_id LEFT JOIN leave_requests lr ON lr.employee_id=le.employee_id AND lr.leave_type_id=le.leave_type_id AND YEAR(lr.start_date)=le.year WHERE le.employee_id=? AND le.year=? GROUP BY le.entitlement_id ORDER BY lt.leave_type_name`,[employeeId,year]);response.json({status:'ok',data:{year,balances:rows.map(x=>({id:x.entitlement_id,leaveTypeId:x.leave_type_id,leaveType:x.leave_type_name,total:Number(x.total_days),used:Number(x.used_days),pending:Number(x.pending_days),remaining:calculateDisplayedRemaining(x)}))}})}
 
 export async function supervisorList(request,response){const supervisorId=await identity(pool,request);const [rows]=await pool.execute(`${select} WHERE e.supervisor_id=? AND lr.status='pending' AND lr.employee_id<>? ORDER BY lr.submitted_at`,[supervisorId,supervisorId]);response.json({status:'ok',data:{leaveRequests:await Promise.all(rows.map(x=>serialize(pool,x)))}})}
 export async function supervisorDetail(request,response){const supervisorId=await identity(pool,request);const row=await byId(pool,positiveId(request.params.requestId));if(!row){return error(response,404,'Leave request was not found.')}const [ok]=await pool.execute('SELECT employee_id FROM employees WHERE employee_id=? AND supervisor_id=?',[row.employee_id,supervisorId]);if(!ok.length||row.employee_id===supervisorId)return error(response,403,'Forbidden');response.json({status:'ok',data:{leaveRequest:await serialize(pool,row)}})}

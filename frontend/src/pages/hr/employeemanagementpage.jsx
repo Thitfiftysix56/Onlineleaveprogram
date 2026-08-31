@@ -19,6 +19,7 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
@@ -29,7 +30,7 @@ import {
 } from 'react-router-dom';
 
 import HRLayout from '../../layouts/hrlayout.jsx';
-import { RowActionMenu } from '../../components/shareduiprimitives.jsx';
+import { ConfirmationDialog, DataListToolbar } from '../../components/shareduiprimitives.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -210,6 +211,10 @@ function EmployeeManagementPage() {
     setDepartmentFilter,
   ] = useState('all');
 
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 5;
+  const [disableTarget, setDisableTarget] = useState(null);
+
   const [
     statusFilter,
     setStatusFilter,
@@ -338,6 +343,13 @@ function EmployeeManagementPage() {
       departmentFilter,
       statusFilter,
     ]);
+
+  const paginatedEmployees = useMemo(
+    () => filteredEmployees.slice(page * rowsPerPage, (page + 1) * rowsPerPage),
+    [filteredEmployees, page],
+  );
+
+  useEffect(() => { setPage(0); }, [searchText, departmentFilter, statusFilter]);
 
   /* =========================
      Summary
@@ -515,7 +527,7 @@ function EmployeeManagementPage() {
           gap: '16px',
 
           marginBottom:
-            '22px',
+            '16px',
         }}
       >
         <Typography
@@ -551,7 +563,7 @@ function EmployeeManagementPage() {
               '0 18px',
 
             backgroundColor:
-              theme.primary,
+              '#2563EB',
 
             color:
               '#FFFFFF',
@@ -573,7 +585,7 @@ function EmployeeManagementPage() {
 
             '&:hover': {
               backgroundColor:
-                theme.dark,
+                '#1D4ED8',
 
               boxShadow:
                 'none',
@@ -779,10 +791,24 @@ function EmployeeManagementPage() {
             รายการ
           </Typography>
 
+          <DataListToolbar
+            searchValue={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="ค้นหาชื่อ รหัส หรืออีเมล"
+            resultLabel={searchText ? `พบ ${filteredEmployees.length} รายการจากคำค้น “${searchText}”` : `พบ ${filteredEmployees.length} รายการ`}
+            activeFilters={[
+              ...(departmentFilter !== 'all' ? [{ key: 'department', label: `แผนก: ${departmentFilter}`, onDelete: () => setDepartmentFilter('all') }] : []),
+              ...(statusFilter !== 'all' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'active' ? 'ใช้งานอยู่' : statusFilter === 'inactive' ? 'ไม่ใช้งาน' : 'ลาออก'}`, onDelete: () => setStatusFilter('all') }] : []),
+            ]}
+            onClearFilters={handleClearFilters}
+            filters={<><FormControl size="small"><Select value={departmentFilter === 'all' ? '' : departmentFilter} displayEmpty renderValue={(value) => value || 'แผนก'} inputProps={{ 'aria-label': 'แผนก' }} onChange={(event) => setDepartmentFilter(event.target.value || 'all')}>{departments.map((department) => <MenuItem key={department} value={department}>{department}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={statusFilter === 'all' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'active' ? 'ใช้งานอยู่' : value === 'inactive' ? 'ไม่ใช้งาน' : value === 'resigned' ? 'ลาออก' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'all')}><MenuItem value="active">ใช้งานอยู่</MenuItem><MenuItem value="inactive">ไม่ใช้งาน</MenuItem><MenuItem value="resigned">ลาออก</MenuItem></Select></FormControl></>}
+            sx={{ marginTop: '16px' }}
+          />
+
           <Box
             sx={{
               display:
-                'grid',
+                'none',
 
               gridTemplateColumns: {
                 xs:
@@ -1082,7 +1108,7 @@ function EmployeeManagementPage() {
               </TableHead>
 
               <TableBody>
-                {filteredEmployees.map(
+                {paginatedEmployees.map(
                   (
                     employee,
                   ) => {
@@ -1098,6 +1124,10 @@ function EmployeeManagementPage() {
                           employee.employeeCode
                         }
                         hover
+                        tabIndex={0}
+                        onClick={() => handleEditEmployee(employee)}
+                        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleEditEmployee(employee); } }}
+                        sx={{ cursor: 'pointer', '&:focus-visible': { outline: '2px solid #2563EB', outlineOffset: -2 } }}
                       >
                         {/* Employee Code */}
 
@@ -1252,19 +1282,9 @@ function EmployeeManagementPage() {
                                 'nowrap',
                             }}
                           >
-                            <RowActionMenu
-                              actions={[
-                                { label: 'แก้ไข', onClick: () => handleEditEmployee(employee) },
-                                employee.status !== 'resigned'
-                                  ? {
-                                      label: updatingId === employee.id ? 'กำลังบันทึก...' : employee.status === 'active' ? 'ปิดใช้งาน' : 'เปิดใช้งาน',
-                                      disabled: updatingId === employee.id,
-                                      tone: employee.status === 'active' ? 'danger' : 'success',
-                                      onClick: () => handleToggleStatus(employee),
-                                    }
-                                  : null,
-                              ]}
-                            />
+                            {employee.status !== 'resigned' ? (
+                              <Button type="button" size="small" variant="outlined" disabled={updatingId === employee.id} onClick={(event) => { event.stopPropagation(); if (employee.status === 'active') setDisableTarget(employee); else handleToggleStatus(employee); }} sx={{ color: employee.status === 'active' ? '#DC2626' : '#15803D', borderColor: employee.status === 'active' ? '#FECACA' : '#BBF7D0', '&:hover': { backgroundColor: employee.status === 'active' ? '#FEF2F2' : '#F0FDF4' } }}>{updatingId === employee.id ? 'กำลังบันทึก...' : employee.status === 'active' ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}</Button>
+                            ) : null}
                           </Box>
                         </TableCell>
                       </TableRow>
@@ -1273,6 +1293,7 @@ function EmployeeManagementPage() {
                 )}
               </TableBody>
             </Table>
+            {filteredEmployees.length > rowsPerPage ? <TablePagination component="div" count={filteredEmployees.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} /> : null}
           </Box>
         ) : (
           /* Empty State */
@@ -1372,6 +1393,7 @@ function EmployeeManagementPage() {
           </Box>
         )}
       </Paper>
+      <ConfirmationDialog open={Boolean(disableTarget)} title="ยืนยันการปิดใช้งานพนักงาน" description={`ต้องการปิดใช้งาน ${disableTarget?.fullName || disableTarget?.name || ''} ใช่หรือไม่`} loading={updatingId === disableTarget?.id} onCancel={() => setDisableTarget(null)} onConfirm={async () => { const target = disableTarget; if (!target) return; await handleToggleStatus(target); setDisableTarget(null); }} />
     </HRLayout>
   );
 }

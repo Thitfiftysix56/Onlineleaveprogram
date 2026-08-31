@@ -7,13 +7,10 @@ function SupervisorLayout({
 }) {
   const supervisorMenuItems = [
     'Dashboard',
-    'Leave Request',
     'My Requests',
-    'Leave Balance',
     'Approval',
     'Team Reports',
-    'Notification',
-    'Profile',
+    'Edit Personal Information',
     'Change Password',
     'Logout',
   ];

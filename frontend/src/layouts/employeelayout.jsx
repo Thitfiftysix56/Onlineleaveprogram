@@ -7,11 +7,8 @@ function EmployeeLayout({
 }) {
   const employeeMenuItems = [
     'Dashboard',
-    'Leave Request',
     'My Requests',
-    'Leave Balance',
-    'Notification',
-    'Profile',
+    'Edit Personal Information',
     'Change Password',
     'Logout',
   ];

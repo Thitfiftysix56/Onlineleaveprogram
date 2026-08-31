@@ -11,7 +11,6 @@ import {
   Button,
   Chip,
   FormControl,
-  IconButton,
   InputLabel,
   Menu,
   MenuItem,
@@ -21,12 +20,13 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
 } from '@mui/material';
 
-import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
+import { ConfirmationDialog, DataListToolbar } from './shareduiprimitives.jsx';
 
 import {
   useNavigate,
@@ -128,6 +128,9 @@ function RoleDepartmentManagementPage({
     statusFilter,
     setStatusFilter,
   ] = useState('All');
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 5;
+  const [disableTarget, setDisableTarget] = useState(null);
 
   const [
     actionMessage,
@@ -225,6 +228,8 @@ function RoleDepartmentManagementPage({
       searchText,
       statusFilter,
     ]);
+  const paginatedDepartments = useMemo(() => filteredDepartments.slice(page * rowsPerPage, (page + 1) * rowsPerPage), [filteredDepartments, page]);
+  useEffect(() => { setPage(0); }, [searchText, statusFilter]);
 
   /* =========================
      Summary
@@ -404,19 +409,6 @@ function RoleDepartmentManagementPage({
      Action Menu
   ========================= */
 
-  const handleOpenActionMenu = (
-    event,
-    department,
-  ) => {
-    setActionMenuAnchor(
-      event.currentTarget,
-    );
-
-    setActionMenuDepartment(
-      department,
-    );
-  };
-
   const handleCloseActionMenu =
     () => {
       setActionMenuAnchor(
@@ -502,7 +494,7 @@ function RoleDepartmentManagementPage({
             '16px',
 
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
         <Typography
@@ -543,7 +535,7 @@ function RoleDepartmentManagementPage({
               '0 18px',
 
             backgroundColor:
-              theme.primary,
+              '#2563EB',
 
             color:
               '#FFFFFF',
@@ -565,7 +557,7 @@ function RoleDepartmentManagementPage({
 
             '&:hover': {
               backgroundColor:
-                theme.dark,
+                '#1D4ED8',
 
               boxShadow:
                 'none',
@@ -845,10 +837,27 @@ function RoleDepartmentManagementPage({
             แผนก
           </Typography>
 
+          <DataListToolbar
+            searchValue={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="ค้นหาชื่อหรือรหัสแผนก"
+            resultLabel={searchText ? `พบ ${filteredDepartments.length} รายการจากคำค้น “${searchText}”` : `พบ ${filteredDepartments.length} รายการ`}
+            activeFilters={statusFilter !== 'All' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'Active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}`, onDelete: () => setStatusFilter('All') }] : []}
+            onClearFilters={handleClearFilters}
+            filters={(
+              <FormControl size="small">
+                <Select value={statusFilter === 'All' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'Active' ? 'ใช้งานอยู่' : value === 'Inactive' ? 'ไม่ใช้งาน' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'All')}>
+                  <MenuItem value="Active">ใช้งานอยู่</MenuItem><MenuItem value="Inactive">ไม่ใช้งาน</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+            sx={{ marginTop: '16px' }}
+          />
+
           <Box
             sx={{
               display:
-                'grid',
+                'none',
 
               gridTemplateColumns: {
                 xs:
@@ -1173,7 +1182,7 @@ function RoleDepartmentManagementPage({
               </TableHead>
 
               <TableBody>
-                {filteredDepartments.map(
+                {paginatedDepartments.map(
                   (department) => {
                     const isActive =
                       department.status ===
@@ -1185,7 +1194,9 @@ function RoleDepartmentManagementPage({
                           department.id
                         }
                         hover
+                        onClick={() => handleEditDepartment(department)}
                         sx={{
+                          cursor: 'pointer',
                           '&:last-child td':
                             {
                               borderBottom:
@@ -1393,9 +1404,10 @@ function RoleDepartmentManagementPage({
                               '1px solid #E5E7EB',
                           }}
                         >
-                          <IconButton
+                          <Button
                             type="button"
-                            aria-label="เปิดเมนูจัดการแผนก"
+                            size="small"
+                            variant="outlined"
                             disabled={
                               Number(
                                 updatingId,
@@ -1404,44 +1416,16 @@ function RoleDepartmentManagementPage({
                                 department.id,
                               )
                             }
-                            onClick={(
-                              event,
-                            ) =>
-                              handleOpenActionMenu(
-                                event,
-                                department,
-                              )
-                            }
+                            onClick={(event) => { event.stopPropagation(); if (isActive) setDisableTarget(department); else handleStatusChange(department); }}
                             sx={{
-                              width:
-                                '34px',
-
-                              height:
-                                '34px',
-
-                              color:
-                                '#64748B',
-
-                              borderRadius:
-                                '8px',
-
-                              '&:hover':
-                                {
-                                  color:
-                                    theme.primary,
-
-                                  backgroundColor:
-                                    theme.soft,
-                                },
+                              minWidth: 0,
+                              color: isActive ? '#B42318' : '#15803D',
+                              borderColor: isActive ? '#FCA5A5' : '#86EFAC',
+                              '&:hover': { backgroundColor: isActive ? '#FEE2E2' : '#DCFCE7' },
                             }}
                           >
-                            <MoreVertRoundedIcon
-                              sx={{
-                                fontSize:
-                                  '20px',
-                              }}
-                            />
-                          </IconButton>
+                            {isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -1449,6 +1433,7 @@ function RoleDepartmentManagementPage({
                 )}
               </TableBody>
             </Table>
+            {filteredDepartments.length > rowsPerPage ? <TablePagination component="div" count={filteredDepartments.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} /> : null}
           </Box>
         ) : (
           /* Empty */
@@ -1604,6 +1589,15 @@ function RoleDepartmentManagementPage({
       </Paper>
 
       {/* Action Menu */}
+
+      <ConfirmationDialog
+        open={Boolean(disableTarget)}
+        title="ยืนยันการปิดใช้งานแผนก"
+        description={`ต้องการปิดใช้งานแผนก ${disableTarget?.departmentName || ''} ใช่หรือไม่`}
+        loading={Number(updatingId) === Number(disableTarget?.id)}
+        onCancel={() => setDisableTarget(null)}
+        onConfirm={async () => { const target = disableTarget; if (!target) return; await handleStatusChange(target); setDisableTarget(null); }}
+      />
 
       <Menu
         anchorEl={

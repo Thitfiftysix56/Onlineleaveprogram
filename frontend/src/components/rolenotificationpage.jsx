@@ -10,6 +10,7 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -21,6 +22,7 @@ import {
   MenuItem,
   Paper,
   Select,
+  TablePagination,
   TextField,
   Typography,
 } from '@mui/material';
@@ -28,6 +30,8 @@ import {
 import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
 import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import RequestNumberText from './requestnumbertext.jsx';
+import { DataListToolbar } from './shareduiprimitives.jsx';
+import { PageHeader } from './sharedvisualfoundation.jsx';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -963,6 +967,10 @@ function RoleNotificationPage({
     setNotifications,
   ] = useState([]);
 
+  const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 5;
+
   const [
     searchText,
     setSearchText,
@@ -1053,15 +1061,19 @@ function RoleNotificationPage({
 
   const loadNotifications =
     useCallback(async () => {
+      setIsLoading(true);
       try {
         const result = await getNotifications();
-        setNotifications((result?.notifications || []).map((notification) => normalizeForPage({
+        const items = Array.isArray(result) ? result : result?.notifications;
+        setNotifications((Array.isArray(items) ? items : []).map((notification) => normalizeForPage({
           ...notification,
           isRead: Boolean(notification.read),
         })));
       } catch (error) {
         setNotifications([]);
         setActionMessage({ severity: 'error', text: error.response?.data?.message || 'ไม่สามารถโหลดการแจ้งเตือนได้' });
+      } finally {
+        setIsLoading(false);
       }
     }, [
       normalizeForPage,
@@ -1219,6 +1231,20 @@ function RoleNotificationPage({
       statusFilter,
       categoryFilter,
     ]);
+
+  const paginatedNotifications = useMemo(
+    () => filteredNotifications.slice(page * rowsPerPage, (page + 1) * rowsPerPage),
+    [filteredNotifications, page],
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [searchText, statusFilter]);
+
+  useEffect(() => {
+    const lastPage = Math.max(0, Math.ceil(filteredNotifications.length / rowsPerPage) - 1);
+    if (page > lastPage) setPage(lastPage);
+  }, [filteredNotifications.length, page]);
 
   /* =========================
      Summary
@@ -1432,10 +1458,31 @@ function RoleNotificationPage({
       });
     };
 
-  const handleOpenNotification = (notification) => {
-    if (!notification?.path) return;
-    if (!notification.isRead) markNotificationAsRead(notification.id).catch(() => {});
-    navigate(notification.path);
+  const handleOpenNotification = async (notification) => {
+    if (!notification) return;
+    if (!notification.isRead) {
+      try {
+        await markNotificationAsRead(notification.id);
+        setNotifications((items) => items.map((item) => item.id === notification.id ? { ...item, isRead: true, read: true } : item));
+        window.dispatchEvent(new CustomEvent('notification-read-state-changed'));
+      } catch {
+        setActionMessage({ severity: 'error', text: 'ไม่สามารถอัปเดตสถานะการแจ้งเตือนได้ กรุณาลองใหม่' });
+        return;
+      }
+    }
+    if (notification.path) {
+      navigate(
+        notification.path,
+        {
+          state: {
+            returnTo:
+              window.location.pathname,
+            returnLabel:
+              'การแจ้งเตือน',
+          },
+        },
+      );
+    }
   };
 
   const handleDeleteNotification = async (notificationId) => {
@@ -1562,12 +1609,11 @@ function RoleNotificationPage({
     <LayoutComponent
       activeMenu="Notification"
     >
-      {/* Header */}
+      <PageHeader title={displayPageTitle} sx={{ marginBottom: '18px' }} />
 
       <Box
         sx={{
-          display:
-            'flex',
+          display: 'none',
 
           alignItems: {
             xs:
@@ -1648,12 +1694,96 @@ function RoleNotificationPage({
         </Alert>
       )}
 
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: {
+            xs: 'flex-start',
+            sm: 'flex-end',
+          },
+          width: '100%',
+          padding: '0 2px 16px',
+          marginBottom: '2px',
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'stretch',
+            flexWrap: 'wrap',
+            gap: 0,
+          }}
+        >
+          {[
+            {
+              label: 'ทั้งหมด',
+              value: notifications.length,
+              color:
+                theme?.primary ||
+                '#2563EB',
+            },
+            {
+              label: 'ยังไม่ได้อ่าน',
+              value: unreadCount,
+              color: '#DC2626',
+            },
+            {
+              label: 'วันนี้',
+              value: todayCount,
+              color: '#D97706',
+            },
+          ].map((item, index) => (
+            <Box
+              key={item.label}
+              sx={{
+                minWidth: {
+                  xs: '88px',
+                  sm: '104px',
+                },
+                padding: {
+                  xs: '0 14px',
+                  sm: '0 18px',
+                },
+                textAlign: 'right',
+                borderLeft:
+                  index === 0
+                    ? 'none'
+                    : '1px solid #E2E8F0',
+              }}
+            >
+              <Typography
+                sx={{
+                  color: '#64748B',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  lineHeight: 1.3,
+                  marginBottom: '4px',
+                }}
+              >
+                {item.label}
+              </Typography>
+
+              <Typography
+                sx={{
+                  color: item.color,
+                  fontSize: '20px',
+                  fontWeight: 800,
+                  lineHeight: 1,
+                }}
+              >
+                {item.value}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+
       {/* Summary */}
 
       <Box
         sx={{
           display:
-            'grid',
+            'none',
 
           gridTemplateColumns: {
             xs:
@@ -1844,10 +1974,12 @@ function RoleNotificationPage({
           overflow:
             'hidden',
           ...(visualCalibration && {
-            backgroundColor: 'transparent',
-            border: 'none',
-            borderRadius: 0,
-            overflow: 'visible',
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #E8EEF5',
+            borderRadius: '18px',
+            overflow: 'hidden',
+            boxShadow:
+              '0 8px 24px rgba(15, 23, 42, 0.04)',
           }),
         }}
       >
@@ -1861,15 +1993,20 @@ function RoleNotificationPage({
             borderBottom:
               '1px solid #E5E7EB',
             ...(visualCalibration && {
-              padding: { xs: '0 0 16px', sm: '2px 0 18px' },
-              backgroundColor: 'transparent',
-              borderBottom: '1px solid #E5EAF0',
+              padding: {
+                xs: '14px',
+                sm: '16px 18px',
+              },
+              backgroundColor: '#FFFFFF',
+              border: 'none',
+              borderBottom: '1px solid #EEF2F7',
               borderRadius: 0,
               marginBottom: 0,
+              boxShadow: 'none',
             }),
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'space-between', flexDirection: { xs: 'column', sm: 'row' }, gap: '10px' }}>
+          <Box sx={{ display: 'none' }}>
             <Typography sx={{ color: '#111827', fontSize: '17px', fontWeight: 800 }}>
               รายการแจ้งเตือน
             </Typography>
@@ -1879,6 +2016,7 @@ function RoleNotificationPage({
               onClick={handleMarkAllAsRead}
               disabled={unreadCount === 0}
               sx={{
+                display: 'none',
                 minWidth: '118px',
                 height: '38px',
                 padding: '0 18px',
@@ -1898,6 +2036,7 @@ function RoleNotificationPage({
 
           <Typography
             sx={{
+              display: 'none',
               color:
                 '#64748B',
 
@@ -1919,10 +2058,32 @@ function RoleNotificationPage({
             รายการ
           </Typography>
 
+          <DataListToolbar
+            searchValue={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="ค้นหาการแจ้งเตือน"
+            activeFilters={[
+              ...(statusFilter !== 'All' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'Unread' ? 'ยังไม่ได้อ่าน' : 'อ่านแล้ว'}`, onDelete: () => setStatusFilter('All') }] : []),
+            ]}
+            onClearFilters={handleClearFilters}
+            filters={<FormControl size="small"><Select value={statusFilter === 'All' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'Unread' ? 'ยังไม่ได้อ่าน' : value === 'Read' ? 'อ่านแล้ว' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'All')}><MenuItem value="Unread">ยังไม่ได้อ่าน</MenuItem><MenuItem value="Read">อ่านแล้ว</MenuItem></Select></FormControl>}
+            sx={{
+              marginTop: 0,
+              '& .MuiOutlinedInput-root': {
+                minHeight: '42px',
+                borderRadius: '12px',
+                backgroundColor: '#FFFFFF',
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#E2E8F0',
+              },
+            }}
+          />
+
           <Box
             sx={{
               display:
-                'grid',
+                'none',
 
               gridTemplateColumns: {
                 xs:
@@ -1939,7 +2100,7 @@ function RoleNotificationPage({
                 '18px',
               ...(visualCalibration && {
                 marginTop: '14px',
-                gap: '10px',
+                gap: 0,
                 '& .MuiOutlinedInput-root': {
                   height: '42px',
                   backgroundColor: '#FFFFFF',
@@ -2108,10 +2269,20 @@ function RoleNotificationPage({
 
         {/* Items */}
 
-        {filteredNotifications.length >
+        {isLoading ? (
+          <Box sx={{ minHeight: 280, display: 'grid', placeItems: 'center' }}>
+            <CircularProgress size={30} sx={{ color: theme?.primary }} />
+          </Box>
+        ) : filteredNotifications.length >
         0 ? (
-          <Box>
-            {filteredNotifications.map(
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            {paginatedNotifications.map(
               (
                 notification,
                 index,
@@ -2157,15 +2328,37 @@ function RoleNotificationPage({
                       ...(visualCalibration && {
                         alignItems: 'flex-start',
                         flexDirection: 'row',
-                        gap: { xs: '11px', sm: '14px' },
-                        padding: { xs: '15px 10px', sm: '17px 14px' },
-                        borderLeft: notification.isRead
-                          ? '2px solid transparent'
-                          : `2px solid ${theme?.primary || '#2563EB'}`,
-                        borderBottom: index === filteredNotifications.length - 1
-                          ? 'none'
-                          : '1px solid #E8ECF1',
-                        backgroundColor: notification.isRead ? 'transparent' : '#F5F8FC',
+                        gap: {
+                          xs: '11px',
+                          sm: '13px',
+                        },
+                        padding: {
+                          xs: '15px 14px',
+                          sm: '16px 18px',
+                        },
+                        backgroundColor:
+                          notification.isRead
+                            ? '#FFFFFF'
+                            : (theme?.soft || '#F8FAFF'),
+                        border: 'none',
+                        borderLeft:
+                          notification.isRead
+                            ? '3px solid transparent'
+                            : `3px solid ${theme?.primary || '#2563EB'}`,
+                        borderBottom:
+                          index === paginatedNotifications.length - 1
+                            ? 'none'
+                            : '1px solid #EEF2F7',
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        transition:
+                          'background-color 0.16s ease',
+                        '&:hover': {
+                          backgroundColor:
+                            notification.isRead
+                              ? '#FAFBFC'
+                              : (theme?.soft || '#F8FAFF'),
+                        },
                       }),
 
                       cursor: notification.path ? 'pointer' : 'default',
@@ -2179,34 +2372,42 @@ function RoleNotificationPage({
                       },
 
                       backgroundColor:
-                        notification.isRead
-                          ? '#FFFFFF'
-                          : theme?.unreadBackground ||
-                            theme?.soft ||
-                            '#F8FAFC',
+                        visualCalibration
+                          ? undefined
+                          : notification.isRead
+                            ? '#FFFFFF'
+                            : theme?.unreadBackground ||
+                              theme?.soft ||
+                              '#F8FAFC',
 
                       borderLeft:
-                        notification.isRead
-                          ? '4px solid transparent'
-                          : `4px solid ${
-                              theme?.primary ||
-                              '#2563EB'
-                            }`,
+                        visualCalibration
+                          ? undefined
+                          : notification.isRead
+                            ? '4px solid transparent'
+                            : `4px solid ${
+                                theme?.primary ||
+                                '#2563EB'
+                              }`,
 
                       borderBottom:
-                        index ===
-                        filteredNotifications.length -
-                          1
-                          ? 'none'
-                          : '1px solid #E5E7EB',
+                        visualCalibration
+                          ? undefined
+                          : index ===
+                              paginatedNotifications.length -
+                                1
+                            ? 'none'
+                            : '1px solid #E5E7EB',
 
-                      '&:hover': {
-                        backgroundColor:
-                          notification.isRead
-                            ? '#F8FAFC'
-                            : theme?.soft ||
-                              '#F8FAFC',
-                      },
+                      '&:hover': visualCalibration
+                        ? undefined
+                        : {
+                            backgroundColor:
+                              notification.isRead
+                                ? '#F8FAFC'
+                                : theme?.soft ||
+                                  '#F8FAFC',
+                          },
                     }}
                   >
                     {/* Symbol */}
@@ -2246,10 +2447,11 @@ function RoleNotificationPage({
                         fontWeight:
                           800,
                         ...(visualCalibration && {
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '9px',
-                          fontSize: '13px',
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '10px',
+                          fontSize: '12px',
+                          boxShadow: 'none',
                         }),
                       }}
                     >
@@ -2309,16 +2511,19 @@ function RoleNotificationPage({
                             size="small"
                             sx={{
                               height:
-                                '23px',
+                                '21px',
 
                               backgroundColor:
-                                theme?.soft,
+                                theme?.soft ||
+                                '#EFF6FF',
 
                               color:
-                                theme?.primary,
+                                theme?.dark ||
+                                theme?.primary ||
+                                '#1D4ED8',
 
                               borderRadius:
-                                '999px',
+                                '7px',
 
                               fontSize:
                                 '9px',
@@ -2345,7 +2550,7 @@ function RoleNotificationPage({
                               categoryStyle.color,
 
                             borderRadius:
-                              '999px',
+                              '7px',
 
                             fontSize:
                               '9px',
@@ -2403,7 +2608,7 @@ function RoleNotificationPage({
                       sx={{
                         flexShrink: 0,
                         width: { xs: '100%', md: 'auto' },
-                        display: 'flex',
+                        display: 'none',
                         alignItems: 'center',
                         justifyContent: { xs: 'flex-end', md: 'flex-start' },
                         gap: '6px',
@@ -2500,6 +2705,34 @@ function RoleNotificationPage({
                 );
               },
             )}
+            {filteredNotifications.length > rowsPerPage ? (
+              <TablePagination
+                component="div"
+                count={filteredNotifications.length}
+                page={page}
+                onPageChange={(_, nextPage) => setPage(nextPage)}
+                rowsPerPage={rowsPerPage}
+                rowsPerPageOptions={[rowsPerPage]}
+                labelRowsPerPage=""
+                labelDisplayedRows={() =>
+                  `หน้า ${page + 1} จาก ${Math.max(
+                    1,
+                    Math.ceil(
+                      filteredNotifications.length /
+                        rowsPerPage,
+                    ),
+                  )}`
+                }
+                sx={{
+                  marginTop: 0,
+                  color: '#64748B',
+                  borderTop:
+                    '1px solid #EEF2F7',
+                  backgroundColor:
+                    '#FFFFFF',
+                }}
+              />
+            ) : null}
           </Box>
         ) : (
           /* Empty */
@@ -2552,7 +2785,7 @@ function RoleNotificationPage({
                   theme?.primary,
 
                 borderRadius:
-                  '50%',
+                  '14px',
 
                 fontSize:
                   '20px',
@@ -2594,7 +2827,9 @@ function RoleNotificationPage({
                   '5px',
               }}
             >
-              ลองเปลี่ยนหรือล้างตัวกรอง
+              {(searchText || statusFilter !== 'All' || categoryFilter !== 'All')
+                ? 'ลองเปลี่ยนหรือล้างตัวกรอง'
+                : 'ขณะนี้ยังไม่มีการแจ้งเตือนสำหรับบัญชีนี้'}
             </Typography>
 
             {(searchText ||

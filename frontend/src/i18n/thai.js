@@ -65,6 +65,7 @@ const exact = new Map(Object.entries({
 }))
 
 const phrases = [
+  [/^A valid active supervisor employee is required before submission\.?$/i, 'ไม่สามารถส่งคำขอลาได้ เนื่องจากยังไม่ได้กำหนดหัวหน้างานที่สามารถอนุมัติคำขอได้ กรุณาติดต่อฝ่ายบุคคล'],
   [/^Welcome back,?\s*/i, 'ยินดีต้อนรับกลับ '], [/^Welcome,?\s*/i, 'ยินดีต้อนรับ '],
   [/Please sign in to continue\.?/gi, 'กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ'],
   [/Enter your username and password to access the system\.?/gi, 'กรอก Username และ Password เพื่อเข้าใช้งานระบบ'],

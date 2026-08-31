@@ -1,10 +1,16 @@
 import {
   Avatar,
+  Badge,
   Box,
   Button,
   ButtonBase,
   Drawer,
   IconButton,
+  CircularProgress,
+  Divider,
+  Menu,
+  MenuItem,
+  Popover,
   Typography,
 } from '@mui/material';
 
@@ -32,6 +38,7 @@ import {
 
 import {
   useEffect,
+  useCallback,
   useState,
 } from 'react';
 
@@ -48,6 +55,7 @@ import {
 import {
   createAuditLog,
 } from '../utils/auditlogstorage.js';
+import { getNotifications, markNotificationRead } from '../api/notification-service.js';
 
 import {
   colorTokens,
@@ -77,6 +85,9 @@ const roleRoutes = {
     Profile:
       '/employee/profile',
 
+    'Edit Personal Information':
+      '/employee/edit-personal-information',
+
     'Change Password':
       '/employee/change-password',
   },
@@ -105,6 +116,9 @@ const roleRoutes = {
 
     Profile:
       '/supervisor/profile',
+
+    'Edit Personal Information':
+      '/supervisor/edit-personal-information',
 
     'Change Password':
       '/supervisor/change-password',
@@ -144,6 +158,9 @@ const roleRoutes = {
     Profile:
       '/hr/profile',
 
+    'Edit Personal Information':
+      '/hr/edit-personal-information',
+
     'Change Password':
       '/hr/change-password',
   },
@@ -178,6 +195,9 @@ const roleRoutes = {
 
     Profile:
       '/admin/profile',
+
+    'Edit Personal Information':
+      '/admin/edit-personal-information',
 
     'Change Password':
       '/admin/change-password',
@@ -235,7 +255,10 @@ const menuLabels = {
     'การแจ้งเตือน',
 
   Profile:
-    'ข้อมูลส่วนตัว',
+    'โปรไฟล์',
+
+  'Edit Personal Information':
+    'แก้ไขข้อมูลส่วนตัว',
 
   'Change Password':
     'เปลี่ยนรหัสผ่าน',
@@ -340,6 +363,9 @@ const getMenuIcon = (
     Profile:
       PersonOutlineRounded,
 
+    'Edit Personal Information':
+      PersonOutlineRounded,
+
     'Change Password':
       LockOutlined,
 
@@ -372,6 +398,12 @@ function RoleLayout({
     setMobileMenuOpen,
   ] = useState(false);
 
+  const [notificationAnchor, setNotificationAnchor] = useState(null);
+  const [accountAnchor, setAccountAnchor] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState('');
+
   const navigate =
     useNavigate();
 
@@ -400,23 +432,99 @@ function RoleLayout({
     roleAccentTokens[currentRole] ||
     roleAccentTokens.employee;
 
+  const profileViewPath = roleRoutes[currentRole].Profile;
+  const editPersonalInformationPath = roleRoutes[currentRole]['Edit Personal Information'];
+  const changePasswordPath = roleRoutes[currentRole]['Change Password'];
+
+  const isDashboardPage =
+    location.pathname.replace(/\/+$/, '') ===
+    String(
+      roleRoutes[currentRole]?.Dashboard ||
+        '',
+    ).replace(/\/+$/, '');
+
+  const loadNotifications = useCallback(async () => {
+    setNotificationsLoading(true);
+    setNotificationsError('');
+    try {
+      const data = await getNotifications();
+      setNotifications(data?.notifications || data || []);
+    } catch {
+      setNotificationsError('ไม่สามารถโหลดการแจ้งเตือนได้');
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadNotifications(); }, [loadNotifications, location.pathname]);
+
+  useEffect(() => {
+    const refreshUnreadCount = () => loadNotifications();
+    window.addEventListener('notification-read-state-changed', refreshUnreadCount);
+    return () => window.removeEventListener('notification-read-state-changed', refreshUnreadCount);
+  }, [loadNotifications]);
+
+  const isNotificationRead = (item) => Boolean(item.read ?? item.isRead ?? item.readAt);
+  const unreadCount = notifications.filter((item) => !isNotificationRead(item)).length;
+
+  const handleNotificationClick = async (item) => {
+    if (!isNotificationRead(item)) {
+      await markNotificationRead(item.id || item.notificationId);
+      setNotifications((items) => items.map((entry) =>
+        (entry.id || entry.notificationId) === (item.id || item.notificationId)
+          ? { ...entry, read: true, isRead: true, readAt: new Date().toISOString() }
+          : entry));
+    }
+    setNotificationAnchor(null);
+    const target = item.path || item.deepLink || (item.leaveRequestId
+      ? `/${currentRole}/${currentRole === 'supervisor' && item.type === 'leave-submitted' ? 'approval' : 'my-requests'}/${item.leaveRequestId}`
+      : null);
+    if (target) navigate(target);
+  };
+
 
   const mainMenuItems =
     menuItems.filter(
       (menuItem) =>
         !accountMenuItems.includes(
           menuItem,
-        ),
+        ) &&
+        ![
+          'Notification',
+          'Change Password',
+          'Edit Personal Information',
+        ].includes(menuItem),
     );
 
 
-  const visibleAccountMenuItems =
-    menuItems.filter(
-      (menuItem) =>
-        accountMenuItems.includes(
-          menuItem,
-        ),
-    );
+  const visibleAccountMenuItems = [
+    ...(
+      menuItems.includes(
+        'Profile',
+      ) ||
+      menuItems.includes(
+        'Edit Personal Information',
+      )
+        ? ['Profile']
+        : []
+    ),
+
+    ...(
+      menuItems.includes(
+        'Change Password',
+      )
+        ? ['Change Password']
+        : []
+    ),
+
+    ...(
+      menuItems.includes(
+        'Logout',
+      )
+        ? ['Logout']
+        : []
+    ),
+  ];
 
 
   useEffect(() => {
@@ -428,15 +536,54 @@ function RoleLayout({
         );
       };
 
+    const handleProfileUpdated =
+      (event) => {
+        const nextProfile =
+          event.detail || {};
+
+        setCurrentUser(
+          (previous) => ({
+            ...(previous || {}),
+            displayName:
+              nextProfile.fullName ||
+              previous?.displayName,
+            profileImageUrl:
+              Object.prototype.hasOwnProperty.call(
+                nextProfile,
+                'profileImageUrl',
+              )
+                ? nextProfile.profileImageUrl
+                : previous?.profileImageUrl,
+            employeeCode:
+              nextProfile.employeeCode ||
+              previous?.employeeCode,
+            department:
+              nextProfile.department ||
+              previous?.department,
+            position:
+              nextProfile.position ||
+              previous?.position,
+          }),
+        );
+      };
+
     window.addEventListener(
       'auth-session-changed',
       handleAuthChanged,
+    );
+    window.addEventListener(
+      'profile-updated',
+      handleProfileUpdated,
     );
 
     return () => {
       window.removeEventListener(
         'auth-session-changed',
         handleAuthChanged,
+      );
+      window.removeEventListener(
+        'profile-updated',
+        handleProfileUpdated,
       );
     };
   }, []);
@@ -521,6 +668,63 @@ function RoleLayout({
       }
     };
 
+  const _renderLegacyGlobalActions = (compact = false) => (
+    <Box sx={{ marginLeft: 'auto', minWidth: 0, display: 'flex', alignItems: 'center', gap: { xs: '6px', sm: '10px' } }}>
+      <Button
+        type="button"
+        variant="contained"
+        startIcon={<AddCircleOutlineRounded />}
+        onClick={() => navigate(`/${currentRole}/leave-request`)}
+        sx={{ minWidth: 0, height: 40, paddingInline: { xs: '10px', sm: '14px' }, borderRadius: '9px', backgroundColor: '#2563EB', boxShadow: 'none', fontSize: '12px', fontWeight: 800, whiteSpace: 'nowrap', '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' }, '& .MuiButton-startIcon': { margin: compact ? 0 : undefined } }}
+      >
+        <Box component="span" sx={{ display: compact ? 'none' : { xs: 'none', sm: 'inline' } }}>สร้างคำขอลา</Box>
+      </Button>
+
+      <IconButton
+        type="button"
+        aria-label="เปิดการแจ้งเตือน"
+        onClick={(event) => { setNotificationAnchor(event.currentTarget); loadNotifications(); }}
+        sx={{ width: 40, height: 40, flexShrink: 0, color: '#334155', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', '&:hover': { backgroundColor: '#F8FAFC' } }}
+      >
+        <Badge badgeContent={unreadCount} color="error" max={99} invisible={!unreadCount}>
+          <NotificationsNoneRounded />
+        </Badge>
+      </IconButton>
+
+      <ButtonBase
+        type="button"
+        aria-label="เปิดเมนูบัญชีผู้ใช้"
+        onClick={(event) => setAccountAnchor(event.currentTarget)}
+        sx={{ minWidth: 0, maxWidth: { xs: 44, sm: 210 }, height: 42, display: 'flex', alignItems: 'center', gap: '9px', padding: { xs: '4px', sm: '4px 10px 4px 5px' }, border: '1px solid #E2E8F0', borderRadius: '10px', backgroundColor: '#FFFFFF', textAlign: 'left', '&:hover': { backgroundColor: '#F8FAFC' } }}
+      >
+        <Avatar src={currentUser?.profileImageUrl || undefined} sx={{ width: 32, height: 32, flexShrink: 0, bgcolor: resolvedTheme.primary, fontSize: '11px', fontWeight: 800 }}>{getInitials(displayName)}</Avatar>
+        <Box sx={{ minWidth: 0, display: { xs: 'none', sm: 'block' } }}>
+          <Typography noWrap sx={{ color: '#0F172A', fontSize: '11px', fontWeight: 800, lineHeight: 1.25 }}>{displayName}</Typography>
+          <Typography noWrap sx={{ color: '#64748B', fontSize: '9px', fontWeight: 700, lineHeight: 1.25 }}>{profileRoleLabel}</Typography>
+        </Box>
+      </ButtonBase>
+    </Box>
+  );
+
+  const renderGlobalActions = () => (
+    <Box sx={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+      <IconButton
+        type="button"
+        aria-label="เปิดการแจ้งเตือน"
+        onClick={() =>
+          navigate(
+            `/${currentRole}/notifications`,
+          )
+        }
+        sx={{ width: 42, height: 42, flexShrink: 0, color: '#334155', backgroundColor: 'transparent', border: 0, boxShadow: 'none', borderRadius: '50%', '&:hover': { backgroundColor: '#F1F5F9' } }}
+      >
+        <Badge badgeContent={unreadCount} color="error" max={99} invisible={!unreadCount}>
+          <NotificationsNoneRounded />
+        </Badge>
+      </IconButton>
+    </Box>
+  );
+
 
   const handleMenuClick =
     (
@@ -535,12 +739,11 @@ function RoleLayout({
         return;
       }
 
-      const targetRoute =
-        roleRoutes[
-          currentRole
-        ]?.[
-          menuItem
-        ];
+      const targetRoute = menuItem === 'Edit Personal Information'
+        ? editPersonalInformationPath
+        : menuItem === 'Change Password'
+          ? changePasswordPath
+          : roleRoutes[currentRole]?.[menuItem];
 
       if (
         !targetRoute
@@ -559,161 +762,85 @@ function RoleLayout({
     isMobile = false,
   ) => {
     const isActive =
-      activeMenu ===
-      menuItem;
+      activeMenu === menuItem;
 
     const isLogout =
-      menuItem ===
-      'Logout';
+      menuItem === 'Logout';
 
     const MenuIcon =
-      getMenuIcon(
-        menuItem,
-      );
-
+      getMenuIcon(menuItem);
 
     return (
       <Button
-        key={
-          menuItem
-        }
+        key={menuItem}
         type="button"
         fullWidth
         onClick={() => {
-          handleMenuClick(
-            menuItem,
-          );
+          handleMenuClick(menuItem);
 
-          if (
-            isMobile
-          ) {
-            setMobileMenuOpen(
-              false,
-            );
+          if (isMobile) {
+            setMobileMenuOpen(false);
           }
         }}
         startIcon={
-          <Box
+          <MenuIcon
             sx={{
-              width:
+              fontSize:
                 isMobile
-                  ? '30px'
-                  : '34px',
-
-              height:
-                isMobile
-                  ? '30px'
-                  : '34px',
-
-              flexShrink:
-                0,
-
-              display:
-                'flex',
-
-              alignItems:
-                'center',
-
-              justifyContent:
-                'center',
-
-              borderRadius:
-                '9px',
-
-              backgroundColor:
-                isLogout
-                  ? colorTokens.status.error.soft
-                  : isActive
-                    ? resolvedTheme.primary
-                    : 'transparent',
-
+                  ? '19px'
+                  : '20px',
               color:
                 isLogout
                   ? colorTokens.status.error.main
                   : isActive
-                    ? '#FFFFFF'
-                    : colorTokens.text.muted,
-
-              border:
-                isLogout
-                  ? `1px solid ${colorTokens.status.error.border}`
-                  : isActive
-                    ? `1px solid ${resolvedTheme.primary}`
-                    : '1px solid transparent',
-
-              boxShadow:
-                isActive
-                  ? `0 5px 12px ${resolvedTheme.border}`
-                  : 'none',
-
-              transition:
-                'all 0.18s ease',
+                    ? resolvedTheme.primary
+                    : '#64748B',
             }}
-          >
-            <MenuIcon
-              sx={{
-                fontSize:
-                  isMobile
-                    ? '18px'
-                    : '19px',
-              }}
-            />
-          </Box>
+          />
         }
         sx={{
           minHeight:
             isMobile
               ? '46px'
-              : '50px',
+              : '48px',
 
           padding:
             isMobile
-              ? '7px 10px'
-              : '7px 11px',
+              ? '8px 14px'
+              : '8px 14px',
 
           justifyContent:
             'flex-start',
 
-          background:
+          backgroundColor:
             isLogout
               ? 'transparent'
               : isActive
-                ? `linear-gradient(
-                    90deg,
-                    ${resolvedTheme.soft} 0%,
-                    rgba(255,255,255,0.78) 100%
-                  )`
+                ? resolvedTheme.soft
                 : 'transparent',
 
           color:
             isLogout
               ? colorTokens.status.error.main
               : isActive
-                ? resolvedTheme.dark
-                : colorTokens.text.secondary,
+                ? resolvedTheme.text
+                : '#475569',
 
-          border:
-            isLogout
-              ? '1px solid transparent'
-              : isActive
-                ? `1px solid ${resolvedTheme.border}`
-                : '1px solid transparent',
+          border: 0,
 
           borderRadius:
-            '10px',
+            '12px',
 
           boxShadow:
-            isActive
-              ? '0 4px 12px rgba(15, 23, 42, 0.055)'
-              : 'none',
+            'none',
 
           fontSize:
             '13px',
 
           fontWeight:
             isActive
-              ? 800
-              : 600,
+              ? 700
+              : 500,
 
           lineHeight:
             1.4,
@@ -728,62 +855,39 @@ function RoleLayout({
             'normal',
 
           transition:
-            'background-color 0.18s ease, color 0.18s ease, transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease',
+            'background-color 0.16s ease, color 0.16s ease',
 
-          '& .MuiButton-startIcon':
-            {
-              marginLeft:
-                0,
-
-              marginRight:
-                '10px',
-            },
+          '& .MuiButton-startIcon': {
+            marginLeft: 0,
+            marginRight: '12px',
+            minWidth: '22px',
+          },
 
           '&:hover': {
-            background:
+            backgroundColor:
               isLogout
                 ? colorTokens.status.error.soft
                 : isActive
-                  ? `linear-gradient(
-                      90deg,
-                      ${resolvedTheme.soft} 0%,
-                      rgba(255,255,255,0.68) 100%
-                    )`
-                  : resolvedTheme.hoverBackground,
+                  ? resolvedTheme.hoverBackground
+                  : '#F8FAFC',
 
             color:
               isLogout
                 ? colorTokens.status.error.main
-                : resolvedTheme.dark,
+                : isActive
+                  ? resolvedTheme.text
+                  : '#0F172A',
+          },
 
-            transform:
-              isActive
-                ? 'none'
-                : 'translateX(2px)',
-
-            borderColor:
-              isLogout
-                ? colorTokens.status.error.border
-                : resolvedTheme.border,
-
-            '& .MuiButton-startIcon > div':
-              {
-                color:
-                  isLogout
-                    ? colorTokens.status.error.main
-                    : isActive
-                      ? '#FFFFFF'
-                      : resolvedTheme.primary,
-              },
+          '&:focus-visible': {
+            outline:
+              `2px solid ${resolvedTheme.primary}33`,
+            outlineOffset:
+              '1px',
           },
         }}
       >
-        {
-          menuLabels[
-            menuItem
-          ] ||
-          menuItem
-        }
+        {menuLabels[menuItem] || menuItem}
       </Button>
     );
   };
@@ -795,25 +899,25 @@ function RoleLayout({
     <Typography
       sx={{
         padding:
-          '0 10px',
+          '0 12px',
 
         marginTop:
-          '8px',
+          '10px',
 
         marginBottom:
-          '5px',
+          '6px',
 
         color:
-          colorTokens.text.disabled,
+          '#94A3B8',
 
         fontSize:
           '9px',
 
         fontWeight:
-          800,
+          700,
 
         letterSpacing:
-          '1.25px',
+          '0.9px',
 
         lineHeight:
           1.5,
@@ -827,11 +931,13 @@ function RoleLayout({
   );
 
 
-  const renderProfileCard = (
+  const _renderProfileCard = (
     isMobile = false,
   ) => (
     <ButtonBase
       type="button"
+      tabIndex={-1}
+      aria-disabled="true"
       onClick={() => {
         handleMenuClick(
           'Profile',
@@ -846,8 +952,33 @@ function RoleLayout({
         }
       }}
       sx={{
+        '--role-primary':
+          resolvedTheme.primary,
+
+        '--role-secondary':
+          resolvedTheme.secondary ||
+          resolvedTheme.dark,
+
+        '--role-border':
+          resolvedTheme.border,
+
+        '--role-hover':
+          resolvedTheme.hoverBackground,
+
+        '--role-focus':
+          `${resolvedTheme.primary}1A`,
+
+        '--role-shadow':
+          `${resolvedTheme.primary}2E`,
+
+        '--role-row-hover':
+          `${resolvedTheme.primary}09`,
+
         width:
           '100%',
+
+        pointerEvents:
+          'none',
 
         minHeight:
           isMobile
@@ -876,13 +1007,13 @@ function RoleLayout({
           resolvedTheme.profileBackground,
 
         border:
-          `1px solid ${resolvedTheme.border}`,
+          `1px solid ${colorTokens.border}`,
 
         borderRadius:
           '13px',
 
         boxShadow:
-          '0 4px 12px rgba(15, 23, 42, 0.055)',
+          '0 8px 22px rgba(15, 23, 42, 0.05)',
 
         textAlign:
           'left',
@@ -1078,6 +1209,164 @@ function RoleLayout({
     </ButtonBase>
   );
 
+  const renderUserInformation = (
+    isMobile = false,
+  ) => (
+    <ButtonBase
+      type="button"
+      aria-label="ดูข้อมูลส่วนตัว"
+      onClick={() => {
+        navigate(profileViewPath);
+
+        if (isMobile) {
+          setMobileMenuOpen(false);
+        }
+      }}
+      sx={{
+        width:
+          '100%',
+
+        minHeight:
+          '66px',
+
+        display:
+          'flex',
+
+        alignItems:
+          'center',
+
+        gap:
+          '12px',
+
+        padding:
+          isMobile
+            ? '10px 16px'
+            : '10px 14px',
+
+        textAlign:
+          'left',
+
+        borderRadius:
+          '12px',
+
+        backgroundColor:
+          'transparent',
+
+        border:
+          0,
+
+        boxShadow:
+          'none',
+
+        transition:
+          'background-color 0.16s ease',
+
+        '&:hover': {
+          backgroundColor:
+            resolvedTheme.soft,
+        },
+
+        '&:focus-visible': {
+          outline:
+            `2px solid ${resolvedTheme.primary}33`,
+          outlineOffset:
+            '1px',
+        },
+      }}
+    >
+      <Avatar
+        src={
+          currentUser
+            ?.profileImageUrl ||
+          undefined
+        }
+        alt={displayName}
+        sx={{
+          width:
+            '44px',
+
+          height:
+            '44px',
+
+          flexShrink:
+            0,
+
+          backgroundColor:
+            resolvedTheme.primary,
+
+          color:
+            '#FFFFFF',
+
+          fontSize:
+            '12px',
+
+          fontWeight:
+            800,
+
+          border:
+            '2px solid #FFFFFF',
+
+          boxShadow:
+            '0 2px 8px rgba(15, 23, 42, 0.08)',
+        }}
+      >
+        {getInitials(displayName)}
+      </Avatar>
+
+      <Box
+        sx={{
+          minWidth:
+            0,
+
+          flex:
+            1,
+        }}
+      >
+        <Typography
+          noWrap
+          title={displayName}
+          sx={{
+            color:
+              '#0F172A',
+
+            fontSize:
+              '13px',
+
+            fontWeight:
+              700,
+
+            lineHeight:
+              1.35,
+          }}
+        >
+          {displayName}
+        </Typography>
+
+        <Typography
+          noWrap
+          sx={{
+            color:
+              resolvedTheme.primary,
+
+            fontSize:
+              '10px',
+
+            fontWeight:
+              700,
+
+            lineHeight:
+              1.35,
+
+            marginTop:
+              '3px',
+          }}
+        >
+          {profileRoleLabel}
+        </Typography>
+      </Box>
+    </ButtonBase>
+  );
+
 
   const renderBrand = (
     isMobile = false,
@@ -1086,17 +1375,11 @@ function RoleLayout({
       sx={{
         minHeight:
           isMobile
-            ? '92px'
-            : '105px',
+            ? '72px'
+            : '78px',
 
         flexShrink:
           0,
-
-        position:
-          'relative',
-
-        overflow:
-          'hidden',
 
         display:
           'flex',
@@ -1109,161 +1392,94 @@ function RoleLayout({
 
         padding:
           isMobile
-            ? '16px 60px 16px 22px'
-            : '20px 22px',
+            ? '14px 56px 14px 20px'
+            : '16px 20px',
 
-        background:
-          resolvedTheme.brandGradient,
+        backgroundColor:
+          '#FFFFFF',
+
+        borderBottom:
+          '1px solid #EEF2F6',
 
         boxShadow:
-          '0 8px 20px rgba(15, 23, 42, 0.10)',
+          'none',
       }}
     >
-
-      {/* Circle decoration */}
       <Box
-        aria-hidden="true"
         sx={{
-          position:
-            'absolute',
+          display:
+            'flex',
 
-          width:
-            '160px',
+          alignItems:
+            'center',
 
-          height:
-            '160px',
-
-          top:
-            '-95px',
-
-          right:
-            '-65px',
-
-          borderRadius:
-            '50%',
-
-          backgroundColor:
-            'rgba(255,255,255,0.11)',
-
-          pointerEvents:
-            'none',
-        }}
-      />
-
-
-      <Box
-        aria-hidden="true"
-        sx={{
-          position:
-            'absolute',
-
-          width:
-            '105px',
-
-          height:
-            '105px',
-
-          bottom:
-            '-70px',
-
-          left:
-            '-38px',
-
-          borderRadius:
-            '50%',
-
-          backgroundColor:
-            'rgba(255,255,255,0.07)',
-
-          pointerEvents:
-            'none',
-        }}
-      />
-
-
-      {/* Shine */}
-      <Box
-        aria-hidden="true"
-        sx={{
-          position:
-            'absolute',
-
-          width:
-            '190px',
-
-          height:
-            '240px',
-
-          top:
-            '-80px',
-
-          left:
-            '88px',
-
-          transform:
-            'rotate(24deg)',
-
-          background:
-            'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.10) 50%, transparent 100%)',
-
-          pointerEvents:
-            'none',
-        }}
-      />
-
-
-      <Typography
-        sx={{
-          position:
-            'relative',
-
-          zIndex:
-            1,
-
-          color:
-            '#FFFFFF',
-
-          fontSize:
-            isMobile
-              ? '19px'
-              : '21px',
-
-          fontWeight:
-            900,
-
-          lineHeight:
-            1.25,
-
-          letterSpacing:
-            '-0.2px',
+          gap:
+            '9px',
         }}
       >
-        Leave Approval
-      </Typography>
+        <Box
+          aria-hidden="true"
+          sx={{
+            width:
+              '4px',
 
+            height:
+              '24px',
+
+            flexShrink:
+              0,
+
+            borderRadius:
+              '4px',
+
+            backgroundColor:
+              resolvedTheme.primary,
+          }}
+        />
+
+        <Typography
+          sx={{
+            color:
+              '#0F172A',
+
+            fontSize:
+              isMobile
+                ? '18px'
+                : '19px',
+
+            fontWeight:
+              700,
+
+            lineHeight:
+              1.25,
+
+            letterSpacing:
+              '-0.2px',
+          }}
+        >
+          Leave Approval
+        </Typography>
+      </Box>
 
       <Typography
         sx={{
-          position:
-            'relative',
-
-          zIndex:
-            1,
-
           color:
-            'rgba(255,255,255,0.78)',
+            '#94A3B8',
 
           fontSize:
             '9px',
 
           fontWeight:
-            800,
+            600,
 
           letterSpacing:
-            '1.6px',
+            '0.9px',
 
           marginTop:
-            '6px',
+            '5px',
+
+          marginLeft:
+            '13px',
 
           lineHeight:
             1.3,
@@ -1278,6 +1494,11 @@ function RoleLayout({
   return (
     <Box
       sx={{
+        '--role-primary': resolvedTheme.primary,
+        '--role-secondary': resolvedTheme.secondary || resolvedTheme.dark,
+        '--role-soft': resolvedTheme.soft,
+        '--role-border': resolvedTheme.border,
+        '--role-text': resolvedTheme.text,
         width:
           '100%',
 
@@ -1287,9 +1508,7 @@ function RoleLayout({
         minHeight:
           '100vh',
 
-        background:
-          resolvedTheme.pageBackground ||
-          colorTokens.background,
+        backgroundColor: colorTokens.background,
 
         overflowX:
           'hidden',
@@ -1338,13 +1557,13 @@ function RoleLayout({
             '0 16px',
 
           backgroundColor:
-            colorTokens.surface,
+            'transparent',
 
           borderBottom:
-            `1px solid ${resolvedTheme.border}`,
+            0,
 
           boxShadow:
-            shadowTokens.subtle,
+            'none',
         }}
       >
         <IconButton
@@ -1386,6 +1605,7 @@ function RoleLayout({
           sx={{
             minWidth:
               0,
+            display: { xs: 'none', sm: 'block' },
           }}
         >
           <Typography
@@ -1424,7 +1644,76 @@ function RoleLayout({
             {profileRoleLabel}
           </Typography>
         </Box>
+
       </Box>
+
+      <IconButton
+        type="button"
+        aria-label="เปิดการแจ้งเตือน"
+        onClick={(event) => { setNotificationAnchor(event.currentTarget); loadNotifications(); }}
+        sx={{ display: 'none' }}
+      >
+        <Badge badgeContent={unreadCount} color="error" max={99} invisible={!unreadCount}>
+          <NotificationsNoneRounded />
+        </Badge>
+      </IconButton>
+
+      <Popover
+        open={Boolean(
+          notificationAnchor,
+        )}
+        anchorEl={notificationAnchor}
+        onClose={() => setNotificationAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{ paper: { sx: { width: { xs: 'calc(100vw - 24px)', sm: 390 }, maxHeight: 'min(560px, calc(100vh - 88px))', borderRadius: '14px', overflow: 'hidden', boxShadow: shadowTokens.floating } } }}
+      >
+        <Box sx={{ padding: '16px 18px' }}>
+          <Typography sx={{ color: '#0F172A', fontSize: '16px', fontWeight: 800 }}>การแจ้งเตือน</Typography>
+        </Box>
+        <Divider />
+        <Box sx={{ maxHeight: 470, overflowY: 'auto' }}>
+          {notificationsLoading ? (
+            <Box sx={{ minHeight: 140, display: 'grid', placeItems: 'center' }}><CircularProgress size={28} /></Box>
+          ) : notificationsError ? (
+            <Box sx={{ padding: '28px 20px', textAlign: 'center' }}><Typography sx={{ color: '#64748B', fontSize: '13px' }}>{notificationsError}</Typography><Button size="small" onClick={loadNotifications} sx={{ marginTop: '10px' }}>ลองใหม่</Button></Box>
+          ) : notifications.length === 0 ? (
+            <Typography sx={{ padding: '34px 20px', color: '#94A3B8', fontSize: '13px', textAlign: 'center' }}>ยังไม่มีการแจ้งเตือน</Typography>
+          ) : notifications.map((item, index) => {
+            const unread = !isNotificationRead(item);
+            return (
+              <Box key={item.id || item.notificationId || index}>
+                <ButtonBase type="button" onClick={() => handleNotificationClick(item)} sx={{ width: '100%', padding: '13px 18px', display: 'block', textAlign: 'left', backgroundColor: unread ? '#F8FAFF' : '#FFFFFF', '&:hover': { backgroundColor: '#F8FAFC' } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
+                    <Typography sx={{ color: unread ? '#0F172A' : '#475569', fontSize: '13px', fontWeight: unread ? 800 : 600, lineHeight: 1.45 }}>{item.title || 'การแจ้งเตือน'}</Typography>
+                    {unread ? <Typography sx={{ color: '#DC2626', fontSize: '10px', fontWeight: 800, flexShrink: 0 }}>ใหม่</Typography> : null}
+                  </Box>
+                  <Typography sx={{ color: '#64748B', fontSize: '12px', lineHeight: 1.55, marginTop: '3px' }}>{item.message || item.description || ''}</Typography>
+                  <Typography sx={{ color: '#94A3B8', fontSize: '10px', marginTop: '5px' }}>{item.createdAt ? new Date(item.createdAt).toLocaleString('th-TH') : ''}</Typography>
+                </ButtonBase>
+                {index < notifications.length - 1 ? <Divider /> : null}
+              </Box>
+            );
+          })}
+        </Box>
+      </Popover>
+
+      <Menu
+        anchorEl={accountAnchor}
+        open={Boolean(accountAnchor)}
+        onClose={() => setAccountAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{ paper: { sx: { width: 230, marginTop: '8px', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: shadowTokens.floating } } }}
+      >
+        <Box sx={{ padding: '8px 16px 12px' }}>
+          <Typography noWrap sx={{ color: '#0F172A', fontSize: '13px', fontWeight: 800 }}>{displayName}</Typography>
+          <Typography sx={{ color: '#64748B', fontSize: '11px', marginTop: '2px' }}>{profileRoleLabel}</Typography>
+        </Box>
+        <Divider />
+        <MenuItem onClick={() => { setAccountAnchor(null); navigate(`/${currentRole}/profile`); }} sx={{ gap: '10px', fontSize: '13px', paddingBlock: '10px' }}><PersonOutlineRounded fontSize="small" />ข้อมูลส่วนตัว</MenuItem>
+        <MenuItem onClick={() => { setAccountAnchor(null); handleLogout(); }} sx={{ gap: '10px', color: '#DC2626', fontSize: '13px', paddingBlock: '10px' }}><LogoutRounded fontSize="small" />ออกจากระบบ</MenuItem>
+      </Menu>
 
 
       {/* =========================
@@ -1464,11 +1753,11 @@ function RoleLayout({
               boxSizing:
                 'border-box',
 
-              background:
-                resolvedTheme.sidebarBackground,
+              backgroundColor:
+                '#FFFFFF',
 
               borderRight:
-                `1px solid ${resolvedTheme.border}`,
+                '1px solid #EEF2F6',
             },
         }}
       >
@@ -1502,14 +1791,14 @@ function RoleLayout({
                 2,
 
               color:
-                '#FFFFFF',
+                '#475569',
 
               backgroundColor:
-                'rgba(255,255,255,0.12)',
+                '#F1F5F9',
 
               '&:hover': {
                 backgroundColor:
-                  'rgba(255,255,255,0.20)',
+                  '#E2E8F0',
               },
             }}
           >
@@ -1521,10 +1810,10 @@ function RoleLayout({
         <Box
           sx={{
             padding:
-              '16px 16px 8px',
+              '10px 12px 4px',
           }}
         >
-          {renderProfileCard(true)}
+          {renderUserInformation(true)}
         </Box>
 
 
@@ -1532,7 +1821,7 @@ function RoleLayout({
           component="nav"
           sx={{
             padding:
-              '2px 16px 20px',
+              '4px 14px 18px',
 
             display:
               'flex',
@@ -1541,7 +1830,7 @@ function RoleLayout({
               'column',
 
             gap:
-              '5px',
+              '3px',
           }}
         >
           {renderSectionTitle(
@@ -1558,23 +1847,13 @@ function RoleLayout({
               ),
           )}
 
-
-          {visibleAccountMenuItems.length >
-            0 &&
-            renderSectionTitle(
-              'บัญชี',
-            )}
+          <Box sx={{ flexGrow: 1, minHeight: '24px' }} />
 
 
-          {visibleAccountMenuItems.map(
-            (
-              menuItem,
-            ) =>
-              renderNavigationItem(
-                menuItem,
-                true,
-              ),
-          )}
+          <Box sx={{ position: 'sticky', bottom: 0, marginTop: 'auto', paddingTop: '8px', backgroundColor: '#FFFFFF' }}>
+            {visibleAccountMenuItems.length > 0 && renderSectionTitle('บัญชี')}
+            {visibleAccountMenuItems.map((menuItem) => renderNavigationItem(menuItem, true))}
+          </Box>
         </Box>
       </Drawer>
 
@@ -1614,17 +1893,15 @@ function RoleLayout({
           flexDirection:
             'column',
 
-          background:
-            resolvedTheme.sidebarBackground,
+          backgroundColor:
+            '#FFFFFF',
 
           borderRight:
-            `1px solid ${resolvedTheme.border}`,
+            '1px solid #EEF2F6',
 
-          boxShadow:
-            '5px 0 18px rgba(15, 23, 42, 0.04)',
+          boxShadow: 'none',
 
-          overflowY:
-            'auto',
+          overflowY: 'hidden',
 
           overflowX:
             'hidden',
@@ -1639,13 +1916,13 @@ function RoleLayout({
         <Box
           sx={{
             padding:
-              '18px 16px 8px',
+              '10px 12px 4px',
 
             flexShrink:
               0,
           }}
         >
-          {renderProfileCard(false)}
+          {renderUserInformation(false)}
         </Box>
 
 
@@ -1657,7 +1934,7 @@ function RoleLayout({
               1,
 
             padding:
-              '2px 16px 22px',
+              '4px 14px 20px',
 
             display:
               'flex',
@@ -1666,7 +1943,9 @@ function RoleLayout({
               'column',
 
             gap:
-              '5px',
+              '3px',
+            overflowY: 'auto',
+            minHeight: 0,
           }}
         >
           {renderSectionTitle(
@@ -1684,23 +1963,13 @@ function RoleLayout({
               ),
           )}
 
-
-          {visibleAccountMenuItems.length >
-            0 &&
-            renderSectionTitle(
-              'บัญชี',
-            )}
+          <Box sx={{ flexGrow: 1, minHeight: '24px' }} />
 
 
-          {visibleAccountMenuItems.map(
-            (
-              menuItem,
-            ) =>
-              renderNavigationItem(
-                menuItem,
-                false,
-              ),
-          )}
+          <Box sx={{ position: 'sticky', bottom: 0, marginTop: 'auto', paddingTop: '8px', paddingBottom: '4px', backgroundColor: '#FFFFFF' }}>
+            {visibleAccountMenuItems.length > 0 && renderSectionTitle('บัญชี')}
+            {visibleAccountMenuItems.map((menuItem) => renderNavigationItem(menuItem, false))}
+          </Box>
         </Box>
       </Box>
 
@@ -1708,8 +1977,8 @@ function RoleLayout({
       {/* =========================
           MAIN CONTENT
       ========================== */}
-      <Box
-        component="main"
+        <Box
+          component="main"
         sx={{
           width: {
             xs:
@@ -1749,8 +2018,37 @@ function RoleLayout({
 
           overflowX:
             'hidden',
+          position: 'relative',
+          ...(isDashboardPage && {
+            '& > .role-page-global-action + *': {
+              paddingRight: '52px',
+              boxSizing: 'border-box',
+            },
+          }),
         }}
       >
+        {isDashboardPage && (
+          <Box
+            className="role-page-global-action"
+            sx={{
+              position: 'absolute',
+              zIndex: 5,
+              top: {
+                xs: '88px',
+                sm: '92px',
+                md: '32px',
+              },
+              right: {
+                xs: '18px',
+                sm: '24px',
+                md: '32px',
+                lg: '40px',
+              },
+            }}
+          >
+            {renderGlobalActions()}
+          </Box>
+        )}
         {children}
       </Box>
     </Box>

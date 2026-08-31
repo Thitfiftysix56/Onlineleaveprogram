@@ -93,7 +93,7 @@ function RejectModalPage() {
     <SupervisorLayout activeMenu="Approval">
       <Box
         sx={{
-          marginBottom: '28px',
+          marginBottom: '16px',
         }}
       >
         <Box
@@ -169,7 +169,7 @@ function RejectModalPage() {
             },
           }}
         >
-          ← Back to Pending Approval
+          ← กลับไปยังรายการรออนุมัติ
         </Button>
       </Box>
 
@@ -415,7 +415,7 @@ function RejectModalPage() {
                   fontWeight: 600,
                 }}
               >
-                Reason for Leave
+                เหตุผลการลา
               </Typography>
 
               <Typography
@@ -585,7 +585,7 @@ function RejectModalPage() {
               fontWeight: 800,
             }}
           >
-            Reject Leave Request
+            ปฏิเสธคำขอลา
           </Typography>
 
           <Typography

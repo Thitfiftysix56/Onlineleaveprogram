@@ -19,8 +19,12 @@ import {
 } from '@mui/material';
 
 import { useNavigate } from 'react-router-dom';
+import AddRounded from '@mui/icons-material/AddRounded';
 
 import AdminLayout from '../../layouts/adminlayout.jsx';
+import { DashboardTablePagination, StatCard } from '../../components/shareduiprimitives.jsx';
+import DashboardLeaveBalance from '../../components/dashboardleavebalance.jsx';
+import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 
 import {
@@ -647,6 +651,8 @@ function AdminDashboardPage() {
     setUsers,
   ] = useState([]);
 
+  const [userPage, setUserPage] = useState(0);
+
   const [
     departments,
     setDepartments,
@@ -824,8 +830,8 @@ function AdminDashboardPage() {
     );
 
   const recentUsers = useMemo(
-    () => users.slice(0, 5),
-    [users],
+    () => users.slice(userPage * 5, userPage * 5 + 5),
+    [userPage, users],
   );
 
   const recentActivities =
@@ -847,6 +853,9 @@ function AdminDashboardPage() {
 
       color:
         '#EA580C',
+
+      accent: 'info',
+      unit: 'บัญชี',
     },
     {
       title:
@@ -860,6 +869,9 @@ function AdminDashboardPage() {
 
       color:
         '#059669',
+
+      accent: 'success',
+      unit: 'บัญชี',
     },
     {
       title:
@@ -873,6 +885,9 @@ function AdminDashboardPage() {
 
       color:
         '#2563EB',
+
+      accent: 'cyan',
+      unit: 'แผนก',
     },
     {
       title:
@@ -886,6 +901,9 @@ function AdminDashboardPage() {
 
       color:
         '#7C3AED',
+
+      accent: 'neutral',
+      unit: 'ตำแหน่ง',
     },
   ];
 
@@ -1012,10 +1030,12 @@ function AdminDashboardPage() {
     <AdminLayout
       activeMenu="Dashboard"
     >
+      <PageHeader title="Dashboard" actions={<Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/admin/leave-request')} sx={{ height: 40, borderRadius: '9px', backgroundColor: '#2563EB', boxShadow: 'none', fontSize: '13px', fontWeight: 800, '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' } }}>สร้างคำขอลา</Button>} sx={{ marginBottom: '18px' }} />
       {/* Header */}
 
       <Box
         sx={{
+          display: 'none',
           marginBottom:
             '24px',
         }}
@@ -1042,6 +1062,8 @@ function AdminDashboardPage() {
         </Typography>
       </Box>
 
+      <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/admin/leave-request')} sx={{ display: 'none' }}>สร้างคำขอลา</Button>
+
       {/* Summary Cards */}
 
       <Box
@@ -1056,133 +1078,30 @@ function AdminDashboardPage() {
             sm:
               'repeat(2, minmax(0, 1fr))',
 
-            xl:
+            md:
               'repeat(4, minmax(0, 1fr))',
           },
 
-          gap:
-            '18px',
+          gap: '12px',
 
           marginBottom:
             '24px',
         }}
       >
-        {summaryCards.map(
-          (card) => (
-            <Paper
-              key={
-                card.title
-              }
-              elevation={0}
-              sx={{
-                minHeight:
-                  '116px',
-
-                padding:
-                  '20px',
-
-                backgroundColor:
-                  `${card.color}0D`,
-
-                border:
-                  `1px solid ${card.color}2E`,
-
-                borderRadius:
-                  '9px',
-              }}
-            >
-              <Box
-                sx={{
-                  display:
-                    'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'space-between',
-
-                  gap:
-                    '12px',
-                }}
-              >
-                <Typography
-                  sx={{
-                    color:
-                      '#64748B',
-
-                    fontSize:
-                      '12px',
-
-                    fontWeight:
-                      700,
-                  }}
-                >
-                  {card.title}
-                </Typography>
-
-                <Box
-                  sx={{
-                    width:
-                      '9px',
-
-                    height:
-                      '9px',
-
-                    flexShrink:
-                      0,
-
-                    backgroundColor:
-                      card.color,
-
-                    borderRadius:
-                      '50%',
-
-                    boxShadow:
-                      `0 0 0 4px ${card.color}14`,
-                  }}
-                />
-              </Box>
-
-              <Typography
-                sx={{
-                  color:
-                    '#111827',
-
-                  fontSize:
-                    '32px',
-
-                  fontWeight:
-                    800,
-
-                  lineHeight:
-                    1.2,
-
-                  marginTop:
-                    '14px',
-                }}
-              >
-                {card.value}
-              </Typography>
-
-              <Typography
-                sx={{
-                  color:
-                    '#94A3B8',
-
-                  fontSize:
-                    '11px',
-
-                  marginTop:
-                    '14px',
-                }}
-              >
-                {card.helper}
-              </Typography>
-            </Paper>
-          ),
-        )}
+        {summaryCards.map((card) => (
+          <StatCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            supportingText={card.helper}
+            accent={card.accent}
+            compactInline
+            unit={card.unit}
+          />
+        ))}
       </Box>
+
+      <DashboardLeaveBalance />
 
       {/* Content Grid */}
 
@@ -1271,6 +1190,8 @@ function AdminDashboardPage() {
                 )
               }
               sx={{
+                display:
+                  'none',
                 minWidth:
                   0,
 
@@ -1304,6 +1225,7 @@ function AdminDashboardPage() {
 
           {recentUsers.length >
           0 ? (
+            <>
             <Box
               sx={{
                 width:
@@ -1533,6 +1455,12 @@ function AdminDashboardPage() {
                 </TableBody>
               </Table>
             </Box>
+            <DashboardTablePagination
+              count={users.length}
+              page={userPage}
+              onPageChange={(_, nextPage) => setUserPage(nextPage)}
+            />
+            </>
           ) : (
             <Box
               sx={{

@@ -1,606 +1,129 @@
 import { useEffect, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Chip,
-  FormControl,
-  FormHelperText,
-  InputLabel,
-  MenuItem,
-  Paper,
-  Select,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createPosition, getPosition, updatePosition } from '../api/position-service.js';
+import { BackButton, PageHeader, Surface } from './sharedvisualfoundation.jsx';
 
-const emptyPositionData = {
-  positionName: '',
-  status: 'Active',
-};
+const emptyData = { positionName: '', status: 'Active' };
 
-const editPositionData = {
-  positionName: 'Developer',
-  status: 'Active',
-};
-
-function RolePositionFormPage({
-  LayoutComponent,
-  activeMenu,
-  theme,
-  mode = 'add',
-}) {
+function RolePositionFormPage({ LayoutComponent, activeMenu, mode = 'add' }) {
   const isEditMode = mode === 'edit';
   const navigate = useNavigate();
   const { positionId } = useParams();
-
-  const [formData, setFormData] = useState(
-    isEditMode
-      ? { ...editPositionData }
-      : { ...emptyPositionData },
-  );
-
+  const [formData, setFormData] = useState(emptyData);
+  const [initialData, setInitialData] = useState(emptyData);
   const [errors, setErrors] = useState({});
-  const [successMessage, setSuccessMessage] = useState('');
-  const [informationMessage, setInformationMessage] =
-    useState('');
+  const [message, setMessage] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
     const load = async () => {
-      setErrors({}); setSuccessMessage(''); setInformationMessage('');
-      if (!isEditMode) { setFormData({ ...emptyPositionData }); setLoading(false); return; }
+      if (!isEditMode) {
+        setFormData(emptyData);
+        setInitialData(emptyData);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         const position = await getPosition(positionId);
-        if (active) setFormData({ positionName: position.positionName, status: position.status });
-      } catch (error) { if (active) setInformationMessage(error.response?.data?.message || 'Unable to load position.'); }
-      finally { if (active) setLoading(false); }
+        const nextData = { positionName: position.positionName || '', status: position.status || 'Active' };
+        if (active) {
+          setFormData(nextData);
+          setInitialData(nextData);
+        }
+      } catch (error) {
+        if (active) setMessage({ type: 'error', text: error.response?.data?.message || 'ไม่สามารถโหลดข้อมูลตำแหน่งได้' });
+      } finally {
+        if (active) setLoading(false);
+      }
     };
-    load(); return () => { active = false; };
+    load();
+    return () => { active = false; };
   }, [isEditMode, positionId]);
 
-  const pageTitle = isEditMode
-    ? 'Edit Position'
-    : 'Add Position';
-
-  const pageDescription = isEditMode
-    ? 'Update the selected position information.'
-    : 'Create a new position for the organization.';
-
-  const handleInputChange = (fieldName, value) => {
-    setFormData((previousData) => ({
-      ...previousData,
-      [fieldName]: value,
-    }));
-
-    setErrors((previousErrors) => ({
-      ...previousErrors,
-      [fieldName]: '',
-    }));
-
-    setSuccessMessage('');
-    setInformationMessage('');
+  const updateName = (value) => {
+    setFormData((current) => ({ ...current, positionName: value }));
+    setErrors({});
+    setMessage({ type: '', text: '' });
   };
 
-  const validateForm = () => {
-    const validationErrors = {};
-    const normalizedPositionName =
-      formData.positionName.trim();
-
-    if (!normalizedPositionName) {
-      validationErrors.positionName =
-        'Please enter the position name';
-    } else if (normalizedPositionName.length < 2) {
-      validationErrors.positionName =
-        'Position name must contain at least 2 characters';
-    } else if (normalizedPositionName.length > 100) {
-      validationErrors.positionName =
-        'Position name must not exceed 100 characters';
-    }
-
-    if (!formData.status) {
-      validationErrors.status =
-        'Please select a position status';
-    }
-
-    setErrors(validationErrors);
-
-    return Object.keys(validationErrors).length === 0;
+  const validate = () => {
+    const name = formData.positionName.trim();
+    const nextErrors = {};
+    if (!name) nextErrors.positionName = 'กรุณากรอกชื่อตำแหน่ง';
+    else if (name.length < 2) nextErrors.positionName = 'ชื่อตำแหน่งต้องมีอย่างน้อย 2 ตัวอักษร';
+    else if (name.length > 100) nextErrors.positionName = 'ชื่อตำแหน่งต้องไม่เกิน 100 ตัวอักษร';
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = async (event) => {
+  const requestConfirmation = (event) => {
     event.preventDefault();
+    if (validate()) setConfirmationOpen(true);
+  };
 
-    setSuccessMessage('');
-    setInformationMessage('');
-
-    if (!validateForm()) {
-      return;
-    }
-
-    const submittedPosition = {
-      positionName: formData.positionName.trim(),
-      status: formData.status,
-    };
-
+  const confirmSave = async () => {
+    const payload = { positionName: formData.positionName.trim(), status: formData.status };
     setSaving(true);
     try {
-      const result = isEditMode ? await updatePosition(positionId, submittedPosition) : await createPosition(submittedPosition);
-      setSuccessMessage(result.message);
+      const result = isEditMode ? await updatePosition(positionId, payload) : await createPosition(payload);
+      setConfirmationOpen(false);
+      setMessage({ type: 'success', text: result.message || 'บันทึกข้อมูลตำแหน่งเรียบร้อยแล้ว' });
       window.setTimeout(() => navigate('/admin/position-management'), 500);
-    } catch (error) { setInformationMessage(error.response?.data?.message || 'Unable to save position.'); }
-    finally { setSaving(false); }
+    } catch (error) {
+      setConfirmationOpen(false);
+      setMessage({ type: 'error', text: error.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลตำแหน่งได้' });
+    } finally {
+      setSaving(false);
+    }
   };
-
-  const handleReset = () => {
-    setFormData(
-      isEditMode
-        ? { ...editPositionData }
-        : { ...emptyPositionData },
-    );
-
-    setErrors({});
-    setSuccessMessage('');
-    setInformationMessage('');
-  };
-
-  const handleBack = () => {
-    navigate('/admin/position-management');
-  };
-
-  const isActive = formData.status === 'Active';
 
   return (
     <LayoutComponent activeMenu={activeMenu}>
-      <Box
-        sx={{
-          marginBottom: '28px',
-        }}
-      >
-        <Typography
-          component="h1"
-          sx={{
-            color: '#111827',
-            fontSize: {
-              xs: '26px',
-              sm: '30px',
-            },
-            fontWeight: 800,
-          }}
-        >
-          {pageTitle}
-        </Typography>
+      <PageHeader
+        title={isEditMode ? 'แก้ไขตำแหน่ง' : 'เพิ่มตำแหน่ง'}
+        subtitle={isEditMode ? 'ปรับปรุงข้อมูลตำแหน่งที่เลือก' : 'เพิ่มตำแหน่งใหม่สำหรับองค์กร'}
+        actions={<BackButton onClick={() => navigate('/admin/position-management')}>กลับ</BackButton>}
+        sx={{ marginBottom: '22px' }}
+      />
+      {message.text ? <Alert severity={message.type} onClose={() => setMessage({ type: '', text: '' })} sx={{ marginBottom: '20px' }}>{message.text}</Alert> : null}
+      {loading ? <Alert severity="info" sx={{ marginBottom: '20px' }}>กำลังโหลดข้อมูลตำแหน่ง...</Alert> : null}
 
-        <Typography
-          sx={{
-            color: '#6B7280',
-            fontSize: '15px',
-            marginTop: '6px',
-          }}
-        >
-          {pageDescription}
-        </Typography>
-
-        <Button
-          type="button"
-          variant="outlined"
-          onClick={handleBack}
-          sx={{
-            minWidth: '100px',
-            height: '42px',
-            marginTop: '16px',
-            padding: '0 18px',
-            backgroundColor: '#FFFFFF',
-            color: theme.primary,
-            borderColor: theme.primary,
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: 700,
-            textTransform: 'none',
-
-            '&:hover': {
-              backgroundColor: theme.soft,
-              borderColor: theme.dark,
-            },
-          }}
-        >
-          ← Back
-        </Button>
-      </Box>
-
-      {informationMessage && (
-        <Alert
-          severity="info"
-          onClose={() => setInformationMessage('')}
-          sx={{
-            marginBottom: '24px',
-            borderRadius: '8px',
-          }}
-        >
-          {informationMessage}
-        </Alert>
-      )}
-
-      {successMessage && (
-        <Alert
-          severity="success"
-          onClose={() => setSuccessMessage('')}
-          sx={{
-            marginBottom: '24px',
-            borderRadius: '8px',
-          }}
-        >
-          {successMessage}
-        </Alert>
-      )}
-
-      {loading && <Alert severity="info" sx={{ marginBottom: '24px' }}>Loading position...</Alert>}
-
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-        noValidate
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr',
-            xl: 'minmax(0, 1.65fr) minmax(320px, 1fr)',
-          },
-          gap: '24px',
-          alignItems: 'start',
-        }}
-      >
-        <Paper
-          elevation={0}
-          sx={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E5E7EB',
-            borderRadius: '12px',
-            overflow: 'hidden',
-          }}
-        >
-          <Box
-            sx={{
-              padding: {
-                xs: '20px',
-                sm: '24px',
-              },
-              borderBottom: '1px solid #E5E7EB',
-            }}
-          >
-            <Typography
-              sx={{
-                color: '#111827',
-                fontSize: '18px',
-                fontWeight: 800,
-              }}
-            >
-              Position Information
-            </Typography>
-
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '4px',
-              }}
-            >
-              Enter the position name and current status.
-            </Typography>
-          </Box>
-
-          <Box
-            sx={{
-              padding: {
-                xs: '20px',
-                sm: '28px',
-              },
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '22px',
-            }}
-          >
-            <TextField
-              fullWidth
-              required
-              label="Position Name"
-              placeholder="Example: Software Developer"
-              value={formData.positionName}
-              onChange={(event) =>
-                handleInputChange(
-                  'positionName',
-                  event.target.value,
-                )
-              }
-              error={Boolean(errors.positionName)}
-              helperText={
-                errors.positionName ||
-                `${formData.positionName.length}/100 characters`
-              }
-              slotProps={{
-                htmlInput: {
-                  maxLength: 100,
-                },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-
-                  '&.Mui-focused fieldset': {
-                    borderColor: theme.primary,
-                  },
-                },
-
-                '& .MuiInputLabel-root.Mui-focused': {
-                  color: theme.primary,
-                },
-              }}
-            />
-
-            <FormControl
-              fullWidth
-              required
-              error={Boolean(errors.status)}
-            >
-              <InputLabel id="position-form-status-label">
-                Position Status
-              </InputLabel>
-
-              <Select
-                labelId="position-form-status-label"
-                value={formData.status}
-                label="Position Status"
-                onChange={(event) =>
-                  handleInputChange(
-                    'status',
-                    event.target.value,
-                  )
-                }
-                sx={{
-                  borderRadius: '8px',
-
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline':
-                    {
-                      borderColor: theme.primary,
-                    },
-                }}
-              >
-                <MenuItem value="Active">
-                  Active
-                </MenuItem>
-
-                <MenuItem value="Inactive">
-                  Inactive
-                </MenuItem>
-              </Select>
-
-              <FormHelperText>
-                {errors.status ||
-                  'Inactive positions remain in existing records but cannot be assigned to new employees.'}
-              </FormHelperText>
-            </FormControl>
-          </Box>
-
-          <Box
-            sx={{
-              padding: {
-                xs: '20px',
-                sm: '22px 28px',
-              },
-              display: 'flex',
-              justifyContent: 'flex-end',
-              flexDirection: {
-                xs: 'column-reverse',
-                sm: 'row',
-              },
-              gap: '12px',
-              backgroundColor: '#F9FAFB',
-              borderTop: '1px solid #E5E7EB',
-            }}
-          >
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={handleReset}
-              sx={{
-                minWidth: '110px',
-                height: '44px',
-                padding: '0 20px',
-                color: '#374151',
-                borderColor: '#D1D5DB',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 700,
-                textTransform: 'none',
-
-                '&:hover': {
-                  backgroundColor: '#FFFFFF',
-                  borderColor: '#9CA3AF',
-                },
-              }}
-            >
-              Cancel
-            </Button>
-
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={saving || loading}
-              sx={{
-                minWidth: '155px',
-                height: '44px',
-                padding: '0 20px',
-                backgroundColor: theme.primary,
-                color: '#FFFFFF',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 700,
-                textTransform: 'none',
-                boxShadow: 'none',
-
-                '&:hover': {
-                  backgroundColor: theme.dark,
-                  boxShadow: 'none',
-                },
-              }}
-            >
-              {isEditMode
-                ? 'Save Changes'
-                : 'Create Position'}
-            </Button>
-          </Box>
-        </Paper>
-
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '24px',
-          }}
-        >
-          <Paper
-            elevation={0}
-            sx={{
-              padding: {
-                xs: '20px',
-                sm: '24px',
-              },
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #E5E7EB',
-              borderRadius: '12px',
-            }}
-          >
-            <Typography
-              sx={{
-                color: '#111827',
-                fontSize: '17px',
-                fontWeight: 800,
-              }}
-            >
-              Position Preview
-            </Typography>
-
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '13px',
-                lineHeight: 1.6,
-                marginTop: '5px',
-              }}
-            >
-              Review the information before saving.
-            </Typography>
-
-            <Box
-              sx={{
-                padding: '20px',
-                marginTop: '22px',
-                backgroundColor: theme.soft,
-                border: `1px solid ${
-                  theme.border || '#E5E7EB'
-                }`,
-                borderRadius: '12px',
-              }}
-            >
-              <Box
-                sx={{
-                  width: '48px',
-                  height: '48px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#FFFFFF',
-                  color: theme.primary,
-                  borderRadius: '12px',
-                  fontSize: '20px',
-                  fontWeight: 800,
-                }}
-              >
-                {formData.positionName
-                  .trim()
-                  .charAt(0)
-                  .toUpperCase() || 'P'}
-              </Box>
-
-              <Typography
-                sx={{
-                  minHeight: '50px',
-                  color: '#111827',
-                  fontSize: '18px',
-                  fontWeight: 800,
-                  lineHeight: 1.4,
-                  marginTop: '16px',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {formData.positionName.trim() ||
-                  'Position Name'}
-              </Typography>
-
-              <Chip
-                label={formData.status}
-                size="small"
-                sx={{
-                  minWidth: '76px',
-                  marginTop: '18px',
-                  backgroundColor: isActive
-                    ? '#DCFCE7'
-                    : '#FEF3C7',
-                  color: isActive
-                    ? '#15803D'
-                    : '#B45309',
-                  borderRadius: '999px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                }}
-              />
-            </Box>
-          </Paper>
-
-          <Paper
-            elevation={0}
-            sx={{
-              padding: {
-                xs: '20px',
-                sm: '24px',
-              },
-              backgroundColor: theme.soft,
-              border: `1px solid ${
-                theme.border || '#E5E7EB'
-              }`,
-              borderRadius: '12px',
-            }}
-          >
-            <Typography
-              sx={{
-                color: theme.dark,
-                fontSize: '15px',
-                fontWeight: 800,
-              }}
-            >
-              Position Status
-            </Typography>
-
-            <Typography
-              sx={{
-                color: theme.text || '#4B5563',
-                fontSize: '13px',
-                lineHeight: 1.7,
-                marginTop: '8px',
-              }}
-            >
-              Active positions can be assigned to employees.
-              Inactive positions remain available for existing
-              employee records and historical reports.
-            </Typography>
-          </Paper>
+      <Surface component="form" onSubmit={requestConfirmation} noValidate padding={0} sx={{ maxWidth: 760, overflow: 'hidden' }}>
+        <Box sx={{ padding: { xs: '20px', sm: '24px' }, borderBottom: '1px solid #D8E0EA', backgroundColor: '#F8FAFC' }}>
+          <Typography component="h2" variant="h6">ข้อมูลตำแหน่ง</Typography>
+          <Typography variant="body2" sx={{ color: '#475569', marginTop: '4px' }}>ระบุชื่อตำแหน่งที่ใช้ในองค์กร</Typography>
         </Box>
-      </Box>
+        <Box sx={{ padding: { xs: '20px', sm: '28px' } }}>
+          <TextField
+            required
+            label="ชื่อตำแหน่ง"
+            placeholder="เช่น นักพัฒนาซอฟต์แวร์"
+            value={formData.positionName}
+            onChange={(event) => updateName(event.target.value)}
+            error={Boolean(errors.positionName)}
+            helperText={errors.positionName || `${formData.positionName.length}/100 ตัวอักษร`}
+            slotProps={{ htmlInput: { maxLength: 100 } }}
+          />
+        </Box>
+        <Stack direction={{ xs: 'column-reverse', sm: 'row' }} justifyContent="flex-end" gap="10px" sx={{ padding: { xs: '16px 20px', sm: '18px 28px' }, borderTop: '1px solid #D8E0EA', backgroundColor: '#F8FAFC' }}>
+          <Button type="button" variant="outlined" onClick={() => { setFormData(initialData); setErrors({}); }}>ล้างการแก้ไข</Button>
+          <Button type="submit" variant="contained" disabled={loading || saving}>{isEditMode ? 'บันทึกการแก้ไข' : 'เพิ่มตำแหน่ง'}</Button>
+        </Stack>
+      </Surface>
+
+      <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>ยืนยันการบันทึกข้อมูลตำแหน่ง</DialogTitle>
+        <DialogContent dividers><Typography><strong>ชื่อตำแหน่ง:</strong> {formData.positionName.trim()}</Typography></DialogContent>
+        <DialogActions sx={{ padding: '14px 20px' }}>
+          <Button variant="outlined" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button>
+          <Button variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>
+        </DialogActions>
+      </Dialog>
     </LayoutComponent>
   );
 }

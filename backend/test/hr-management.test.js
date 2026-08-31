@@ -180,6 +180,8 @@ test('leave type list/get/create/update/status and validation work', async () =>
   const invalid = { code: 'ANN', name: 'Annual Leave', description: 'Annual leave type', defaultDays: -1, minimumDays: 1, maximumDaysPerRequest: 5, status: 'Active' }
   assert.equal((await fetch(`${baseUrl}/api/hr/leave-types`, { method: 'POST', headers: auth(), body: JSON.stringify(invalid) })).status, 400)
   const valid = { ...invalid, defaultDays: 10 }
+  assert.equal((await fetch(`${baseUrl}/api/hr/leave-types`, { method: 'POST', headers: auth(), body: JSON.stringify({ ...valid, maximumDaysPerRequest: '' }) })).status, 400)
+  assert.equal((await fetch(`${baseUrl}/api/hr/leave-types`, { method: 'POST', headers: auth(), body: JSON.stringify({ ...valid, minimumDays: 6, maximumDaysPerRequest: 5 }) })).status, 400)
   let results = [[[]], [{ insertId: 1 }], [[leaveTypeRow]]]
   pool.execute = async () => results.shift()
   assert.equal((await fetch(`${baseUrl}/api/hr/leave-types`, { method: 'POST', headers: auth(), body: JSON.stringify(valid) })).status, 201)

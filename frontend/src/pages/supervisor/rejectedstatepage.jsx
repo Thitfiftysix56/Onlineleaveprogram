@@ -71,7 +71,7 @@ function RejectedStatePage() {
     <SupervisorLayout activeMenu="Approval">
       <Box
         sx={{
-          marginBottom: '28px',
+          marginBottom: '16px',
         }}
       >
         <Box
@@ -151,7 +151,7 @@ function RejectedStatePage() {
     },
   }}
 >
-  ← Back
+  ← กลับ
 </Button>
       </Box>
 
@@ -410,7 +410,7 @@ function RejectedStatePage() {
                   fontWeight: 600,
                 }}
               >
-                Reason for Leave
+                เหตุผลการลา
               </Typography>
 
               <Typography
@@ -841,7 +841,7 @@ function RejectedStatePage() {
                   fontWeight: 800,
                 }}
               >
-                Approval Timeline
+                ลำดับเหตุการณ์การอนุมัติ
               </Typography>
 
               <Typography

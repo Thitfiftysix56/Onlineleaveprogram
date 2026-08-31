@@ -27,6 +27,7 @@ import {
 } from 'react-router-dom';
 
 import api from '../api/axios.js';
+import { PageHeader } from './sharedvisualfoundation.jsx';
 
 import {
   getCurrentUser,
@@ -190,18 +191,18 @@ function PasswordField({
         sx={{
           '& .MuiOutlinedInput-root':
             {
-              height: '48px',
-              backgroundColor: '#FAFCFF',
-              borderRadius: '9px',
+              height: '50px',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '12px',
 
               '& fieldset': {
-                borderColor: '#DCE3ED',
+                borderColor: '#E2E8F0',
               },
 
               '&:hover fieldset':
                 {
                   borderColor:
-                    theme.border,
+                    '#CBD5E1',
                 },
 
               '&.Mui-focused fieldset':
@@ -583,26 +584,17 @@ function RoleChangePasswordPage({
     >
       <Box
         sx={{
-          marginBottom:
-            '22px',
+          width: '100%',
+          maxWidth: '620px',
+          marginInline: 'auto',
         }}
       >
-        <Typography
-          component="h1"
-          sx={{
-            color: '#111827',
-
-            fontSize: {
-              xs: '26px',
-              sm: '30px',
-            },
-
-            fontWeight: 800,
-          }}
-        >
-          เปลี่ยนรหัสผ่าน
-        </Typography>
-      </Box>
+      <PageHeader
+        title="เปลี่ยนรหัสผ่าน"
+        sx={{
+          marginBottom: '18px',
+        }}
+      />
 
       {(errorMessage ||
         successMessage) && (
@@ -618,11 +610,10 @@ function RoleChangePasswordPage({
           }}
           sx={{
             width: '100%',
-            maxWidth: '900px',
-            margin:
-              '0 auto 18px',
+            maxWidth: '760px',
+            marginBottom: '16px',
             borderRadius: '10px',
-            fontSize: '13px',
+            fontSize: '12px',
           }}
         >
           {errorMessage ||
@@ -630,533 +621,327 @@ function RoleChangePasswordPage({
         </Alert>
       )}
 
-      <Paper
+      <Box
         component="form"
-        onSubmit={
-          handleSubmit
-        }
+        onSubmit={handleSubmit}
         noValidate
-        elevation={0}
         sx={{
           width: '100%',
-          maxWidth: '900px',
+          maxWidth: '620px',
           margin: '0 auto',
-          display: 'grid',
-
-          gridTemplateColumns: {
-            xs: '1fr',
-            md:
-              'minmax(0, 1.35fr) minmax(280px, 0.85fr)',
-          },
-
-          backgroundColor:
-            '#FFFFFF',
-
-          border:
-            '1px solid #E5E7EB',
-
-          borderRadius:
-            '14px',
-
-          overflow: 'hidden',
         }}
       >
-        {/* Left Form */}
-        <Box
+        <Paper
+          elevation={0}
           sx={{
-            padding: {
-              xs: '22px',
-              sm: '28px',
-              md: '30px 32px 32px',
-            },
+            background:
+              `linear-gradient(
+                135deg,
+                #FFFFFF 0%,
+                ${resolvedTheme.soft || '#EFF6FF'} 100%
+              )`,
+            border:
+              '1px solid #E6ECF3',
+            borderRadius: '20px',
+            overflow: 'hidden',
+            boxShadow:
+              `0 10px 28px ${resolvedTheme.primary}12`,
           }}
         >
           <Box
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              marginBottom: '24px',
+              padding: {
+                xs: '20px 18px 18px',
+                sm: '22px 24px 20px',
+              },
             }}
           >
             <Box
               sx={{
-                width: '42px',
-                height: '42px',
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent:
-                  'center',
-
-                backgroundColor:
-                  resolvedTheme.soft,
-
-                color:
-                  resolvedTheme.primary,
-
-                border:
-                  `1px solid ${resolvedTheme.border}`,
-
-                borderRadius: '10px',
+                width: '100%',
+                maxWidth: '480px',
+                margin: '0 auto 18px',
               }}
             >
-              <LockRounded
+              <Typography
                 sx={{
-                  fontSize: '21px',
+                  color: resolvedTheme.dark,
+                  fontSize: '14px',
+                  fontWeight: 800,
                 }}
-              />
+              >
+                ตั้งรหัสผ่านใหม่
+              </Typography>
+
             </Box>
 
-            <Typography
+            <Box
               sx={{
-                color: '#111827',
-                fontSize: '18px',
-                fontWeight: 800,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '18px',
+                width: '100%',
+                maxWidth: '480px',
+                margin: '0 auto',
               }}
             >
-              ตั้งรหัสผ่านใหม่
-            </Typography>
-          </Box>
+              <PasswordField
+                id="current-password"
+                label="รหัสผ่านปัจจุบัน"
+                value={
+                  formData.currentPassword
+                }
+                onChange={(event) =>
+                  handleInputChange(
+                    'currentPassword',
+                    event.target.value,
+                  )
+                }
+                visible={
+                  showCurrentPassword
+                }
+                onToggleVisibility={() =>
+                  setShowCurrentPassword(
+                    (previous) =>
+                      !previous,
+                  )
+                }
+                disabled={
+                  isSubmitting
+                }
+                autoComplete="current-password"
+                theme={
+                  resolvedTheme
+                }
+              />
 
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '19px',
-            }}
-          >
-            <PasswordField
-              id="current-password"
-              label="รหัสผ่านปัจจุบัน"
-              value={
-                formData
-                  .currentPassword
-              }
-              onChange={(
-                event,
-              ) =>
-                handleInputChange(
-                  'currentPassword',
-                  event.target
-                    .value,
-                )
-              }
-              visible={
-                showCurrentPassword
-              }
-              onToggleVisibility={() =>
-                setShowCurrentPassword(
-                  (
-                    previous,
-                  ) =>
-                    !previous,
-                )
-              }
-              disabled={
-                isSubmitting
-              }
-              autoComplete="current-password"
-              theme={
-                resolvedTheme
-              }
-            />
-
-            <PasswordField
-              id="new-password"
-              label="รหัสผ่านใหม่"
-              value={
-                formData
-                  .newPassword
-              }
-              onChange={(
-                event,
-              ) =>
-                handleInputChange(
-                  'newPassword',
-                  event.target
-                    .value,
-                )
-              }
-              visible={
-                showNewPassword
-              }
-              onToggleVisibility={() =>
-                setShowNewPassword(
-                  (
-                    previous,
-                  ) =>
-                    !previous,
-                )
-              }
-              disabled={
-                isSubmitting
-              }
-              autoComplete="new-password"
-              theme={
-                resolvedTheme
-              }
-            />
-
-            <PasswordField
-              id="confirm-password"
-              label="ยืนยันรหัสผ่านใหม่"
-              value={
-                formData
-                  .confirmPassword
-              }
-              onChange={(
-                event,
-              ) =>
-                handleInputChange(
-                  'confirmPassword',
-                  event.target
-                    .value,
-                )
-              }
-              visible={
-                showConfirmPassword
-              }
-              onToggleVisibility={() =>
-                setShowConfirmPassword(
-                  (
-                    previous,
-                  ) =>
-                    !previous,
-                )
-              }
-              disabled={
-                isSubmitting
-              }
-              autoComplete="new-password"
-              theme={
-                resolvedTheme
-              }
-            />
-          </Box>
-
-          {formData
-            .confirmPassword &&
-            formData
-              .newPassword && (
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems:
-                    'center',
-                  gap: '7px',
-                  marginTop: '12px',
-                }}
-              >
-                <Box
-                  sx={{
-                    width: '8px',
-                    height: '8px',
-                    flexShrink: 0,
-
-                    backgroundColor:
-                      passwordsMatch
-                        ? '#22C55E'
-                        : '#EF4444',
-
-                    borderRadius:
-                      '50%',
-                  }}
+              <Box>
+                <PasswordField
+                  id="new-password"
+                  label="รหัสผ่านใหม่"
+                  value={
+                    formData.newPassword
+                  }
+                  onChange={(event) =>
+                    handleInputChange(
+                      'newPassword',
+                      event.target.value,
+                    )
+                  }
+                  visible={
+                    showNewPassword
+                  }
+                  onToggleVisibility={() =>
+                    setShowNewPassword(
+                      (previous) =>
+                        !previous,
+                    )
+                  }
+                  disabled={
+                    isSubmitting
+                  }
+                  autoComplete="new-password"
+                  theme={
+                    resolvedTheme
+                  }
                 />
 
-                <Typography
+                <Box
                   sx={{
-                    color:
-                      passwordsMatch
-                        ? '#15803D'
-                        : '#DC2626',
-
-                    fontSize: '11px',
-                    fontWeight: 600,
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '7px',
+                    marginTop: '10px',
                   }}
                 >
-                  {passwordsMatch
-                    ? 'รหัสผ่านใหม่ตรงกัน'
-                    : 'ยืนยันรหัสผ่านใหม่ไม่ตรงกัน'}
-                </Typography>
+                  {passwordChecks.map(
+                    (requirement) => (
+                      <Box
+                        key={
+                          requirement.label
+                        }
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          minHeight: '26px',
+                          padding: '4px 8px',
+                          backgroundColor:
+                            requirement.passed
+                              ? '#F0FDF4'
+                              : 'rgba(255,255,255,0.78)',
+                          border: 'none',
+                          borderRadius: '8px',
+                        }}
+                      >
+                        <CheckRounded
+                          sx={{
+                            fontSize: '12px',
+                            color:
+                              requirement.passed
+                                ? '#16A34A'
+                                : '#CBD5E1',
+                          }}
+                        />
+
+                        <Typography
+                          sx={{
+                            color:
+                              requirement.passed
+                                ? '#166534'
+                                : '#64748B',
+                            fontSize: '9.5px',
+                            fontWeight: 600,
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {
+                            requirement.label
+                          }
+                        </Typography>
+                      </Box>
+                    ),
+                  )}
+                </Box>
               </Box>
-            )}
 
-          <Button
-            fullWidth
-            type="submit"
-            variant="contained"
-            disabled={
-              isSubmitting
-            }
-            sx={{
-              height: '46px',
-              marginTop: '26px',
-
-              backgroundColor:
-                resolvedTheme.primary,
-
-              color: '#FFFFFF',
-              borderRadius: '9px',
-              fontSize: '13px',
-              fontWeight: 700,
-              textTransform: 'none',
-              boxShadow: 'none',
-
-              '&:hover': {
-                backgroundColor:
-                  resolvedTheme.dark,
-
-                boxShadow: 'none',
-              },
-
-              '&.Mui-disabled':
-                {
-                  backgroundColor:
-                    '#CBD5E1',
-
-                  color:
-                    '#FFFFFF',
-                },
-            }}
-          >
-            {isSubmitting ? (
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'center',
-
-                  gap: '9px',
-                }}
-              >
-                <CircularProgress
-                  size={18}
-                  thickness={5}
-                  sx={{
-                    color:
-                      '#FFFFFF',
-                  }}
+              <Box>
+                <PasswordField
+                  id="confirm-password"
+                  label="ยืนยันรหัสผ่านใหม่"
+                  value={
+                    formData.confirmPassword
+                  }
+                  onChange={(event) =>
+                    handleInputChange(
+                      'confirmPassword',
+                      event.target.value,
+                    )
+                  }
+                  visible={
+                    showConfirmPassword
+                  }
+                  onToggleVisibility={() =>
+                    setShowConfirmPassword(
+                      (previous) =>
+                        !previous,
+                    )
+                  }
+                  disabled={
+                    isSubmitting
+                  }
+                  autoComplete="new-password"
+                  theme={
+                    resolvedTheme
+                  }
                 />
 
-                กำลังเปลี่ยนรหัสผ่าน...
+                {formData.confirmPassword &&
+                  formData.newPassword && (
+                    <Typography
+                      sx={{
+                        marginTop: '7px',
+                        color:
+                          passwordsMatch
+                            ? '#15803D'
+                            : '#DC2626',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {passwordsMatch
+                        ? 'รหัสผ่านใหม่ตรงกัน'
+                        : 'ยืนยันรหัสผ่านใหม่ไม่ตรงกัน'}
+                    </Typography>
+                  )}
               </Box>
-            ) : (
-              'เปลี่ยนรหัสผ่าน'
-            )}
-          </Button>
-        </Box>
-
-        {/* Right Requirement Panel */}
-        <Box
-          sx={{
-            padding: {
-              xs: '22px',
-              sm: '26px',
-              md: '30px',
-            },
-
-            display: 'flex',
-            flexDirection:
-              'column',
-
-            justifyContent:
-              'center',
-
-            backgroundColor:
-              '#F8FAFC',
-
-            borderTop: {
-              xs:
-                '1px solid #E5E7EB',
-
-              md: 'none',
-            },
-
-            borderLeft: {
-              xs: 'none',
-
-              md:
-                '1px solid #E5E7EB',
-            },
-          }}
-        >
-          <Typography
-            sx={{
-              color: '#111827',
-              fontSize: '16px',
-              fontWeight: 800,
-            }}
-          >
-            รหัสผ่านใหม่ต้องประกอบด้วย
-          </Typography>
+            </Box>
+          </Box>
 
           <Box
             sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '13px',
-              marginTop: '20px',
+              padding: {
+                xs: '0 18px 20px',
+                sm: '0 22px 22px',
+              },
             }}
           >
-            {passwordChecks.map(
-              (
-                requirement,
-              ) => (
+            <Box
+              sx={{
+                width: '100%',
+                maxWidth: '480px',
+                margin: '0 auto',
+                display: 'flex',
+                justifyContent:
+                  'flex-end',
+              }}
+            >
+              <Button
+              type="submit"
+              variant="contained"
+              disabled={
+                isSubmitting
+              }
+              sx={{
+                minWidth: '142px',
+                height: '40px',
+                padding: '0 18px',
+                backgroundColor:
+                  resolvedTheme.primary,
+                color: '#FFFFFF',
+                borderRadius: '9px',
+                fontSize: '12px',
+                fontWeight: 700,
+                textTransform: 'none',
+                boxShadow:
+                  `0 5px 12px ${resolvedTheme.primary}28`,
+
+                '&:hover': {
+                  backgroundColor:
+                    resolvedTheme.dark,
+                  boxShadow:
+                    `0 6px 14px ${resolvedTheme.primary}36`,
+                },
+
+                '&.Mui-disabled': {
+                  backgroundColor:
+                    '#CBD5E1',
+                  color: '#FFFFFF',
+                },
+              }}
+            >
+              {isSubmitting ? (
                 <Box
-                  key={
-                    requirement.label
-                  }
                   sx={{
                     display: 'flex',
                     alignItems:
                       'center',
-
-                    gap: '10px',
+                    justifyContent:
+                      'center',
+                    gap: '8px',
                   }}
                 >
-                  <Box
-                    sx={{
-                      width: '24px',
-                      height: '24px',
-                      flexShrink: 0,
-
-                      display: 'flex',
-                      alignItems:
-                        'center',
-
-                      justifyContent:
-                        'center',
-
-                      backgroundColor:
-                        requirement.passed
-                          ? '#DCFCE7'
-                          : '#FFFFFF',
-
-                      color:
-                        requirement.passed
-                          ? '#15803D'
-                          : '#94A3B8',
-
-                      border:
-                        requirement.passed
-                          ? '1px solid #BBF7D0'
-                          : '1px solid #E2E8F0',
-
-                      borderRadius:
-                        '50%',
-                    }}
-                  >
-                    <CheckRounded
-                      sx={{
-                        fontSize:
-                          '15px',
-                      }}
-                    />
-                  </Box>
-
-                  <Typography
+                  <CircularProgress
+                    size={16}
+                    thickness={5}
                     sx={{
                       color:
-                        requirement.passed
-                          ? '#166534'
-                          : '#64748B',
-
-                      fontSize: '12px',
-
-                      fontWeight:
-                        requirement.passed
-                          ? 600
-                          : 500,
+                        '#FFFFFF',
                     }}
-                  >
-                    {
-                      requirement.label
-                    }
-                  </Typography>
+                  />
+                  กำลังเปลี่ยน...
                 </Box>
-              ),
-            )}
-          </Box>
-
-          <Box
-            sx={{
-              marginTop: '24px',
-              paddingTop: '20px',
-              borderTop:
-                '1px solid #E2E8F0',
-            }}
-          >
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-              }}
-            >
-              <Box
-                sx={{
-                  width: '24px',
-                  height: '24px',
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'center',
-
-                  backgroundColor:
-                    passwordsMatch
-                      ? '#DCFCE7'
-                      : '#FFFFFF',
-
-                  color:
-                    passwordsMatch
-                      ? '#15803D'
-                      : '#94A3B8',
-
-                  border:
-                    passwordsMatch
-                      ? '1px solid #BBF7D0'
-                      : '1px solid #E2E8F0',
-
-                  borderRadius:
-                    '50%',
-                }}
-              >
-                <CheckRounded
-                  sx={{
-                    fontSize: '15px',
-                  }}
-                />
-              </Box>
-
-              <Typography
-                sx={{
-                  color:
-                    passwordsMatch
-                      ? '#166534'
-                      : '#64748B',
-
-                  fontSize: '12px',
-
-                  fontWeight:
-                    passwordsMatch
-                      ? 600
-                      : 500,
-                }}
-              >
-                ยืนยันรหัสผ่านใหม่ให้ตรงกัน
-              </Typography>
+              ) : (
+                'เปลี่ยนรหัสผ่าน'
+              )}
+              </Button>
             </Box>
           </Box>
-        </Box>
-      </Paper>
+        </Paper>
+      </Box>
+      </Box>
     </LayoutComponent>
+
   );
 }
 

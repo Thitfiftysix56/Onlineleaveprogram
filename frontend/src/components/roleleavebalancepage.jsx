@@ -10,7 +10,6 @@ import {
   Chip,
   FormControl,
   InputLabel,
-  LinearProgress,
   MenuItem,
   Paper,
   Select,
@@ -378,7 +377,7 @@ const getBalanceStatus = (
 function RoleLeaveBalancePage({
   LayoutComponent,
   theme,
-  visualCalibration = true,
+  visualCalibration = false,
 }) {
   void legacyLeaveBalanceSamples;
   const currentYear = new Date().getFullYear();
@@ -650,7 +649,7 @@ function RoleLeaveBalancePage({
             '16px',
 
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
         <Typography
@@ -762,7 +761,7 @@ function RoleLeaveBalancePage({
       <Box
         sx={{
           display:
-            'grid',
+            'none',
 
           gridTemplateColumns: {
             xs:
@@ -1057,6 +1056,9 @@ function RoleLeaveBalancePage({
 
                       borderRadius:
                         '14px',
+                      minHeight: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
                       ...(visualCalibration && {
                         padding: '18px 20px',
                         display: 'grid',
@@ -1297,7 +1299,7 @@ function RoleLeaveBalancePage({
                           'grid',
 
                         gridTemplateColumns:
-                          'repeat(3, minmax(0, 1fr))',
+                          'repeat(2, minmax(0, 1fr))',
 
                         gap:
                           '8px',
@@ -1333,16 +1335,6 @@ function RoleLeaveBalancePage({
                             '#DC2626',
                         },
 
-                        {
-                          label:
-                            'รออนุมัติ',
-
-                          value:
-                            balance.pendingDays,
-
-                          color:
-                            '#B45309',
-                        },
                       ].map(
                         (
                           item,
@@ -1421,6 +1413,7 @@ function RoleLeaveBalancePage({
 
                     <Box
                       sx={{
+                        display: 'none',
                         marginTop:
                           '18px',
                       }}
@@ -1476,32 +1469,6 @@ function RoleLeaveBalancePage({
                           %
                         </Typography>
                       </Box>
-
-                      <LinearProgress
-                        variant="determinate"
-                        value={
-                          committedPercentage
-                        }
-                        sx={{
-                          height:
-                            '8px',
-
-                          backgroundColor:
-                            '#E5E7EB',
-
-                          borderRadius:
-                            '999px',
-
-                          '& .MuiLinearProgress-bar':
-                            {
-                              backgroundColor:
-                                leaveTypeStyle.color,
-
-                              borderRadius:
-                                '999px',
-                            },
-                        }}
-                      />
 
                       <Box
                         sx={{

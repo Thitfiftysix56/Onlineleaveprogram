@@ -22,8 +22,12 @@ import {
 import {
   useNavigate,
 } from 'react-router-dom';
+import AddRounded from '@mui/icons-material/AddRounded';
 
 import HRLayout from '../../layouts/hrlayout.jsx';
+import { DashboardTablePagination } from '../../components/shareduiprimitives.jsx';
+import DashboardLeaveBalance from '../../components/dashboardleavebalance.jsx';
+import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -229,6 +233,8 @@ function HRDashboardPage() {
     setError,
   ] = useState('');
 
+  const [employeePage, setEmployeePage] = useState(0);
+
   /* =========================
      Load Data
   ========================= */
@@ -348,7 +354,7 @@ function HRDashboardPage() {
       ],
     );
 
-  const recentEmployees =
+  const sortedEmployees =
     useMemo(() => {
       return [...employees]
         .sort(
@@ -375,65 +381,50 @@ function HRDashboardPage() {
               firstDate
             );
           },
-        )
-        .slice(0, 5);
+        );
     }, [employees]);
+
+  const recentEmployees = useMemo(
+    () => sortedEmployees.slice(employeePage * 5, employeePage * 5 + 5),
+    [employeePage, sortedEmployees],
+  );
 
   const summaryCards = [
     {
-      title:
-        'พนักงานทั้งหมด',
-
-      value:
-        employees.length,
-
-      backgroundColor:
-        theme.soft,
-
-      color:
-        '#2563EB',
+      title: 'พนักงานทั้งหมด',
+      value: employees.length,
+      unit: 'คน',
+      description: 'พนักงานทั้งหมดในระบบ',
+      background: 'linear-gradient(135deg, #EAF3FF 0%, #FFFFFF 78%)',
+      borderColor: '#C9DDFB',
+      glowColor: 'rgba(59, 130, 246, 0.10)',
     },
-
     {
-      title:
-        'พนักงานที่ใช้งานอยู่',
-
-      value:
-        activeEmployees.length,
-
-      backgroundColor:
-        '#DCFCE7',
-
-      color:
-        '#15803D',
+      title: 'พนักงานที่ใช้งานอยู่',
+      value: activeEmployees.length,
+      unit: 'คน',
+      description: 'พนักงานที่มีสถานะใช้งาน',
+      background: 'linear-gradient(135deg, #E5F9EE 0%, #FFFFFF 78%)',
+      borderColor: '#A7E8C3',
+      glowColor: 'rgba(34, 197, 94, 0.10)',
     },
-
     {
-      title:
-        'ประเภทการลาที่ใช้งาน',
-
-      value:
-        activeLeaveTypes.length,
-
-      backgroundColor:
-        '#DBEAFE',
-
-      color:
-        '#7C3AED',
+      title: 'ประเภทการลาที่ใช้งาน',
+      value: activeLeaveTypes.length,
+      unit: 'ประเภท',
+      description: 'ประเภทลาที่เปิดใช้งาน',
+      background: 'linear-gradient(135deg, #F3E8FF 0%, #FFFFFF 78%)',
+      borderColor: '#DDD6FE',
+      glowColor: 'rgba(124, 58, 237, 0.10)',
     },
-
     {
-      title:
-        'วันหยุดปีนี้',
-
-      value:
-        currentYearHolidays.length,
-
-      backgroundColor:
-        '#FEF3C7',
-
-      color:
-        '#B45309',
+      title: 'วันหยุดปีนี้',
+      value: currentYearHolidays.length,
+      unit: 'วัน',
+      description: `วันหยุดองค์กรปี ${currentYear}`,
+      background: 'linear-gradient(135deg, #FFF6D8 0%, #FFFFFF 78%)',
+      borderColor: '#F6D66B',
+      glowColor: 'rgba(245, 158, 11, 0.11)',
     },
   ];
 
@@ -443,10 +434,39 @@ function HRDashboardPage() {
 
   return (
     <HRLayout activeMenu="Dashboard">
+      <PageHeader
+        title="Dashboard"
+        actions={
+          <Button
+            type="button"
+            variant="contained"
+            startIcon={<AddRounded />}
+            onClick={() => navigate('/hr/leave-request')}
+            sx={{
+              height: '40px',
+              padding: '0 16px',
+              borderRadius: '9px',
+              backgroundColor: '#2563EB',
+              boxShadow: 'none',
+              fontSize: '13px',
+              fontWeight: 800,
+              textTransform: 'none',
+              '&:hover': {
+                backgroundColor: '#1D4ED8',
+                boxShadow: 'none',
+              },
+            }}
+          >
+            สร้างคำขอลา
+          </Button>
+        }
+        sx={{ marginBottom: '24px' }}
+      />
       {/* Header */}
       <Typography
         component="h1"
         sx={{
+          display: 'none',
           color: '#111827',
 
           fontSize: {
@@ -461,6 +481,8 @@ function HRDashboardPage() {
       >
         Dashboard
       </Typography>
+
+      <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/hr/leave-request')} sx={{ display: 'none' }}>สร้างคำขอลา</Button>
 
       {error && (
         <Alert
@@ -504,110 +526,64 @@ function HRDashboardPage() {
           <Box
             sx={{
               display: 'grid',
-
               gridTemplateColumns: {
-                xs: '1fr',
-
-                sm:
-                  'repeat(2, 1fr)',
-
-                xl:
-                  'repeat(4, 1fr)',
+                xs: 'repeat(2, minmax(0, 1fr))',
+                md: 'repeat(4, minmax(0, 1fr))',
               },
-
-              gap: '18px',
-
-              marginBottom:
-                '24px',
+              gap: { xs: '12px', sm: '16px' },
+              marginBottom: '22px',
             }}
           >
-            {summaryCards.map(
-              (card) => (
-                <Paper
-                  key={
-                    card.title
-                  }
-                  elevation={0}
-                  sx={{
-                    minHeight:
-                      '116px',
-
-                    padding:
-                      '20px',
-
-                    backgroundColor:
-                      `${card.color}18`,
-
-                    border:
-                      `1px solid ${card.color}45`,
-
-                    borderRadius:
-                      '9px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width:
-                        'auto',
-
-                      height:
-                        'auto',
-
-                      display:
-                        'flex',
-
-                      alignItems:
-                        'center',
-
-                      justifyContent:
-                        'flex-start',
-                      textAlign: 'left',
-
-                      backgroundColor:
-                        'transparent',
-
-                      color:
-                        '#172033',
-
-                      borderRadius:
-                        0,
-
-                      fontSize:
-                        '26px',
-
-                      fontWeight:
-                        700,
-                      order: 2,
-                      marginTop: '7px',
-                    }}
-                  >
+            {summaryCards.map((card) => (
+              <Paper
+                key={card.title}
+                elevation={0}
+                sx={{
+                  position: 'relative',
+                  overflow: 'hidden',
+                  minHeight: { xs: '132px', sm: '148px' },
+                  padding: { xs: '18px', sm: '22px 24px' },
+                  background: card.background,
+                  border: `1px solid ${card.borderColor}`,
+                  borderRadius: '18px',
+                  boxShadow: '0 8px 24px rgba(15, 23, 42, 0.06)',
+                  transition: 'transform 160ms ease, box-shadow 160ms ease',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    width: '108px',
+                    height: '108px',
+                    top: '-44px',
+                    right: '-26px',
+                    borderRadius: '50%',
+                    backgroundColor: card.glowColor,
+                    pointerEvents: 'none',
+                  },
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 12px 28px rgba(15, 23, 42, 0.09)',
+                  },
+                }}
+              >
+                <Typography sx={{ position: 'relative', zIndex: 1, color: '#334155', fontSize: '14px', fontWeight: 700 }}>
+                  {card.title}
+                </Typography>
+                <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'baseline', gap: '7px', marginTop: '12px' }}>
+                  <Typography sx={{ color: '#0F172A', fontSize: { xs: '28px', sm: '32px' }, fontWeight: 900, lineHeight: 1.15 }}>
                     {card.value}
-                  </Box>
-
-                  <Typography
-                    sx={{
-                      color:
-                        '#64748B',
-
-                      fontSize:
-                        '12px',
-
-                      fontWeight:
-                        800,
-
-                      marginTop:
-                        0,
-                      order: 1,
-                    }}
-                  >
-                    {card.title}
                   </Typography>
-                </Paper>
-              ),
-            )}
+                  <Typography sx={{ color: '#64748B', fontSize: '12px', fontWeight: 700 }}>
+                    {card.unit}
+                  </Typography>
+                </Box>
+                <Typography sx={{ position: 'relative', zIndex: 1, color: '#64748B', fontSize: '12px', fontWeight: 500, marginTop: '8px' }}>
+                  {card.description}
+                </Typography>
+              </Paper>
+            ))}
           </Box>
+
+          <DashboardLeaveBalance />
 
           {/* =====================
               Recent Employees
@@ -634,10 +610,12 @@ function HRDashboardPage() {
             <Box
               sx={{
                 minHeight:
-                  '76px',
+                  '72px',
 
-                padding:
-                  '18px 24px',
+                padding: {
+                  xs: '18px',
+                  sm: '20px 22px',
+                },
 
                 display:
                   'flex',
@@ -708,6 +686,8 @@ function HRDashboardPage() {
                   )
                 }
                 sx={{
+                  display:
+                    'none',
                   height:
                     '38px',
 
@@ -748,6 +728,7 @@ function HRDashboardPage() {
 
             {recentEmployees.length >
             0 ? (
+              <>
               <Box
                 sx={{
                   overflowX:
@@ -782,11 +763,14 @@ function HRDashboardPage() {
                               heading
                             }
                             sx={{
+                              padding:
+                                '13px 18px',
+
                               color:
                                 '#64748B',
 
                               fontSize:
-                                '11px',
+                                '12px',
 
                               fontWeight:
                                 700,
@@ -832,14 +816,28 @@ function HRDashboardPage() {
                               index
                             }
                             hover
+                            sx={{
+                              '&:hover': {
+                                backgroundColor: '#FAFBFD',
+                              },
+                              '&:last-child td': {
+                                borderBottom: 'none',
+                              },
+                            }}
                           >
                             <TableCell
                               sx={{
+                                padding:
+                                  '16px 18px',
+
                                 color:
-                                  theme.primary,
+                                  '#111827',
 
                                 fontSize:
-                                  '12px',
+                                  '13px',
+
+                                borderBottom:
+                                  '1px solid #EEF0F3',
 
                                 fontWeight:
                                   800,
@@ -853,14 +851,19 @@ function HRDashboardPage() {
                               )}
                             </TableCell>
 
-                            <TableCell>
+                            <TableCell
+                              sx={{
+                                padding: '16px 18px',
+                                borderBottom: '1px solid #EEF0F3',
+                              }}
+                            >
                               <Typography
                                 sx={{
                                   color:
                                     '#111827',
 
                                   fontSize:
-                                    '12px',
+                                    '13px',
 
                                   fontWeight:
                                     700,
@@ -877,14 +880,12 @@ function HRDashboardPage() {
 
                             <TableCell
                               sx={{
-                                color:
-                                  '#475569',
-
-                                fontSize:
-                                  '12px',
-
-                                whiteSpace:
-                                  'nowrap',
+                                padding: '16px 18px',
+                                color: '#475569',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                whiteSpace: 'nowrap',
+                                borderBottom: '1px solid #EEF0F3',
                               }}
                             >
                               {getDepartment(
@@ -894,14 +895,12 @@ function HRDashboardPage() {
 
                             <TableCell
                               sx={{
-                                color:
-                                  '#475569',
-
-                                fontSize:
-                                  '12px',
-
-                                whiteSpace:
-                                  'nowrap',
+                                padding: '16px 18px',
+                                color: '#475569',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                whiteSpace: 'nowrap',
+                                borderBottom: '1px solid #EEF0F3',
                               }}
                             >
                               {getPosition(
@@ -909,7 +908,12 @@ function HRDashboardPage() {
                               )}
                             </TableCell>
 
-                            <TableCell>
+                            <TableCell
+                              sx={{
+                                padding: '16px 18px',
+                                borderBottom: '1px solid #EEF0F3',
+                              }}
+                            >
                               <Chip
                                 label={translateEmployeeStatus(
                                   status,
@@ -925,11 +929,13 @@ function HRDashboardPage() {
                                   borderRadius:
                                     '999px',
 
-                                  fontSize:
-                                    '10px',
-
-                                  fontWeight:
-                                    700,
+                                  minWidth: '86px',
+                                  height: '28px',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  '& .MuiChip-label': {
+                                    padding: '0 12px',
+                                  },
                                 }}
                               />
                             </TableCell>
@@ -940,6 +946,12 @@ function HRDashboardPage() {
                   </TableBody>
                 </Table>
               </Box>
+              <DashboardTablePagination
+                count={sortedEmployees.length}
+                page={employeePage}
+                onPageChange={(_, nextPage) => setEmployeePage(nextPage)}
+              />
+              </>
             ) : (
               <Box
                 sx={{

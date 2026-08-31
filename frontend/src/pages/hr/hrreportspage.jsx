@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
@@ -21,6 +22,7 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
@@ -270,11 +272,30 @@ function ThaiDateField({
   value,
   onChange,
 }) {
+  const nativeInputRef = useRef(null);
+  const openPicker = () => {
+    const input = nativeInputRef.current;
+    if (!input) return;
+    input.focus({ preventScroll: true });
+    if (typeof input.showPicker === 'function') input.showPicker();
+    else input.click();
+  };
+
   return (
     <Box
+      role="button"
+      tabIndex={0}
+      onClick={openPicker}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openPicker();
+        }
+      }}
       sx={{
         position:
           'relative',
+        cursor: 'pointer',
       }}
     >
       <TextField
@@ -344,6 +365,7 @@ function ThaiDateField({
       />
 
       <input
+        ref={nativeInputRef}
         type="date"
         value={value}
         onChange={(
@@ -368,8 +390,7 @@ function ThaiDateField({
 
           opacity: 0,
 
-          cursor:
-            'pointer',
+          pointerEvents: 'none',
         }}
       />
     </Box>
@@ -622,6 +643,9 @@ function HRReportsPage() {
     setEndDate,
   ] = useState('');
 
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 5;
+
   /* =========================
      Load Report
   ========================= */
@@ -870,6 +894,15 @@ function HRReportsPage() {
       startDate,
       endDate,
     ]);
+
+  const paginatedRequests = useMemo(
+    () => filteredRequests.slice(page * rowsPerPage, (page + 1) * rowsPerPage),
+    [filteredRequests, page],
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [searchText, departmentFilter, leaveTypeFilter, statusFilter, startDate, endDate]);
 
   /* =========================
      Summary
@@ -1231,7 +1264,7 @@ function HRReportsPage() {
             '16px',
 
           marginBottom:
-            '22px',
+            '16px',
         }}
       >
         <Typography
@@ -1276,7 +1309,7 @@ function HRReportsPage() {
               '0 18px',
 
             backgroundColor:
-              theme.primary,
+              '#2563EB',
 
             color:
               '#FFFFFF',
@@ -1298,7 +1331,7 @@ function HRReportsPage() {
 
             '&:hover': {
               backgroundColor:
-                theme.dark,
+                '#1D4ED8',
 
               boxShadow:
                 'none',
@@ -1556,9 +1589,7 @@ function HRReportsPage() {
               </InputLabel>
 
               <Select
-                value={
-                  departmentFilter
-                }
+                value={departmentFilter === 'all' ? '' : departmentFilter}
                 label="แผนก"
                 onChange={(
                   event,
@@ -1576,9 +1607,6 @@ function HRReportsPage() {
                     '9px',
                 }}
               >
-                <MenuItem value="all">
-                  ทุกแผนก
-                </MenuItem>
 
                 {departments.map(
                   (
@@ -1611,9 +1639,7 @@ function HRReportsPage() {
               </InputLabel>
 
               <Select
-                value={
-                  leaveTypeFilter
-                }
+                value={leaveTypeFilter === 'all' ? '' : leaveTypeFilter}
                 label="ประเภทการลา"
                 onChange={(
                   event,
@@ -1631,9 +1657,6 @@ function HRReportsPage() {
                     '9px',
                 }}
               >
-                <MenuItem value="all">
-                  ทุกประเภท
-                </MenuItem>
 
                 {leaveTypes.map(
                   (
@@ -1666,9 +1689,7 @@ function HRReportsPage() {
               </InputLabel>
 
               <Select
-                value={
-                  statusFilter
-                }
+                value={statusFilter === 'all' ? '' : statusFilter}
                 label="สถานะ"
                 onChange={(
                   event,
@@ -1686,9 +1707,6 @@ function HRReportsPage() {
                     '9px',
                 }}
               >
-                <MenuItem value="all">
-                  ทุกสถานะ
-                </MenuItem>
 
                 <MenuItem value="draft">
                   ฉบับร่าง
@@ -1989,7 +2007,7 @@ function HRReportsPage() {
               </TableHead>
 
               <TableBody>
-                {filteredRequests.map(
+                {paginatedRequests.map(
                   (
                     request,
                     index,
@@ -2327,6 +2345,18 @@ function HRReportsPage() {
                 )}
               </TableBody>
             </Table>
+            {filteredRequests.length > rowsPerPage ? (
+              <TablePagination
+                component="div"
+                count={filteredRequests.length}
+                page={page}
+                onPageChange={(_, nextPage) => setPage(nextPage)}
+                rowsPerPage={rowsPerPage}
+                rowsPerPageOptions={[rowsPerPage]}
+                labelRowsPerPage=""
+                labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`}
+              />
+            ) : null}
           </Box>
         ) : (
           /* Empty */

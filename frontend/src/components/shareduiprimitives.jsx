@@ -8,17 +8,23 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  InputAdornment,
   IconButton,
   Menu,
   MenuItem,
   Stack,
   TableContainer,
   TableHead,
+  TablePagination,
   Typography,
+  TextField,
+  Button,
 } from '@mui/material';
 import ErrorOutlineRoundedIcon from '@mui/icons-material/ErrorOutlineRounded';
 import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 
 import {
   colorTokens,
@@ -35,6 +41,11 @@ const semanticAccents = {
     border: colorTokens.borderStrong,
   },
   info: colorTokens.status.info,
+  cyan: {
+    main: '#0E7490',
+    soft: '#CFFAFE',
+    border: '#67E8F9',
+  },
   success: colorTokens.status.success,
   warning: colorTokens.status.warning,
   error: colorTokens.status.error,
@@ -49,6 +60,8 @@ export function StatCard({
   supportingText,
   icon,
   accent = 'neutral',
+  compactInline = false,
+  unit,
   onClick,
   sx,
   ...props
@@ -62,19 +75,30 @@ export function StatCard({
     <Surface
       {...props}
       {...interactiveProps}
-      padding={spacingTokens.xl}
+      padding={compactInline ? 18 : spacingTokens.xl}
       sx={{
         position: 'relative',
         width: '100%',
-        minHeight: 116,
+        minHeight: compactInline ? 72 : 116,
         overflow: 'hidden',
         textAlign: 'left',
         font: 'inherit',
         color: 'inherit',
         borderColor: accentStyle.border,
-        backgroundColor: accentStyle.soft,
-        borderRadius: `${radiusTokens.control}px`,
-        transition: 'background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease',
+        backgroundColor: accent === 'neutral'
+          ? '#FFFFFF'
+          : `color-mix(in srgb, ${accentStyle.soft} 54%, #FFFFFF)`,
+        borderRadius: `${radiusTokens.surface}px`,
+        boxShadow: shadowTokens.none,
+        transition: 'background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          insetBlockStart: 0,
+          insetInline: 0,
+          height: 3,
+          backgroundColor: accentStyle.main,
+        },
         ...(onClick && {
           cursor: 'pointer',
           '&:hover': {
@@ -94,17 +118,20 @@ export function StatCard({
         aria-hidden="true"
         sx={{
           position: 'absolute',
-          insetBlock: `${spacingTokens.lg}px`,
-          insetInlineStart: 0,
-          width: 3,
-          borderRadius: '0 999px 999px 0',
-          backgroundColor: accentStyle.main,
+          width: 112,
+          height: 112,
+          insetBlockStart: -58,
+          insetInlineEnd: -42,
+          borderRadius: '50%',
+          backgroundColor: accentStyle.soft,
+          opacity: 0.52,
         }}
       />
-      <Stack direction="row" justifyContent="space-between" gap={2}>
-        <Box sx={{ minWidth: 0 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+        <Box sx={{ minWidth: 0, width: compactInline ? '100%' : 'auto', display: compactInline ? 'flex' : 'block', alignItems: 'baseline', justifyContent: compactInline ? 'space-between' : 'initial', gap: compactInline ? '16px' : 0 }}>
           <Typography
             variant="body2"
+            noWrap={compactInline}
             sx={{ color: colorTokens.text.secondary, fontWeight: 600 }}
           >
             {title}
@@ -112,16 +139,17 @@ export function StatCard({
           <Typography
             component="p"
             sx={{
-              color: colorTokens.text.primary,
-              fontSize: '1.75rem',
+              color: accent === 'neutral' ? colorTokens.text.primary : accentStyle.main,
+              fontSize: compactInline ? '1.125rem' : '1.75rem',
               fontWeight: 700,
               lineHeight: 1.25,
-              marginTop: `${spacingTokens.sm}px`,
+              marginTop: compactInline ? 0 : `${spacingTokens.sm}px`,
+              whiteSpace: compactInline ? 'nowrap' : 'normal',
             }}
           >
-            {value}
+            {value}{unit ? ` ${unit}` : ''}
           </Typography>
-          {supportingText ? (
+          {supportingText && !compactInline ? (
             <Typography
               variant="body2"
               sx={{
@@ -142,9 +170,11 @@ export function StatCard({
               width: 40,
               height: 40,
               flexShrink: 0,
-              borderRadius: `${radiusTokens.control}px`,
+              borderRadius: '13px',
               color: accentStyle.main,
               backgroundColor: accentStyle.soft,
+              border: `1px solid ${accentStyle.border}`,
+              boxShadow: 'none',
             }}
           >
             {icon}
@@ -155,7 +185,167 @@ export function StatCard({
   );
 }
 
+export function DashboardTablePagination({ count, page, onPageChange }) {
+  return (
+    <TablePagination
+      component="div"
+      count={count}
+      page={page}
+      onPageChange={onPageChange}
+      rowsPerPage={5}
+      onRowsPerPageChange={() => {}}
+      rowsPerPageOptions={[5]}
+      labelRowsPerPage=""
+      labelDisplayedRows={() =>
+        `หน้า ${page + 1} จาก ${Math.max(1, Math.ceil(count / 5))}`
+      }
+      sx={{
+        borderTop: '1px solid #E5E7EB',
+        color: '#4B5563',
+        '& .MuiTablePagination-selectLabel, & .MuiTablePagination-input': { display: 'none' },
+        '& .MuiTablePagination-displayedRows': { fontSize: '12px' },
+        '& .MuiTablePagination-toolbar': { minHeight: '50px', paddingInline: { xs: '10px', sm: '16px' } },
+        '& .MuiTablePagination-actions .MuiIconButton-root': { width: '32px', height: '32px', border: 'none' },
+      }}
+    />
+  );
+}
+
 export const SummaryCard = StatCard;
+
+export function ConfirmationDialog({ open, title, description, confirmLabel = 'ยืนยัน', loading = false, tone = 'error', onCancel, onConfirm }) {
+  return (
+    <Dialog open={open} onClose={() => !loading && onCancel?.()} fullWidth maxWidth="sm">
+      <DialogTitle>{title}</DialogTitle>
+      <DialogContent dividers>
+        <DialogContentText>{description}</DialogContentText>
+      </DialogContent>
+      <DialogActions sx={{ padding: '14px 20px' }}>
+        <Button type="button" variant="outlined" disabled={loading} onClick={onCancel}>ยกเลิก</Button>
+        <Button type="button" variant="contained" color={tone} disabled={loading} onClick={onConfirm}>
+          {loading ? 'กำลังบันทึก...' : confirmLabel}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+export function DataListToolbar({
+  searchValue = '',
+  onSearchChange,
+  searchPlaceholder = 'ค้นหา',
+  filters,
+  activeFilters = [],
+  onClearFilters,
+  resultLabel,
+  sx,
+}) {
+  const hasActiveFilters = activeFilters.length > 0;
+
+  return (
+    <Box sx={{ width: '100%', ...sx }}>
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+        gap="16px"
+        sx={{ columnGap: '16px', rowGap: '12px' }}
+      >
+        <TextField
+          size="small"
+          value={searchValue}
+          onChange={(event) => onSearchChange?.(event.target.value)}
+          placeholder={searchPlaceholder}
+          aria-label={searchPlaceholder}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon sx={{ color: colorTokens.text.muted, fontSize: 20 }} />
+                </InputAdornment>
+              ),
+              endAdornment: searchValue ? (
+                <InputAdornment position="end">
+                  <IconButton
+                    type="button"
+                    size="small"
+                    aria-label="ล้างคำค้นหา"
+                    onClick={() => onSearchChange?.('')}
+                    sx={{ width: 30, height: 30 }}
+                  >
+                    <CloseRoundedIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+            },
+          }}
+          sx={{
+            width: { xs: '100%', md: 360 },
+            flexShrink: 0,
+            '& .MuiOutlinedInput-root': { height: 42, backgroundColor: '#FFFFFF' },
+          }}
+        />
+        {filters ? (
+          <Stack
+            direction="row"
+            gap="16px"
+            useFlexGap
+            flexWrap="wrap"
+            sx={{
+              flex: 1,
+              width: { xs: '100%', md: 'auto' },
+              columnGap: '16px',
+              rowGap: '12px',
+              '& .MuiFormControl-root': {
+                minWidth: { xs: 0, sm: 148 },
+                flex: { xs: '1 1 calc(50% - 8px)', sm: '0 0 148px' },
+              },
+              '& .MuiOutlinedInput-root': { height: 42, backgroundColor: '#FFFFFF' },
+              '& .MuiSelect-select': {
+                display: 'flex',
+                alignItems: 'center',
+                minWidth: 0,
+                paddingRight: '36px !important',
+                lineHeight: 1.4,
+              },
+            }}
+          >
+            {filters}
+          </Stack>
+        ) : null}
+      </Stack>
+
+      {resultLabel || hasActiveFilters ? <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        justifyContent="space-between"
+        gap={`${spacingTokens.sm}px`}
+        sx={{ marginTop: `${spacingTokens.md}px`, minHeight: 28 }}
+      >
+        <Typography variant="body2" sx={{ color: colorTokens.text.secondary, fontWeight: 600 }}>
+          {resultLabel}
+        </Typography>
+        {hasActiveFilters ? (
+          <Stack direction="row" alignItems="center" gap={`${spacingTokens.xs}px`} useFlexGap flexWrap="wrap">
+            {activeFilters.map((filter) => (
+              <Chip
+                key={filter.key || filter.label}
+                size="small"
+                label={filter.label}
+                onDelete={filter.onDelete}
+                sx={{ backgroundColor: 'var(--role-hover, #F1F5F9)', color: colorTokens.text.secondary }}
+              />
+            ))}
+            {onClearFilters ? (
+              <Button type="button" size="small" variant="text" onClick={onClearFilters}>
+                ล้างตัวกรอง
+              </Button>
+            ) : null}
+          </Stack>
+        ) : null}
+      </Stack> : null}
+    </Box>
+  );
+}
 
 export function RowActionMenu({ actions, label = 'การดำเนินการ' }) {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -220,7 +410,16 @@ export function RowActionMenu({ actions, label = 'การดำเนินก
 
 export function TableShell({ children, sx, ...props }) {
   return (
-    <Surface padding={0} sx={{ width: '100%', overflow: 'hidden', ...sx }}>
+    <Surface
+      padding={0}
+      sx={{
+        width: '100%',
+        overflow: 'hidden',
+        borderColor: colorTokens.border,
+        boxShadow: shadowTokens.subtle,
+        ...sx,
+      }}
+    >
       <TableContainer {...props} sx={{ width: '100%', overflowX: 'auto' }}>
         {children}
       </TableContainer>
@@ -236,7 +435,7 @@ export function TableHeader({ children, sx, ...props }) {
         '& .MuiTableCell-head': {
           height: 48,
           whiteSpace: 'nowrap',
-          backgroundColor: colorTokens.surfaceSubtle,
+          backgroundColor: '#EEF3F8',
           color: colorTokens.text.primary,
           fontWeight: 700,
         },

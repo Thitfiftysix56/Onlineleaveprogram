@@ -14,9 +14,7 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
-  IconButton,
   InputLabel,
-  Menu,
   MenuItem,
   Paper,
   Select,
@@ -29,8 +27,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import RequestNumberText from './requestnumbertext.jsx';
+import { DataListToolbar } from './shareduiprimitives.jsx';
+import { PageHeader } from './sharedvisualfoundation.jsx';
 
 import {
   useLocation,
@@ -189,6 +188,7 @@ function RoleMyRequestsPage({
   visualCalibration = true,
 }) {
   void legacyRequestSamples;
+  void visualCalibration;
   const navigate =
     useNavigate();
 
@@ -256,9 +256,6 @@ function RoleMyRequestsPage({
     message,
     setMessage,
   ] = useState(null);
-
-  const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
-  const [actionMenuRequest, setActionMenuRequest] = useState(null);
 
   const [
     selectedRequest,
@@ -492,9 +489,9 @@ function RoleMyRequestsPage({
 
       cancelled: {
         backgroundColor:
-          '#E5E7EB',
+          '#FEE2E2',
         color:
-          '#6B7280',
+          '#B91C1C',
       },
     };
 
@@ -545,17 +542,6 @@ function RoleMyRequestsPage({
     navigate(
       `/${currentRole}/my-requests/${request.id}`,
     );
-  };
-
-  const openActionMenu = (event, request) => {
-    event.stopPropagation();
-    setActionMenuAnchor(event.currentTarget);
-    setActionMenuRequest(request);
-  };
-
-  const closeActionMenu = () => {
-    setActionMenuAnchor(null);
-    setActionMenuRequest(null);
   };
 
   const handleEditDraft = (
@@ -703,59 +689,44 @@ function RoleMyRequestsPage({
 
   const summaryCards = [
     {
-      title:
-        'คำขอทั้งหมด',
-
-      value:
-        summary.total,
-
-      backgroundColor:
-        theme.soft,
-
-      color:
-        theme.primary,
+      title: 'คำขอทั้งหมด',
+      value: summary.total,
+      description: 'รวมทุกสถานะ',
+      background:
+        'linear-gradient(135deg, #EAF3FF 0%, #FFFFFF 78%)',
+      borderColor: '#C9DDFB',
+      glowColor: 'rgba(59, 130, 246, 0.10)',
+      valueColor: '#2563EB',
     },
-
     {
-      title:
-        'แบบร่าง',
-
-      value:
-        summary.draft,
-
-      backgroundColor:
-        '#F3F4F6',
-
-      color:
-        '#4B5563',
+      title: 'แบบร่าง',
+      value: summary.draft,
+      description: 'คำขอที่ยังไม่ได้ส่ง',
+      background:
+        'linear-gradient(135deg, #F1F5F9 0%, #FFFFFF 78%)',
+      borderColor: '#DCE3EA',
+      glowColor: 'rgba(100, 116, 139, 0.10)',
+      valueColor: '#64748B',
     },
-
     {
-      title:
-        'รออนุมัติ',
-
-      value:
-        summary.pending,
-
-      backgroundColor:
-        '#FEF3C7',
-
-      color:
-        '#B45309',
+      title: 'รออนุมัติ',
+      value: summary.pending,
+      description: 'กำลังรอการพิจารณา',
+      background:
+        'linear-gradient(135deg, #FFF6D8 0%, #FFFFFF 78%)',
+      borderColor: '#F6D66B',
+      glowColor: 'rgba(245, 158, 11, 0.11)',
+      valueColor: '#B45309',
     },
-
     {
-      title:
-        'อนุมัติแล้ว',
-
-      value:
-        summary.approved,
-
-      backgroundColor:
-        '#DCFCE7',
-
-      color:
-        '#15803D',
+      title: 'อนุมัติแล้ว',
+      value: summary.approved,
+      description: 'คำขอที่ได้รับอนุมัติ',
+      background:
+        'linear-gradient(135deg, #E5F9EE 0%, #FFFFFF 78%)',
+      borderColor: '#A7E8C3',
+      glowColor: 'rgba(34, 197, 94, 0.10)',
+      valueColor: '#15803D',
     },
   ];
 
@@ -781,223 +752,108 @@ function RoleMyRequestsPage({
     <LayoutComponent
       activeMenu="My Requests"
     >
+      <PageHeader title="คำขอลาของฉัน" sx={{ marginBottom: '10px' }} />
       <Box
         sx={{
-          display: 'flex',
-          alignItems: { xs: 'stretch', sm: 'center' },
-          justifyContent: 'space-between',
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: '16px',
-          marginBottom:
-            '24px',
-        }}
-      >
-        <Typography
-          component="h1"
-          sx={{
-            color:
-              '#111827',
-
-            fontSize: {
-              xs:
-                '26px',
-
-              sm:
-                '30px',
-            },
-
-            fontWeight:
-              800,
-          }}
-        >
-          คำขอลาของฉัน
-        </Typography>
-      </Box>
-
-      {message && (
-        <Alert
-          severity={
-            message.severity
-          }
-          onClose={() =>
-            setMessage(null)
-          }
-          sx={{
-            marginBottom:
-              '20px',
-
-            borderRadius:
-              '10px',
-          }}
-        >
-          {message.text}
-        </Alert>
-      )}
-
-      <Box
-        sx={{
-          display:
-            'grid',
-
+          display: 'grid',
           gridTemplateColumns: {
-            xs:
-              'repeat(2, minmax(0, 1fr))',
-
-            md:
-              'repeat(4, minmax(0, 1fr))',
+            xs: '1fr',
+            sm: 'repeat(2, minmax(0, 1fr))',
+            md: 'repeat(4, minmax(0, 1fr))',
           },
-
           gap: {
-            xs:
-              '12px',
-
-            sm:
-              '16px',
+            xs: '12px',
+            sm: '16px',
           },
-
-          marginBottom:
-            '22px',
-          ...(visualCalibration && {
-            gap: 0,
-            overflow: 'hidden',
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E6EAF0',
-            borderRadius: '12px',
-          }),
+          marginBottom: '16px',
         }}
       >
-        {summaryCards.map(
-          (card) => (
-            <Paper
-              key={
-                card.title
-              }
-              elevation={0}
+        {summaryCards.map((card) => (
+          <Paper
+            key={card.title}
+            elevation={0}
+            sx={{
+              position: 'relative',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+              gap: '8px',
+              minHeight: '72px',
+              padding: '18px',
+              background: card.background,
+              border: '1px solid #E6EAF0',
+              borderRadius: '20px',
+              boxShadow:
+                '0 8px 24px rgba(15, 23, 42, 0.06)',
+              transition:
+                'transform 160ms ease, box-shadow 160ms ease',
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                width: '118px',
+                height: '118px',
+                top: '-47px',
+                right: '-38px',
+                borderRadius: '50%',
+                backgroundColor: card.glowColor,
+                filter: 'blur(3px)',
+                pointerEvents: 'none',
+              },
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow:
+                  '0 12px 28px rgba(15, 23, 42, 0.09)',
+              },
+            }}
+          >
+            <Typography
+              noWrap
               sx={{
-                minHeight:
-                  '112px',
-
-                padding:
-                  '16px 18px',
-
-                backgroundColor:
-                  '#FFFFFF',
-
-                border:
-                  '1px solid #E5E7EB',
-
-                borderRadius:
-                  '12px',
-
-                display:
-                  'flex',
-
-                alignItems:
-                  'center',
-
-                gap:
-                  '14px',
-                ...(visualCalibration && {
-                  minHeight: '80px',
-                  padding: '13px 16px',
-                  border: 'none',
-                  borderRight: '1px solid #EBEEF2',
-                  borderRadius: 0,
-                  boxShadow: 'none',
-                }),
+                position: 'relative',
+                zIndex: 1,
+                color: '#374151',
+                fontSize: '15px',
+                fontWeight: 700,
+                lineHeight: 1.4,
+                minWidth: 0,
               }}
             >
-              <Box
-                sx={{
-                  width:
-                    '48px',
+              {card.title}
+            </Typography>
 
-                  height:
-                    '48px',
+            <Typography
+              sx={{
+                position: 'relative',
+                zIndex: 1,
+                color: card.valueColor,
+                fontSize: '18px',
+                fontWeight: 800,
+                lineHeight: 1,
+                letterSpacing: '-0.02em',
+                marginTop: 0,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {card.value}
+            </Typography>
 
-                  flexShrink:
-                    0,
-
-                  display:
-                    'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'center',
-
-                  backgroundColor:
-                    card.backgroundColor,
-
-                  color:
-                    card.color,
-
-                  borderRadius:
-                    '12px',
-
-                  fontSize:
-                    '20px',
-                  ...(visualCalibration && {
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '8px',
-                    fontSize: '16px',
-                  }),
-
-                  fontWeight:
-                    800,
-                }}
-              >
-                {
-                  card.value
-                }
-              </Box>
-
-              <Box
-                sx={{
-                  minWidth:
-                    0,
-                }}
-              >
-                <Typography
-                  sx={{
-                    color:
-                      '#6B7280',
-
-                    fontSize:
-                      '12px',
-
-                    fontWeight:
-                      600,
-                  }}
-                >
-                  สถานะคำขอ
-                </Typography>
-
-                <Typography
-                  sx={{
-                    color:
-                      '#111827',
-
-                    fontSize:
-                      '15px',
-
-                    fontWeight:
-                      800,
-
-                    marginTop:
-                      '2px',
-                  }}
-                >
-                  {
-                    card.title
-                  }
-                </Typography>
-              </Box>
-            </Paper>
-          ),
-        )}
+            <Typography
+              sx={{
+                display: 'none',
+                position: 'relative',
+                zIndex: 1,
+                color: '#64748B',
+                fontSize: '12px',
+                fontWeight: 500,
+                marginTop: 0,
+                gridColumn: '1 / -1',
+              }}
+            >
+              {card.description}
+            </Typography>
+          </Paper>
+        ))}
       </Box>
 
       <Paper
@@ -1010,20 +866,23 @@ function RoleMyRequestsPage({
             '1px solid #E5E7EB',
 
           borderRadius:
-            '14px',
+            '20px',
 
           overflow:
             'hidden',
+
+          boxShadow:
+            '0 4px 16px rgba(15, 23, 42, 0.04)',
         }}
       >
         <Box
           sx={{
             padding: {
               xs:
-                '18px',
+                '16px 16px 10px',
 
               sm:
-                '20px 22px',
+                '18px 22px 12px',
             },
 
             borderBottom:
@@ -1073,34 +932,55 @@ function RoleMyRequestsPage({
               รายการคำขอลา
             </Typography>
 
-            <Typography
-              sx={{
-                color:
-                  '#6B7280',
-
-                fontSize:
-                  '13px',
-
-                fontWeight:
-                  500,
-              }}
-            >
-              แสดง{' '}
-              {
-                filteredRequests.length
-              }{' '}
-              จาก{' '}
-              {
-                requests.length
-              }{' '}
-              รายการ
-            </Typography>
           </Box>
+
+          <DataListToolbar
+            searchValue={searchText}
+            onSearchChange={handleSearchChange}
+            searchPlaceholder="ค้นหาประเภทลา หรือเลขคำขอ"
+            resultLabel=""
+            activeFilters={[
+              ...(statusFilter !== 'all' ? [{ key: 'status', label: `สถานะ: ${statusLabels[statusFilter] || statusFilter}`, onDelete: () => handleStatusFilterChange('all') }] : []),
+              ...(yearFilter !== 'all' ? [{ key: 'year', label: `ปี: ${yearFilter}`, onDelete: () => handleYearFilterChange('all') }] : []),
+            ]}
+            onClearFilters={handleClearFilters}
+            filters={(
+              <>
+                <FormControl size="small">
+                  <Select
+                    value={statusFilter === 'all' ? '' : statusFilter}
+                    displayEmpty
+                    renderValue={(value) => value ? (statusLabels[value] || value) : 'สถานะ'}
+                    onChange={(event) => handleStatusFilterChange(event.target.value || 'all')}
+                    inputProps={{ 'aria-label': 'สถานะ' }}
+                  >
+                    <MenuItem value="draft">แบบร่าง</MenuItem>
+                    <MenuItem value="pending">รออนุมัติ</MenuItem>
+                    <MenuItem value="approved">อนุมัติแล้ว</MenuItem>
+                    <MenuItem value="rejected">ปฏิเสธแล้ว</MenuItem>
+                    <MenuItem value="cancelled">ยกเลิกแล้ว</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl size="small">
+                  <Select
+                    value={yearFilter === 'all' ? '' : yearFilter}
+                    displayEmpty
+                    renderValue={(value) => value || 'ปี'}
+                    onChange={(event) => handleYearFilterChange(event.target.value || 'all')}
+                    inputProps={{ 'aria-label': 'ปี' }}
+                  >
+                    {availableYears.map((year) => <MenuItem key={year} value={year}>{year}</MenuItem>)}
+                  </Select>
+                </FormControl>
+              </>
+            )}
+            sx={{ marginTop: '14px' }}
+          />
 
           <Box
             sx={{
               display:
-                'grid',
+                'none',
 
               gridTemplateColumns: {
                 xs:
@@ -1293,8 +1173,53 @@ function RoleMyRequestsPage({
         {filteredRequests.length >
         0 ? (
           <>
+            <Box sx={{ display: { xs: 'grid', md: 'none' }, gap: '10px', padding: '14px' }}>
+              {paginatedRequests.map((request) => {
+                const statusStyle = getStatusStyle(request.status);
+                const statusLabel = statusLabels[request.status] || request.status || '-';
+                return (
+                  <Paper
+                    key={request.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleViewRequest(request)}
+                    onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleViewRequest(request); } }}
+                    sx={{
+                      width: '100%', padding: '15px', textAlign: 'left', font: 'inherit', color: 'inherit',
+                      backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px',
+                      cursor: 'pointer', '&:hover': { borderColor: theme.border, backgroundColor: '#FAFCFF' },
+                      '&:focus-visible': { outline: `3px solid ${theme.soft}`, outlineOffset: 2 },
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography sx={{ color: '#0F172A', fontSize: '15px', fontWeight: 800 }}>{request.leaveType || '-'}</Typography>
+                        <Typography sx={{ color: '#475569', fontSize: '13px', fontWeight: 600, marginTop: '4px' }}>{formatDateRange(request.startDate, request.endDate)}</Typography>
+                      </Box>
+                      <Chip size="small" label={statusLabel} sx={{ backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, flexShrink: 0 }} />
+                    </Box>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #F1F5F9' }}>
+                      <Box><Typography sx={{ color: '#94A3B8', fontSize: '10px' }}>จำนวนวัน</Typography><Typography sx={{ color: '#334155', fontSize: '12px', fontWeight: 700 }}>{formatDays(request.leaveDays)} วัน</Typography></Box>
+                      <Box><Typography sx={{ color: '#94A3B8', fontSize: '10px' }}>เลขที่คำขอ</Typography><Typography sx={{ color: '#334155', fontSize: '12px', fontWeight: 700 }}><RequestNumberText>{request.requestNo || `แบบร่าง #${request.id}`}</RequestNumberText></Typography></Box>
+                    </Box>
+                    {request.status === 'draft' ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
+                        <Button type="button" size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); handleEditDraft(request); }} sx={{ color: '#2563EB', borderColor: '#BFDBFE' }}>แก้ไข</Button>
+                        <Button type="button" size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); openConfirmation('delete', request); }} sx={{ color: '#DC2626', borderColor: '#FECACA' }}>ลบ</Button>
+                      </Box>
+                    ) : null}
+                    {request.status === 'pending' ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+                        <Button type="button" size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); openConfirmation('cancel', request); }} sx={{ color: '#DC2626', borderColor: '#FECACA' }}>ยกเลิก</Button>
+                      </Box>
+                    ) : null}
+                  </Paper>
+                );
+              })}
+            </Box>
             <Box
               sx={{
+                display: { xs: 'none', md: 'block' },
                 width:
                   '100%',
 
@@ -1648,23 +1573,14 @@ function RoleMyRequestsPage({
                                 },
                               }}
                             >
-                              {['draft', 'pending'].includes(request.status) ? (
-                                <IconButton
-                                  type="button"
-                                  size="small"
-                                  aria-label="การดำเนินการ"
-                                  aria-haspopup="menu"
-                                  onClick={(event) => openActionMenu(event, request)}
-                                  sx={{
-                                    width: 36,
-                                    height: 36,
-                                    color: '#64748B',
-                                    borderRadius: '8px',
-                                    '&:hover': { backgroundColor: theme.soft, color: theme.dark },
-                                  }}
-                                >
-                                  <MoreVertRounded sx={{ fontSize: '20px' }} />
-                                </IconButton>
+                              {request.status === 'draft' ? (
+                                <>
+                                  <Button type="button" size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); handleEditDraft(request); }} sx={{ color: '#2563EB', borderColor: '#BFDBFE', '&:hover': { borderColor: '#2563EB', backgroundColor: '#EFF6FF' } }}>แก้ไข</Button>
+                                  <Button type="button" size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); openConfirmation('delete', request); }} sx={{ color: '#DC2626', borderColor: '#FECACA', '&:hover': { borderColor: '#DC2626', backgroundColor: '#FEF2F2' } }}>ลบ</Button>
+                                </>
+                              ) : null}
+                              {request.status === 'pending' ? (
+                                <Button type="button" size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); openConfirmation('cancel', request); }} sx={{ color: '#DC2626', borderColor: '#FECACA', '&:hover': { borderColor: '#DC2626', backgroundColor: '#FEF2F2' } }}>ยกเลิก</Button>
                               ) : null}
                             </Box>
                           </TableCell>
@@ -1675,49 +1591,6 @@ function RoleMyRequestsPage({
                 </TableBody>
               </Table>
             </Box>
-
-            <Menu
-              anchorEl={actionMenuAnchor}
-              open={Boolean(actionMenuAnchor && actionMenuRequest)}
-              onClose={closeActionMenu}
-              slotProps={{ paper: { sx: { minWidth: 140, borderRadius: '10px' } } }}
-            >
-              {actionMenuRequest?.status === 'draft' ? (
-                <MenuItem
-                  onClick={() => {
-                    const request = actionMenuRequest;
-                    closeActionMenu();
-                    handleEditDraft(request);
-                  }}
-                >
-                  แก้ไข
-                </MenuItem>
-              ) : null}
-              {actionMenuRequest?.status === 'draft' ? (
-                <MenuItem
-                  onClick={() => {
-                    const request = actionMenuRequest;
-                    closeActionMenu();
-                    openConfirmation('delete', request);
-                  }}
-                  sx={{ color: '#B42318' }}
-                >
-                  ลบ
-                </MenuItem>
-              ) : null}
-              {actionMenuRequest?.status === 'pending' ? (
-                <MenuItem
-                  onClick={() => {
-                    const request = actionMenuRequest;
-                    closeActionMenu();
-                    openConfirmation('cancel', request);
-                  }}
-                  sx={{ color: '#A16207' }}
-                >
-                  ยกเลิก
-                </MenuItem>
-              ) : null}
-            </Menu>
 
             <TablePagination
               component="div"
@@ -1738,15 +1611,16 @@ function RoleMyRequestsPage({
               }
               rowsPerPageOptions={[
                 5,
-                10,
               ]}
               labelRowsPerPage="จำนวนรายการต่อหน้า:"
-              labelDisplayedRows={({
-                from,
-                to,
-                count,
-              }) =>
-                `${from}–${to} จาก ${count}`
+              labelDisplayedRows={() =>
+                `หน้า ${page + 1} จาก ${Math.max(
+                  1,
+                  Math.ceil(
+                    filteredRequests.length /
+                      rowsPerPage,
+                  ),
+                )}`
               }
               sx={{
                 borderTop:

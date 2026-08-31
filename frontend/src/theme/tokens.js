@@ -7,13 +7,13 @@ export const colorTokens = {
     inverse: '#FFFFFF',
   },
 
-  background: '#EEF2F7',
+  background: '#F2F5F9',
 
   surface: '#FFFFFF',
 
   surfaceSubtle: '#F1F5F9',
 
-  border: '#CBD5E1',
+  border: '#D8E0EA',
 
   borderStrong: '#94A3B8',
 
@@ -56,6 +56,8 @@ export const roleAccentTokens = {
 
     dark: '#1D4ED8',
 
+    secondary: '#4F46E5',
+
     soft: '#DBEAFE',
 
     border: '#93C5FD',
@@ -67,7 +69,7 @@ export const roleAccentTokens = {
      * อ่อนลงจากเวอร์ชันก่อน
      */
     pageBackground:
-      'linear-gradient(135deg, #E7EFFA 0%, #F2F6FB 50%, #E2ECF8 100%)',
+      'radial-gradient(circle at 86% 6%, rgba(79, 70, 229, 0.09), transparent 28%), radial-gradient(circle at 12% 88%, rgba(6, 182, 212, 0.08), transparent 30%), linear-gradient(145deg, #F7FAFF 0%, #F3F7FC 55%, #F7F9FD 100%)',
 
     /*
      * Sidebar
@@ -105,6 +107,8 @@ export const roleAccentTokens = {
 
     dark: '#6D28D9',
 
+    secondary: '#4F46E5',
+
     soft: '#EDE9FE',
 
     border: '#C4B5FD',
@@ -115,7 +119,7 @@ export const roleAccentTokens = {
      * พื้นหลัง Main Content
      */
     pageBackground:
-      'linear-gradient(135deg, #F0EBF9 0%, #F7F5FB 50%, #EBE4F7 100%)',
+      'radial-gradient(circle at 86% 6%, rgba(124, 58, 237, 0.10), transparent 28%), radial-gradient(circle at 12% 88%, rgba(79, 70, 229, 0.07), transparent 30%), linear-gradient(145deg, #FBF9FF 0%, #F6F5FC 55%, #FAF9FD 100%)',
 
     /*
      * Sidebar
@@ -153,6 +157,8 @@ export const roleAccentTokens = {
 
     dark: '#047857',
 
+    secondary: '#0F766E',
+
     soft: '#D1FAE5',
 
     border: '#6EE7B7',
@@ -163,7 +169,7 @@ export const roleAccentTokens = {
      * พื้นหลัง Main Content
      */
     pageBackground:
-      'linear-gradient(135deg, #E7F3ED 0%, #F2F7F4 50%, #E1F0E8 100%)',
+      'radial-gradient(circle at 86% 6%, rgba(5, 150, 105, 0.09), transparent 28%), radial-gradient(circle at 12% 88%, rgba(13, 148, 136, 0.07), transparent 30%), linear-gradient(145deg, #F7FCFA 0%, #F3F9F6 55%, #F8FBFA 100%)',
 
     /*
      * Sidebar
@@ -201,6 +207,8 @@ export const roleAccentTokens = {
 
     dark: '#C2410C',
 
+    secondary: '#D97706',
+
     soft: '#FFEDD5',
 
     border: '#FDBA74',
@@ -211,7 +219,7 @@ export const roleAccentTokens = {
      * พื้นหลัง Main Content
      */
     pageBackground:
-      'linear-gradient(135deg, #F8EEE6 0%, #FBF7F3 50%, #F5E9DF 100%)',
+      'radial-gradient(circle at 86% 6%, rgba(234, 88, 12, 0.09), transparent 28%), radial-gradient(circle at 12% 88%, rgba(217, 119, 6, 0.07), transparent 30%), linear-gradient(145deg, #FFFBF7 0%, #FAF7F3 55%, #FCFAF8 100%)',
 
     /*
      * Sidebar
@@ -260,11 +268,11 @@ export const spacingTokens = Object.freeze({
 
 
 export const radiusTokens = Object.freeze({
-  control: 8,
+  control: 11,
 
-  surface: 10,
+  surface: 16,
 
-  dialog: 12,
+  dialog: 18,
 
   pill: 999,
 });
@@ -275,8 +283,8 @@ export const shadowTokens = Object.freeze({
     'none',
 
   subtle:
-    '0 1px 3px rgba(15, 23, 42, 0.08)',
+    '0 1px 2px rgba(15, 23, 42, 0.035), 0 8px 24px rgba(15, 23, 42, 0.045)',
 
   floating:
-    '0 10px 28px rgba(15, 23, 42, 0.14)',
+    '0 18px 44px rgba(15, 23, 42, 0.10)',
 });

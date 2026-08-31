@@ -1,7 +1,4 @@
-import {
-  useState,
-} from 'react';
-
+import { useState } from 'react'
 import {
   Alert,
   Box,
@@ -10,129 +7,89 @@ import {
   InputAdornment,
   TextField,
   Typography,
-} from '@mui/material';
-
-import {
-  PersonSearchRounded,
-  SendRounded,
-} from '@mui/icons-material';
-
-import {
-  useLocation,
-  useNavigate,
-} from 'react-router-dom';
-
-import api from '../api/axios.js';
-import PasswordRecoveryLayout from '../components/passwordrecoverylayout.jsx';
-
-import {
-  normalizePasswordResetIdentifier,
-} from '../auth/passwordresetcontext.js';
-
-import usePasswordResetFlow from '../auth/usepasswordresetflow.js';
+} from '@mui/material'
+import MailOutlineRounded from '@mui/icons-material/MailOutlineRounded'
+import SendRounded from '@mui/icons-material/SendRounded'
+import { useNavigate } from 'react-router-dom'
+import api from '../api/axios.js'
+import PasswordRecoveryLayout from '../components/passwordrecoverylayout.jsx'
+import { normalizePasswordResetIdentifier } from '../auth/passwordresetcontext.js'
+import usePasswordResetFlow from '../auth/usepasswordresetflow.js'
 
 function ForgotPasswordPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const flow = usePasswordResetFlow();
+  const navigate = useNavigate()
+  const flow = usePasswordResetFlow()
 
-  const [
-    identifier,
-    setIdentifier,
-  ] = useState('');
+  const [email, setEmail] = useState('')
+  const [message, setMessage] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const [
-    message,
-    setMessage,
-  ] = useState(() => (
-    location.state?.passwordResetMessage
-      ? {
-          severity: 'error',
-          text: location.state.passwordResetMessage,
-        }
-      : null
-  ));
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-  const [
-    isSubmitting,
-    setIsSubmitting,
-  ] = useState(false);
+  const handleSubmit = async (event) => {
+    event.preventDefault()
 
-  const handleSubmit = async (
-    event,
-  ) => {
-    event.preventDefault();
+    const normalizedEmail = normalizePasswordResetIdentifier(email)
 
-    const formData =
-      new FormData(event.currentTarget);
-
-    const normalizedIdentifier =
-      normalizePasswordResetIdentifier(
-        formData.get('identifier'),
-      );
-
-    if (!normalizedIdentifier) {
+    if (!normalizedEmail) {
       setMessage({
         severity: 'error',
-        text: 'กรุณากรอก Username หรือ Email',
-      });
-
-      return;
+        text: 'กรุณากรอก Email',
+      })
+      return
     }
 
-    setIsSubmitting(true);
-    setMessage(null);
+    if (!emailPattern.test(normalizedEmail)) {
+      setMessage({
+        severity: 'error',
+        text: 'รูปแบบ Email ไม่ถูกต้อง',
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+    setMessage(null)
 
     try {
       const response = await api.post(
         '/auth/forgot-password/request-otp',
         {
-          identifier:
-            normalizedIdentifier,
+          identifier: normalizedEmail,
         },
-      );
+      )
+
+      const retryAfterSeconds = Number(
+        response.data?.retryAfterSeconds || 60,
+      )
 
       flow.begin(
-        normalizedIdentifier,
-        Number(
-          response.data
-            ?.retryAfterSeconds || 60,
-        ),
-      );
+        normalizedEmail,
+        retryAfterSeconds,
+      )
 
-      setMessage({
-        severity: 'success',
-        text: response.data?.message,
-      });
-
-      navigate(
-        '/forgot-password/verify',
-      );
+      navigate('/forgot-password/verify')
     } catch (error) {
+      const responseMessage =
+        error.response?.data?.message
+
       setMessage({
         severity: 'error',
         text:
-          error.response?.data?.message ||
-          'ไม่สามารถขอรหัสยืนยันได้',
-      });
+          responseMessage ||
+          'ไม่สามารถส่งรหัสยืนยันได้ กรุณาลองใหม่อีกครั้ง',
+      })
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  };
+  }
 
   return (
-    <PasswordRecoveryLayout
-      title="Forgot Password"
-      description="กรอก Username หรือ Email ที่ลงทะเบียนไว้เพื่อรับรหัสยืนยัน"
-    >
+    <PasswordRecoveryLayout title="Forgot Password">
       {message && (
         <Alert
           severity={message.severity}
-          onClose={() =>
-            setMessage(null)
-          }
           sx={{
-            marginBottom: '20px',
+            marginBottom: '18px',
             borderRadius: '10px',
             fontSize: '13px',
           }}
@@ -143,79 +100,62 @@ function ForgotPasswordPage() {
 
       <Box
         component="form"
+        autoComplete="off"
         onSubmit={handleSubmit}
       >
-        <Typography
-          component="label"
-          htmlFor="identifier"
-          sx={{
-            display: 'block',
-            color: '#374151',
-            fontSize: '13px',
-            fontWeight: 800,
-            marginBottom: '8px',
-          }}
-        >
-          Username or Email
-        </Typography>
-
         <TextField
-          id="identifier"
           fullWidth
           required
-          name="identifier"
-          placeholder="กรอก Username หรือ Email"
-          value={identifier}
-          disabled={isSubmitting}
           autoFocus
-          autoComplete="username"
+          id="recovery-contact"
+          name="recoveryContact"
+          type="text"
+          inputMode="email"
+          autoComplete="new-password"
+          label="Email"
+          placeholder="กรอก Email"
+          value={email}
+          disabled={isSubmitting}
+          helperText="ระบบจะส่ง OTP เฉพาะ Email ที่ลงทะเบียนไว้กับบัญชีเท่านั้น"
           onChange={(event) => {
-            setIdentifier(
-              event.target.value,
-            );
+            setEmail(event.target.value)
 
-            setMessage(null);
+            if (message) {
+              setMessage(null)
+            }
           }}
           slotProps={{
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <PersonSearchRounded
+                  <MailOutlineRounded
                     sx={{
-                      color: '#94A3B8',
-                      fontSize: '21px',
+                      color: '#64748B',
+                      fontSize: '20px',
                     }}
                   />
                 </InputAdornment>
               ),
             },
-
             htmlInput: {
               maxLength: 120,
+              autoComplete: 'new-password',
+            },
+            formHelperText: {
+              sx: {
+                marginTop: '7px',
+                marginLeft: '2px',
+                color: '#64748B',
+                fontSize: '12px',
+                lineHeight: 1.6,
+              },
             },
           }}
           sx={{
             '& .MuiOutlinedInput-root': {
-              height: '50px',
+              minHeight: '50px',
               borderRadius: '10px',
-              backgroundColor: '#FAFCFF',
-
-              '& fieldset': {
-                borderColor: '#DCE3ED',
-              },
-
-              '&:hover fieldset': {
-                borderColor: '#93B4E8',
-              },
-
-              '&.Mui-focused fieldset': {
-                borderColor: '#2563EB',
-                borderWidth: '1.5px',
-              },
-            },
-
-            '& input': {
-              fontSize: '14px',
+              backgroundColor: '#FFFFFF',
             },
           }}
         />
@@ -226,82 +166,79 @@ function ForgotPasswordPage() {
           variant="contained"
           disabled={isSubmitting}
           startIcon={
-            isSubmitting
-              ? null
-              : <SendRounded />
+            isSubmitting ? null : (
+              <SendRounded
+                sx={{
+                  fontSize: '19px',
+                }}
+              />
+            )
           }
           sx={{
             height: '50px',
-            marginTop: '26px',
-            borderRadius: '11px',
-            background:
-              'linear-gradient(90deg, #2563EB 0%, #3B82F6 100%)',
-            color: '#FFFFFF',
-            fontSize: '14px',
-            fontWeight: 900,
+            marginTop: '24px',
+            borderRadius: '10px',
             textTransform: 'none',
+            fontSize: '14px',
+            fontWeight: 800,
+            background:
+              'linear-gradient(90deg, #3B82F6 0%, #6366F1 52%, #8B5CF6 100%)',
             boxShadow:
-              '0 12px 22px rgba(37, 99, 235, 0.22)',
-
+              '0 12px 24px rgba(79, 70, 229, 0.20)',
             '&:hover': {
               background:
-                'linear-gradient(90deg, #1D4ED8 0%, #2563EB 100%)',
+                'linear-gradient(90deg, #2563EB 0%, #4F46E5 52%, #7C3AED 100%)',
               boxShadow:
-                '0 14px 26px rgba(37, 99, 235, 0.28)',
+                '0 14px 28px rgba(79, 70, 229, 0.26)',
             },
-
             '&.Mui-disabled': {
               color: '#FFFFFF',
-              backgroundColor: '#AFCBF5',
+              background: '#A5B4FC',
             },
           }}
         >
           {isSubmitting ? (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-              }}
-            >
+            <>
               <CircularProgress
-                size={19}
-                thickness={5}
+                size={18}
                 sx={{
+                  marginRight: '9px',
                   color: '#FFFFFF',
                 }}
               />
-
-              กำลังส่ง...
-            </Box>
+              กำลังส่งรหัส...
+            </>
           ) : (
             'ส่งรหัสยืนยัน'
           )}
         </Button>
 
-        <Box
+        <Typography
+          component="button"
+          type="button"
+          onClick={() => navigate('/login')}
           sx={{
-            marginTop: '20px',
-            padding: '14px 16px',
-            borderRadius: '10px',
-            border: '1px solid #E1EAF6',
-            backgroundColor: '#F7FAFE',
+            width: '100%',
+            marginTop: '18px',
+            padding: 0,
+            border: 0,
+            background: 'transparent',
+            color: '#6366F1',
+            fontFamily: 'inherit',
+            fontSize: '13px',
+            fontWeight: 700,
+            textAlign: 'center',
+            cursor: 'pointer',
+            '&:hover': {
+              textDecoration: 'underline',
+            },
           }}
         >
-          <Typography
-            sx={{
-              color: '#64748B',
-              fontSize: '11.5px',
-              lineHeight: 1.7,
-              textAlign: 'center',
-            }}
-          >
-            ระบบจะส่งรหัสยืนยันไปยัง Email ที่ลงทะเบียนไว้กับบัญชีเท่านั้น
-          </Typography>
-        </Box>
+          กลับไป Login
+        </Typography>
       </Box>
     </PasswordRecoveryLayout>
-  );
+  )
 }
 
-export default ForgotPasswordPage;
+export default ForgotPasswordPage

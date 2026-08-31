@@ -70,20 +70,44 @@ test.beforeEach(() => {
   resetPasswordRequestRateLimitsForTests()
 })
 
-test('forgot password returns the same generic response for an unknown account', async () => {
-  pool.execute = async () => [[]]
+test('forgot password rejects an unknown email explicitly and rejects username input as invalid email', async () => {
+  let databaseCalls = 0
+  let emailCalls = 0
+  pool.execute = async () => {
+    databaseCalls += 1
+    return [[]]
+  }
+  setEmailTransportForTests({
+    async sendMail() {
+      emailCalls += 1
+      throw new Error('Email service must not be called')
+    },
+  })
 
-  const response = await fetch(`${baseUrl}/api/auth/forgot-password/request-otp`, {
+  const unknownEmailResponse = await fetch(`${baseUrl}/api/auth/forgot-password/request-otp`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ identifier: 'unknown-account' }),
+    body: JSON.stringify({ identifier: 'unknown@example.test' }),
   })
-  const body = await response.json()
+  const unknownEmailBody = await unknownEmailResponse.json()
 
-  assert.equal(response.status, 200)
-  assert.match(body.message, /If an account matches/)
-  assert.equal('otp' in body, false)
-  assert.equal('email' in body, false)
+  assert.equal(unknownEmailResponse.status, 404)
+  assert.equal(unknownEmailBody.status, 'error')
+  assert.equal(unknownEmailBody.message, 'ไม่พบบัญชีที่ลงทะเบียนไว้')
+  assert.equal(databaseCalls, 1)
+  assert.equal(emailCalls, 0)
+
+  const usernameResponse = await fetch(`${baseUrl}/api/auth/forgot-password/request-otp`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ identifier: activeUser.username }),
+  })
+  const usernameBody = await usernameResponse.json()
+
+  assert.equal(usernameResponse.status, 400)
+  assert.equal(usernameBody.status, 'error')
+  assert.equal(databaseCalls, 1)
+  assert.equal(emailCalls, 0)
 })
 
 test('OTP request sends to the database email and stores only an HMAC hash', async () => {
@@ -118,7 +142,7 @@ test('OTP request sends to the database email and stores only an HMAC hash', asy
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
-      identifier: 'employee007',
+      identifier: activeUser.email,
       email: 'attacker@example.test',
     }),
   })
@@ -152,14 +176,14 @@ test('resend before the 60 second cooldown returns 429 with retryAfterSeconds', 
   const response = await fetch(`${baseUrl}/api/auth/forgot-password/request-otp`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ identifier: activeUser.username, isResend: true }),
+    body: JSON.stringify({ identifier: activeUser.email, isResend: true }),
   })
   const body = await response.json()
 
   assert.equal(response.status, 429)
   assert.equal(body.retryAfterSeconds, 42)
   assert.match(body.message, /42 seconds/)
-  assert.match(cooldownQuery, /TIMESTAMPDIFF\(SECOND, created_at, NOW\(\)\)/)
+  assert.match(cooldownQuery, /TIMESTAMPDIFF\(\s*SECOND,\s*created_at,\s*NOW\(\)\s*\)/)
 })
 
 test('resend after cooldown creates a different OTP and sends a second email', async () => {
@@ -213,7 +237,7 @@ test('resend after cooldown creates a different OTP and sends a second email', a
   const response = await fetch(`${baseUrl}/api/auth/forgot-password/request-otp`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ identifier: activeUser.username, isResend: true }),
+    body: JSON.stringify({ identifier: activeUser.email, isResend: true }),
   })
   const body = await response.json()
   const resentOtp = sentMail.text.match(/\b\d{6}\b/)[0]
@@ -249,7 +273,7 @@ test('resend is limited to three times in a 15 minute window', async () => {
   const response = await fetch(`${baseUrl}/api/auth/forgot-password/request-otp`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ identifier: activeUser.username, isResend: true }),
+    body: JSON.stringify({ identifier: activeUser.email, isResend: true }),
   })
   const body = await response.json()
 
@@ -288,12 +312,12 @@ test('email delivery failure rolls back the resend and returns 503', async () =>
   const response = await fetch(`${baseUrl}/api/auth/forgot-password/request-otp`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ identifier: activeUser.username }),
+    body: JSON.stringify({ identifier: activeUser.email }),
   })
   const body = await response.json()
 
   assert.equal(response.status, 503)
-  assert.equal(body.message, 'Email service is temporarily unavailable.')
+  assert.equal(body.message, 'ไม่สามารถส่ง Email ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง')
   assert.equal(commits, 0)
   assert.equal(rollbacks, 1)
 })
@@ -322,12 +346,12 @@ test('a resent OTP rejects the old code and verifies the new code', async () => 
   const oldResponse = await fetch(`${baseUrl}/api/auth/forgot-password/verify-otp`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ identifier: activeUser.username, otp: oldOtp }),
+    body: JSON.stringify({ identifier: activeUser.email, otp: oldOtp }),
   })
   const newResponse = await fetch(`${baseUrl}/api/auth/forgot-password/verify-otp`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ identifier: activeUser.username, otp: newOtp }),
+    body: JSON.stringify({ identifier: activeUser.email, otp: newOtp }),
   })
 
   assert.equal(oldResponse.status, 400)
@@ -359,7 +383,7 @@ test('verified OTP creates a short-lived reset token while storing only its hash
   const response = await fetch(`${baseUrl}/api/auth/forgot-password/verify-otp`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ identifier: 'employee007', otp }),
+    body: JSON.stringify({ identifier: activeUser.email, otp }),
   })
   const body = await response.json()
 
@@ -403,7 +427,7 @@ test('reset token changes the hash atomically and cannot be reused', async () =>
       if (sql.includes('UPDATE users')) {
         updatedPasswordHash = parameters[0]
       }
-      if (sql.includes('UPDATE password_reset_tokens SET used_at')) {
+      if (/UPDATE password_reset_tokens\s+SET used_at/.test(sql)) {
         tokenUsed = true
       }
       return [{ affectedRows: 1 }]

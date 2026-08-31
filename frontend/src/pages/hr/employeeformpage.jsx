@@ -3,6 +3,10 @@ import {
   Alert,
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   FormHelperText,
   InputLabel,
@@ -13,6 +17,8 @@ import {
   Typography,
 } from '@mui/material';
 import HRLayout from '../../layouts/hrlayout.jsx';
+import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
+import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getDepartments } from '../../api/department-service.js';
 import { getPositions } from '../../api/position-service.js';
@@ -46,6 +52,7 @@ function EmployeeFormPage({ mode = 'add' }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
 
   const [departments, setDepartments] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -90,7 +97,7 @@ function EmployeeFormPage({ mode = 'add' }) {
           });
         }
       } catch (error) {
-        if (active) setErrorMessage(error.response?.data?.message || 'Unable to load employee form data.');
+        if (active) setErrorMessage(error.response?.data?.message || 'ไม่สามารถโหลดข้อมูลพนักงานได้');
       } finally {
         if (active) setLoading(false);
       }
@@ -118,66 +125,66 @@ function EmployeeFormPage({ mode = 'add' }) {
 
     if (!formData.employeeId.trim()) {
       validationErrors.employeeId =
-        'Please enter an employee ID';
+        'กรุณากรอกรหัสพนักงาน';
     }
 
     if (!formData.firstName.trim()) {
       validationErrors.firstName =
-        'Please enter the first name';
+        'กรุณากรอกชื่อ';
     }
 
     if (!formData.lastName.trim()) {
       validationErrors.lastName =
-        'Please enter the last name';
+        'กรุณากรอกนามสกุล';
     }
 
     if (!formData.email.trim()) {
       validationErrors.email =
-        'Please enter an email address';
+        'กรุณากรอกอีเมล';
     } else {
       const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
       if (!emailPattern.test(formData.email.trim())) {
         validationErrors.email =
-          'Please enter a valid email address';
+          'รูปแบบอีเมลไม่ถูกต้อง';
       }
     }
 
     if (!formData.phone.trim()) {
       validationErrors.phone =
-        'Please enter a phone number';
+        'กรุณากรอกเบอร์โทรศัพท์';
     } else {
       const phonePattern = /^[0-9+\-\s()]{8,20}$/;
 
       if (!phonePattern.test(formData.phone.trim())) {
         validationErrors.phone =
-          'Please enter a valid phone number';
+          'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง';
       }
     }
 
     if (!formData.department) {
       validationErrors.department =
-        'Please select a department';
+        'กรุณาเลือกแผนก';
     }
 
     if (!formData.position) {
       validationErrors.position =
-        'Please select a position';
+        'กรุณาเลือกตำแหน่ง';
     }
 
     if (!formData.role) {
       validationErrors.role =
-        'Please select a role';
+        'กรุณาเลือกบทบาท';
     }
 
     if (!formData.employmentDate) {
       validationErrors.employmentDate =
-        'Please select an employment date';
+        'กรุณาเลือกวันที่เริ่มงาน';
     }
 
     if (!formData.status) {
       validationErrors.status =
-        'Please select an employee status';
+        'กรุณาเลือกสถานะพนักงาน';
     }
 
     setErrors(validationErrors);
@@ -185,7 +192,7 @@ function EmployeeFormPage({ mode = 'add' }) {
     return Object.keys(validationErrors).length === 0;
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault();
 
     setSuccessMessage('');
@@ -195,6 +202,10 @@ function EmployeeFormPage({ mode = 'add' }) {
       return;
     }
 
+    setConfirmationOpen(true);
+  };
+
+  const confirmSave = async () => {
     const employeeData = {
       employeeCode: formData.employeeId.trim(),
       firstName: formData.firstName.trim(),
@@ -212,10 +223,11 @@ function EmployeeFormPage({ mode = 'add' }) {
       const result = isEditMode
         ? await updateEmployee(employeeId, employeeData)
         : await createEmployee(employeeData);
-      setSuccessMessage(result.message || `Employee ${isEditMode ? 'updated' : 'created'} successfully.`);
+      setConfirmationOpen(false);
+      setSuccessMessage(result.message || `${isEditMode ? 'แก้ไข' : 'เพิ่ม'}พนักงานเรียบร้อยแล้ว`);
       window.setTimeout(() => navigate('/hr/employee-management'), 500);
     } catch (error) {
-      setErrorMessage(error.response?.data?.message || 'Unable to save employee.');
+      setErrorMessage(error.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลพนักงานได้');
     } finally {
       setSaving(false);
     }
@@ -247,65 +259,7 @@ function EmployeeFormPage({ mode = 'add' }) {
 
   return (
     <HRLayout activeMenu="Employee Management">
-      <Box
-        sx={{
-          marginBottom: '28px',
-        }}
-      >
-        <Typography
-          component="h1"
-          sx={{
-            color: '#111827',
-            fontSize: {
-              xs: '26px',
-              sm: '30px',
-            },
-            fontWeight: 800,
-          }}
-        >
-          {isEditMode
-            ? 'Edit Employee'
-            : 'Add Employee'}
-        </Typography>
-
-        <Typography
-          sx={{
-            color: '#6B7280',
-            fontSize: '15px',
-            marginTop: '6px',
-          }}
-        >
-          {isEditMode
-            ? 'Update personal, employment and system account information for the selected employee.'
-            : 'Enter personal, employment and system account information for the new employee.'}
-        </Typography>
-
-<Button
-  type="button"
-  variant="outlined"
-  onClick={() => navigate('/hr/employee-management')}
-  sx={{
-    minWidth: '100px',
-    height: '42px',
-    marginTop: '16px',
-    padding: '0 18px',
-    backgroundColor: '#FFFFFF',
-    color: '#2563EB',
-    borderColor: '#2563EB',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: 700,
-    textTransform: 'none',
-
-    '&:hover': {
-      backgroundColor: '#EFF6FF',
-      borderColor: '#1D4ED8',
-    },
-  }}
->
-  ← Back
-</Button>
-      </Box>
+      <PageHeader title={isEditMode ? 'แก้ไขพนักงาน' : 'เพิ่มพนักงาน'} actions={<Button type="button" variant="outlined" startIcon={<ArrowBackRounded />} onClick={() => navigate('/hr/employee-management')} sx={{ height: 40, color: '#475569', borderColor: '#CBD5E1', borderRadius: '9px', fontWeight: 700, '&:hover': { borderColor: '#94A3B8', backgroundColor: '#F8FAFC' } }}>กลับ</Button>} sx={{ marginBottom: '22px' }} />
 
       {successMessage && (
         <Alert
@@ -322,7 +276,7 @@ function EmployeeFormPage({ mode = 'add' }) {
 
       {(errorMessage || loading) && (
         <Alert severity={errorMessage ? 'error' : 'info'} sx={{ marginBottom: '24px', borderRadius: '8px' }}>
-          {errorMessage || 'Loading employee data...'}
+          {errorMessage || 'กำลังโหลดข้อมูลพนักงาน...'}
         </Alert>
       )}
 
@@ -361,7 +315,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 fontWeight: 800,
               }}
             >
-              Personal Information
+              ข้อมูลส่วนตัว
             </Typography>
 
             <Typography
@@ -371,8 +325,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 marginTop: '4px',
               }}
             >
-              Basic information used to identify and contact
-              the employee.
+              ข้อมูลสำหรับระบุตัวตนและติดต่อพนักงาน
             </Typography>
           </Box>
 
@@ -393,8 +346,8 @@ function EmployeeFormPage({ mode = 'add' }) {
             <TextField
               fullWidth
               required
-              label="Employee ID"
-              placeholder="Example: EMP006"
+              label="รหัสพนักงาน"
+              placeholder="เช่น EMP006"
               value={formData.employeeId}
               onChange={(event) =>
                 handleInputChange(
@@ -405,7 +358,7 @@ function EmployeeFormPage({ mode = 'add' }) {
               error={Boolean(errors.employeeId)}
               helperText={
                 errors.employeeId ||
-                'Employee ID must be unique'
+                'รหัสพนักงานต้องไม่ซ้ำกับข้อมูลที่มีอยู่'
               }
               sx={{
                 '& .MuiOutlinedInput-root': {
@@ -417,7 +370,7 @@ function EmployeeFormPage({ mode = 'add' }) {
             <TextField
               fullWidth
               required
-              label="First Name"
+              label="ชื่อ"
               value={formData.firstName}
               onChange={(event) =>
                 handleInputChange(
@@ -437,7 +390,7 @@ function EmployeeFormPage({ mode = 'add' }) {
             <TextField
               fullWidth
               required
-              label="Last Name"
+              label="นามสกุล"
               value={formData.lastName}
               onChange={(event) =>
                 handleInputChange(
@@ -458,7 +411,7 @@ function EmployeeFormPage({ mode = 'add' }) {
               fullWidth
               required
               type="email"
-              label="Email Address"
+              label="อีเมล"
               placeholder="employee@organization.co.th"
               value={formData.email}
               onChange={(event) =>
@@ -479,7 +432,7 @@ function EmployeeFormPage({ mode = 'add' }) {
             <TextField
               fullWidth
               required
-              label="Phone Number"
+              label="เบอร์โทรศัพท์"
               placeholder="08X-XXX-XXXX"
               value={formData.phone}
               onChange={(event) =>
@@ -524,7 +477,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 fontWeight: 800,
               }}
             >
-              Employment Information
+              ข้อมูลการทำงาน
             </Typography>
 
             <Typography
@@ -534,8 +487,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 marginTop: '4px',
               }}
             >
-              Assign the employee to a department, position and
-              supervisor.
+              ระบุแผนก ตำแหน่ง และผู้บังคับบัญชา
             </Typography>
           </Box>
 
@@ -559,13 +511,13 @@ function EmployeeFormPage({ mode = 'add' }) {
               error={Boolean(errors.department)}
             >
               <InputLabel id="employee-department-label">
-                Department
+                แผนก
               </InputLabel>
 
               <Select
                 labelId="employee-department-label"
                 value={formData.department}
-                label="Department"
+                label="แผนก"
                 onChange={(event) =>
                   handleInputChange(
                     'department',
@@ -599,13 +551,13 @@ function EmployeeFormPage({ mode = 'add' }) {
               error={Boolean(errors.position)}
             >
               <InputLabel id="employee-position-label">
-                Position
+                ตำแหน่ง
               </InputLabel>
 
               <Select
                 labelId="employee-position-label"
                 value={formData.position}
-                label="Position"
+                label="ตำแหน่ง"
                 onChange={(event) =>
                   handleInputChange(
                     'position',
@@ -635,13 +587,13 @@ function EmployeeFormPage({ mode = 'add' }) {
 
             <FormControl fullWidth>
               <InputLabel id="employee-supervisor-label">
-                Supervisor
+                ผู้บังคับบัญชา
               </InputLabel>
 
               <Select
                 labelId="employee-supervisor-label"
                 value={formData.supervisor}
-                label="Supervisor"
+                label="ผู้บังคับบัญชา"
                 onChange={(event) =>
                   handleInputChange(
                     'supervisor',
@@ -653,7 +605,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 }}
               >
                 <MenuItem value="">
-                  No Supervisor
+                  ไม่มีผู้บังคับบัญชา
                 </MenuItem>
 
                 {supervisors.map((supervisor) => (
@@ -672,7 +624,7 @@ function EmployeeFormPage({ mode = 'add' }) {
               fullWidth
               required
               type="date"
-              label="Employment Date"
+              label="วันที่เริ่มงาน"
               value={formData.employmentDate}
               onChange={(event) =>
                 handleInputChange(
@@ -759,7 +711,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 fontWeight: 800,
               }}
             >
-              System Account
+              ข้อมูลบัญชีผู้ใช้
             </Typography>
 
             <Typography
@@ -769,7 +721,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 marginTop: '4px',
               }}
             >
-              Set the employee role and account status.
+              กำหนดบทบาทและสถานะบัญชี
             </Typography>
           </Box>
 
@@ -797,13 +749,13 @@ function EmployeeFormPage({ mode = 'add' }) {
                 error={Boolean(errors.role)}
               >
                 <InputLabel id="employee-role-label">
-                  Role
+                  บทบาท
                 </InputLabel>
 
                 <Select
                   labelId="employee-role-label"
                   value={formData.role}
-                  label="Role"
+                  label="บทบาท"
                   onChange={(event) =>
                     handleInputChange(
                       'role',
@@ -816,7 +768,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 >
                   {roles.map((role) => (
                     <MenuItem key={role} value={role}>
-                      {role}
+                      {({ Employee: 'พนักงาน', Supervisor: 'หัวหน้างาน', HR: 'ฝ่ายทรัพยากรบุคคล', Admin: 'ผู้ดูแลระบบ' })[role]}
                     </MenuItem>
                   ))}
                 </Select>
@@ -834,13 +786,13 @@ function EmployeeFormPage({ mode = 'add' }) {
                 error={Boolean(errors.status)}
               >
                 <InputLabel id="employee-status-label">
-                  Status
+                  สถานะ
                 </InputLabel>
 
                 <Select
                   labelId="employee-status-label"
                   value={formData.status}
-                  label="Status"
+                  label="สถานะ"
                   onChange={(event) =>
                     handleInputChange(
                       'status',
@@ -852,11 +804,11 @@ function EmployeeFormPage({ mode = 'add' }) {
                   }}
                 >
                   <MenuItem value="Active">
-                    Active
+                    ใช้งานอยู่
                   </MenuItem>
 
                   <MenuItem value="Inactive">
-                    Inactive
+                    ไม่ใช้งาน
                   </MenuItem>
                 </Select>
 
@@ -884,7 +836,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                   fontWeight: 800,
                 }}
               >
-                Initial password
+                รหัสผ่านเริ่มต้น
               </Typography>
 
               <Typography
@@ -895,10 +847,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                   marginTop: '6px',
                 }}
               >
-                The system will automatically generate an
-                initial password when the employee account is
-                created. The employee can change it through the
-                Change Password page.
+                ระบบจะสร้างรหัสผ่านเริ่มต้นเมื่อสร้างบัญชี พนักงานสามารถเปลี่ยนได้จากหน้าเปลี่ยนรหัสผ่าน
               </Typography>
             </Box>
           </Box>
@@ -935,7 +884,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 fontWeight: 800,
               }}
             >
-              Create Employee
+              {isEditMode ? 'บันทึกการแก้ไข' : 'เพิ่มพนักงาน'}
             </Typography>
 
             <Typography
@@ -946,8 +895,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 marginTop: '4px',
               }}
             >
-              Check that all required information is correct
-              before saving.
+              ตรวจสอบข้อมูลที่จำเป็นก่อนบันทึก
             </Typography>
           </Box>
 
@@ -982,7 +930,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 },
               }}
             >
-              Cancel
+              ล้างข้อมูล
             </Button>
 
             <Button
@@ -993,7 +941,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 minWidth: '150px',
                 height: '44px',
                 padding: '0 20px',
-                backgroundColor: '#059669',
+                backgroundColor: '#2563EB',
                 color: '#FFFFFF',
                 borderRadius: '8px',
                 fontSize: '14px',
@@ -1002,16 +950,29 @@ function EmployeeFormPage({ mode = 'add' }) {
                 boxShadow: 'none',
 
                 '&:hover': {
-                  backgroundColor: '#047857',
+                  backgroundColor: '#1D4ED8',
                   boxShadow: 'none',
                 },
               }}
             >
-              {saving ? 'Saving...' : 'Save Employee'}
+              {saving ? 'กำลังบันทึก...' : 'บันทึก'}
             </Button>
           </Box>
         </Paper>
       </Box>
+      <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกข้อมูลพนักงาน</DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: 'grid', gap: '10px' }}>
+            <Typography><strong>ชื่อ:</strong> {formData.firstName} {formData.lastName}</Typography>
+            <Typography><strong>รหัสพนักงาน:</strong> {formData.employeeId}</Typography>
+            <Typography><strong>อีเมล:</strong> {formData.email}</Typography>
+            <Typography><strong>แผนก:</strong> {departments.find((item) => String(item.departmentId) === String(formData.department))?.departmentName || '-'}</Typography>
+            <Typography><strong>ตำแหน่ง:</strong> {positions.find((item) => String(item.positionId) === String(formData.position))?.positionName || '-'}</Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ padding: '14px 20px' }}><Button type="button" variant="outlined" disabled={saving} onClick={() => setConfirmationOpen(false)} sx={{ color: '#475569', borderColor: '#CBD5E1' }}>กลับไปแก้ไข</Button><Button type="button" variant="contained" disabled={saving} onClick={confirmSave} sx={{ backgroundColor: '#15803D', '&:hover': { backgroundColor: '#166534' } }}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions>
+      </Dialog>
     </HRLayout>
   );
 }

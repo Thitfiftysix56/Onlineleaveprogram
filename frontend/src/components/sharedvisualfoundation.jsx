@@ -1,9 +1,11 @@
 import {
   Box,
+  Button,
   Paper,
   Stack,
   Typography,
 } from '@mui/material';
+import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
 
 import {
   colorTokens,
@@ -27,7 +29,7 @@ export function PageContainer({
         marginInline: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        gap: `${spacingTokens['2xl']}px`,
+        gap: `${spacingTokens['3xl']}px`,
         ...sx,
       }}
     >
@@ -54,14 +56,19 @@ export function PageHeader({
       sx={{
         width: '100%',
         boxSizing: 'border-box',
+        paddingBlock: `${spacingTokens.xs}px`,
         ...sx,
+        marginBottom: '16px',
       }}
     >
       <Box sx={{ minWidth: 0 }}>
         <Typography
           component="h1"
           variant="h2"
-          sx={{ color: colorTokens.text.primary }}
+          sx={{
+            color: colorTokens.text.primary,
+            letterSpacing: '-0.025em',
+          }}
         >
           {title}
         </Typography>
@@ -70,7 +77,7 @@ export function PageHeader({
             variant="body1"
             sx={{
               color: colorTokens.text.secondary,
-              marginTop: `${spacingTokens.xs}px`,
+              marginTop: `${spacingTokens.sm}px`,
               maxWidth: '72ch',
             }}
           >
@@ -84,6 +91,10 @@ export function PageHeader({
       flexShrink: 0,
       width: { xs: '100%', sm: 'auto' },
       marginLeft: { xs: 0, sm: 'auto' },
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: { xs: 'flex-end', sm: 'flex-start' },
+      gap: `${spacingTokens.sm}px`,
       '& > *': {
         maxWidth: '100%',
       },
@@ -96,9 +107,46 @@ export function PageHeader({
   );
 }
 
+export function BackButton({ children = 'กลับ', sx, ...props }) {
+  return (
+    <Button
+      {...props}
+      type="button"
+      size="small"
+      variant="outlined"
+      startIcon={<ArrowBackRounded sx={{ fontSize: 18 }} />}
+      sx={{
+        minWidth: 0,
+        minHeight: 38,
+        paddingInline: `${spacingTokens.lg}px`,
+        color: colorTokens.text.secondary,
+        borderColor: colorTokens.borderStrong,
+        backgroundColor: '#FFFFFF',
+        borderRadius: `${radiusTokens.control}px`,
+        boxShadow: shadowTokens.none,
+        '&:hover': {
+          color: colorTokens.text.primary,
+          borderColor: '#94A3B8',
+          backgroundColor: colorTokens.surfaceSubtle,
+          transform: 'translateY(-1px)',
+        },
+        '&:active': { transform: 'translateY(0)' },
+        '&:focus-visible': {
+          outline: '3px solid #E2E8F0',
+          outlineOffset: 2,
+          borderColor: '#64748B',
+        },
+        ...sx,
+      }}
+    >
+      {children}
+    </Button>
+  );
+}
+
 const surfaceVariants = {
   default: {
-    backgroundColor: '#FCFDFE',
+    backgroundColor: '#FFFFFF',
     borderColor: colorTokens.border,
     boxShadow: shadowTokens.none,
   },
@@ -108,7 +156,7 @@ const surfaceVariants = {
     boxShadow: shadowTokens.none,
   },
   elevated: {
-    backgroundColor: colorTokens.surface,
+    backgroundColor: '#FFFFFF',
     borderColor: colorTokens.border,
     boxShadow: shadowTokens.floating,
   },

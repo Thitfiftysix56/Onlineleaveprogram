@@ -19,6 +19,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import {
   getProfile,
@@ -29,6 +30,10 @@ import {
   getCurrentUser,
   updateCurrentUserProfileSession,
 } from '../utils/authstorage.js';
+import RoleChangePasswordPage from './rolechangepasswordpage.jsx';
+import { PageHeader } from './sharedvisualfoundation.jsx';
+
+const EmbeddedProfileSection = ({ children }) => children;
 
 const MAX_PROFILE_IMAGE_SIZE =
   2 * 1024 * 1024;
@@ -119,7 +124,9 @@ const translateProfileMessage = (
 function RoleProfilePage({
   LayoutComponent,
   theme,
+  editMode = false,
 }) {
+  const navigate = useNavigate();
   const fileInputRef =
     useRef(null);
 
@@ -134,7 +141,7 @@ function RoleProfilePage({
   const [
     loading,
     setLoading,
-  ] = useState(true);
+  ] = useState(editMode);
 
   const [
     loadError,
@@ -149,7 +156,9 @@ function RoleProfilePage({
   const [
     editOpen,
     setEditOpen,
-  ] = useState(false);
+  ] = useState(editMode);
+
+  const [_passwordOpen, setPasswordOpen] = useState(false);
 
   const [
     editForm,
@@ -235,6 +244,38 @@ function RoleProfilePage({
     loadProfile();
   }, []);
 
+  useEffect(() => {
+    if (!editMode) {
+      setEditOpen(false);
+      return;
+    }
+
+    if (!profile) {
+      return;
+    }
+
+    setEditForm({
+      fullName:
+        profile.fullName ||
+        '',
+      email:
+        profile.email ||
+        '',
+      phone:
+        profile.phone ||
+        '',
+    });
+
+    setSelectedImage(null);
+    setImagePreview(
+      profile.profileImageUrl ||
+        '',
+    );
+    setRemoveImage(false);
+    setEditError('');
+    setEditOpen(true);
+  }, [editMode, profile]);
+
   const displayName =
     profile?.fullName ||
     currentUser
@@ -252,6 +293,45 @@ function RoleProfilePage({
     profile?.roleName ||
     currentUser?.role ||
     '';
+
+  const profilePath =
+    `/${String(
+      currentUser?.role ||
+        'employee',
+    )
+      .trim()
+      .toLowerCase()}/profile`;
+
+  const resetEditState = () => {
+    setSelectedImage(null);
+    setImagePreview(
+      profile?.profileImageUrl ||
+        '',
+    );
+    setRemoveImage(false);
+    setEditError('');
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value =
+        '';
+    }
+  };
+
+  const handleCloseEditProfile = () => {
+    if (saving) {
+      return;
+    }
+
+    resetEditState();
+    setEditOpen(false);
+
+    if (editMode) {
+      navigate(
+        profilePath,
+        { replace: true },
+      );
+    }
+  };
 
   const openEditProfile = (
     selectImage = false,
@@ -481,6 +561,21 @@ function RoleProfilePage({
           result.profile,
         );
 
+        if (
+          typeof window !==
+          'undefined'
+        ) {
+          window.dispatchEvent(
+            new CustomEvent(
+              'profile-updated',
+              {
+                detail:
+                  result.profile,
+              },
+            ),
+          );
+        }
+
         setSuccessMessage(
           translateProfileMessage(
             result.message,
@@ -488,9 +583,16 @@ function RoleProfilePage({
           ),
         );
 
-        setEditOpen(
-          false,
-        );
+        setSelectedImage(null);
+        setRemoveImage(false);
+        setEditOpen(false);
+
+        if (editMode) {
+          navigate(
+            profilePath,
+            { replace: true },
+          );
+        }
       } catch (error) {
         setEditError(
           translateProfileMessage(
@@ -586,10 +688,12 @@ function RoleProfilePage({
 
   return (
     <LayoutComponent
-      activeMenu="Profile"
+      activeMenu={editMode ? 'Edit Personal Information' : ''}
     >
+      <PageHeader title={editMode ? 'แก้ไขข้อมูลส่วนตัว' : 'ข้อมูลส่วนตัว'} sx={{ marginBottom: '22px' }} />
       <Box
         sx={{
+          display: 'none',
           marginBottom:
             '22px',
         }}
@@ -677,10 +781,13 @@ function RoleProfilePage({
               '#FFFFFF',
 
             border:
-              '1px solid #E5E7EB',
+              '1px solid #E8EEF5',
 
             borderRadius:
-              '14px',
+              '18px',
+
+            boxShadow:
+              '0 8px 24px rgba(15, 23, 42, 0.05)',
           }}
         >
           <CircularProgress
@@ -698,10 +805,13 @@ function RoleProfilePage({
               '#FFFFFF',
 
             border:
-              '1px solid #E5E7EB',
+              '1px solid #E8EEF5',
 
             borderRadius:
-              '14px',
+              '20px',
+
+            boxShadow:
+              '0 10px 30px rgba(15, 23, 42, 0.06)',
 
             overflow:
               'hidden',
@@ -745,12 +855,12 @@ function RoleProfilePage({
               background:
                 `linear-gradient(
                   135deg,
-                  ${resolvedTheme.soft} 0%,
-                  #FFFFFF 65%
+                  #FFFFFF 0%,
+                  ${resolvedTheme.soft} 100%
                 )`,
 
               borderBottom:
-                '1px solid #E5E7EB',
+                '1px solid #EEF2F7',
             }}
           >
             <Box
@@ -770,38 +880,7 @@ function RoleProfilePage({
                 },
               }}
             >
-              <Button
-                type="button"
-                aria-label="เลือกรูปโปรไฟล์"
-                onClick={() =>
-                  openEditProfile(
-                    true,
-                  )
-                }
-                disabled={
-                  !profile
-                }
-                sx={{
-                  minWidth:
-                    0,
-
-                  padding:
-                    0,
-
-                  flexShrink:
-                    0,
-
-                  borderRadius:
-                    '50%',
-
-                  '&:hover':
-                    {
-                      backgroundColor:
-                        'transparent',
-                    },
-                }}
-              >
-                <Avatar
+              <Avatar
                   src={
                     profileImageUrl ||
                     undefined
@@ -833,10 +912,10 @@ function RoleProfilePage({
                       resolvedTheme.primary,
 
                     border:
-                      `2px solid ${resolvedTheme.border}`,
+                      '3px solid #FFFFFF',
 
                     boxShadow:
-                      '0 4px 14px rgba(15, 23, 42, 0.06)',
+                      '0 6px 18px rgba(15, 23, 42, 0.08)',
 
                     fontSize:
                       '26px',
@@ -848,8 +927,7 @@ function RoleProfilePage({
                   {getInitials(
                     displayName,
                   )}
-                </Avatar>
-              </Button>
+              </Avatar>
 
               <Box
                 sx={{
@@ -932,16 +1010,16 @@ function RoleProfilePage({
                         '27px',
 
                       backgroundColor:
-                        '#FFFFFF',
+                        resolvedTheme.soft,
 
                       color:
                         resolvedTheme.dark,
 
                       border:
-                        `1px solid ${resolvedTheme.border}`,
+                        '1px solid transparent',
 
                       borderRadius:
-                        '999px',
+                        '10px',
 
                       fontSize:
                         '10px',
@@ -965,9 +1043,7 @@ function RoleProfilePage({
               type="button"
               variant="contained"
               onClick={() =>
-                openEditProfile(
-                  false,
-                )
+                navigate(`/${String(currentUser?.role || 'employee').toLowerCase()}/edit-personal-information`)
               }
               disabled={
                 !profile
@@ -999,7 +1075,7 @@ function RoleProfilePage({
                   '#FFFFFF',
 
                 borderRadius:
-                  '9px',
+                  '10px',
 
                 fontSize:
                   '13px',
@@ -1011,7 +1087,7 @@ function RoleProfilePage({
                   'none',
 
                 boxShadow:
-                  'none',
+                  '0 4px 12px rgba(15, 23, 42, 0.08)',
 
                 '&:hover':
                   {
@@ -1019,7 +1095,7 @@ function RoleProfilePage({
                       resolvedTheme.dark,
 
                     boxShadow:
-                      'none',
+                      '0 6px 16px rgba(15, 23, 42, 0.10)',
                   },
               }}
             >
@@ -1068,17 +1144,17 @@ function RoleProfilePage({
 
                 columnGap: {
                   sm:
-                    '48px',
+                    '14px',
 
                   lg:
-                    '72px',
+                    '16px',
                 },
 
                 rowGap:
-                  '0',
+                  '14px',
 
                 marginTop:
-                  '14px',
+                  '16px',
               }}
             >
               {profileItems.map(
@@ -1092,7 +1168,7 @@ function RoleProfilePage({
                     }
                     sx={{
                       minHeight:
-                        '72px',
+                        '74px',
 
                       display:
                         'flex',
@@ -1104,20 +1180,16 @@ function RoleProfilePage({
                         'center',
 
                       padding:
-                        '13px 0',
+                        '14px 16px',
 
-                      borderBottom:
-                        index <
-                        profileItems.length -
-                          2
-                          ? '1px solid #EEF0F3'
-                          : {
-                              xs:
-                                '1px solid #EEF0F3',
+                      backgroundColor:
+                        '#F8FAFC',
 
-                              sm:
-                                'none',
-                            },
+                      border:
+                        '1px solid #EEF2F7',
+
+                      borderRadius:
+                        '12px',
                     }}
                   >
                     <Typography
@@ -1170,18 +1242,26 @@ function RoleProfilePage({
         </Paper>
       )}
 
+      <Box id="change-password" sx={{ display: 'none' }}>
+        <Button type="button" variant="outlined" onClick={() => setPasswordOpen(true)} sx={{ height: 40, borderRadius: '9px', color: '#2563EB', borderColor: '#BFDBFE', fontSize: '13px', fontWeight: 800 }}>เปลี่ยนรหัสผ่าน</Button>
+      </Box>
+
+      <Dialog open={false} onClose={() => setPasswordOpen(false)} fullWidth maxWidth="sm" slotProps={{ paper: { sx: { borderRadius: '14px' } } }}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', borderBottom: '1px solid #E5E7EB', fontSize: '18px', fontWeight: 800 }}>
+          เปลี่ยนรหัสผ่าน
+          <Button type="button" onClick={() => setPasswordOpen(false)} sx={{ color: '#64748B', fontSize: '12px', fontWeight: 700 }}>ยกเลิก</Button>
+        </DialogTitle>
+        <DialogContent sx={{ padding: '0 !important' }}>
+          <RoleChangePasswordPage LayoutComponent={EmbeddedProfileSection} theme={resolvedTheme} />
+        </DialogContent>
+      </Dialog>
+
       <Dialog
-        open={
-          editOpen
-        }
-        keepMounted
+        open={editOpen}
         fullWidth
         maxWidth="sm"
-        onClose={() =>
-          !saving &&
-          setEditOpen(
-            false,
-          )
+        onClose={
+          handleCloseEditProfile
         }
         component="form"
         onSubmit={
@@ -1190,25 +1270,38 @@ function RoleProfilePage({
         slotProps={{
           paper: {
             sx: {
+              width:
+                'min(680px, calc(100% - 24px))',
               borderRadius:
-                '14px',
+                '20px',
+              overflow:
+                'hidden',
+              border:
+                '1px solid #E8EEF5',
+              boxShadow:
+                '0 18px 50px rgba(15, 23, 42, 0.14)',
             },
           },
         }}
       >
         <DialogTitle
           sx={{
+            padding:
+              '20px 24px',
             color:
               '#111827',
-
             fontSize:
               '19px',
-
             fontWeight:
               800,
-
+            background:
+              `linear-gradient(
+                135deg,
+                #FFFFFF 0%,
+                ${resolvedTheme.soft} 100%
+              )`,
             borderBottom:
-              '1px solid #E5E7EB',
+              '1px solid #EEF2F7',
           }}
         >
           แก้ไขข้อมูลส่วนตัว
@@ -1217,7 +1310,9 @@ function RoleProfilePage({
         <DialogContent
           sx={{
             padding:
-              '22px !important',
+              '24px !important',
+            backgroundColor:
+              '#FFFFFF',
           }}
         >
           {editError && (
@@ -1225,99 +1320,87 @@ function RoleProfilePage({
               severity="error"
               sx={{
                 marginBottom:
-                  '20px',
-
+                  '18px',
                 borderRadius:
                   '9px',
               }}
             >
-              {
-                editError
-              }
+              {editError}
             </Alert>
           )}
 
           <Box
             sx={{
               display:
-                'flex',
-
-              flexDirection:
-                'column',
-
+                'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: '150px minmax(0, 1fr)',
+              },
+              gap: {
+                xs: '22px',
+                sm: '26px',
+              },
               alignItems:
-                'center',
-
-              marginBottom:
-                '24px',
+                'start',
             }}
           >
-            <Avatar
-              src={
-                imagePreview ||
-                undefined
-              }
-              alt={
-                editForm.fullName
-              }
-              sx={{
-                width:
-                  '108px',
-
-                height:
-                  '108px',
-
-                backgroundColor:
-                  resolvedTheme.soft,
-
-                color:
-                  resolvedTheme.primary,
-
-                border:
-                  `1px solid ${resolvedTheme.border}`,
-
-                fontSize:
-                  '32px',
-
-                fontWeight:
-                  900,
-              }}
-            >
-              {getInitials(
-                editForm.fullName,
-              )}
-            </Avatar>
-
-            <input
-              ref={
-                fileInputRef
-              }
-              hidden
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={
-                handleImageChange
-              }
-            />
-
             <Box
               sx={{
                 display:
                   'flex',
-
-                flexWrap:
-                  'wrap',
-
-                justifyContent:
-                  'center',
-
-                gap:
-                  '8px',
-
-                marginTop:
-                  '14px',
+                flexDirection:
+                  'column',
+                alignItems: {
+                  xs: 'center',
+                  sm: 'flex-start',
+                },
               }}
             >
+              <Avatar
+                src={
+                  imagePreview ||
+                  undefined
+                }
+                alt={
+                  editForm.fullName
+                }
+                sx={{
+                  width:
+                    '104px',
+                  height:
+                    '104px',
+                  backgroundColor:
+                    resolvedTheme.soft,
+                  color:
+                    resolvedTheme.primary,
+                  border:
+                    '3px solid #FFFFFF',
+                  boxShadow:
+                    '0 6px 18px rgba(15, 23, 42, 0.08)',
+                  fontSize:
+                    '30px',
+                  fontWeight:
+                    900,
+                }}
+              >
+                {getInitials(
+                  editForm.fullName,
+                )}
+              </Avatar>
+
+              <input
+                ref={
+                  fileInputRef
+                }
+                hidden
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={
+                  handleImageChange
+                }
+              />
+
               <Button
                 type="button"
                 variant="outlined"
@@ -1330,307 +1413,239 @@ function RoleProfilePage({
                   saving
                 }
                 sx={{
+                  minWidth:
+                    '104px',
                   height:
-                    '38px',
-
-                  padding:
-                    '0 14px',
-
+                    '35px',
+                  marginTop:
+                    '12px',
                   color:
                     resolvedTheme.primary,
-
                   borderColor:
                     resolvedTheme.border,
-
+                  backgroundColor:
+                    '#FFFFFF',
                   borderRadius:
-                    '8px',
-
+                    '10px',
                   fontSize:
                     '12px',
-
                   fontWeight:
                     700,
-
                   textTransform:
                     'none',
-
-                  '&:hover':
-                    {
-                      backgroundColor:
-                        resolvedTheme.soft,
-
-                      borderColor:
-                        resolvedTheme.primary,
-                    },
                 }}
               >
-                เลือกรูป
+                {imagePreview
+                  ? 'เปลี่ยนรูป'
+                  : 'เพิ่มรูป'}
               </Button>
 
-              {imagePreview && (
-                <Button
-                  type="button"
-                  variant="outlined"
-                  onClick={
-                    handleRemoveImage
-                  }
-                  disabled={
-                    saving
-                  }
-                  sx={{
-                    height:
-                      '38px',
+              {!removeImage &&
+                (imagePreview ||
+                  profileImageUrl) && (
+                  <Button
+                    type="button"
+                    variant="text"
+                    onClick={
+                      handleRemoveImage
+                    }
+                    disabled={
+                      saving
+                    }
+                    sx={{
+                      minWidth:
+                        '104px',
+                      height:
+                        '32px',
+                      marginTop:
+                        '4px',
+                      color:
+                        '#DC2626',
+                      borderRadius:
+                        '10px',
+                      fontSize:
+                        '11px',
+                      fontWeight:
+                        700,
+                      textTransform:
+                        'none',
+                    }}
+                  >
+                    ลบรูป
+                  </Button>
+                )}
 
-                    padding:
-                      '0 14px',
-
-                    color:
-                      '#DC2626',
-
-                    borderColor:
-                      '#FCA5A5',
-
-                    borderRadius:
-                      '8px',
-
-                    fontSize:
-                      '12px',
-
-                    fontWeight:
-                      700,
-
-                    textTransform:
-                      'none',
-
-                    '&:hover':
-                      {
-                        backgroundColor:
-                          '#FEF2F2',
-
-                        borderColor:
-                          '#DC2626',
-                      },
-                  }}
-                >
-                  ลบรูป
-                </Button>
-              )}
+              {removeImage &&
+                profileImageUrl && (
+                  <Button
+                    type="button"
+                    variant="text"
+                    onClick={() => {
+                      setRemoveImage(
+                        false,
+                      );
+                      setImagePreview(
+                        profileImageUrl,
+                      );
+                      setEditError('');
+                    }}
+                    disabled={
+                      saving
+                    }
+                    sx={{
+                      minWidth:
+                        '104px',
+                      height:
+                        '32px',
+                      marginTop:
+                        '4px',
+                      color:
+                        '#475569',
+                      borderRadius:
+                        '10px',
+                      fontSize:
+                        '11px',
+                      fontWeight:
+                        700,
+                      textTransform:
+                        'none',
+                    }}
+                  >
+                    คืนรูปเดิม
+                  </Button>
+                )}
             </Box>
 
-            <Typography
+            <Box
               sx={{
-                color:
-                  '#9CA3AF',
-
-                fontSize:
-                  '11px',
-
-                marginTop:
-                  '8px',
+                display:
+                  'grid',
+                gridTemplateColumns:
+                  '1fr',
+                gap:
+                  '14px',
               }}
             >
-              รองรับ JPEG, PNG และ WebP ขนาดไม่เกิน 2 MB
-            </Typography>
-          </Box>
+              <TextField
+                required
+                fullWidth
+                size="small"
+                label="ชื่อ-นามสกุล"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '10px',
+                    backgroundColor: '#FFFFFF',
+                  },
+                }}
+                value={
+                  editForm.fullName
+                }
+                onChange={(event) =>
+                  setEditForm(
+                    (previous) => ({
+                      ...previous,
+                      fullName:
+                        event.target.value,
+                    }),
+                  )
+                }
+                disabled={
+                  saving
+                }
+                slotProps={{
+                  htmlInput: {
+                    maxLength:
+                      201,
+                  },
+                }}
+              />
 
-          <Box
-            sx={{
-              display:
-                'grid',
+              <TextField
+                required
+                fullWidth
+                size="small"
+                type="email"
+                label="อีเมล"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '10px',
+                    backgroundColor: '#FFFFFF',
+                  },
+                }}
+                value={
+                  editForm.email
+                }
+                onChange={(event) =>
+                  setEditForm(
+                    (previous) => ({
+                      ...previous,
+                      email:
+                        event.target.value,
+                    }),
+                  )
+                }
+                disabled={
+                  saving
+                }
+                slotProps={{
+                  htmlInput: {
+                    maxLength:
+                      100,
+                  },
+                }}
+              />
 
-              gridTemplateColumns: {
-                xs:
-                  '1fr',
-
-                sm:
-                  'repeat(2, minmax(0, 1fr))',
-              },
-
-              gap:
-                '14px',
-            }}
-          >
-            <TextField
-              required
-              fullWidth
-              size="small"
-              label="ชื่อ-นามสกุล"
-              value={
-                editForm.fullName
-              }
-              onChange={(
-                event,
-              ) =>
-                setEditForm(
-                  (
-                    previous,
-                  ) => ({
-                    ...previous,
-
-                    fullName:
-                      event
-                        .target
-                        .value,
-                  }),
-                )
-              }
-              disabled={
-                saving
-              }
-              slotProps={{
-                htmlInput: {
-                  maxLength:
-                    201,
-                },
-              }}
-            />
-
-            <TextField
-              required
-              fullWidth
-              size="small"
-              type="email"
-              label="อีเมล"
-              value={
-                editForm.email
-              }
-              onChange={(
-                event,
-              ) =>
-                setEditForm(
-                  (
-                    previous,
-                  ) => ({
-                    ...previous,
-
-                    email:
-                      event
-                        .target
-                        .value,
-                  }),
-                )
-              }
-              disabled={
-                saving
-              }
-              slotProps={{
-                htmlInput: {
-                  maxLength:
-                    100,
-                },
-              }}
-            />
-
-            <TextField
-              fullWidth
-              size="small"
-              label="เบอร์โทรศัพท์"
-              value={
-                editForm.phone
-              }
-              onChange={(
-                event,
-              ) =>
-                setEditForm(
-                  (
-                    previous,
-                  ) => ({
-                    ...previous,
-
-                    phone:
-                      event
-                        .target
-                        .value,
-                  }),
-                )
-              }
-              disabled={
-                saving
-              }
-              slotProps={{
-                htmlInput: {
-                  maxLength:
-                    20,
-                },
-              }}
-            />
-
-            <TextField
-              fullWidth
-              size="small"
-              label="รหัสพนักงาน"
-              value={
-                profile
-                  ?.employeeCode ||
-                ''
-              }
-              disabled
-            />
-
-            <TextField
-              fullWidth
-              size="small"
-              label="ชื่อผู้ใช้"
-              value={
-                profile
-                  ?.username ||
-                ''
-              }
-              disabled
-            />
-
-            <TextField
-              fullWidth
-              size="small"
-              label="บทบาท"
-              value={getRoleLabel(
-                roleValue,
-              )}
-              disabled
-            />
-
-            <TextField
-              fullWidth
-              size="small"
-              label="แผนก"
-              value={
-                profile
-                  ?.department ||
-                ''
-              }
-              disabled
-            />
-
-            <TextField
-              fullWidth
-              size="small"
-              label="ตำแหน่ง"
-              value={
-                profile
-                  ?.position ||
-                ''
-              }
-              disabled
-            />
+              <TextField
+                fullWidth
+                size="small"
+                label="เบอร์โทรศัพท์"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '10px',
+                    backgroundColor: '#FFFFFF',
+                  },
+                }}
+                value={
+                  editForm.phone
+                }
+                onChange={(event) =>
+                  setEditForm(
+                    (previous) => ({
+                      ...previous,
+                      phone:
+                        event.target.value,
+                    }),
+                  )
+                }
+                disabled={
+                  saving
+                }
+                slotProps={{
+                  htmlInput: {
+                    maxLength:
+                      20,
+                  },
+                }}
+              />
+            </Box>
           </Box>
         </DialogContent>
 
         <DialogActions
           sx={{
             padding:
-              '14px 22px 18px',
-
+              '14px 24px 18px',
+            backgroundColor:
+              '#F8FAFC',
             borderTop:
-              '1px solid #E5E7EB',
+              '1px solid #EEF2F7',
           }}
         >
           <Button
             type="button"
             variant="outlined"
-            onClick={() =>
-              setEditOpen(
-                false,
-              )
+            onClick={
+              handleCloseEditProfile
             }
             disabled={
               saving
@@ -1638,25 +1653,20 @@ function RoleProfilePage({
             sx={{
               minWidth:
                 '84px',
-
               height:
                 '40px',
-
               color:
                 '#374151',
-
               borderColor:
                 '#D1D5DB',
-
               borderRadius:
-                '8px',
-
+                '10px',
+              backgroundColor:
+                '#FFFFFF',
               fontSize:
                 '13px',
-
               fontWeight:
                 700,
-
               textTransform:
                 'none',
             }}
@@ -1673,35 +1683,25 @@ function RoleProfilePage({
             sx={{
               minWidth:
                 '118px',
-
               height:
                 '40px',
-
               backgroundColor:
                 resolvedTheme.primary,
-
               color:
                 '#FFFFFF',
-
               borderRadius:
-                '8px',
-
+                '10px',
               fontSize:
                 '13px',
-
               fontWeight:
                 700,
-
               textTransform:
                 'none',
-
               boxShadow:
                 'none',
-
               '&:hover': {
                 backgroundColor:
                   resolvedTheme.dark,
-
                 boxShadow:
                   'none',
               },

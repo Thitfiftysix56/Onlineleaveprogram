@@ -8,6 +8,7 @@ import {
 
 import App from './App.jsx';
 import ApplicationErrorBoundary from './components/applicationerrorboundary.jsx';
+import ServerUnavailableOverlay from './components/serverunavailableoverlay.jsx';
 import './index.css';
 import { installThaiUi } from './i18n/thai.js';
 import theme from './theme/theme.js';
@@ -19,6 +20,7 @@ createRoot(document.getElementById('root')).render(
     <ThemeProvider theme={theme}>
       <BrowserRouter>
         <ApplicationErrorBoundary>
+          <ServerUnavailableOverlay />
           <App />
         </ApplicationErrorBoundary>
       </BrowserRouter>

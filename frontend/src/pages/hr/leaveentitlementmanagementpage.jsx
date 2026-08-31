@@ -22,13 +22,14 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
 } from '@mui/material';
 
 import HRLayout from '../../layouts/hrlayout.jsx';
-import { RowActionMenu } from '../../components/shareduiprimitives.jsx';
+import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -319,6 +320,9 @@ function LeaveEntitlementManagementPage() {
   ] = useState(
     String(currentYear),
   );
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 5;
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
 
   const [
     dialogOpen,
@@ -526,6 +530,8 @@ function LeaveEntitlementManagementPage() {
       leaveTypeFilter,
       yearFilter,
     ]);
+  const paginatedEntitlements = useMemo(() => filteredEntitlements.slice(page * rowsPerPage, (page + 1) * rowsPerPage), [filteredEntitlements, page]);
+  useEffect(() => { setPage(0); }, [searchText, departmentFilter, leaveTypeFilter, yearFilter]);
 
   /* =========================
      Summary
@@ -742,7 +748,7 @@ function LeaveEntitlementManagementPage() {
      Save
   ========================= */
 
-  const handleSave = async () => {
+  const confirmSave = async () => {
     setFormError('');
 
     const employeeId =
@@ -873,6 +879,7 @@ function LeaveEntitlementManagementPage() {
       }
 
       setDialogOpen(false);
+      setConfirmationOpen(false);
 
       setSelectedEntitlement(
         null,
@@ -892,6 +899,20 @@ function LeaveEntitlementManagementPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSave = () => {
+    setFormError('');
+    const employeeId = Number(formData.employeeId);
+    const leaveTypeId = Number(formData.leaveTypeId);
+    const year = Number(formData.year);
+    const totalDays = Number(formData.totalDays);
+    const usedDays = Number(formData.usedDays);
+    if (!employeeId || !leaveTypeId || !Number.isInteger(year) || year < 2000 || year > 2100 || Number.isNaN(totalDays) || totalDays < 0 || totalDays > 365 || Number.isNaN(usedDays) || usedDays < 0 || usedDays > totalDays) {
+      void confirmSave();
+      return;
+    }
+    setConfirmationOpen(true);
   };
 
   /* =========================
@@ -956,7 +977,7 @@ function LeaveEntitlementManagementPage() {
           gap: '16px',
 
           marginBottom:
-            '22px',
+            '16px',
         }}
       >
         <Typography
@@ -992,7 +1013,7 @@ function LeaveEntitlementManagementPage() {
               '0 18px',
 
             backgroundColor:
-              theme.primary,
+              '#2563EB',
 
             color:
               '#FFFFFF',
@@ -1014,7 +1035,7 @@ function LeaveEntitlementManagementPage() {
 
             '&:hover': {
               backgroundColor:
-                theme.dark,
+                '#1D4ED8',
 
               boxShadow:
                 'none',
@@ -1223,10 +1244,25 @@ function LeaveEntitlementManagementPage() {
             รายการ
           </Typography>
 
+          <DataListToolbar
+            searchValue={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="ค้นหาพนักงานหรือประเภทลา"
+            resultLabel={searchText ? `พบ ${filteredEntitlements.length} รายการจากคำค้น “${searchText}”` : `พบ ${filteredEntitlements.length} รายการ`}
+            activeFilters={[
+              ...(departmentFilter !== 'all' ? [{ key: 'department', label: `แผนก: ${departmentFilter}`, onDelete: () => setDepartmentFilter('all') }] : []),
+              ...(leaveTypeFilter !== 'all' ? [{ key: 'type', label: `ประเภท: ${translateLeaveType(leaveTypes.find((item) => String(item.id) === String(leaveTypeFilter))?.name || leaveTypeFilter)}`, onDelete: () => setLeaveTypeFilter('all') }] : []),
+              ...(yearFilter !== 'all' ? [{ key: 'year', label: `ปี: ${yearFilter}`, onDelete: () => setYearFilter('all') }] : []),
+            ]}
+            onClearFilters={handleClearFilters}
+            filters={<><FormControl size="small"><Select value={departmentFilter === 'all' ? '' : departmentFilter} displayEmpty renderValue={(value) => value || 'แผนก'} inputProps={{ 'aria-label': 'แผนก' }} onChange={(event) => setDepartmentFilter(event.target.value || 'all')}>{departments.map((department) => <MenuItem key={department} value={department}>{department}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={leaveTypeFilter === 'all' ? '' : leaveTypeFilter} displayEmpty renderValue={(value) => value ? translateLeaveType(leaveTypes.find((item) => String(item.id) === String(value))?.name || value) : 'ประเภทลา'} inputProps={{ 'aria-label': 'ประเภทลา' }} onChange={(event) => setLeaveTypeFilter(event.target.value || 'all')}>{leaveTypes.map((leaveType) => <MenuItem key={leaveType.id} value={String(leaveType.id)}>{translateLeaveType(leaveType.name)}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={yearFilter === 'all' ? '' : yearFilter} displayEmpty renderValue={(value) => value || 'ปี'} inputProps={{ 'aria-label': 'ปี' }} onChange={(event) => setYearFilter(event.target.value || 'all')}>{years.map((year) => <MenuItem key={year} value={String(year)}>{year}</MenuItem>)}</Select></FormControl></>}
+            sx={{ marginTop: '16px' }}
+          />
+
           <Box
             sx={{
               display:
-                'grid',
+                'none',
 
               gridTemplateColumns: {
                 xs:
@@ -1572,7 +1608,7 @@ function LeaveEntitlementManagementPage() {
               </TableHead>
 
               <TableBody>
-                {filteredEntitlements.map(
+                {paginatedEntitlements.map(
                   (item) => {
                     const remaining =
                       Math.max(
@@ -1593,6 +1629,10 @@ function LeaveEntitlementManagementPage() {
                           item.id
                         }
                         hover
+                        tabIndex={0}
+                        onClick={() => handleOpenEdit(item)}
+                        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleOpenEdit(item); } }}
+                        sx={{ cursor: 'pointer', '&:focus-visible': { outline: '2px solid #2563EB', outlineOffset: -2 } }}
                       >
                         <TableCell>
                           <Typography
@@ -1759,17 +1799,14 @@ function LeaveEntitlementManagementPage() {
                           </Box>
                         </TableCell>
 
-                        <TableCell>
-                          <RowActionMenu
-                            actions={[{ label: 'แก้ไข', onClick: () => handleOpenEdit(item) }]}
-                          />
-                        </TableCell>
+                        <TableCell />
                       </TableRow>
                     );
                   },
                 )}
               </TableBody>
             </Table>
+            {filteredEntitlements.length > rowsPerPage ? <TablePagination component="div" count={filteredEntitlements.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} /> : null}
           </Box>
         ) : (
           /* Empty */
@@ -2285,7 +2322,7 @@ function LeaveEntitlementManagementPage() {
                 '42px',
 
               backgroundColor:
-                theme.primary,
+                '#2563EB',
 
               color:
                 '#FFFFFF',
@@ -2320,6 +2357,7 @@ function LeaveEntitlementManagementPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm"><DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกสิทธิ์การลา</DialogTitle><DialogContent dividers><Typography>พนักงาน: {employees.find((item) => Number(item.id) === Number(formData.employeeId))?.fullName || '-'}</Typography><Typography sx={{ marginTop: '8px' }}>ประเภทการลา: {translateLeaveType(leaveTypes.find((item) => Number(item.id) === Number(formData.leaveTypeId))?.name || '-')}</Typography><Typography sx={{ marginTop: '8px' }}>ปี: {formData.year} · สิทธิ์ {formData.totalDays} วัน · ใช้แล้ว {formData.usedDays} วัน</Typography></DialogContent><DialogActions sx={{ padding: '14px 20px' }}><Button variant="outlined" disabled={saving} onClick={() => setConfirmationOpen(false)} sx={{ color: '#475569', borderColor: '#CBD5E1' }}>กลับไปแก้ไข</Button><Button variant="contained" disabled={saving} onClick={confirmSave} sx={{ backgroundColor: '#15803D', '&:hover': { backgroundColor: '#166534' } }}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions></Dialog>
     </HRLayout>
   );
 }

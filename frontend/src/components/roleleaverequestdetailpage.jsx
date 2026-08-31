@@ -17,7 +17,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import RequestNumberText from './requestnumbertext.jsx';
+import { BackButton, PageHeader } from './sharedvisualfoundation.jsx';
 
 import {
   useLocation,
@@ -114,13 +116,13 @@ function RoleLeaveRequestDetailPage({
 
       title:
         selectedRequest.status === 'draft'
-          ? 'Leave request draft created'
-          : 'Leave request created',
+          ? 'สร้างร่างคำขอลาแล้ว'
+          : 'สร้างคำขอลาแล้ว',
 
       detail:
         selectedRequest.status === 'draft'
-          ? 'The leave request is currently saved as a draft.'
-          : 'A new leave request was created.',
+          ? 'คำขอลานี้ถูกบันทึกเป็นฉบับร่าง'
+          : 'สร้างคำขอลาใหม่แล้ว',
 
       dateTime:
         selectedRequest.createdAt ||
@@ -134,10 +136,10 @@ function RoleLeaveRequestDetailPage({
       generatedTimeline.push({
         id: 'submitted',
 
-        title: 'Submitted for approval',
+        title: 'ส่งคำขอเพื่อรออนุมัติแล้ว',
 
         detail:
-          'The leave request was submitted to the assigned supervisor.',
+          'ส่งคำขอลาไปยังหัวหน้างานที่รับผิดชอบแล้ว',
 
         dateTime:
           selectedRequest.submittedAt,
@@ -155,10 +157,10 @@ function RoleLeaveRequestDetailPage({
       generatedTimeline.push({
         id: 'approved',
 
-        title: 'Approved by supervisor',
+        title: 'หัวหน้างานอนุมัติแล้ว',
 
         detail:
-          'The supervisor approved this leave request.',
+          'หัวหน้างานอนุมัติคำขอลานี้แล้ว',
 
         dateTime:
           selectedRequest.approvedAt ||
@@ -179,11 +181,11 @@ function RoleLeaveRequestDetailPage({
       generatedTimeline.push({
         id: 'rejected',
 
-        title: 'Rejected by supervisor',
+        title: 'หัวหน้างานปฏิเสธแล้ว',
 
         detail: storedRejectReason
-          ? `The supervisor rejected this leave request. Reason: ${storedRejectReason}`
-          : 'The supervisor rejected this leave request.',
+          ? `หัวหน้างานปฏิเสธคำขอลานี้ เหตุผล: ${storedRejectReason}`
+          : 'หัวหน้างานปฏิเสธคำขอลานี้',
 
         dateTime:
           selectedRequest.rejectedAt ||
@@ -200,10 +202,10 @@ function RoleLeaveRequestDetailPage({
       generatedTimeline.push({
         id: 'cancelled',
 
-        title: 'Cancelled by employee',
+        title: 'พนักงานยกเลิกคำขอแล้ว',
 
         detail:
-          'The request owner cancelled this leave request.',
+          'เจ้าของคำขอยกเลิกคำขอลานี้แล้ว',
 
         dateTime:
           selectedRequest.updatedAt ||
@@ -217,6 +219,16 @@ function RoleLeaveRequestDetailPage({
   };
 
   const getBackRoute = () => {
+    const returnTo =
+      location.state?.returnTo;
+
+    if (
+      typeof returnTo === 'string' &&
+      returnTo.startsWith('/')
+    ) {
+      return returnTo;
+    }
+
     if (viewerMode === 'supervisor') {
       return '/supervisor/approval';
     }
@@ -453,8 +465,8 @@ function RoleLeaveRequestDetailPage({
 
       cancelled: {
         backgroundColor:
-          '#E5E7EB',
-        color: '#6B7280',
+          '#FEE2E2',
+        color: '#B91C1C',
       },
     };
 
@@ -569,7 +581,7 @@ function RoleLeaveRequestDetailPage({
 
       if (!normalizedReason) {
         setRejectError(
-          'Please enter the rejection reason',
+          'กรุณาระบุเหตุผลในการปฏิเสธ',
         );
 
         return;
@@ -579,19 +591,19 @@ function RoleLeaveRequestDetailPage({
         normalizedReason.length < 5
       ) {
         setRejectError(
-          'The rejection reason must contain at least 5 characters',
+          'เหตุผลในการปฏิเสธต้องมีอย่างน้อย 5 ตัวอักษร',
         );
 
         return;
       }
 
-      let updatedRequest; try { await decideLeaveRequest(request.id, 'rejected', normalizedReason); updatedRequest={...request,status:'rejected',rejectionReason:normalizedReason,reviewedAt:new Date().toISOString()}; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'The request could not be rejected.'}); }
+      let updatedRequest; try { await decideLeaveRequest(request.id, 'rejected', normalizedReason); updatedRequest={...request,status:'rejected',rejectionReason:normalizedReason,reviewedAt:new Date().toISOString()}; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'ไม่สามารถปฏิเสธคำขอได้'}); }
 
       if (!updatedRequest) {
         setMessage({
           severity: 'error',
 
-          text: 'The request could not be rejected.',
+          text: 'ไม่สามารถปฏิเสธคำขอได้',
         });
 
         closeActionDialog();
@@ -607,20 +619,20 @@ function RoleLeaveRequestDetailPage({
       setMessage({
         severity: 'success',
 
-        text: `${requestReference} was rejected successfully.`,
+        text: `ปฏิเสธคำขอ ${requestReference} สำเร็จแล้ว`,
       });
     }
 
     if (
       selectedAction === 'approve'
     ) {
-      let updatedRequest; try { await decideLeaveRequest(request.id, 'approved'); updatedRequest={...request,status:'approved',reviewedAt:new Date().toISOString()}; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'The request could not be approved.'}); }
+      let updatedRequest; try { await decideLeaveRequest(request.id, 'approved'); updatedRequest={...request,status:'approved',reviewedAt:new Date().toISOString()}; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'ไม่สามารถอนุมัติคำขอได้'}); }
 
       if (!updatedRequest) {
         setMessage({
           severity: 'error',
 
-          text: 'The request could not be approved.',
+          text: 'ไม่สามารถอนุมัติคำขอได้',
         });
 
         closeActionDialog();
@@ -635,20 +647,20 @@ function RoleLeaveRequestDetailPage({
       setMessage({
         severity: 'success',
 
-        text: `${requestReference} was approved successfully.`,
+        text: `อนุมัติคำขอ ${requestReference} สำเร็จแล้ว`,
       });
     }
 
     if (
       selectedAction === 'cancel'
     ) {
-      let updatedRequest; try { await cancelLeaveRequest(request.id); updatedRequest={...request,status:'cancelled',cancelledAt:new Date().toISOString()}; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'The request could not be cancelled.'}); }
+      let updatedRequest; try { await cancelLeaveRequest(request.id); updatedRequest={...request,status:'cancelled',cancelledAt:new Date().toISOString()}; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'ไม่สามารถยกเลิกคำขอได้'}); }
 
       if (!updatedRequest) {
         setMessage({
           severity: 'error',
 
-          text: 'The request could not be cancelled.',
+          text: 'ไม่สามารถยกเลิกคำขอได้',
         });
 
         closeActionDialog();
@@ -663,20 +675,20 @@ function RoleLeaveRequestDetailPage({
       setMessage({
         severity: 'success',
 
-        text: `${requestReference} was cancelled successfully.`,
+        text: `ยกเลิกคำขอ ${requestReference} สำเร็จแล้ว`,
       });
     }
 
     if (
       selectedAction === 'delete'
     ) {
-      let wasDeleted=false; try { await deleteLeaveDraft(request.id); wasDeleted=true; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'The draft could not be deleted.'}); }
+      let wasDeleted=false; try { await deleteLeaveDraft(request.id); wasDeleted=true; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'ไม่สามารถลบร่างได้'}); }
 
       if (!wasDeleted) {
         setMessage({
           severity: 'error',
 
-          text: 'The draft could not be deleted.',
+          text: 'ไม่สามารถลบร่างได้',
         });
 
         closeActionDialog();
@@ -700,14 +712,13 @@ function RoleLeaveRequestDetailPage({
 
   const actionDialogContent = {
     approve: {
-      title:
-        'Approve Leave Request',
+      title: 'อนุมัติคำขอลา',
 
       description:
-        'Confirm that you want to approve this leave request.',
+        'ยืนยันว่าต้องการอนุมัติคำขอลานี้',
 
       buttonText:
-        'Approve Request',
+        'อนุมัติคำขอ',
 
       buttonColor: '#059669',
 
@@ -716,14 +727,13 @@ function RoleLeaveRequestDetailPage({
     },
 
     reject: {
-      title:
-        'Reject Leave Request',
+      title: 'ปฏิเสธคำขอลา',
 
       description:
-        'Enter a clear rejection reason before confirming.',
+        'ระบุเหตุผลในการปฏิเสธให้ชัดเจนก่อนยืนยัน',
 
       buttonText:
-        'Reject Request',
+        'ปฏิเสธคำขอ',
 
       buttonColor: '#DC2626',
 
@@ -732,29 +742,28 @@ function RoleLeaveRequestDetailPage({
     },
 
     cancel: {
-      title:
-        'Cancel Leave Request',
+      title: 'ยกเลิกคำขอลา',
 
       description:
-        'Confirm that you want to cancel this pending leave request.',
+        'ยืนยันว่าต้องการยกเลิกคำขอลาที่รออนุมัตินี้',
 
       buttonText:
-        'Cancel Request',
+        'ยกเลิกคำขอ',
 
-      buttonColor: '#D97706',
+      buttonColor: '#DC2626',
 
       buttonHoverColor:
-        '#B45309',
+        '#B91C1C',
     },
 
     delete: {
-      title: 'Delete Draft',
+      title: 'ลบร่างคำขอลา',
 
       description:
-        'Confirm that you want to delete this draft. This action cannot be undone.',
+        'ยืนยันว่าต้องการลบร่างนี้ การดำเนินการนี้ไม่สามารถย้อนกลับได้',
 
       buttonText:
-        'Delete Draft',
+        'ลบร่าง',
 
       buttonColor: '#DC2626',
 
@@ -841,32 +850,32 @@ function RoleLeaveRequestDetailPage({
 
       return [
         {
-          label: 'Employee Code',
+          label: 'รหัสพนักงาน',
 
           value:
             request.employeeCode ||
             'EMP001',
         },
         {
-          label: 'Employee Name',
+          label: 'ชื่อพนักงาน',
 
           value:
             request.employeeName ||
-            'Employee User',
+            'พนักงาน',
         },
         {
-          label: 'Department',
+          label: 'แผนก',
 
           value:
             request.department ||
-            'Information Technology',
+            'เทคโนโลยีสารสนเทศ',
         },
         {
-          label: 'Position',
+          label: 'ตำแหน่ง',
 
           value:
             request.position ||
-            'Developer',
+            'นักพัฒนาระบบ',
         },
       ];
     },
@@ -903,7 +912,7 @@ function RoleLeaveRequestDetailPage({
               fontWeight: 800,
             }}
           >
-            Leave Request Detail
+            ไม่พบคำขอลา
           </Typography>
         </Box>
 
@@ -914,42 +923,19 @@ function RoleLeaveRequestDetailPage({
           }}
         >
           {message?.text ||
-            'The selected leave request was not found.'}
+            'ไม่พบข้อมูลคำขอลาที่เลือก รายการอาจถูกลบหรือคุณไม่มีสิทธิ์เข้าถึง'}
         </Alert>
 
-        <Button
-          type="button"
-          variant="outlined"
+        <BackButton
           onClick={handleBack}
           sx={{
-            height: '42px',
-
             marginTop: '20px',
-
-            padding: '0 18px',
-
-            color:
-              theme.primary,
-
-            borderColor:
-              theme.primary,
-
-            borderRadius: '8px',
-
-            fontSize: '14px',
-
-            fontWeight: 700,
-
-            textTransform: 'none',
-
-            '&:hover': {
-              backgroundColor:
-                theme.soft,
-            },
           }}
         >
-          ← Back
-        </Button>
+          {location.state?.returnLabel
+            ? `กลับไปยัง${location.state.returnLabel}`
+            : 'กลับไปยังรายการคำขอ'}
+        </BackButton>
       </LayoutComponent>
     );
   }
@@ -960,7 +946,194 @@ function RoleLeaveRequestDetailPage({
     >
       <Box
         sx={{
-          display: 'flex',
+          width: '100%',
+          maxWidth: '1080px',
+          marginInline: 'auto',
+        }}
+      >
+      <PageHeader
+        title="รายละเอียดคำขอลา"
+        actions={
+          <BackButton onClick={handleBack}>
+            กลับ
+          </BackButton>
+        }
+        sx={{ marginBottom: '14px' }}
+      />
+
+      <Paper
+        elevation={0}
+        sx={{
+          position: 'relative',
+          overflow: 'hidden',
+          marginBottom: '16px',
+          padding: 0,
+          background:
+            'linear-gradient(135deg, #EDF5FF 0%, #FFFFFF 72%)',
+          border: '1px solid #D8E6FB',
+          borderRadius: '20px',
+          boxShadow:
+            '0 8px 24px rgba(15, 23, 42, 0.055)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            width: '160px',
+            height: '160px',
+            top: '-84px',
+            right: '-38px',
+            borderRadius: '50%',
+            backgroundColor:
+              'rgba(59, 130, 246, 0.08)',
+            pointerEvents: 'none',
+          },
+        }}
+      >
+        <Box
+          sx={{
+            position: 'relative',
+            zIndex: 1,
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              md: 'minmax(0, 1.65fr) minmax(280px, 0.72fr)',
+            },
+            gap: {
+              xs: 0,
+              md: '24px',
+            },
+            alignItems: 'stretch',
+          }}
+        >
+          {/* ข้อมูลคำขอ */}
+          <Box
+            sx={{
+              minWidth: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              padding: {
+                xs: '18px',
+                sm: '24px',
+              },
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '10px',
+              }}
+            >
+              <Typography
+                sx={{
+                  color: '#2563EB',
+                  fontSize: {
+                    xs: '15px',
+                    sm: '16px',
+                  },
+                  fontWeight: 800,
+                }}
+              >
+                <RequestNumberText>
+                  {requestReference}
+                </RequestNumberText>
+              </Typography>
+
+              <Chip
+                label={formatStatus(currentStatus)}
+                size="small"
+                sx={{
+                  minWidth: '82px',
+                  backgroundColor:
+                    statusStyle.backgroundColor,
+                  color: statusStyle.color,
+                  borderRadius: '999px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                }}
+              />
+            </Box>
+
+          </Box>
+
+          {/* ข้อมูลพนักงานด้านขวา */}
+          <Box
+            sx={{
+              minWidth: 0,
+              padding: {
+                xs: '18px',
+                sm: '24px',
+              },
+              borderLeft: {
+                xs: 'none',
+                md: '1px solid rgba(148, 163, 184, 0.28)',
+              },
+              borderTop: {
+                xs: '1px solid rgba(148, 163, 184, 0.28)',
+                md: 'none',
+              },
+            }}
+          >
+            <Typography
+              sx={{
+                color: '#0F172A',
+                fontSize: '13px',
+                fontWeight: 800,
+                marginBottom: '12px',
+              }}
+            >
+              ข้อมูลพนักงาน
+            </Typography>
+
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(2, minmax(0, 1fr))',
+                },
+                gap: '12px 20px',
+              }}
+            >
+              {employeeItems.map((item) => (
+                <Box
+                  key={item.label}
+                  sx={{ minWidth: 0 }}
+                >
+                  <Typography
+                    sx={{
+                      color: '#94A3B8',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {item.label}
+                  </Typography>
+
+                  <Typography
+                    sx={{
+                      color: '#1E293B',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      marginTop: '3px',
+                      lineHeight: 1.45,
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    <RequestNumberText>
+                      {item.value}
+                    </RequestNumberText>
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        </Box>
+      </Paper>
+      <Box
+        sx={{
+          display: 'none',
 
           alignItems: {
             xs: 'flex-start',
@@ -994,7 +1167,7 @@ function RoleLeaveRequestDetailPage({
               fontWeight: 800,
             }}
           >
-            Leave Request Detail
+            รายละเอียดคำขอลา
           </Typography>
 
           <Box
@@ -1047,46 +1220,11 @@ function RoleLeaveRequestDetailPage({
           </Box>
         </Box>
 
-        <Button
-          type="button"
-          variant="outlined"
+        <BackButton
           onClick={handleBack}
-          sx={{
-            minWidth: '100px',
-
-            height: '42px',
-
-            padding: '0 18px',
-
-            backgroundColor:
-              '#FFFFFF',
-
-            color:
-              theme.primary,
-
-            borderColor:
-              theme.primary,
-
-            borderRadius: '8px',
-
-            fontSize: '14px',
-
-            fontWeight: 700,
-
-            textTransform: 'none',
-
-            '&:hover': {
-              backgroundColor:
-                theme.soft,
-
-              borderColor:
-                theme.dark ||
-                theme.primary,
-            },
-          }}
         >
-          ← Back
-        </Button>
+          กลับ
+        </BackButton>
       </Box>
 
       {message && (
@@ -1112,7 +1250,7 @@ function RoleLeaveRequestDetailPage({
           gridTemplateColumns: {
             xs: '1fr',
 
-            xl: 'minmax(0, 1.65fr) minmax(330px, 0.85fr)',
+            md: 'minmax(0, 1.65fr) minmax(280px, 0.72fr)',
           },
 
           gap: '24px',
@@ -1138,7 +1276,10 @@ function RoleLeaveRequestDetailPage({
               border:
                 '1px solid #E5E7EB',
 
-              borderRadius: '12px',
+              borderRadius: '20px',
+
+              boxShadow:
+                '0 4px 16px rgba(15, 23, 42, 0.04)',
 
               overflow: 'hidden',
             }}
@@ -1167,7 +1308,7 @@ function RoleLeaveRequestDetailPage({
                   fontWeight: 800,
                 }}
               >
-                Request Information
+                ข้อมูลคำขอ
               </Typography>
               {isSupervisor && (canApprove || canReject) ? (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -1188,7 +1329,7 @@ function RoleLeaveRequestDetailPage({
                         '&:hover': { backgroundColor: '#047857', boxShadow: 'none' },
                       }}
                     >
-                      Approve Request
+                      อนุมัติคำขอ
                     </Button>
                   )}
                   {canReject && (
@@ -1208,9 +1349,51 @@ function RoleLeaveRequestDetailPage({
                         '&:hover': { backgroundColor: '#FEF2F2', borderColor: '#DC2626' },
                       }}
                     >
-                      Reject Request
+                      ปฏิเสธคำขอ
                     </Button>
                   )}
+                </Box>
+              ) : null}
+              {!isSupervisor && hasAvailableAction ? (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {canEditDraft ? (
+                    <Button type="button" size="small" variant="outlined" onClick={handleEditDraft}>
+                      แก้ไขร่าง
+                    </Button>
+                  ) : null}
+                  {canDeleteDraft ? (
+                    <Button
+                      type="button"
+                      size="small"
+                      color="error"
+                      variant="outlined"
+                      onClick={() => openActionDialog('delete')}
+                    >
+                      ลบร่าง
+                    </Button>
+                  ) : null}
+                  {canCancelPending ? (
+                    <Button
+                      type="button"
+                      size="small"
+                      variant="outlined"
+                      onClick={() => openActionDialog('cancel')}
+                      sx={{
+                        color: '#DC2626',
+                        borderColor: '#DC2626',
+                        borderRadius: '8px',
+                        fontWeight: 700,
+                        textTransform: 'none',
+                        '&:hover': {
+                          color: '#B91C1C',
+                          borderColor: '#B91C1C',
+                          backgroundColor: '#FEF2F2',
+                        },
+                      }}
+                    >
+                      ยกเลิกคำขอ
+                    </Button>
+                  ) : null}
                 </Box>
               ) : null}
             </Box>
@@ -1317,7 +1500,7 @@ function RoleLeaveRequestDetailPage({
                       '0.5px',
                   }}
                 >
-                  Reason for Leave
+                  เหตุผลการลา
                 </Typography>
 
                 <Typography
@@ -1343,116 +1526,67 @@ function RoleLeaveRequestDetailPage({
           <Paper
             elevation={0}
             sx={{
-              backgroundColor:
-                '#FFFFFF',
-
-              border:
-                '1px solid #E5E7EB',
-
-              borderRadius: '12px',
-
-              overflow: 'hidden',
+              display: 'none',
+              padding: { xs: '16px', sm: '18px' },
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E5E7EB',
+              borderRadius: '20px',
             }}
           >
-            <Box
-              sx={{
-                padding: {
-                  xs: '20px',
-                  sm: '24px',
-                },
-
-                borderBottom:
-                  '1px solid #E5E7EB',
-              }}
-            >
-              <Typography
-                sx={{
-                  color: '#111827',
-
-                  fontSize: '18px',
-
-                  fontWeight: 800,
-                }}
-              >
-                Employee Information
+            <Typography sx={{ color: '#111827', fontSize: '15px', fontWeight: 800 }}>
+              เอกสารแนบ
+            </Typography>
+            {attachments.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                {attachments.map((attachment, index) => {
+                  const fileName = attachment.name || attachment.fileName || `Attachment ${index + 1}`;
+                  return (
+                    <Box
+                      key={attachment.id || `${fileName}-${index}`}
+                      sx={{
+                        display: 'flex', alignItems: 'center', gap: '10px', padding: '10px',
+                        backgroundColor: '#F8FAFC', borderRadius: '9px', minWidth: 0,
+                      }}
+                    >
+                      <Box sx={{ width: 34, height: 34, flexShrink: 0, display: 'grid', placeItems: 'center', color: theme.primary, backgroundColor: theme.soft, borderRadius: '8px' }}>
+                        <InsertDriveFileOutlinedIcon sx={{ fontSize: 19 }} />
+                      </Box>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography sx={{ color: '#1E293B', fontSize: '12px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {fileName}
+                        </Typography>
+                        <Typography sx={{ color: '#94A3B8', fontSize: '10px', marginTop: '2px' }}>
+                          {formatFileSize(attachment.size || attachment.fileSize || 0)}
+                        </Typography>
+                      </Box>
+                      <Button type="button" size="small" variant="text" onClick={() => handleAttachmentClick(attachment)} sx={{ minWidth: 0 }}>
+                        เปิด
+                      </Button>
+                    </Box>
+                  );
+                })}
+              </Box>
+            ) : (
+              <Typography sx={{ color: '#94A3B8', fontSize: '12px', marginTop: '10px' }}>
+                ไม่มีเอกสารแนบ
               </Typography>
-            </Box>
-
-            <Box
-              sx={{
-                padding: {
-                  xs: '20px',
-                  sm: '28px',
-                },
-
-                display: 'grid',
-
-                gridTemplateColumns: {
-                  xs: '1fr',
-
-                  sm: 'repeat(2, minmax(0, 1fr))',
-                },
-
-                gap: '24px',
-              }}
-            >
-              {employeeItems.map(
-                (item) => (
-                  <Box key={item.label}>
-                    <Typography
-                      sx={{
-                        color:
-                          '#9CA3AF',
-
-                        fontSize:
-                          '11px',
-
-                        fontWeight:
-                          700,
-
-                        textTransform:
-                          'uppercase',
-
-                        letterSpacing:
-                          '0.5px',
-                      }}
-                    >
-                      {item.label}
-                    </Typography>
-
-                    <Typography
-                      sx={{
-                        color:
-                          '#111827',
-
-                        fontSize:
-                          '14px',
-
-                        fontWeight:
-                          700,
-
-                        marginTop:
-                          '5px',
-                      }}
-                    >
-                      <RequestNumberText>{item.value}</RequestNumberText>
-                    </Typography>
-                  </Box>
-                ),
-              )}
-            </Box>
+            )}
           </Paper>
 
           <Paper
             elevation={0}
             sx={{
+              display: 'none',
               backgroundColor:
                 '#FFFFFF',
 
               border:
                 '1px solid #E5E7EB',
 
-              borderRadius: '12px',
+              borderRadius: '20px',
+
+              boxShadow:
+                '0 4px 16px rgba(15, 23, 42, 0.04)',
 
               overflow: 'hidden',
             }}
@@ -1477,7 +1611,7 @@ function RoleLeaveRequestDetailPage({
                   fontWeight: 800,
                 }}
               >
-                Attachments
+                เอกสารแนบ
               </Typography>
 
               <Typography
@@ -1490,8 +1624,8 @@ function RoleLeaveRequestDetailPage({
                 }}
               >
                 {isAdminMetadata
-                  ? 'Attachment metadata only.'
-                  : 'Files attached to this leave request.'}
+                  ? 'แสดงเฉพาะข้อมูลเอกสารแนบ'
+                  : 'เอกสารที่แนบมากับคำขอลานี้'}
               </Typography>
             </Box>
 
@@ -1669,7 +1803,7 @@ function RoleLeaveRequestDetailPage({
                       '28px 0',
                   }}
                 >
-                  No attachment was submitted.
+                  ไม่มีเอกสารแนบ
                 </Typography>
               )}
             </Box>
@@ -1699,7 +1833,10 @@ function RoleLeaveRequestDetailPage({
               border:
                 '1px solid #E5E7EB',
 
-              borderRadius: '12px',
+              borderRadius: '20px',
+
+              boxShadow:
+                '0 4px 16px rgba(15, 23, 42, 0.04)',
             }}
           >
             <Typography
@@ -1711,12 +1848,12 @@ function RoleLeaveRequestDetailPage({
                 fontWeight: 800,
               }}
             >
-              Approval Timeline
+              ลำดับเหตุการณ์การอนุมัติ
             </Typography>
 
             <Box
               sx={{
-                marginTop: '24px',
+                marginTop: '16px',
               }}
             >
               {timeline.map(
@@ -1730,15 +1867,15 @@ function RoleLeaveRequestDetailPage({
                       display: 'grid',
 
                       gridTemplateColumns:
-                        '22px 1fr',
+                        '18px 1fr',
 
-                      gap: '12px',
+                      gap: '9px',
 
                       paddingBottom:
                         index ===
                         timeline.length - 1
                           ? 0
-                          : '28px',
+                          : '18px',
                     }}
                   >
                     {index !==
@@ -1814,24 +1951,6 @@ function RoleLeaveRequestDetailPage({
                       <Typography
                         sx={{
                           color:
-                            '#6B7280',
-
-                          fontSize:
-                            '12px',
-
-                          lineHeight:
-                            1.7,
-
-                          marginTop:
-                            '4px',
-                        }}
-                      >
-                        {item.detail}
-                      </Typography>
-
-                      <Typography
-                        sx={{
-                          color:
                             '#9CA3AF',
 
                           fontSize:
@@ -1854,8 +1973,33 @@ function RoleLeaveRequestDetailPage({
 
           <Paper
             elevation={0}
+            sx={{ padding: { xs: '20px', sm: '24px' }, backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '20px', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)' }}
+          >
+            <Typography sx={{ color: '#111827', fontSize: '15px', fontWeight: 800 }}>เอกสารแนบ</Typography>
+            {attachments.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                {attachments.map((attachment, index) => {
+                  const fileName = attachment.name || attachment.fileName || `Attachment ${index + 1}`;
+                  return (
+                    <Box key={attachment.id || `${fileName}-${index}`} sx={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', backgroundColor: '#F8FAFC', borderRadius: '9px', minWidth: 0 }}>
+                      <Box sx={{ width: 34, height: 34, flexShrink: 0, display: 'grid', placeItems: 'center', color: theme.primary, backgroundColor: theme.soft, borderRadius: '8px' }}><InsertDriveFileOutlinedIcon sx={{ fontSize: 19 }} /></Box>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography sx={{ color: '#1E293B', fontSize: '12px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fileName}</Typography>
+                        <Typography sx={{ color: '#94A3B8', fontSize: '10px', marginTop: '2px' }}>{formatFileSize(attachment.size || attachment.fileSize || 0)}</Typography>
+                      </Box>
+                      <Button type="button" size="small" variant="text" onClick={() => handleAttachmentClick(attachment)} sx={{ minWidth: 0 }}>เปิด</Button>
+                    </Box>
+                  );
+                })}
+              </Box>
+            ) : <Typography sx={{ color: '#94A3B8', fontSize: '12px', marginTop: '10px' }}>ไม่มีเอกสารแนบ</Typography>}
+          </Paper>
+
+
+          <Paper
+            elevation={0}
             sx={{
-              display: isSupervisor ? 'none' : 'block',
+              display: 'none',
               padding: {
                 xs: '20px',
                 sm: '24px',
@@ -1869,7 +2013,10 @@ function RoleLeaveRequestDetailPage({
                 '#E5E7EB'
               }`,
 
-              borderRadius: '12px',
+              borderRadius: '20px',
+
+              boxShadow:
+                '0 4px 16px rgba(15, 23, 42, 0.04)',
             }}
           >
             <Typography
@@ -1883,7 +2030,7 @@ function RoleLeaveRequestDetailPage({
                 fontWeight: 800,
               }}
             >
-              Available Actions
+              การดำเนินการที่ทำได้
             </Typography>
 
             <Typography
@@ -1899,9 +2046,7 @@ function RoleLeaveRequestDetailPage({
                 marginTop: '6px',
               }}
             >
-              Actions are shown according
-              to the request status and
-              user permission.
+              การดำเนินการจะแสดงตามสถานะคำขอและสิทธิ์ของผู้ใช้
             </Typography>
 
             {hasAvailableAction ? (
@@ -1928,7 +2073,7 @@ function RoleLeaveRequestDetailPage({
                       height: '42px',
 
                       backgroundColor:
-                        theme.primary,
+                        '#2563EB',
 
                       borderRadius:
                         '8px',
@@ -1947,15 +2092,14 @@ function RoleLeaveRequestDetailPage({
 
                       '&:hover': {
                         backgroundColor:
-                          theme.dark ||
-                          theme.primary,
+                          '#1D4ED8',
 
                         boxShadow:
                           'none',
                       },
                     }}
                   >
-                    Edit Draft
+                    แก้ไขร่าง
                   </Button>
                 )}
 
@@ -1994,7 +2138,7 @@ function RoleLeaveRequestDetailPage({
                       },
                     }}
                   >
-                    Delete Draft
+                    ลบร่าง
                   </Button>
                 )}
 
@@ -2010,10 +2154,10 @@ function RoleLeaveRequestDetailPage({
                     sx={{
                       height: '42px',
 
-                      color: '#B45309',
+                      color: '#DC2626',
 
                       borderColor:
-                        '#F59E0B',
+                        '#DC2626',
 
                       borderRadius:
                         '8px',
@@ -2028,12 +2172,18 @@ function RoleLeaveRequestDetailPage({
                         'none',
 
                       '&:hover': {
+                        color:
+                          '#B91C1C',
+
+                        borderColor:
+                          '#B91C1C',
+
                         backgroundColor:
-                          '#FFFBEB',
+                          '#FEF2F2',
                       },
                     }}
                   >
-                    Cancel Request
+                    ยกเลิกคำขอ
                   </Button>
                 )}
 
@@ -2076,7 +2226,7 @@ function RoleLeaveRequestDetailPage({
                       },
                     }}
                   >
-                    Approve Request
+                    อนุมัติคำขอ
                   </Button>
                 )}
 
@@ -2115,7 +2265,7 @@ function RoleLeaveRequestDetailPage({
                       },
                     }}
                   >
-                    Reject Request
+                    ปฏิเสธคำขอ
                   </Button>
                 )}
               </Box>
@@ -2131,12 +2281,13 @@ function RoleLeaveRequestDetailPage({
                 }}
               >
                 {isHR
-                  ? 'HR can review this request but cannot approve, reject, edit or cancel it.'
-                  : 'No action is available for the current request status.'}
+                  ? 'ฝ่ายทรัพยากรบุคคลตรวจสอบคำขอนี้ได้ แต่ไม่สามารถอนุมัติ ปฏิเสธ แก้ไข หรือยกเลิกได้'
+                  : 'ไม่มีการดำเนินการสำหรับสถานะคำขอปัจจุบัน'}
               </Alert>
             )}
           </Paper>
         </Box>
+      </Box>
       </Box>
 
       <Dialog
@@ -2224,7 +2375,7 @@ function RoleLeaveRequestDetailPage({
               }}
             >
               {request.leaveType ||
-                'Not selected'}
+                'ยังไม่ได้เลือก'}
               :{' '}
               {formatDate(
                 request.startDate,
@@ -2244,8 +2395,8 @@ function RoleLeaveRequestDetailPage({
               multiline
               minRows={4}
               maxRows={7}
-              label="Rejection Reason"
-              placeholder="Enter the reason for rejecting this request"
+              label="เหตุผลในการปฏิเสธ"
+              placeholder="ระบุเหตุผลในการปฏิเสธคำขอนี้"
               value={rejectReason}
               onChange={(event) => {
                 setRejectReason(
@@ -2259,7 +2410,7 @@ function RoleLeaveRequestDetailPage({
               )}
               helperText={
                 rejectError ||
-                `${rejectReason.length}/500 characters`
+                `${rejectReason.length}/500 ตัวอักษร`
               }
               slotProps={{
                 htmlInput: {
@@ -2312,7 +2463,7 @@ function RoleLeaveRequestDetailPage({
                 'none',
             }}
           >
-            Back
+            กลับ
           </Button>
 
           <Button

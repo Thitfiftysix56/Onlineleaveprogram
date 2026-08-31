@@ -25,6 +25,7 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
@@ -35,7 +36,7 @@ import {
 } from '@mui/icons-material';
 
 import HRLayout from '../../layouts/hrlayout.jsx';
-import { RowActionMenu } from '../../components/shareduiprimitives.jsx';
+import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -373,6 +374,9 @@ function HolidayManagementPage() {
     statusFilter,
     setStatusFilter,
   ] = useState('all');
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 5;
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
 
   /* =========================
      Add / Edit
@@ -582,6 +586,8 @@ function HolidayManagementPage() {
       yearFilter,
       statusFilter,
     ]);
+  const paginatedHolidays = useMemo(() => filteredHolidays.slice(page * rowsPerPage, (page + 1) * rowsPerPage), [filteredHolidays, page]);
+  useEffect(() => { setPage(0); }, [searchText, yearFilter, statusFilter]);
 
   /* =========================
      Summary
@@ -899,7 +905,7 @@ function HolidayManagementPage() {
      Save
   ========================= */
 
-  const handleSave =
+  const confirmSave =
     async () => {
       if (
         !validateForm()
@@ -960,6 +966,7 @@ function HolidayManagementPage() {
         setDialogOpen(
           false,
         );
+        setConfirmationOpen(false);
 
         setSelectedHoliday(
           null,
@@ -992,6 +999,11 @@ function HolidayManagementPage() {
         setSaving(false);
       }
     };
+
+  const handleSave = () => {
+    if (!validateForm()) return;
+    setConfirmationOpen(true);
+  };
 
   /* =========================
      Delete
@@ -1090,7 +1102,7 @@ function HolidayManagementPage() {
             '16px',
 
           marginBottom:
-            '22px',
+            '16px',
         }}
       >
         <Typography
@@ -1131,7 +1143,7 @@ function HolidayManagementPage() {
               '0 18px',
 
             backgroundColor:
-              theme.primary,
+              '#2563EB',
 
             color:
               '#FFFFFF',
@@ -1153,7 +1165,7 @@ function HolidayManagementPage() {
 
             '&:hover': {
               backgroundColor:
-                theme.dark,
+                '#1D4ED8',
 
               boxShadow:
                 'none',
@@ -1371,10 +1383,24 @@ function HolidayManagementPage() {
             รายการ
           </Typography>
 
+          <DataListToolbar
+            searchValue={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="ค้นหาชื่อวันหยุด"
+            resultLabel={searchText ? `พบ ${filteredHolidays.length} รายการจากคำค้น “${searchText}”` : `พบ ${filteredHolidays.length} รายการ`}
+            activeFilters={[
+              ...(yearFilter !== 'all' ? [{ key: 'year', label: `ปี: ${yearFilter}`, onDelete: () => setYearFilter('all') }] : []),
+              ...(statusFilter !== 'all' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}`, onDelete: () => setStatusFilter('all') }] : []),
+            ]}
+            onClearFilters={handleClearFilters}
+            filters={<><FormControl size="small"><Select value={yearFilter === 'all' ? '' : yearFilter} displayEmpty renderValue={(value) => value || 'ปี'} inputProps={{ 'aria-label': 'ปี' }} onChange={(event) => setYearFilter(event.target.value || 'all')}>{availableYears.map((year) => <MenuItem key={year} value={String(year)}>{year}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={statusFilter === 'all' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'active' ? 'ใช้งานอยู่' : value === 'inactive' ? 'ไม่ใช้งาน' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'all')}><MenuItem value="active">ใช้งานอยู่</MenuItem><MenuItem value="inactive">ไม่ใช้งาน</MenuItem></Select></FormControl></>}
+            sx={{ marginTop: '16px' }}
+          />
+
           <Box
             sx={{
               display:
-                'grid',
+                'none',
 
               gridTemplateColumns: {
                 xs:
@@ -1665,7 +1691,7 @@ function HolidayManagementPage() {
               </TableHead>
 
               <TableBody>
-                {filteredHolidays.map(
+                {paginatedHolidays.map(
                   (
                     holiday,
                   ) => (
@@ -1674,6 +1700,10 @@ function HolidayManagementPage() {
                         holiday.id
                       }
                       hover
+                      tabIndex={0}
+                      onClick={() => handleOpenEdit(holiday)}
+                      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleOpenEdit(holiday); } }}
+                      sx={{ cursor: 'pointer', '&:focus-visible': { outline: '2px solid #2563EB', outlineOffset: -2 } }}
                     >
                       {/* Name */}
 
@@ -1815,12 +1845,7 @@ function HolidayManagementPage() {
                               'nowrap',
                           }}
                         >
-                          <RowActionMenu
-                            actions={[
-                              { label: 'แก้ไข', onClick: () => handleOpenEdit(holiday) },
-                              { label: 'ลบ', tone: 'danger', onClick: () => handleOpenDelete(holiday) },
-                            ]}
-                          />
+                          <Button type="button" size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); handleOpenDelete(holiday); }} sx={{ color: '#DC2626', borderColor: '#FECACA', '&:hover': { borderColor: '#DC2626', backgroundColor: '#FEF2F2' } }}>ลบ</Button>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1828,6 +1853,7 @@ function HolidayManagementPage() {
                 )}
               </TableBody>
             </Table>
+            {filteredHolidays.length > rowsPerPage ? <TablePagination component="div" count={filteredHolidays.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} /> : null}
           </Box>
         ) : (
           /* Empty */
@@ -2128,61 +2154,6 @@ function HolidayManagementPage() {
               )}
             </FormControl>
 
-            {/* Year Preview */}
-
-            {formData.date && (
-              <Box
-                sx={{
-                  padding:
-                    '14px 16px',
-
-                  backgroundColor:
-                    '#F8FAFC',
-
-                  border:
-                    '1px solid #E5E7EB',
-
-                  borderRadius:
-                    '10px',
-                }}
-              >
-                <Typography
-                  sx={{
-                    color:
-                      '#64748B',
-
-                    fontSize:
-                      '10px',
-
-                    fontWeight:
-                      700,
-                  }}
-                >
-                  ปีของวันหยุด
-                </Typography>
-
-                <Typography
-                  sx={{
-                    color:
-                      theme.primary,
-
-                    fontSize:
-                      '16px',
-
-                    fontWeight:
-                      800,
-
-                    marginTop:
-                      '3px',
-                  }}
-                >
-                  {formData.date.slice(
-                    0,
-                    4,
-                  )}
-                </Typography>
-              </Box>
-            )}
           </Box>
         </DialogContent>
 
@@ -2253,7 +2224,7 @@ function HolidayManagementPage() {
                 '42px',
 
               backgroundColor:
-                theme.primary,
+                '#2563EB',
 
               color:
                 '#FFFFFF',
@@ -2288,6 +2259,7 @@ function HolidayManagementPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm"><DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกวันหยุด</DialogTitle><DialogContent dividers><Typography><strong>ชื่อวันหยุด:</strong> {formData.name}</Typography><Typography sx={{ marginTop: '8px' }}><strong>วันที่:</strong> {formData.date || '-'}</Typography><Typography sx={{ marginTop: '8px' }}><strong>สถานะ:</strong> {formData.status === 'active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}</Typography></DialogContent><DialogActions sx={{ padding: '14px 20px' }}><Button variant="outlined" disabled={saving} onClick={() => setConfirmationOpen(false)} sx={{ color: '#475569', borderColor: '#CBD5E1' }}>กลับไปแก้ไข</Button><Button variant="contained" disabled={saving} onClick={confirmSave} sx={{ backgroundColor: '#15803D', '&:hover': { backgroundColor: '#166534' } }}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions></Dialog>
 
       {/* =========================
           Delete Dialog

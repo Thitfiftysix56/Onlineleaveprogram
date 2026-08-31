@@ -9,12 +9,29 @@ process.env.DB_USER = 'test_user'
 process.env.JWT_SECRET = 'leave-remediation-test-secret-with-at-least-32-bytes'
 
 const [
-  { calculateApprovalAvailability, recheckApprovalBalance, validateSubmissionParticipants },
+  { calculateApprovalAvailability, calculateDisplayedRemaining, calculateWorkingDays, isValidLeaveReason, recheckApprovalBalance, validateSubmissionParticipants },
   { isAllowedLeaveAttachment },
 ] = await Promise.all([
   import('../src/controllers/leave-controller.js'),
   import('../src/middleware/leave-upload.js'),
 ])
+
+test('leave reason accepts Thai and English letters with spaces', () => {
+  assert.equal(isValidLeaveReason('ลาพักผ่อนกับครอบครัว'), true)
+  assert.equal(isValidLeaveReason('Family personal leave'), true)
+  assert.equal(isValidLeaveReason('ลากิจ ส่วนตัว'), true)
+})
+
+test('leave reason rejects digits, symbols, emoji, and blank values', () => {
+  for (const reason of ['ลา 123 วัน', 'leave!!!', 'ลาพักผ่อน 😊', '   ']) {
+    assert.equal(isValidLeaveReason(reason), false, reason)
+  }
+})
+
+test('displayed remaining is affected only by approved usage', () => {
+  assert.equal(calculateDisplayedRemaining({ total_days: 10, used_days: 2, pending_days: 3 }), 8)
+  assert.equal(calculateDisplayedRemaining({ total_days: 10, used_days: 5, pending_days: 0 }), 5)
+})
 
 function connectionWithParticipant(overrides = {}) {
   const participant = {
@@ -32,26 +49,44 @@ function connectionWithParticipant(overrides = {}) {
 
 test('TA-001 rejects an inactive submitting employee', async () => {
   const result = await validateSubmissionParticipants(connectionWithParticipant({ employee_status: 'inactive' }), 10)
-  assert.match(result.error, /submitting employee.*inactive/i)
+  assert.match(result.error, /ผู้ยื่นคำขอ.*ไม่ได้เปิดใช้งาน/i)
 })
 
 test('TA-001 rejects an inactive supervisor employee', async () => {
   const result = await validateSubmissionParticipants(connectionWithParticipant({ supervisor_employee_status: 'inactive' }), 10)
-  assert.match(result.error, /active supervisor employee/i)
+  assert.match(result.error, /หัวหน้างานโดยตรง.*เปิดใช้งาน/i)
 })
 
 test('TA-001 rejects an inactive supervisor user account', async () => {
   const result = await validateSubmissionParticipants(connectionWithParticipant({ supervisor_user_status: 'inactive' }), 10)
-  assert.match(result.error, /active supervisor account/i)
+  assert.match(result.error, /บัญชีของหัวหน้างาน.*ไม่พร้อมใช้งาน/i)
 })
 
 test('TA-001 rejects a supervisor account with a non-Supervisor role', async () => {
   const result = await validateSubmissionParticipants(connectionWithParticipant({ supervisor_role_name: 'Employee' }), 10)
-  assert.match(result.error, /Supervisor role/i)
+  assert.match(result.error, /บทบาทหัวหน้างาน/i)
+})
+
+test('TA-001 rejects a self-supervisor relationship', async () => {
+  const result = await validateSubmissionParticipants(connectionWithParticipant({ supervisor_id: 10 }), 10)
+  assert.match(result.error, /ตนเองเป็นหัวหน้างานโดยตรง/i)
+  assert.doesNotMatch(result.error, /[A-Za-z]/)
 })
 
 test('TA-001 accepts a valid active Supervisor and returns its user id', async () => {
   assert.deepEqual(await validateSubmissionParticipants(connectionWithParticipant(), 10), { supervisorUserId: 30 })
+})
+
+test('leave day calculation counts the complete selected working-day range', async () => {
+  const connection = { execute: async () => [[]] }
+  assert.equal(await calculateWorkingDays(connection, '2026-08-24', '2026-08-24'), 1)
+  assert.equal(await calculateWorkingDays(connection, '2026-08-24', '2026-08-28'), 5)
+  assert.equal(await calculateWorkingDays(connection, '2026-08-24', '2026-08-30'), 5)
+})
+
+test('leave day calculation excludes weekends and active holidays represented as Date values', async () => {
+  const connection = { execute: async () => [[{ holiday_date: new Date('2026-08-26T00:00:00Z') }]] }
+  assert.equal(await calculateWorkingDays(connection, '2026-08-24', '2026-08-30'), 4)
 })
 
 for (const file of [

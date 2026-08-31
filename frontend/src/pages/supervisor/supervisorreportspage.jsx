@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   Alert,
@@ -6,7 +6,8 @@ import {
   Button,
   CircularProgress,
   FormControl,
-  InputLabel,
+  IconButton,
+  InputAdornment,
   MenuItem,
   Paper,
   Select,
@@ -15,9 +16,11 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  TablePagination,
   TextField,
   Typography,
 } from '@mui/material';
+import CalendarMonthRounded from '@mui/icons-material/CalendarMonthRounded';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -49,13 +52,13 @@ const statusColors = {
   },
 
   rejected: {
-    backgroundColor: '#FEE2E2',
-    color: '#B91C1C',
+    backgroundColor: '#FFE4E6',
+    color: '#BE123C',
   },
 
   cancelled: {
-    backgroundColor: '#E5E7EB',
-    color: '#64748B',
+    backgroundColor: '#FEE2E2',
+    color: '#DC2626',
   },
 };
 
@@ -83,7 +86,7 @@ const formatDate = (value) => {
   );
 
   if (match) {
-    return `${match[3]}/${match[2]}/${match[1]}`;
+    return `${match[3]}/${match[2]}/${Number(match[1]) + 543}`;
   }
 
   const date = new Date(value);
@@ -95,7 +98,7 @@ const formatDate = (value) => {
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
 
-  return `${day}/${month}/${date.getFullYear()}`;
+  return `${day}/${month}/${date.getFullYear() + 543}`;
 };
 
 const formatDateRange = (startDate, endDate) => {
@@ -118,20 +121,20 @@ function ThaiDateField({
   label,
   value,
   onChange,
+  min,
+  max,
 }) {
-  const formatDisplayDate = (dateValue) => {
-    if (!dateValue) {
-      return '';
+  const pickerRef = useRef(null);
+  const openPicker = (event) => {
+    event?.stopPropagation?.();
+    const picker = pickerRef.current;
+    if (!picker) return;
+    try {
+      if (typeof picker.showPicker === 'function') picker.showPicker();
+      else picker.click();
+    } catch {
+      picker.click();
     }
-
-    const [year, month, day] =
-      dateValue.split('-');
-
-    if (!year || !month || !day) {
-      return '';
-    }
-
-    return `${day}/${month}/${year}`;
   };
 
   return (
@@ -143,13 +146,14 @@ function ThaiDateField({
       <TextField
         fullWidth
         label={label}
-        value={formatDisplayDate(value)}
+        value={value ? formatDate(value) : ''}
         placeholder="วว/ดด/ปปปป"
+        onClick={openPicker}
         slotProps={{
           input: {
             readOnly: true,
+            endAdornment: <InputAdornment position="end"><IconButton type="button" aria-label={`เลือก${label}`} onClick={openPicker} edge="end"><CalendarMonthRounded fontSize="small" /></IconButton></InputAdornment>,
           },
-
           inputLabel: {
             shrink: true,
           },
@@ -162,6 +166,7 @@ function ThaiDateField({
 
           '& .MuiOutlinedInput-input': {
             fontSize: '14px',
+            cursor: 'pointer',
           },
 
           '& .MuiInputBase-input::placeholder': {
@@ -172,6 +177,7 @@ function ThaiDateField({
       />
 
       <input
+        ref={pickerRef}
         type="date"
         value={value}
         onChange={(event) =>
@@ -179,12 +185,15 @@ function ThaiDateField({
         }
         style={{
           position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
+          width: 1,
+          height: 1,
           opacity: 0,
-          cursor: 'pointer',
+          pointerEvents: 'none',
+          insetInlineStart: 0,
+          bottom: 0,
         }}
+        min={min}
+        max={max}
       />
     </Box>
   );
@@ -197,11 +206,13 @@ function SupervisorReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const [status, setStatus] = useState('all');
-  const [leaveType, setLeaveType] = useState('all');
+  const [status, setStatus] = useState('');
+  const [leaveType, setLeaveType] = useState('');
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 5;
 
   useEffect(() => {
     const loadReport = async () => {
@@ -254,11 +265,11 @@ function SupervisorReportsPage() {
       ).toLowerCase();
 
       const matchesStatus =
-        status === 'all' ||
+        !status ||
         requestStatus === status;
 
       const matchesLeaveType =
-        leaveType === 'all' ||
+        !leaveType ||
         String(request.leaveTypeId) ===
           String(leaveType);
 
@@ -302,12 +313,23 @@ function SupervisorReportsPage() {
     };
   }, [filteredRequests]);
 
+  useEffect(() => {
+    setPage(0);
+  }, [startDate, endDate, status, leaveType]);
+
+  const paginatedRequests = useMemo(
+    () => filteredRequests.slice(page * rowsPerPage, (page + 1) * rowsPerPage),
+    [filteredRequests, page],
+  );
+
   const summaryCards = [
     {
       title: 'คำขอทั้งหมด',
       value: summary.total,
-      backgroundColor: theme.soft,
-      color: theme.primary,
+      backgroundColor: '#EFF6FF',
+      borderColor: '#BFDBFE',
+      gradient: 'linear-gradient(135deg, #EAF3FF 0%, #F7FAFF 68%, #FFFFFF 100%)',
+      glowColor: 'rgba(96, 165, 250, 0.18)',
       accent: 'info',
     },
 
@@ -315,7 +337,9 @@ function SupervisorReportsPage() {
       title: 'รออนุมัติ',
       value: summary.pending,
       backgroundColor: '#FEF3C7',
-      color: '#B45309',
+      borderColor: '#FCD34D',
+      gradient: 'linear-gradient(135deg, #FFFFFF 0%, #FFFBEB 45%, #FEF3C7 100%)',
+      glowColor: 'rgba(245, 158, 11, 0.16)',
       accent: 'warning',
     },
 
@@ -323,7 +347,9 @@ function SupervisorReportsPage() {
       title: 'อนุมัติแล้ว',
       value: summary.approved,
       backgroundColor: '#DCFCE7',
-      color: '#15803D',
+      borderColor: '#86EFAC',
+      gradient: 'linear-gradient(135deg, #FFFFFF 0%, #F6FEF9 45%, #DCFCE7 100%)',
+      glowColor: 'rgba(34, 197, 94, 0.14)',
       accent: 'success',
     },
 
@@ -331,21 +357,23 @@ function SupervisorReportsPage() {
       title: 'ปฏิเสธแล้ว',
       value: summary.rejected,
       backgroundColor: '#FEE2E2',
-      color: '#B91C1C',
+      borderColor: '#FCA5A5',
+      gradient: 'linear-gradient(135deg, #FFFFFF 0%, #FFF8F8 45%, #FEE2E2 100%)',
+      glowColor: 'rgba(239, 68, 68, 0.13)',
       accent: 'error',
     },
   ];
 
   const clearFilters = () => {
-    setStatus('all');
-    setLeaveType('all');
+    setStatus('');
+    setLeaveType('');
     setStartDate('');
     setEndDate('');
   };
 
   return (
     <SupervisorLayout activeMenu="Team Reports">
-      <PageHeader title="รายงานทีม" />
+      <PageHeader title="รายงานทีม" sx={{ marginBottom: '10px' }} />
 
       {error && (
         <Alert
@@ -367,10 +395,11 @@ function SupervisorReportsPage() {
           gridTemplateColumns: {
             xs: '1fr',
             sm: 'repeat(2, 1fr)',
-            xl: 'repeat(4, 1fr)',
+            md: 'repeat(4, minmax(0, 1fr))',
           },
 
-          gap: '18px',
+          gap: '16px',
+          marginBottom: '16px',
         }}
       >
         {summaryCards.map((card) => (
@@ -379,6 +408,26 @@ function SupervisorReportsPage() {
             title={card.title}
             value={card.value}
             accent={card.accent}
+            compactInline
+            sx={{
+              minHeight: '72px',
+              padding: '18px',
+              background: card.gradient,
+              borderColor: '#E6EAF0',
+              borderRadius: '20px',
+              boxShadow: '0 8px 24px rgba(15, 23, 42, 0.06)',
+              '&::before': { display: 'none' },
+              '& > [aria-hidden="true"]': {
+                width: '112px',
+                height: '112px',
+                top: '-46px',
+                right: '-38px',
+                backgroundColor: card.glowColor,
+                filter: 'blur(3px)',
+                opacity: 1,
+              },
+              '& > .MuiStack-root': { position: 'relative', zIndex: 1 },
+            }}
           />
         ))}
       </Box>
@@ -415,18 +464,6 @@ function SupervisorReportsPage() {
             ประวัติการลาของลูกทีม
           </Typography>
 
-          <Typography
-            sx={{
-              color: '#64748B',
-
-              fontSize: '12px',
-
-              marginTop: '4px',
-            }}
-          >
-            แสดง {filteredRequests.length} รายการ
-          </Typography>
-
           <Box
             sx={{
               display: 'grid',
@@ -436,7 +473,7 @@ function SupervisorReportsPage() {
 
                 md: 'repeat(2, 1fr)',
 
-                lg: 'minmax(140px, 0.75fr) minmax(180px, 1fr) minmax(170px, 0.9fr) minmax(170px, 0.9fr) auto',
+                lg: 'repeat(4, minmax(150px, 1fr)) auto',
               },
 
               gap: '16px',
@@ -445,14 +482,13 @@ function SupervisorReportsPage() {
             }}
           >
             {/* สถานะ */}
-            <FormControl fullWidth>
-              <InputLabel>
-                สถานะ
-              </InputLabel>
+            <FormControl fullWidth sx={{ order: 3 }}>
 
               <Select
                 value={status}
-                label="สถานะ"
+                displayEmpty
+                renderValue={(value) => value ? statusLabels[value] : 'สถานะ'}
+                inputProps={{ 'aria-label': 'สถานะ' }}
                 onChange={(event) =>
                   setStatus(
                     event.target.value,
@@ -463,10 +499,6 @@ function SupervisorReportsPage() {
                   borderRadius: '9px',
                 }}
               >
-                <MenuItem value="all">
-                  ทุกสถานะ
-                </MenuItem>
-
                 <MenuItem value="pending">
                   รออนุมัติ
                 </MenuItem>
@@ -486,14 +518,13 @@ function SupervisorReportsPage() {
             </FormControl>
 
             {/* ประเภทการลา */}
-            <FormControl fullWidth>
-              <InputLabel>
-                ประเภทการลา
-              </InputLabel>
+            <FormControl fullWidth sx={{ order: 4 }}>
 
               <Select
                 value={leaveType}
-                label="ประเภทการลา"
+                displayEmpty
+                renderValue={(value) => value ? translateLeaveType(leaveTypes.find(([id]) => id === String(value))?.[1]) : 'ประเภท'}
+                inputProps={{ 'aria-label': 'ประเภท' }}
                 onChange={(event) =>
                   setLeaveType(
                     event.target.value,
@@ -504,10 +535,6 @@ function SupervisorReportsPage() {
                   borderRadius: '9px',
                 }}
               >
-                <MenuItem value="all">
-                  ทุกประเภท
-                </MenuItem>
-
                 {leaveTypes.map(
                   ([id, name]) => (
                     <MenuItem
@@ -528,6 +555,7 @@ function SupervisorReportsPage() {
               label="วันที่เริ่มต้น"
               value={startDate}
               onChange={setStartDate}
+              max={endDate || undefined}
             />
 
             {/* วันที่สิ้นสุด */}
@@ -535,6 +563,7 @@ function SupervisorReportsPage() {
               label="วันที่สิ้นสุด"
               value={endDate}
               onChange={setEndDate}
+              min={startDate || undefined}
             />
 
             {/* ล้างตัวกรอง */}
@@ -543,6 +572,7 @@ function SupervisorReportsPage() {
               variant="outlined"
               onClick={clearFilters}
               sx={{
+                order: 5,
                 height: '48px',
 
                 gridColumn: {
@@ -638,7 +668,7 @@ function SupervisorReportsPage() {
               </TableHead>
 
               <TableBody>
-                {filteredRequests.map(
+                {paginatedRequests.map(
                   (request) => {
                     const requestStatus =
                       String(
@@ -820,6 +850,17 @@ function SupervisorReportsPage() {
                 )}
               </TableBody>
             </Table>
+            {filteredRequests.length > rowsPerPage ? (
+              <TablePagination
+                component="div"
+                count={filteredRequests.length}
+                page={page}
+                onPageChange={(_, nextPage) => setPage(nextPage)}
+                rowsPerPage={rowsPerPage}
+                rowsPerPageOptions={[rowsPerPage]}
+                labelRowsPerPage="รายการต่อหน้า"
+              />
+            ) : null}
           </Box>
         ) : (
           /* Empty */

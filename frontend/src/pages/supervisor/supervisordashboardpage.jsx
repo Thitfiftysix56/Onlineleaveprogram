@@ -16,11 +16,13 @@ import {
 import {
   useNavigate,
 } from 'react-router-dom';
+import AddRounded from '@mui/icons-material/AddRounded';
 
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
 import RequestNumberText from '../../components/requestnumbertext.jsx';
 import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
-import { StatCard } from '../../components/shareduiprimitives.jsx';
+import DashboardLeaveBalance from '../../components/dashboardleavebalance.jsx';
+import { DashboardTablePagination } from '../../components/shareduiprimitives.jsx';
 import { roleAccentTokens } from '../../theme/tokens.js';
 
 import { getTeamReport } from '../../api/leave-service.js';
@@ -408,6 +410,8 @@ function SupervisorDashboardPage() {
     setLeaveRequests,
   ] = useState([]);
 
+  const [requestPage, setRequestPage] = useState(0);
+
   const [
     notifications,
     setNotifications,
@@ -567,12 +571,10 @@ function SupervisorDashboardPage() {
   const recentPendingRequests =
     useMemo(
       () =>
-        pendingRequests.slice(
-          0,
-          5,
-        ),
+        pendingRequests.slice(requestPage * 5, requestPage * 5 + 5),
       [
         pendingRequests,
+        requestPage,
       ],
     );
 
@@ -591,81 +593,79 @@ function SupervisorDashboardPage() {
   const summaryCards = [
     {
       title: 'รออนุมัติ',
-
       value:
         pendingRequests.length,
-
       description:
         'รายการที่รอตรวจสอบ',
-
-      backgroundColor:
-        supervisorTheme.soft,
-
-      color:
-        supervisorTheme.primary,
-      accent: 'warning',
+      gradient:
+        'linear-gradient(135deg, #FFFFFF 0%, #FFFBEB 45%, #FEF3C7 100%)',
+      glowColor:
+        'rgba(245, 158, 11, 0.16)',
+      valueColor:
+        '#B45309',
     },
 
     {
       title:
         'อนุมัติแล้ว',
-
       value:
         approvedRequestCount,
-
       description:
         `รายการในปี ${currentYear}`,
-
-      backgroundColor:
-        '#DCFCE7',
-
-      color:
+      gradient:
+        'linear-gradient(135deg, #FFFFFF 0%, #F6FEF9 45%, #DCFCE7 100%)',
+      glowColor:
+        'rgba(34, 197, 94, 0.14)',
+      valueColor:
         '#15803D',
-      accent: 'success',
     },
 
     {
       title:
         'ปฏิเสธแล้ว',
-
       value:
         rejectedRequestCount,
-
       description:
         `รายการในปี ${currentYear}`,
-
-      backgroundColor:
-        '#FEE2E2',
-
-      color:
-        '#B91C1C',
-      accent: 'error',
+      gradient:
+        'linear-gradient(135deg, #FFFFFF 0%, #FFF8F8 45%, #FEE2E2 100%)',
+      glowColor:
+        'rgba(239, 68, 68, 0.13)',
+      valueColor:
+        '#DC2626',
     },
 
     {
       title:
         'ยังไม่ได้อ่าน',
-
       value:
         unreadNotificationCount,
-
       description:
         'การแจ้งเตือนใหม่',
-
-      backgroundColor:
-        '#EDE9FE',
-
-      color:
-        '#6D28D9',
-      accent: 'error',
+      gradient:
+        'linear-gradient(135deg, #FFFFFF 0%, #FAF8FF 45%, #EDE9FE 100%)',
+      glowColor:
+        'rgba(124, 58, 237, 0.15)',
+      valueColor:
+        '#2563EB',
     },
   ];
 
   const handleOpenRequest = (
     request,
   ) => {
+    const requestId =
+      Number(request?.id);
+
+    if (
+      !Number.isInteger(requestId) ||
+      requestId <= 0
+    ) {
+      return;
+    }
+
     navigate(
-      `/supervisor/approval/${request.id}`,
+      `/supervisor/approval/${requestId}`,
     );
   };
 
@@ -692,7 +692,7 @@ function SupervisorDashboardPage() {
     <SupervisorLayout
       activeMenu="Dashboard"
     >
-      <PageHeader title="Dashboard" />
+      <PageHeader title="Dashboard" actions={<Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/supervisor/leave-request')} sx={{ height: 40, borderRadius: '9px', backgroundColor: '#2563EB', boxShadow: 'none', fontSize: '13px', fontWeight: 800, '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' } }}>สร้างคำขอลา</Button>} />
 
       {/* Summary Cards */}
       <Box
@@ -707,29 +707,186 @@ function SupervisorDashboardPage() {
             sm:
               'repeat(2, minmax(0, 1fr))',
 
-            xl:
+            md:
               'repeat(4, minmax(0, 1fr))',
           },
 
           gap:
-            '18px',
+            '16px',
 
+          marginBottom:
+            '24px',
         }}
       >
         {summaryCards.map(
           (card) => (
-            <StatCard
+            <Paper
               key={
                 card.title
               }
-              title={card.title}
-              value={card.value}
-              supportingText={card.description}
-              accent={card.accent}
-            />
+              elevation={0}
+              sx={{
+                position:
+                  'relative',
+
+                overflow:
+                  'hidden',
+
+                display:
+                  'flex',
+
+                alignItems:
+                  'baseline',
+
+                justifyContent:
+                  'space-between',
+
+                gap:
+                  '8px',
+
+                minHeight:
+                  '72px',
+
+                padding:
+                  '18px',
+
+                background:
+                  card.gradient,
+
+                border:
+                  '1px solid #E6EAF0',
+
+                borderRadius:
+                  '20px',
+
+                boxShadow:
+                  '0 8px 24px rgba(15, 23, 42, 0.06)',
+
+                '&::after': {
+                  content:
+                    '""',
+
+                  position:
+                    'absolute',
+
+                  width:
+                    '112px',
+
+                  height:
+                    '112px',
+
+                  top:
+                    '-46px',
+
+                  right:
+                    '-38px',
+
+                  borderRadius:
+                    '50%',
+
+                  backgroundColor:
+                    card.glowColor,
+
+                  filter:
+                    'blur(3px)',
+
+                  pointerEvents:
+                    'none',
+                },
+              }}
+            >
+              <Typography
+                noWrap
+                sx={{
+                  position:
+                    'relative',
+
+                  zIndex:
+                    1,
+
+                  color:
+                    '#374151',
+
+                  fontSize:
+                    '14px',
+
+                  fontWeight:
+                    700,
+                }}
+              >
+                {card.title}
+              </Typography>
+
+              <Typography
+                noWrap
+                sx={{
+                  position:
+                    'relative',
+
+                  zIndex:
+                    1,
+
+                  marginTop:
+                    0,
+
+                  color:
+                    card.valueColor,
+
+                  fontSize: {
+                    xs:
+                      '18px',
+
+                    md:
+                      '18px',
+                  },
+
+                  fontWeight:
+                    800,
+
+                  lineHeight:
+                    1,
+
+                  letterSpacing:
+                    '-0.02em',
+                }}
+              >
+                {card.value}
+              </Typography>
+
+              <Typography
+                sx={{
+                  position:
+                    'relative',
+
+                  display:
+                    'none',
+
+                  zIndex:
+                    1,
+
+                  marginTop:
+                    '12px',
+
+                  color:
+                    '#64748B',
+
+                  fontSize:
+                    '12px',
+
+                  fontWeight:
+                    500,
+                }}
+              >
+                {
+                  card.description
+                }
+              </Typography>
+            </Paper>
           ),
         )}
       </Box>
+
+      <DashboardLeaveBalance />
 
       {/* Pending Requests */}
       <Paper
@@ -803,6 +960,8 @@ function SupervisorDashboardPage() {
 
             <Typography
               sx={{
+                display:
+                  'none',
                 color:
                   '#64748B',
 
@@ -834,6 +993,8 @@ function SupervisorDashboardPage() {
               )
             }
             sx={{
+              display:
+                'none',
               height:
                 '40px',
 
@@ -873,6 +1034,7 @@ function SupervisorDashboardPage() {
 
         {recentPendingRequests.length >
         0 ? (
+          <>
           <Box
             sx={{
               overflowX:
@@ -891,7 +1053,7 @@ function SupervisorDashboardPage() {
                     'grid',
 
                   gridTemplateColumns:
-                    '1.2fr 1.5fr 1.2fr 1.7fr 0.8fr 0.8fr',
+                    '1.2fr 1.5fr 1.2fr 1.7fr 0.8fr',
 
                   gap:
                     '16px',
@@ -912,7 +1074,6 @@ function SupervisorDashboardPage() {
                   'ประเภทการลา',
                   'ช่วงวันที่',
                   'จำนวนวัน',
-                  'การดำเนินการ',
                 ].map(
                   (heading) => (
                     <Typography
@@ -947,12 +1108,22 @@ function SupervisorDashboardPage() {
                         request,
                       )
                     }
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleOpenRequest(request)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleOpenRequest(request);
+                      }
+                    }}
                     sx={{
                       display:
                         'grid',
 
                       gridTemplateColumns:
-                        '1.2fr 1.5fr 1.2fr 1.7fr 0.8fr 0.8fr',
+                        '1.2fr 1.5fr 1.2fr 1.7fr 0.8fr',
+                      cursor: 'pointer',
 
                       gap:
                         '16px',
@@ -1102,62 +1273,17 @@ function SupervisorDashboardPage() {
                       วัน
                     </Typography>
 
-                    <Button
-                      type="button"
-                      variant="outlined"
-                      onClick={() =>
-                        handleOpenRequest(
-                          request,
-                        )
-                      }
-                      sx={{
-                        width:
-                          'fit-content',
-
-                        minWidth:
-                          '78px',
-
-                        height:
-                          '34px',
-
-                        padding:
-                          '0 12px',
-
-                        color:
-                          supervisorTheme.primary,
-
-                        borderColor:
-                          supervisorTheme.border,
-
-                        borderRadius:
-                          '8px',
-
-                        fontSize:
-                          '11px',
-
-                        fontWeight:
-                          700,
-
-                        textTransform:
-                          'none',
-
-                        '&:hover':
-                          {
-                            backgroundColor:
-                              supervisorTheme.soft,
-
-                            borderColor:
-                              supervisorTheme.primary,
-                          },
-                      }}
-                    >
-                      ตรวจสอบ
-                    </Button>
                   </Box>
                 ),
               )}
             </Box>
           </Box>
+          <DashboardTablePagination
+            count={pendingRequests.length}
+            page={requestPage}
+            onPageChange={(_, nextPage) => setRequestPage(nextPage)}
+          />
+          </>
         ) : (
           <Box
             sx={{
@@ -1259,6 +1385,9 @@ function SupervisorDashboardPage() {
       <Paper
         elevation={0}
         sx={{
+          display:
+            'none',
+
           backgroundColor:
             '#FFFFFF',
 

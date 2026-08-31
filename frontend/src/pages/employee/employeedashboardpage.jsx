@@ -16,12 +16,15 @@ import {
 import {
   useNavigate,
 } from 'react-router-dom';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
 
 import EmployeeLayout from '../../layouts/employeelayout.jsx';
 import RequestNumberText from '../../components/requestnumbertext.jsx';
 import {
   PageHeader,
 } from '../../components/sharedvisualfoundation.jsx';
+import DashboardLeaveBalance from '../../components/dashboardleavebalance.jsx';
+import { DashboardTablePagination } from '../../components/shareduiprimitives.jsx';
 import { getLeaveBalance, getMyLeaveRequests } from '../../api/leave-service.js';
 import { getNotifications, markNotificationRead as markNotificationAsRead } from '../../api/notification-service.js';
 import {
@@ -628,6 +631,8 @@ function EmployeeDashboardPage() {
     setLeaveRequests,
   ] = useState([]);
 
+  const [requestPage, setRequestPage] = useState(0);
+
   const [
     leaveBalances,
     setLeaveBalances,
@@ -816,19 +821,21 @@ function EmployeeDashboardPage() {
             normalizeStatus(
               request.status,
             ) ===
-              'approved' &&
-            getRequestYear(
-              request,
-            ) ===
-              currentYear,
+              'approved',
         ).length,
       [
-        currentYear,
         leaveRequests,
       ],
     );
 
-  const summaryCards = [
+  const rejectedRequestCount = useMemo(
+    () => leaveRequests.filter(
+      (request) => normalizeStatus(request.status) === 'rejected',
+    ).length,
+    [leaveRequests],
+  );
+
+  const dashboardCardCandidates = [
     {
       title:
         'สิทธิ์ลาพักร้อน',
@@ -857,6 +864,8 @@ function EmployeeDashboardPage() {
 
       color:
         '#2563EB',
+
+      accent: 'info',
     },
 
     {
@@ -887,6 +896,8 @@ function EmployeeDashboardPage() {
 
       color:
         '#E11D48',
+
+      accent: 'error',
     },
 
     {
@@ -907,6 +918,8 @@ function EmployeeDashboardPage() {
 
       color:
         '#D97706',
+
+      accent: 'warning',
     },
 
     {
@@ -927,10 +940,49 @@ function EmployeeDashboardPage() {
 
       color:
         '#059669',
+
+      accent: 'success',
     },
   ];
 
-  const recentRequests =
+  // Leave balances are rendered once by DashboardLeaveBalance below. These
+  // four cards intentionally contain request counts only.
+  const summaryCards = [
+    {
+      title: 'คำขอทั้งหมด',
+      value: leaveRequests.length,
+      description: 'รวมทุกสถานะ',
+      background: 'linear-gradient(135deg, #EAF3FF 0%, #F7FAFF 68%, #FFFFFF 100%)',
+      glowColor: 'rgba(96, 165, 250, 0.18)',
+      valueColor: '#2563EB',
+    },
+    {
+      ...dashboardCardCandidates[2],
+      title: 'รออนุมัติ',
+      description: 'กำลังรอการพิจารณา',
+      background: 'linear-gradient(135deg, #FFF8DC 0%, #FFFCF1 68%, #FFFFFF 100%)',
+      glowColor: 'rgba(250, 204, 21, 0.18)',
+      valueColor: '#B45309',
+    },
+    {
+      ...dashboardCardCandidates[3],
+      title: 'อนุมัติแล้ว',
+      description: 'คำขอที่ได้รับอนุมัติ',
+      background: 'linear-gradient(135deg, #EAFBF2 0%, #F6FEF9 68%, #FFFFFF 100%)',
+      glowColor: 'rgba(74, 222, 128, 0.18)',
+      valueColor: '#15803D',
+    },
+    {
+      title: 'ไม่อนุมัติ',
+      value: rejectedRequestCount,
+      description: 'คำขอที่ไม่ได้รับอนุมัติ',
+      background: 'linear-gradient(135deg, #FFF0F1 0%, #FFF8F8 68%, #FFFFFF 100%)',
+      glowColor: 'rgba(248, 113, 113, 0.16)',
+      valueColor: '#DC2626',
+    },
+  ];
+
+  const dashboardRequests =
     useMemo(
       () =>
         leaveRequests
@@ -942,15 +994,16 @@ function EmployeeDashboardPage() {
                 request.status,
               ) !==
               'draft',
-          )
-          .slice(
-            0,
-            5,
           ),
       [
         leaveRequests,
       ],
     );
+
+  const recentRequests = useMemo(
+    () => dashboardRequests.slice(requestPage * 5, requestPage * 5 + 5),
+    [dashboardRequests, requestPage],
+  );
 
   const recentNotifications =
     useMemo(
@@ -1016,6 +1069,7 @@ function EmployeeDashboardPage() {
           <Button
             type="button"
             variant="contained"
+            startIcon={<AddRoundedIcon sx={{ fontSize: 19 }} />}
             onClick={() =>
               navigate(
                 '/employee/leave-request',
@@ -1031,13 +1085,17 @@ function EmployeeDashboardPage() {
               fontWeight: 700,
               textTransform: 'none',
               boxShadow: 'none',
+              transition: 'background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
               '&:hover': {
                 backgroundColor: '#1D4ED8',
-                boxShadow: 'none',
+                boxShadow: '0 6px 16px rgba(37, 99, 235, 0.22)',
+                transform: 'translateY(-1px)',
               },
+              '&:active': { transform: 'translateY(0)', boxShadow: 'none' },
+              '&:focus-visible': { outline: '3px solid #BFDBFE', outlineOffset: 2 },
             }}
           >
-            + สร้างคำขอลา
+            สร้างคำขอลา
           </Button>
         )}
       />
@@ -1049,7 +1107,7 @@ function EmployeeDashboardPage() {
 
           gridTemplateColumns: {
             xs:
-              'repeat(2, minmax(0, 1fr))',
+              '1fr',
 
             sm:
               'repeat(2, minmax(0, 1fr))',
@@ -1057,43 +1115,88 @@ function EmployeeDashboardPage() {
             md:
               'repeat(4, minmax(0, 1fr))',
           },
-          gap: '12px',
+          gap: '16px',
         }}
       >
-        {summaryCards.map(
-          (
-            card,
-            index,
-          ) => (
-            <Box key={card.title} sx={{
-              minWidth: 0,
-              padding: { xs: '18px 16px', sm: '22px 24px' },
-              borderRight: {
-                xs: index % 2 === 0 ? '1px solid #E5EAF0' : 'none',
-                md: index < summaryCards.length - 1 ? '1px solid #E5EAF0' : 'none',
+        {summaryCards.map((card) => (
+          <Paper
+            key={card.title}
+            elevation={0}
+            sx={{
+              position: 'relative',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+              gap: '8px',
+              minHeight: '72px',
+              padding: '18px',
+              background: card.background,
+              border: '1px solid #E6EAF0',
+              borderRadius: '20px',
+              boxShadow: '0 8px 24px rgba(15, 23, 42, 0.07)',
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                width: '118px',
+                height: '118px',
+                top: '-47px',
+                right: '-38px',
+                borderRadius: '50%',
+                backgroundColor: card.glowColor,
+                filter: 'blur(3px)',
+                pointerEvents: 'none',
               },
-              borderBottom: {
-                xs: index < 2 ? '1px solid #E5EAF0' : 'none',
-                md: 'none',
-              },
-              backgroundColor: card.backgroundColor,
-              border: `1px solid ${card.borderColor}`,
-              borderRadius: '9px',
-              boxShadow: 'none',
-            }}>
-              <Typography sx={{ color: '#64748B', fontSize: '12px', fontWeight: 600 }}>
-                {card.title}
-              </Typography>
-              <Typography sx={{ color: '#172033', fontSize: { xs: '22px', sm: '26px' }, fontWeight: 700, lineHeight: 1.25, marginTop: '7px' }}>
-                {card.value}
-              </Typography>
-              <Typography sx={{ color: '#64748B', fontSize: '12px', lineHeight: 1.5, marginTop: '5px' }}>
-                {card.description}
-              </Typography>
-            </Box>
-          ),
-        )}
+            }}
+          >
+            <Typography
+              noWrap
+              sx={{
+                position: 'relative',
+                zIndex: 1,
+                color: '#374151',
+                fontSize: '15px',
+                fontWeight: 700,
+                lineHeight: 1.4,
+              }}
+            >
+              {card.title}
+            </Typography>
+
+            <Typography
+              noWrap
+              sx={{
+                position: 'relative',
+                zIndex: 1,
+                marginTop: 0,
+                color: card.valueColor,
+                fontSize: '18px',
+                fontWeight: 800,
+                lineHeight: 1,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {card.value}
+            </Typography>
+
+            <Typography
+              sx={{
+                display: 'none',
+                position: 'relative',
+                zIndex: 1,
+                marginTop: '12px',
+                color: '#64748B',
+                fontSize: '13px',
+                fontWeight: 500,
+              }}
+            >
+              {card.description}
+            </Typography>
+          </Paper>
+        ))}
       </Box>
+
+      <DashboardLeaveBalance />
 
       <Paper
         elevation={0}
@@ -1163,21 +1266,6 @@ function EmployeeDashboardPage() {
             >
               คำขอล่าสุด
             </Typography>
-
-            <Typography
-              sx={{
-                color:
-                  '#6B7280',
-
-                fontSize:
-                  '13px',
-
-                marginTop:
-                  '3px',
-              }}
-            >
-              คำขอลาที่ส่งล่าสุดของคุณ
-            </Typography>
           </Box>
 
           <Box
@@ -1201,6 +1289,7 @@ function EmployeeDashboardPage() {
                 )
               }
               sx={{
+                display: 'none',
                 height:
                   '40px',
 
@@ -1242,6 +1331,7 @@ function EmployeeDashboardPage() {
 
         {recentRequests.length >
         0 ? (
+          <>
           <Box
             sx={{
               overflowX:
@@ -1472,6 +1562,12 @@ function EmployeeDashboardPage() {
               )}
             </Box>
           </Box>
+          <DashboardTablePagination
+            count={dashboardRequests.length}
+            page={requestPage}
+            onPageChange={(_, nextPage) => setRequestPage(nextPage)}
+          />
+          </>
         ) : (
           <Box
             sx={{
@@ -1569,12 +1665,14 @@ function EmployeeDashboardPage() {
             <Button
               type="button"
               variant="contained"
+              startIcon={<AddRoundedIcon sx={{ fontSize: 19 }} />}
               onClick={() =>
                 navigate(
                   '/employee/leave-request',
                 )
               }
               sx={{
+                display: 'none',
                 height:
                   '40px',
 
@@ -1614,7 +1712,7 @@ function EmployeeDashboardPage() {
                 },
               }}
             >
-              + สร้างคำขอลา
+              สร้างคำขอลา
             </Button>
           </Box>
         )}
@@ -1634,6 +1732,9 @@ function EmployeeDashboardPage() {
 
           overflow:
             'hidden',
+
+          display:
+            'none',
         }}
       >
         <Box

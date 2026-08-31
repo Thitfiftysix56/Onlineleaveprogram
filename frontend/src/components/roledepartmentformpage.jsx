@@ -3,686 +3,164 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
-  FormControl,
-  FormHelperText,
-  InputLabel,
-  MenuItem,
-  Paper,
-  Select,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Stack,
   TextField,
   Typography,
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  createDepartment,
-  getDepartment,
-  updateDepartment,
-} from '../api/department-service.js';
+import { createDepartment, getDepartment, updateDepartment } from '../api/department-service.js';
+import { BackButton, PageHeader, Surface } from './sharedvisualfoundation.jsx';
 
-const emptyDepartmentData = {
-  departmentName: '',
-  description: '',
-  status: 'Active',
-};
+const emptyData = { departmentName: '', description: '', status: 'Active' };
 
-const editDepartmentData = {
-  departmentName: 'Information Technology',
-  description:
-    'Responsible for software development, infrastructure and technical support.',
-  status: 'Active',
-};
-
-function RoleDepartmentFormPage({
-  LayoutComponent,
-  activeMenu,
-  theme,
-  mode = 'add',
-}) {
+function RoleDepartmentFormPage({ LayoutComponent, activeMenu, mode = 'add' }) {
   const isEditMode = mode === 'edit';
   const navigate = useNavigate();
   const { departmentId } = useParams();
-
-  const [formData, setFormData] = useState(
-    isEditMode
-      ? { ...editDepartmentData }
-      : { ...emptyDepartmentData },
-  );
-
+  const [formData, setFormData] = useState(emptyData);
+  const [initialData, setInitialData] = useState(emptyData);
   const [errors, setErrors] = useState({});
-  const [successMessage, setSuccessMessage] =
-    useState('');
-
-  const [informationMessage, setInformationMessage] =
-    useState('');
+  const [message, setMessage] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
     const load = async () => {
-      setErrors({}); setSuccessMessage(''); setInformationMessage('');
-      if (!isEditMode) { setFormData({ ...emptyDepartmentData }); setLoading(false); return; }
+      if (!isEditMode) {
+        setFormData(emptyData);
+        setInitialData(emptyData);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         const department = await getDepartment(departmentId);
-        if (active) setFormData({ departmentName: department.departmentName, description: department.description || '', status: department.status });
+        const nextData = {
+          departmentName: department.departmentName || '',
+          description: department.description || '',
+          status: department.status || 'Active',
+        };
+        if (active) {
+          setFormData(nextData);
+          setInitialData(nextData);
+        }
       } catch (error) {
-        if (active) setInformationMessage(error.response?.data?.message || 'Unable to load department.');
-      } finally { if (active) setLoading(false); }
+        if (active) setMessage({ type: 'error', text: error.response?.data?.message || 'ไม่สามารถโหลดข้อมูลแผนกได้' });
+      } finally {
+        if (active) setLoading(false);
+      }
     };
     load();
     return () => { active = false; };
   }, [departmentId, isEditMode]);
 
-  const pageTitle = isEditMode
-    ? 'Edit Department'
-    : 'Add Department';
-
-  const pageDescription = isEditMode
-    ? 'Update the selected department information.'
-    : 'Create a new department for the organization.';
-
-  const handleInputChange = (fieldName, value) => {
-    setFormData((previousData) => ({
-      ...previousData,
-      [fieldName]: value,
-    }));
-
-    setErrors((previousErrors) => ({
-      ...previousErrors,
-      [fieldName]: '',
-    }));
-
-    setSuccessMessage('');
-    setInformationMessage('');
+  const updateField = (field, value) => {
+    setFormData((current) => ({ ...current, [field]: value }));
+    setErrors((current) => ({ ...current, [field]: '' }));
+    setMessage({ type: '', text: '' });
   };
 
-  const validateForm = () => {
-    const validationErrors = {};
-
-    const normalizedDepartmentName =
-      formData.departmentName.trim();
-
-    if (!normalizedDepartmentName) {
-      validationErrors.departmentName =
-        'Please enter the department name';
-    } else if (
-      normalizedDepartmentName.length < 2
-    ) {
-      validationErrors.departmentName =
-        'Department name must contain at least 2 characters';
-    } else if (
-      normalizedDepartmentName.length > 100
-    ) {
-      validationErrors.departmentName =
-        'Department name must not exceed 100 characters';
-    }
-
-    if (!formData.status) {
-      validationErrors.status =
-        'Please select a department status';
-    }
-
-    setErrors(validationErrors);
-
-    return (
-      Object.keys(validationErrors).length === 0
-    );
+  const validate = () => {
+    const nextErrors = {};
+    const name = formData.departmentName.trim();
+    if (!name) nextErrors.departmentName = 'กรุณากรอกชื่อแผนก';
+    else if (name.length < 2) nextErrors.departmentName = 'ชื่อแผนกต้องมีอย่างน้อย 2 ตัวอักษร';
+    else if (name.length > 100) nextErrors.departmentName = 'ชื่อแผนกต้องไม่เกิน 100 ตัวอักษร';
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = async (event) => {
+  const requestConfirmation = (event) => {
     event.preventDefault();
+    if (validate()) setConfirmationOpen(true);
+  };
 
-    setSuccessMessage('');
-    setInformationMessage('');
-
-    if (!validateForm()) {
-      return;
-    }
-
-    const submittedDepartment = { departmentName: formData.departmentName.trim(), description: formData.description.trim() || null, status: formData.status };
+  const confirmSave = async () => {
+    const payload = {
+      departmentName: formData.departmentName.trim(),
+      description: formData.description.trim() || null,
+      status: formData.status,
+    };
     setSaving(true);
     try {
-      const result = isEditMode ? await updateDepartment(departmentId, submittedDepartment) : await createDepartment(submittedDepartment);
-      setSuccessMessage(result.message);
+      const result = isEditMode
+        ? await updateDepartment(departmentId, payload)
+        : await createDepartment(payload);
+      setConfirmationOpen(false);
+      setMessage({ type: 'success', text: result.message || 'บันทึกข้อมูลแผนกเรียบร้อยแล้ว' });
       window.setTimeout(() => navigate('/admin/department-management'), 500);
-    } catch (error) { setInformationMessage(error.response?.data?.message || 'Unable to save department.'); }
-    finally { setSaving(false); }
+    } catch (error) {
+      setConfirmationOpen(false);
+      setMessage({ type: 'error', text: error.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลแผนกได้' });
+    } finally {
+      setSaving(false);
+    }
   };
-
-  const handleReset = () => {
-    setFormData(
-      isEditMode
-        ? { ...editDepartmentData }
-        : { ...emptyDepartmentData },
-    );
-
-    setErrors({});
-    setSuccessMessage('');
-    setInformationMessage('');
-  };
-
-  const handleBack = () => {
-    navigate('/admin/department-management');
-  };
-
-  const isActive =
-    formData.status === 'Active';
-
-  const departmentInitial =
-    formData.departmentName
-      .trim()
-      .charAt(0)
-      .toUpperCase() || 'D';
 
   return (
     <LayoutComponent activeMenu={activeMenu}>
-      <Box
-        sx={{
-          marginBottom: '28px',
-        }}
-      >
-        <Typography
-          component="h1"
-          sx={{
-            color: '#111827',
-            fontSize: {
-              xs: '26px',
-              sm: '30px',
-            },
-            fontWeight: 800,
-          }}
-        >
-          {pageTitle}
-        </Typography>
+      <PageHeader
+        title={isEditMode ? 'แก้ไขแผนก' : 'เพิ่มแผนก'}
+        subtitle={isEditMode ? 'ปรับปรุงข้อมูลแผนกที่เลือก' : 'เพิ่มแผนกใหม่สำหรับองค์กร'}
+        actions={<BackButton onClick={() => navigate('/admin/department-management')}>กลับ</BackButton>}
+        sx={{ marginBottom: '22px' }}
+      />
 
-        <Typography
-          sx={{
-            color: '#6B7280',
-            fontSize: '15px',
-            marginTop: '6px',
-          }}
-        >
-          {pageDescription}
-        </Typography>
+      {message.text ? <Alert severity={message.type} onClose={() => setMessage({ type: '', text: '' })} sx={{ marginBottom: '20px' }}>{message.text}</Alert> : null}
+      {loading ? <Alert severity="info" sx={{ marginBottom: '20px' }}>กำลังโหลดข้อมูลแผนก...</Alert> : null}
 
-        <Button
-          type="button"
-          variant="outlined"
-          onClick={handleBack}
-          sx={{
-            minWidth: '100px',
-            height: '42px',
-            marginTop: '16px',
-            padding: '0 18px',
-            backgroundColor: '#FFFFFF',
-            color: theme.primary,
-            borderColor: theme.primary,
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: 700,
-            textTransform: 'none',
-
-            '&:hover': {
-              backgroundColor: theme.soft,
-              borderColor: theme.dark,
-            },
-          }}
-        >
-          ← Back
-        </Button>
-      </Box>
-
-      {informationMessage && (
-        <Alert
-          severity="info"
-          onClose={() =>
-            setInformationMessage('')
-          }
-          sx={{
-            marginBottom: '24px',
-            borderRadius: '8px',
-          }}
-        >
-          {informationMessage}
-        </Alert>
-      )}
-
-      {successMessage && (
-        <Alert
-          severity="success"
-          onClose={() =>
-            setSuccessMessage('')
-          }
-          sx={{
-            marginBottom: '24px',
-            borderRadius: '8px',
-          }}
-        >
-          {successMessage}
-        </Alert>
-      )}
-
-      {loading && <Alert severity="info" sx={{ marginBottom: '24px' }}>Loading department...</Alert>}
-
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-        noValidate
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr',
-            xl: 'minmax(0, 1.65fr) minmax(320px, 1fr)',
-          },
-          gap: '24px',
-          alignItems: 'start',
-        }}
-      >
-        <Paper
-          elevation={0}
-          sx={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E5E7EB',
-            borderRadius: '12px',
-            overflow: 'hidden',
-          }}
-        >
-          <Box
-            sx={{
-              padding: {
-                xs: '20px',
-                sm: '24px',
-              },
-              borderBottom:
-                '1px solid #E5E7EB',
-            }}
-          >
-            <Typography
-              sx={{
-                color: '#111827',
-                fontSize: '18px',
-                fontWeight: 800,
-              }}
-            >
-              Department Information
-            </Typography>
-
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '4px',
-              }}
-            >
-              Enter the department name,
-              description and current status.
-            </Typography>
-          </Box>
-
-          <Box
-            sx={{
-              padding: {
-                xs: '20px',
-                sm: '28px',
-              },
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '22px',
-            }}
-          >
-            <TextField
-              fullWidth
-              required
-              label="Department Name"
-              placeholder="Example: Information Technology"
-              value={formData.departmentName}
-              onChange={(event) =>
-                handleInputChange(
-                  'departmentName',
-                  event.target.value,
-                )
-              }
-              error={Boolean(
-                errors.departmentName,
-              )}
-              helperText={
-                errors.departmentName ||
-                `${formData.departmentName.length}/100 characters`
-              }
-              slotProps={{
-                htmlInput: {
-                  maxLength: 100,
-                },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-
-                  '&.Mui-focused fieldset': {
-                    borderColor:
-                      theme.primary,
-                  },
-                },
-
-                '& .MuiInputLabel-root.Mui-focused':
-                  {
-                    color: theme.primary,
-                  },
-              }}
-            />
-
-            <TextField
-              fullWidth
-              multiline
-              minRows={5}
-              maxRows={10}
-              label="Description"
-              placeholder="Describe the responsibilities of this department"
-              value={formData.description}
-              onChange={(event) =>
-                handleInputChange(
-                  'description',
-                  event.target.value,
-                )
-              }
-              helperText="Optional"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-
-                  '&.Mui-focused fieldset': {
-                    borderColor:
-                      theme.primary,
-                  },
-                },
-
-                '& .MuiInputLabel-root.Mui-focused':
-                  {
-                    color: theme.primary,
-                  },
-              }}
-            />
-
-            <FormControl
-              fullWidth
-              required
-              error={Boolean(errors.status)}
-            >
-              <InputLabel id="department-form-status-label">
-                Department Status
-              </InputLabel>
-
-              <Select
-                labelId="department-form-status-label"
-                value={formData.status}
-                label="Department Status"
-                onChange={(event) =>
-                  handleInputChange(
-                    'status',
-                    event.target.value,
-                  )
-                }
-                sx={{
-                  borderRadius: '8px',
-
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline':
-                    {
-                      borderColor:
-                        theme.primary,
-                    },
-                }}
-              >
-                <MenuItem value="Active">
-                  Active
-                </MenuItem>
-
-                <MenuItem value="Inactive">
-                  Inactive
-                </MenuItem>
-              </Select>
-
-              <FormHelperText>
-                {errors.status ||
-                  'Inactive departments remain in historical records but cannot be assigned to new employees.'}
-              </FormHelperText>
-            </FormControl>
-          </Box>
-
-          <Box
-            sx={{
-              padding: {
-                xs: '20px',
-                sm: '22px 28px',
-              },
-              display: 'flex',
-              justifyContent: 'flex-end',
-              flexDirection: {
-                xs: 'column-reverse',
-                sm: 'row',
-              },
-              gap: '12px',
-              backgroundColor: '#F9FAFB',
-              borderTop:
-                '1px solid #E5E7EB',
-            }}
-          >
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={handleReset}
-              sx={{
-                minWidth: '110px',
-                height: '44px',
-                padding: '0 20px',
-                color: '#374151',
-                borderColor: '#D1D5DB',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 700,
-                textTransform: 'none',
-
-                '&:hover': {
-                  backgroundColor: '#FFFFFF',
-                  borderColor: '#9CA3AF',
-                },
-              }}
-            >
-              Cancel
-            </Button>
-
-            <Button
-              type="submit"
-              variant="contained"
-              disabled={saving || loading}
-              sx={{
-                minWidth: '170px',
-                height: '44px',
-                padding: '0 20px',
-                backgroundColor:
-                  theme.primary,
-                color: '#FFFFFF',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 700,
-                textTransform: 'none',
-                boxShadow: 'none',
-
-                '&:hover': {
-                  backgroundColor:
-                    theme.dark,
-                  boxShadow: 'none',
-                },
-              }}
-            >
-              {isEditMode
-                ? 'Save Changes'
-                : 'Create Department'}
-            </Button>
-          </Box>
-        </Paper>
-
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '24px',
-          }}
-        >
-          <Paper
-            elevation={0}
-            sx={{
-              padding: {
-                xs: '20px',
-                sm: '24px',
-              },
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #E5E7EB',
-              borderRadius: '12px',
-            }}
-          >
-            <Typography
-              sx={{
-                color: '#111827',
-                fontSize: '17px',
-                fontWeight: 800,
-              }}
-            >
-              Department Preview
-            </Typography>
-
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '13px',
-                lineHeight: 1.6,
-                marginTop: '5px',
-              }}
-            >
-              Review the department information
-              before saving.
-            </Typography>
-
-            <Box
-              sx={{
-                padding: '20px',
-                marginTop: '22px',
-                backgroundColor: theme.soft,
-                border: `1px solid ${
-                  theme.border || '#E5E7EB'
-                }`,
-                borderRadius: '12px',
-              }}
-            >
-              <Box
-                sx={{
-                  width: '48px',
-                  height: '48px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#FFFFFF',
-                  color: theme.primary,
-                  borderRadius: '12px',
-                  fontSize: '20px',
-                  fontWeight: 800,
-                }}
-              >
-                {departmentInitial}
-              </Box>
-
-              <Typography
-                sx={{
-                  color: '#111827',
-                  fontSize: '18px',
-                  fontWeight: 800,
-                  lineHeight: 1.4,
-                  marginTop: '16px',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {formData.departmentName.trim() ||
-                  'Department Name'}
-              </Typography>
-
-              <Typography
-                sx={{
-                  minHeight: '44px',
-                  color: '#6B7280',
-                  fontSize: '13px',
-                  lineHeight: 1.7,
-                  marginTop: '9px',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {formData.description.trim() ||
-                  'No description provided.'}
-              </Typography>
-
-              <Chip
-                label={formData.status}
-                size="small"
-                sx={{
-                  minWidth: '76px',
-                  marginTop: '18px',
-                  backgroundColor: isActive
-                    ? '#DCFCE7'
-                    : '#FEF3C7',
-                  color: isActive
-                    ? '#15803D'
-                    : '#B45309',
-                  borderRadius: '999px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                }}
-              />
-            </Box>
-          </Paper>
-
-          <Paper
-            elevation={0}
-            sx={{
-              padding: {
-                xs: '20px',
-                sm: '24px',
-              },
-              backgroundColor: theme.soft,
-              border: `1px solid ${
-                theme.border || '#E5E7EB'
-              }`,
-              borderRadius: '12px',
-            }}
-          >
-            <Typography
-              sx={{
-                color: theme.dark,
-                fontSize: '15px',
-                fontWeight: 800,
-              }}
-            >
-              Department Status
-            </Typography>
-
-            <Typography
-              sx={{
-                color:
-                  theme.text || '#4B5563',
-                fontSize: '13px',
-                lineHeight: 1.8,
-                marginTop: '8px',
-              }}
-            >
-              Active departments can be assigned
-              to employees. Inactive departments
-              remain available for existing
-              employee records and historical
-              reports.
-            </Typography>
-          </Paper>
+      <Surface component="form" onSubmit={requestConfirmation} noValidate padding={0} sx={{ maxWidth: 860, overflow: 'hidden' }}>
+        <Box sx={{ padding: { xs: '20px', sm: '24px' }, borderBottom: '1px solid #D8E0EA', backgroundColor: '#F8FAFC' }}>
+          <Typography component="h2" variant="h6">ข้อมูลแผนก</Typography>
+          <Typography variant="body2" sx={{ color: '#475569', marginTop: '4px' }}>ระบุชื่อและรายละเอียดของแผนก</Typography>
         </Box>
-      </Box>
+        <Stack gap="20px" sx={{ padding: { xs: '20px', sm: '28px' } }}>
+          <TextField
+            required
+            label="ชื่อแผนก"
+            placeholder="เช่น เทคโนโลยีสารสนเทศ"
+            value={formData.departmentName}
+            onChange={(event) => updateField('departmentName', event.target.value)}
+            error={Boolean(errors.departmentName)}
+            helperText={errors.departmentName || `${formData.departmentName.length}/100 ตัวอักษร`}
+            slotProps={{ htmlInput: { maxLength: 100 } }}
+          />
+          <TextField
+            multiline
+            minRows={4}
+            maxRows={8}
+            label="รายละเอียด"
+            placeholder="ระบุหน้าที่หรือขอบเขตงานของแผนก"
+            value={formData.description}
+            onChange={(event) => updateField('description', event.target.value)}
+            helperText="ไม่บังคับ"
+          />
+        </Stack>
+        <Stack direction={{ xs: 'column-reverse', sm: 'row' }} justifyContent="flex-end" gap="10px" sx={{ padding: { xs: '16px 20px', sm: '18px 28px' }, borderTop: '1px solid #D8E0EA', backgroundColor: '#F8FAFC' }}>
+          <Button type="button" variant="outlined" onClick={() => { setFormData(initialData); setErrors({}); }}>ล้างการแก้ไข</Button>
+          <Button type="submit" variant="contained" disabled={loading || saving}>{isEditMode ? 'บันทึกการแก้ไข' : 'เพิ่มแผนก'}</Button>
+        </Stack>
+      </Surface>
+
+      <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>ยืนยันการบันทึกข้อมูลแผนก</DialogTitle>
+        <DialogContent dividers>
+          <Stack gap="8px">
+            <Typography><strong>ชื่อแผนก:</strong> {formData.departmentName.trim()}</Typography>
+            <Typography><strong>รายละเอียด:</strong> {formData.description.trim() || '-'}</Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ padding: '14px 20px' }}>
+          <Button variant="outlined" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button>
+          <Button variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>
+        </DialogActions>
+      </Dialog>
     </LayoutComponent>
   );
 }

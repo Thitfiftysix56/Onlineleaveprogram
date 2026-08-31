@@ -7,16 +7,13 @@ function HRLayout({
 }) {
   const hrMenuItems = [
     'Dashboard',
-    'Leave Request',
     'My Requests',
-    'Leave Balance',
     'Employee Management',
     'Leave Entitlement',
     'Leave Type',
     'Holiday Management',
     'Reports',
-    'Notification',
-    'Profile',
+    'Edit Personal Information',
     'Change Password',
     'Logout',
   ];

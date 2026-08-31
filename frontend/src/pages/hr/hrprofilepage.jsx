@@ -10,11 +10,12 @@ const hrTheme = {
   text: '#065F46',
 };
 
-function HRProfilePage() {
+function HRProfilePage({ editMode = false }) {
   return (
     <RoleProfilePage
       LayoutComponent={HRLayout}
       theme={hrTheme}
+      editMode={editMode}
     />
   );
 }
