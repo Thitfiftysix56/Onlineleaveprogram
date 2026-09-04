@@ -234,7 +234,7 @@ function ForgotPasswordPage() {
             },
           }}
         >
-          กลับไป Login
+          กลับไปหน้าเข้าสู่ระบบ
         </Typography>
       </Box>
     </PasswordRecoveryLayout>

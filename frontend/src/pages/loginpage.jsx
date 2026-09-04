@@ -37,6 +37,8 @@ import {
 } from '../utils/authstorage.js'
 
 import api from '../api/axios.js'
+import AuthenticationBrand from '../components/authenticationbrand.jsx'
+import { appPageBackground } from '../theme/tokens.js'
 
 
 const emptyFormData = {
@@ -48,39 +50,6 @@ const emptyFormData = {
 /* =========================
    ANIMATIONS
 ========================= */
-
-const meshMovement = keyframes`
-  0% {
-    background-position:
-      0% 0%,
-      100% 0%,
-      0% 100%,
-      50% 100%,
-      100% 100%,
-      50% 50%;
-  }
-
-  50% {
-    background-position:
-      5% 3%,
-      94% 5%,
-      4% 94%,
-      54% 95%,
-      96% 94%,
-      50% 50%;
-  }
-
-  100% {
-    background-position:
-      2% 7%,
-      96% 2%,
-      7% 96%,
-      46% 93%,
-      93% 98%,
-      50% 50%;
-  }
-`
-
 
 const floatingCircle = keyframes`
   0% {
@@ -171,7 +140,7 @@ function LoginPage() {
       !enteredPassword
     ) {
       setErrorMessage(
-        'กรุณากรอก Username และ Password',
+        'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน',
       )
 
       return
@@ -191,7 +160,7 @@ function LoginPage() {
       if (response.data.status !== 'ok') {
         setErrorMessage(
           response.data.message ||
-            'Unable to sign in.',
+            'ไม่สามารถเข้าสู่ระบบได้',
         )
 
         return
@@ -279,11 +248,11 @@ function LoginPage() {
         backgroundColor: '#FFFFFF',
 
         boxShadow:
-          '0 0 0 4px rgba(99, 102, 241, 0.10), 0 8px 20px rgba(99, 102, 241, 0.08)',
+          '0 0 0 4px rgba(37, 99, 235, 0.10), 0 8px 20px rgba(37, 99, 235, 0.08)',
       },
 
       '&.Mui-focused fieldset': {
-        borderColor: '#6366F1',
+        borderColor: '#2563EB',
 
         borderWidth: '1.5px',
       },
@@ -319,36 +288,7 @@ function LoginPage() {
 
         overflowY: 'auto',
 
-        background: `
-          radial-gradient(
-            circle at 8% 14%,
-            rgba(59, 130, 246, 0.19) 0%,
-            rgba(59, 130, 246, 0.08) 24%,
-            transparent 44%
-          ),
-
-          radial-gradient(
-            circle at 92% 86%,
-            rgba(139, 92, 246, 0.17) 0%,
-            rgba(139, 92, 246, 0.07) 26%,
-            transparent 46%
-          ),
-
-          radial-gradient(
-            circle at 82% 8%,
-            rgba(16, 185, 129, 0.09) 0%,
-            rgba(16, 185, 129, 0.035) 22%,
-            transparent 38%
-          ),
-
-          radial-gradient(
-            circle at 20% 92%,
-            rgba(14, 165, 233, 0.08) 0%,
-            transparent 36%
-          ),
-
-          #EEF2F8
-        `,
+        background: appPageBackground,
       }}
     >
       <Paper
@@ -363,30 +303,37 @@ function LoginPage() {
         sx={{
           width: '100%',
 
-          maxWidth: '920px',
+          maxWidth: '520px',
 
           display: 'grid',
 
-          gridTemplateColumns: {
-            xs: '1fr',
-            sm: '0.92fr 1.08fr',
-          },
+          gridTemplateColumns: '1fr',
 
           overflow: 'hidden',
 
-          borderRadius: {
-            xs: '20px',
-            sm: '24px',
-          },
+          borderRadius: '20px',
 
           backgroundColor:
             '#FFFFFF',
 
           border:
-            '1px solid rgba(148, 163, 184, 0.22)',
+            '1px solid #D8E0EA',
 
           boxShadow:
-            '0 28px 70px rgba(30, 41, 59, 0.16)',
+            '0 20px 55px rgba(15, 23, 42, 0.11)',
+
+          position: 'relative',
+
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            left: 0,
+            height: '5px',
+            zIndex: 3,
+            background: 'linear-gradient(90deg, #60A5FA 0%, #A78BFA 34%, #34D399 67%, #FBBF24 100%)',
+          },
         }}
       >
 
@@ -396,6 +343,8 @@ function LoginPage() {
 
         <Box
           sx={{
+            display: 'none',
+
             position: 'relative',
 
             minHeight: {
@@ -408,8 +357,6 @@ function LoginPage() {
               sm: '40px 30px',
               md: '48px 42px',
             },
-
-            display: 'flex',
 
             flexDirection:
               'column',
@@ -426,62 +373,14 @@ function LoginPage() {
             overflow:
               'hidden',
 
-            background: `
-              radial-gradient(
-                ellipse at 0% 0%,
-                rgba(14, 165, 233, 0.84) 0%,
-                rgba(14, 165, 233, 0.28) 32%,
-                transparent 58%
-              ),
+            background:
+              'linear-gradient(155deg, #1D4ED8 0%, #2563EB 58%, #0EA5E9 100%)',
 
-              radial-gradient(
-                ellipse at 100% 5%,
-                rgba(139, 92, 246, 0.88) 0%,
-                rgba(139, 92, 246, 0.30) 36%,
-                transparent 62%
-              ),
-
-              radial-gradient(
-                ellipse at 0% 100%,
-                rgba(16, 185, 129, 0.82) 0%,
-                rgba(16, 185, 129, 0.34) 40%,
-                transparent 66%
-              ),
-
-              radial-gradient(
-                ellipse at 48% 92%,
-                rgba(5, 150, 105, 0.36) 0%,
-                rgba(5, 150, 105, 0.16) 32%,
-                transparent 60%
-              ),
-
-              radial-gradient(
-                ellipse at 100% 100%,
-                rgba(249, 115, 22, 0.52) 0%,
-                rgba(249, 115, 22, 0.17) 32%,
-                transparent 58%
-              ),
-
-              linear-gradient(
-                140deg,
-                #3B82F6 0%,
-                #6366F1 34%,
-                #6D5FE7 58%,
-                #8B5CF6 100%
-              )
-            `,
-
-            backgroundSize: `
-              115% 115%,
-              115% 115%,
-              115% 115%,
-              115% 115%,
-              115% 115%,
-              100% 100%
-            `,
+            backgroundSize:
+              '100% 100%',
 
             animation:
-              `${meshMovement} 18s ease-in-out infinite`,
+              'none',
 
             borderRight: {
               xs: 'none',
@@ -686,7 +585,7 @@ function LoginPage() {
               },
 
               color:
-                '#6366F1',
+                '#2563EB',
 
               backgroundColor:
                 'rgba(255,255,255,0.95)',
@@ -917,13 +816,13 @@ function LoginPage() {
           sx={{
             padding: {
               xs:
-                '30px 24px 34px',
+                '34px 24px 32px',
 
               sm:
-                '40px 36px',
+                '42px 44px 40px',
 
               md:
-                '46px 52px',
+                '46px 48px 44px',
             },
 
             display:
@@ -943,20 +842,22 @@ function LoginPage() {
           }}
         >
 
+          <AuthenticationBrand />
+
           <Typography
-            component="h2"
+            component="h1"
 
             sx={{
               color:
                 '#0F172A',
 
               fontSize: {
-                xs: '24px',
-                sm: '27px',
+                xs: '20px',
+                sm: '22px',
               },
 
               fontWeight:
-                900,
+                700,
 
               lineHeight:
                 1.3,
@@ -966,34 +867,12 @@ function LoginPage() {
 
               textAlign:
                 'left',
-            }}
-          >
-            Login
-          </Typography>
-
-
-          <Typography
-            sx={{
-              color:
-                '#64748B',
-
-              fontSize:
-                '13px',
-
-              lineHeight:
-                1.7,
-
-              textAlign:
-                'left',
-
-              marginTop:
-                '6px',
 
               marginBottom:
-                '26px',
+                '18px',
             }}
           >
-            กรุณากรอก Username และ Password เพื่อเข้าใช้งานระบบ
+            เข้าสู่ระบบ
           </Typography>
 
 
@@ -1076,7 +955,7 @@ function LoginPage() {
                 '7px',
             }}
           >
-            Username
+            ชื่อผู้ใช้
           </Typography>
 
 
@@ -1087,7 +966,7 @@ function LoginPage() {
 
             required
 
-            placeholder="Enter Username"
+            placeholder="กรอกชื่อผู้ใช้"
 
             value={
               formData.username
@@ -1150,7 +1029,7 @@ function LoginPage() {
                 '7px',
             }}
           >
-            Password
+            รหัสผ่าน
           </Typography>
 
 
@@ -1167,7 +1046,7 @@ function LoginPage() {
                 : 'password'
             }
 
-            placeholder="Enter Password"
+            placeholder="กรอกรหัสผ่าน"
 
             value={
               formData.password
@@ -1198,8 +1077,8 @@ function LoginPage() {
 
                       aria-label={
                         showPassword
-                          ? 'Hide password'
-                          : 'Show password'
+                          ? 'ซ่อนรหัสผ่าน'
+                          : 'แสดงรหัสผ่าน'
                       }
 
                       onClick={() =>
@@ -1326,14 +1205,14 @@ function LoginPage() {
                   'transparent',
 
                 color:
-                  '#7C3AED',
+                  '#1D4ED8',
 
                 textDecoration:
                   'underline',
               },
             }}
           >
-            Forgot Password?
+            ลืมรหัสผ่าน?
           </Button>
 
 
@@ -1368,8 +1247,8 @@ function LoginPage() {
               borderRadius:
                 '11px',
 
-              background:
-                'linear-gradient(100deg, #3B82F6 0%, #6366F1 48%, #8B5CF6 100%)',
+              backgroundColor:
+                '#2563EB',
 
               color:
                 '#FFFFFF',
@@ -1419,8 +1298,8 @@ function LoginPage() {
               },
 
               '&:hover': {
-                background:
-                  'linear-gradient(100deg, #2563EB 0%, #4F46E5 48%, #7C3AED 100%)',
+                backgroundColor:
+                  '#1D4ED8',
 
                 boxShadow:
                   '0 15px 32px rgba(99,102,241,0.34)',
@@ -1496,7 +1375,7 @@ function LoginPage() {
                   }}
                 />
 
-                Signing In...
+                กำลังเข้าสู่ระบบ...
               </Box>
             ) : (
               <Box
@@ -1510,7 +1389,7 @@ function LoginPage() {
                     2,
                 }}
               >
-                Sign In
+                เข้าสู่ระบบ
               </Box>
             )}
           </Button>

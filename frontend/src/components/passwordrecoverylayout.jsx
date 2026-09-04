@@ -13,44 +13,12 @@ import {
 import {
   keyframes,
 } from '@emotion/react'
+import AuthenticationBrand from './authenticationbrand.jsx'
 
 
 /* =========================
    ANIMATIONS
 ========================= */
-
-const meshMovement = keyframes`
-  0% {
-    background-position:
-      0% 0%,
-      100% 0%,
-      0% 100%,
-      50% 100%,
-      100% 100%,
-      50% 50%;
-  }
-
-  50% {
-    background-position:
-      5% 3%,
-      94% 5%,
-      4% 94%,
-      54% 95%,
-      96% 94%,
-      50% 50%;
-  }
-
-  100% {
-    background-position:
-      2% 7%,
-      96% 2%,
-      7% 96%,
-      46% 93%,
-      93% 98%,
-      50% 50%;
-  }
-`
-
 
 const floatingCircle = keyframes`
   0% {
@@ -71,6 +39,7 @@ function PasswordRecoveryLayout({
   title,
   description,
   children,
+  compact = false,
 }) {
   return (
     <Box
@@ -99,34 +68,11 @@ function PasswordRecoveryLayout({
         },
 
         background: `
-          radial-gradient(
-            circle at 8% 14%,
-            rgba(59, 130, 246, 0.19) 0%,
-            rgba(59, 130, 246, 0.08) 24%,
-            transparent 44%
-          ),
-
-          radial-gradient(
-            circle at 92% 86%,
-            rgba(139, 92, 246, 0.17) 0%,
-            rgba(139, 92, 246, 0.07) 26%,
-            transparent 46%
-          ),
-
-          radial-gradient(
-            circle at 82% 8%,
-            rgba(16, 185, 129, 0.09) 0%,
-            rgba(16, 185, 129, 0.035) 22%,
-            transparent 38%
-          ),
-
-          radial-gradient(
-            circle at 20% 92%,
-            rgba(14, 165, 233, 0.08) 0%,
-            transparent 36%
-          ),
-
-          #EEF2F8
+          radial-gradient(circle at 12% 18%, rgba(96, 165, 250, 0.20), transparent 34%),
+          radial-gradient(circle at 86% 14%, rgba(167, 139, 250, 0.18), transparent 32%),
+          radial-gradient(circle at 16% 88%, rgba(52, 211, 153, 0.16), transparent 32%),
+          radial-gradient(circle at 88% 86%, rgba(251, 191, 36, 0.16), transparent 34%),
+          #F8FAFC
         `,
       }}
     >
@@ -136,7 +82,7 @@ function PasswordRecoveryLayout({
         sx={{
           width: '100%',
 
-          maxWidth: '920px',
+          maxWidth: compact ? '460px' : '520px',
 
           position: 'relative',
 
@@ -144,25 +90,30 @@ function PasswordRecoveryLayout({
 
           display: 'grid',
 
-          gridTemplateColumns: {
-            xs: '1fr',
-            sm: '0.92fr 1.08fr',
-          },
+          gridTemplateColumns: '1fr',
 
           overflow: 'hidden',
 
-          borderRadius: {
-            xs: '20px',
-            sm: '24px',
-          },
+          borderRadius: '20px',
 
           backgroundColor: '#FFFFFF',
 
           border:
-            '1px solid rgba(148, 163, 184, 0.22)',
+            '1px solid #D8E0EA',
 
           boxShadow:
-            '0 28px 70px rgba(30, 41, 59, 0.16)',
+            '0 20px 55px rgba(15, 23, 42, 0.11)',
+
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            left: 0,
+            height: '5px',
+            zIndex: 3,
+            background: 'linear-gradient(90deg, #60A5FA 0%, #A78BFA 34%, #34D399 67%, #FBBF24 100%)',
+          },
         }}
       >
 
@@ -172,6 +123,8 @@ function PasswordRecoveryLayout({
 
         <Box
           sx={{
+            display: 'none',
+
             position: 'relative',
 
             minHeight: {
@@ -185,8 +138,6 @@ function PasswordRecoveryLayout({
               md: '48px 42px',
             },
 
-            display: 'flex',
-
             flexDirection: 'column',
 
             alignItems: 'center',
@@ -199,62 +150,14 @@ function PasswordRecoveryLayout({
 
             color: '#FFFFFF',
 
-            background: `
-              radial-gradient(
-                ellipse at 0% 0%,
-                rgba(14, 165, 233, 0.84) 0%,
-                rgba(14, 165, 233, 0.28) 32%,
-                transparent 58%
-              ),
+            background:
+              'linear-gradient(155deg, #1D4ED8 0%, #2563EB 58%, #0EA5E9 100%)',
 
-              radial-gradient(
-                ellipse at 100% 5%,
-                rgba(139, 92, 246, 0.88) 0%,
-                rgba(139, 92, 246, 0.30) 36%,
-                transparent 62%
-              ),
-
-              radial-gradient(
-                ellipse at 0% 100%,
-                rgba(16, 185, 129, 0.82) 0%,
-                rgba(16, 185, 129, 0.34) 40%,
-                transparent 66%
-              ),
-
-              radial-gradient(
-                ellipse at 48% 92%,
-                rgba(5, 150, 105, 0.36) 0%,
-                rgba(5, 150, 105, 0.16) 32%,
-                transparent 60%
-              ),
-
-              radial-gradient(
-                ellipse at 100% 100%,
-                rgba(249, 115, 22, 0.52) 0%,
-                rgba(249, 115, 22, 0.17) 32%,
-                transparent 58%
-              ),
-
-              linear-gradient(
-                140deg,
-                #3B82F6 0%,
-                #6366F1 34%,
-                #6D5FE7 58%,
-                #8B5CF6 100%
-              )
-            `,
-
-            backgroundSize: `
-              115% 115%,
-              115% 115%,
-              115% 115%,
-              115% 115%,
-              115% 115%,
-              100% 100%
-            `,
+            backgroundSize:
+              '100% 100%',
 
             animation:
-              `${meshMovement} 18s ease-in-out infinite`,
+              'none',
 
             borderRight: {
               xs: 'none',
@@ -650,13 +553,19 @@ function PasswordRecoveryLayout({
           sx={{
             minHeight: {
               xs: 'auto',
-              sm: '560px',
+              sm: 'auto',
             },
 
             padding: {
-              xs: '30px 24px 34px',
-              sm: '40px 36px',
-              md: '46px 52px',
+              xs: compact
+                ? '28px 20px 26px'
+                : '34px 24px 32px',
+              sm: compact
+                ? '32px 36px 30px'
+                : '42px 44px 40px',
+              md: compact
+                ? '34px 38px 32px'
+                : '46px 48px 44px',
             },
 
             display: 'flex',
@@ -699,11 +608,11 @@ function PasswordRecoveryLayout({
                 backgroundColor: '#FFFFFF',
 
                 boxShadow:
-                  '0 0 0 4px rgba(99,102,241,0.10), 0 8px 20px rgba(99,102,241,0.08)',
+                  '0 0 0 4px rgba(37,99,235,0.10), 0 8px 20px rgba(37,99,235,0.08)',
               },
 
               '&.Mui-focused fieldset': {
-                borderColor: '#6366F1',
+                borderColor: '#2563EB',
 
                 borderWidth: '1.5px',
               },
@@ -758,8 +667,8 @@ function PasswordRecoveryLayout({
             '& .MuiButton-contained': {
               borderRadius: '11px',
 
-              background:
-                'linear-gradient(100deg, #3B82F6 0%, #6366F1 48%, #8B5CF6 100%)',
+              backgroundColor:
+                '#2563EB',
 
               color: '#FFFFFF',
 
@@ -774,8 +683,8 @@ function PasswordRecoveryLayout({
                 'transform 180ms ease, box-shadow 180ms ease',
 
               '&:hover': {
-                background:
-                  'linear-gradient(100deg, #2563EB 0%, #4F46E5 48%, #7C3AED 100%)',
+                backgroundColor:
+                  '#1D4ED8',
 
                 boxShadow:
                   '0 13px 28px rgba(99,102,241,0.30)',
@@ -801,20 +710,22 @@ function PasswordRecoveryLayout({
           }}
         >
 
+          <AuthenticationBrand compact={compact} />
+
           {/* Title */}
 
           <Typography
-            component="h2"
+            component="h1"
 
             sx={{
               color: '#0F172A',
 
               fontSize: {
-                xs: '24px',
-                sm: '27px',
+                xs: '20px',
+                sm: '22px',
               },
 
-              fontWeight: 900,
+              fontWeight: 700,
 
               lineHeight: 1.3,
 
@@ -834,7 +745,7 @@ function PasswordRecoveryLayout({
 
               marginTop: '7px',
 
-              marginBottom: '26px',
+              marginBottom: compact ? '18px' : '26px',
 
               color: '#64748B',
 

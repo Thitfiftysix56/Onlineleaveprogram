@@ -17,8 +17,8 @@ import {
   Typography,
 } from '@mui/material';
 import HRLayout from '../../layouts/hrlayout.jsx';
-import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
-import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
+import { BackButton, PageHeader } from '../../components/sharedvisualfoundation.jsx';
+import { roleDashboardCardSurfaceSx } from '../../theme/rolecardsurface.js';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createLeaveType, getLeaveType, updateLeaveType } from '../../api/leave-type-service.js';
 
@@ -96,7 +96,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
         'กรุณากรอกรหัสประเภทการลา';
     } else if (!/^[A-Z0-9]{2,10}$/.test(code)) {
       validationErrors.code =
-        'ใช้ตัวอักษรภาษาอังกฤษพิมพ์ใหญ่หรือตัวเลข 2-10 ตัว';
+        'ใช้ตัวอักษร A-Z หรือตัวเลข จำนวน 2–10 ตัว';
     }
 
     if (!name) {
@@ -224,7 +224,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
 
   return (
     <HRLayout activeMenu="Leave Type">
-      <PageHeader title={isEditMode ? 'แก้ไขประเภทการลา' : 'เพิ่มประเภทการลา'} actions={<Button type="button" variant="outlined" startIcon={<ArrowBackRounded />} onClick={() => navigate('/hr/leave-types')} sx={{ height: 40, color: '#475569', borderColor: '#CBD5E1', borderRadius: '9px', fontWeight: 700, '&:hover': { borderColor: '#94A3B8', backgroundColor: '#F8FAFC' } }}>กลับ</Button>} sx={{ marginBottom: '22px' }} />
+      <PageHeader title={isEditMode ? 'แก้ไขประเภทการลา' : 'เพิ่มประเภทการลา'} actions={<BackButton onClick={() => navigate('/hr/leave-types')}>กลับ</BackButton>} sx={{ maxWidth: '820px', marginInline: 'auto' }} />
 
       {successMessage && (
         <Alert
@@ -246,14 +246,34 @@ function LeaveTypeFormPage({ mode = 'add' }) {
         onSubmit={handleSubmit}
         noValidate
         sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '24px',
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: 'minmax(0, 1fr)',
+            lg: 'repeat(2, minmax(0, 1fr))',
+          },
+          gap: '16px',
+          width: '100%',
+          maxWidth: '820px',
+          marginInline: 'auto',
+          '& > .MuiPaper-root': {
+            borderRadius: '20px',
+            borderColor: '#E2E8F0',
+            boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+            ...roleDashboardCardSurfaceSx,
+          },
+          '& > .MuiPaper-root > .MuiBox-root:first-of-type': {
+            background: 'transparent !important',
+            borderBottom: '0 !important',
+          },
+          '& .MuiOutlinedInput-root': {
+            borderRadius: '10px',
+          },
         }}
       >
         <Paper
           elevation={0}
           sx={{
+            gridRow: { lg: 'span 2' },
             backgroundColor: '#FFFFFF',
             border: '1px solid #E5E7EB',
             borderRadius: '12px',
@@ -273,21 +293,12 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               sx={{
                 color: '#111827',
                 fontSize: '18px',
-                fontWeight: 800,
+                fontWeight: 600,
               }}
             >
               ข้อมูลประเภทการลา
             </Typography>
 
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '4px',
-              }}
-            >
-              ระบุชื่อ รหัส และรายละเอียดประเภทการลา
-            </Typography>
           </Box>
 
           <Box
@@ -319,7 +330,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               error={Boolean(errors.code)}
               helperText={
                 errors.code ||
-                'ใช้ตัวอักษรภาษาอังกฤษพิมพ์ใหญ่หรือตัวเลข 2-10 ตัว'
+                'ใช้ตัวอักษร A-Z หรือตัวเลข จำนวน 2–10 ตัว'
               }
               slotProps={{
                 htmlInput: {
@@ -420,21 +431,12 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               sx={{
                 color: '#111827',
                 fontSize: '18px',
-                fontWeight: 800,
+                fontWeight: 600,
               }}
             >
               การกำหนดสิทธิ์ลา
             </Typography>
 
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '4px',
-              }}
-            >
-              กำหนดสิทธิ์เริ่มต้นและจำนวนวันที่ขอได้
-            </Typography>
           </Box>
 
           <Box
@@ -464,10 +466,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
                 )
               }
               error={Boolean(errors.defaultDays)}
-              helperText={
-                errors.defaultDays ||
-                'สิทธิ์เริ่มต้นต่อปี'
-              }
+              helperText={errors.defaultDays}
               slotProps={{
                 htmlInput: {
                   min: 0,
@@ -485,7 +484,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               fullWidth
               required
               type="number"
-              label="จำนวนวันขั้นต่ำต่อคำขอ"
+              label="จำนวนวันขอขั้นต่ำ"
               value={formData.minimumDays}
               onChange={(event) =>
                 handleInputChange(
@@ -494,10 +493,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
                 )
               }
               error={Boolean(errors.minimumDays)}
-              helperText={
-                errors.minimumDays ||
-                'จำนวนวันน้อยที่สุดที่ขอได้'
-              }
+              helperText={errors.minimumDays}
               slotProps={{
                 htmlInput: {
                   min: 1,
@@ -515,7 +511,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               fullWidth
               required
               type="number"
-              label="จำนวนวันสูงสุดต่อคำขอ"
+              label="จำนวนวันขอสูงสุด"
               value={formData.maximumDaysPerRequest}
               onChange={(event) =>
                 handleInputChange(
@@ -526,10 +522,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               error={Boolean(
                 errors.maximumDaysPerRequest,
               )}
-              helperText={
-                errors.maximumDaysPerRequest ||
-                'จำนวนวันมากที่สุดที่ขอได้'
-              }
+              helperText={errors.maximumDaysPerRequest}
               slotProps={{
                 htmlInput: {
                   min: 1,
@@ -567,21 +560,12 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               sx={{
                 color: '#111827',
                 fontSize: '18px',
-                fontWeight: 800,
+                fontWeight: 600,
               }}
             >
               เงื่อนไขคำขอ
             </Typography>
 
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '4px',
-              }}
-            >
-              กำหนดเอกสารแนบและสถานะการใช้งาน
-            </Typography>
           </Box>
 
           <Box
@@ -676,88 +660,16 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               )}
             </FormControl>
 
-            <Box
-              sx={{
-                gridColumn: {
-                  xs: 'auto',
-                  sm: '1 / -1',
-                },
-                padding: '16px',
-                backgroundColor: '#ECFDF5',
-                border: '1px solid #A7F3D0',
-                borderRadius: '8px',
-              }}
-            >
-              <Typography
-                sx={{
-                  color: '#047857',
-                  fontSize: '14px',
-                  fontWeight: 800,
-                }}
-              >
-                การกำหนดสิทธิ์ลา
-              </Typography>
-
-              <Typography
-                sx={{
-                  color: '#065F46',
-                  fontSize: '13px',
-                  lineHeight: 1.7,
-                  marginTop: '6px',
-                }}
-              >
-                หลังสร้างประเภทการลา สามารถกำหนดสิทธิ์ให้พนักงานได้จากหน้าจัดการสิทธิ์การลา
-              </Typography>
-            </Box>
           </Box>
         </Paper>
 
-        <Paper
-          elevation={0}
+        <Box
           sx={{
-            padding: {
-              xs: '20px',
-              sm: '24px',
-            },
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E5E7EB',
-            borderRadius: '12px',
+            gridColumn: '1 / -1',
             display: 'flex',
-            alignItems: {
-              xs: 'stretch',
-              sm: 'center',
-            },
-            justifyContent: 'space-between',
-            flexDirection: {
-              xs: 'column',
-              sm: 'row',
-            },
-            gap: '18px',
+            justifyContent: 'flex-end',
           }}
         >
-          <Box>
-            <Typography
-              sx={{
-                color: '#111827',
-                fontSize: '16px',
-                fontWeight: 800,
-              }}
-            >
-              {isEditMode ? 'บันทึกการแก้ไข' : 'เพิ่มประเภทการลา'}
-            </Typography>
-
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '13px',
-                lineHeight: 1.6,
-                marginTop: '4px',
-              }}
-            >
-              ตรวจสอบสิทธิ์และเงื่อนไขก่อนบันทึก
-            </Typography>
-          </Box>
-
           <Box
             sx={{
               display: 'flex',
@@ -800,7 +712,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
                 minWidth: '160px',
                 height: '44px',
                 padding: '0 20px',
-                backgroundColor: '#2563EB',
+                backgroundColor: '#059669',
                 color: '#FFFFFF',
                 borderRadius: '8px',
                 fontSize: '14px',
@@ -809,7 +721,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
                 boxShadow: 'none',
 
                 '&:hover': {
-                  backgroundColor: '#1D4ED8',
+                  backgroundColor: '#047857',
                   boxShadow: 'none',
                 },
               }}
@@ -817,7 +729,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               {saving ? 'กำลังบันทึก...' : 'บันทึก'}
             </Button>
           </Box>
-        </Paper>
+        </Box>
       </Box>
       <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm"><DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกประเภทการลา</DialogTitle><DialogContent dividers><Box sx={{ display: 'grid', gap: '10px' }}><Typography><strong>รหัส:</strong> {formData.code}</Typography><Typography><strong>ชื่อ:</strong> {formData.name}</Typography><Typography><strong>สิทธิ์เริ่มต้น:</strong> {formData.defaultDays} วัน</Typography><Typography><strong>ช่วงวันที่ขอ:</strong> {formData.minimumDays}-{formData.maximumDaysPerRequest} วัน</Typography><Typography><strong>เอกสารแนบ:</strong> {formData.attachmentRequired === 'Yes' ? 'จำเป็น' : 'ไม่จำเป็น'}</Typography></Box></DialogContent><DialogActions sx={{ padding: '14px 20px' }}><Button type="button" variant="outlined" disabled={saving} onClick={() => setConfirmationOpen(false)} sx={{ color: '#475569', borderColor: '#CBD5E1' }}>กลับไปแก้ไข</Button><Button type="button" variant="contained" disabled={saving} onClick={confirmSave} sx={{ backgroundColor: '#15803D', '&:hover': { backgroundColor: '#166534' } }}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions></Dialog>
     </HRLayout>

@@ -79,7 +79,6 @@ const leaveTypeLabels = {
   'Annual Leave': 'ลาพักร้อน',
   'Sick Leave': 'ลาป่วย',
   'Personal Leave': 'ลากิจ',
-  'Maternity Leave': 'ลาคลอด',
   'Other Leave': 'ลาอื่น ๆ',
 };
 
@@ -280,15 +279,6 @@ const getLeaveTypeStyle = (
         '#DDD6FE',
     },
 
-    'Maternity Leave': {
-      shortName: 'M',
-      backgroundColor:
-        '#FDF2F8',
-      color:
-        '#DB2777',
-      borderColor:
-        '#FBCFE8',
-    },
   };
 
   return (

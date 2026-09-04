@@ -743,7 +743,7 @@ function RejectModalPage() {
               xs: '16px 20px 20px',
               sm: '16px 24px 24px',
             },
-            borderTop: '1px solid #E5E7EB',
+            borderTop: 0,
             gap: '10px',
           }}
         >

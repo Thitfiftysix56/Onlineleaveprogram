@@ -200,7 +200,7 @@ export function DashboardTablePagination({ count, page, onPageChange }) {
         `หน้า ${page + 1} จาก ${Math.max(1, Math.ceil(count / 5))}`
       }
       sx={{
-        borderTop: '1px solid #E5E7EB',
+        borderTop: 0,
         color: '#4B5563',
         '& .MuiTablePagination-selectLabel, & .MuiTablePagination-input': { display: 'none' },
         '& .MuiTablePagination-displayedRows': { fontSize: '12px' },
@@ -215,18 +215,21 @@ export const SummaryCard = StatCard;
 
 export function ConfirmationDialog({ open, title, description, confirmLabel = 'ยืนยัน', loading = false, tone = 'error', onCancel, onConfirm }) {
   return (
-    <Dialog open={open} onClose={() => !loading && onCancel?.()} fullWidth maxWidth="sm">
-      <DialogTitle>{title}</DialogTitle>
-      <DialogContent dividers>
-        <DialogContentText>{description}</DialogContentText>
-      </DialogContent>
-      <DialogActions sx={{ padding: '14px 20px' }}>
+    <DialogShell
+      open={open}
+      onClose={() => !loading && onCancel?.()}
+      title={title}
+      description={description}
+      destructive={tone === 'error'}
+      actions={(
+        <>
         <Button type="button" variant="outlined" disabled={loading} onClick={onCancel}>ยกเลิก</Button>
         <Button type="button" variant="contained" color={tone} disabled={loading} onClick={onConfirm}>
           {loading ? 'กำลังบันทึก...' : confirmLabel}
         </Button>
-      </DialogActions>
-    </Dialog>
+        </>
+      )}
+    />
   );
 }
 
@@ -247,8 +250,8 @@ export function DataListToolbar({
       <Stack
         direction={{ xs: 'column', md: 'row' }}
         alignItems={{ xs: 'stretch', md: 'center' }}
-        gap="16px"
-        sx={{ columnGap: '16px', rowGap: '12px' }}
+        gap={`${spacingTokens.lg}px`}
+        sx={{ columnGap: `${spacingTokens.lg}px`, rowGap: `${spacingTokens.md}px` }}
       >
         <TextField
           size="small"
@@ -281,25 +284,25 @@ export function DataListToolbar({
           sx={{
             width: { xs: '100%', md: 360 },
             flexShrink: 0,
-            '& .MuiOutlinedInput-root': { height: 42, backgroundColor: '#FFFFFF' },
+            '& .MuiOutlinedInput-root': { height: 44, backgroundColor: '#FFFFFF' },
           }}
         />
         {filters ? (
           <Stack
             direction="row"
-            gap="16px"
+            gap={`${spacingTokens.lg}px`}
             useFlexGap
             flexWrap="wrap"
             sx={{
               flex: 1,
               width: { xs: '100%', md: 'auto' },
-              columnGap: '16px',
-              rowGap: '12px',
+              columnGap: `${spacingTokens.lg}px`,
+              rowGap: `${spacingTokens.md}px`,
               '& .MuiFormControl-root': {
                 minWidth: { xs: 0, sm: 148 },
                 flex: { xs: '1 1 calc(50% - 8px)', sm: '0 0 148px' },
               },
-              '& .MuiOutlinedInput-root': { height: 42, backgroundColor: '#FFFFFF' },
+              '& .MuiOutlinedInput-root': { height: 44, backgroundColor: '#FFFFFF' },
               '& .MuiSelect-select': {
                 display: 'flex',
                 alignItems: 'center',
@@ -433,11 +436,11 @@ export function TableHeader({ children, sx, ...props }) {
       {...props}
       sx={{
         '& .MuiTableCell-head': {
-          height: 48,
+          height: 44,
           whiteSpace: 'nowrap',
           backgroundColor: '#EEF3F8',
           color: colorTokens.text.primary,
-          fontWeight: 700,
+          fontWeight: 600,
         },
         ...sx,
       }}
@@ -542,7 +545,7 @@ const statusStyles = {
   pending: semanticAccents.warning,
   approved: semanticAccents.success,
   rejected: semanticAccents.error,
-  cancelled: semanticAccents.neutral,
+  cancelled: semanticAccents.error,
 };
 
 export function StatusChip({ status, label, sx, ...props }) {
@@ -705,7 +708,7 @@ export function DialogShell({
           sx={{
             gap: `${spacingTokens.sm}px`,
             padding: `${spacingTokens.lg}px ${spacingTokens['2xl']}px ${spacingTokens['2xl']}px`,
-            borderTop: `1px solid ${colorTokens.border}`,
+            borderTop: 0,
           }}
         >
           {actions}

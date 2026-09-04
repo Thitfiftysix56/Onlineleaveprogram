@@ -21,7 +21,7 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import EmployeeLayout from '../../layouts/employeelayout.jsx';
 import RequestNumberText from '../../components/requestnumbertext.jsx';
 import {
-  PageHeader,
+  CompactSummaryCard,
 } from '../../components/sharedvisualfoundation.jsx';
 import DashboardLeaveBalance from '../../components/dashboardleavebalance.jsx';
 import { DashboardTablePagination } from '../../components/shareduiprimitives.jsx';
@@ -114,9 +114,6 @@ const getLeaveTypeLabel = (
 
     'Personal Leave':
       'ลากิจ',
-
-    'Maternity Leave':
-      'ลาคลอด',
 
     'Other Leave':
       'ลาอื่น ๆ',
@@ -384,10 +381,10 @@ const getStatusStyle = (
 
     cancelled: {
       backgroundColor:
-        '#F3F4F6',
+        '#FEE2E2',
 
       color:
-        '#6B7280',
+        '#B91C1C',
     },
 
     draft: {
@@ -1063,9 +1060,7 @@ function EmployeeDashboardPage() {
       activeMenu="Dashboard"
       calibrated
     >
-      <PageHeader
-        title="Dashboard"
-        actions={(
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
           <Button
             type="button"
             variant="contained"
@@ -1073,6 +1068,7 @@ function EmployeeDashboardPage() {
             onClick={() =>
               navigate(
                 '/employee/leave-request',
+                { state: { returnTo: '/employee/dashboard' } },
               )
             }
             sx={{
@@ -1097,8 +1093,7 @@ function EmployeeDashboardPage() {
           >
             สร้างคำขอลา
           </Button>
-        )}
-      />
+      </Box>
 
       <Box
         sx={{
@@ -1116,83 +1111,18 @@ function EmployeeDashboardPage() {
               'repeat(4, minmax(0, 1fr))',
           },
           gap: '16px',
+          marginBottom: '16px',
         }}
       >
         {summaryCards.map((card) => (
-          <Paper
+          <CompactSummaryCard
             key={card.title}
-            elevation={0}
-            sx={{
-              position: 'relative',
-              overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'baseline',
-              justifyContent: 'space-between',
-              gap: '8px',
-              minHeight: '72px',
-              padding: '18px',
-              background: card.background,
-              border: '1px solid #E6EAF0',
-              borderRadius: '20px',
-              boxShadow: '0 8px 24px rgba(15, 23, 42, 0.07)',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                width: '118px',
-                height: '118px',
-                top: '-47px',
-                right: '-38px',
-                borderRadius: '50%',
-                backgroundColor: card.glowColor,
-                filter: 'blur(3px)',
-                pointerEvents: 'none',
-              },
-            }}
-          >
-            <Typography
-              noWrap
-              sx={{
-                position: 'relative',
-                zIndex: 1,
-                color: '#374151',
-                fontSize: '15px',
-                fontWeight: 700,
-                lineHeight: 1.4,
-              }}
-            >
-              {card.title}
-            </Typography>
-
-            <Typography
-              noWrap
-              sx={{
-                position: 'relative',
-                zIndex: 1,
-                marginTop: 0,
-                color: card.valueColor,
-                fontSize: '18px',
-                fontWeight: 800,
-                lineHeight: 1,
-                letterSpacing: '-0.02em',
-              }}
-            >
-              {card.value}
-            </Typography>
-
-            <Typography
-              sx={{
-                display: 'none',
-                position: 'relative',
-                zIndex: 1,
-                marginTop: '12px',
-                color: '#64748B',
-                fontSize: '13px',
-                fontWeight: 500,
-              }}
-            >
-              {card.description}
-            </Typography>
-          </Paper>
+            title={card.title}
+            value={card.value}
+            color={card.valueColor}
+            background={card.background}
+            glowColor={card.glowColor}
+          />
         ))}
       </Box>
 
@@ -1261,7 +1191,7 @@ function EmployeeDashboardPage() {
                   '18px',
 
                 fontWeight:
-                  800,
+                  600,
               }}
             >
               คำขอล่าสุด
@@ -1669,6 +1599,7 @@ function EmployeeDashboardPage() {
               onClick={() =>
                 navigate(
                   '/employee/leave-request',
+                  { state: { returnTo: '/employee/dashboard' } },
                 )
               }
               sx={{
@@ -1796,7 +1727,7 @@ function EmployeeDashboardPage() {
                     '18px',
 
                   fontWeight:
-                    800,
+                    600,
                 }}
               >
                 การแจ้งเตือนล่าสุด

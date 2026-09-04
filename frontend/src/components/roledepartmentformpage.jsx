@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
-  Box,
   Button,
   Dialog,
   DialogActions,
@@ -13,14 +12,23 @@ import {
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createDepartment, getDepartment, updateDepartment } from '../api/department-service.js';
-import { BackButton, PageHeader, Surface } from './sharedvisualfoundation.jsx';
 
 const emptyData = { departmentName: '', description: '', status: 'Active' };
 
-function RoleDepartmentFormPage({ LayoutComponent, activeMenu, mode = 'add' }) {
+function RoleDepartmentFormPage({
+  LayoutComponent,
+  activeMenu,
+  mode = 'add',
+  dialogOnly = false,
+  open = true,
+  departmentId: departmentIdProp,
+  onClose,
+  onSaved,
+}) {
   const isEditMode = mode === 'edit';
   const navigate = useNavigate();
-  const { departmentId } = useParams();
+  const { departmentId: routeDepartmentId } = useParams();
+  const departmentId = departmentIdProp || routeDepartmentId;
   const [formData, setFormData] = useState(emptyData);
   const [initialData, setInitialData] = useState(emptyData);
   const [errors, setErrors] = useState({});
@@ -94,7 +102,10 @@ function RoleDepartmentFormPage({ LayoutComponent, activeMenu, mode = 'add' }) {
         : await createDepartment(payload);
       setConfirmationOpen(false);
       setMessage({ type: 'success', text: result.message || 'บันทึกข้อมูลแผนกเรียบร้อยแล้ว' });
-      window.setTimeout(() => navigate('/admin/department-management'), 500);
+      window.setTimeout(() => {
+        if (onSaved) onSaved(result);
+        else navigate('/admin/department-management');
+      }, 500);
     } catch (error) {
       setConfirmationOpen(false);
       setMessage({ type: 'error', text: error.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลแผนกได้' });
@@ -103,25 +114,36 @@ function RoleDepartmentFormPage({ LayoutComponent, activeMenu, mode = 'add' }) {
     }
   };
 
-  return (
-    <LayoutComponent activeMenu={activeMenu}>
-      <PageHeader
-        title={isEditMode ? 'แก้ไขแผนก' : 'เพิ่มแผนก'}
-        subtitle={isEditMode ? 'ปรับปรุงข้อมูลแผนกที่เลือก' : 'เพิ่มแผนกใหม่สำหรับองค์กร'}
-        actions={<BackButton onClick={() => navigate('/admin/department-management')}>กลับ</BackButton>}
-        sx={{ marginBottom: '22px' }}
-      />
+  const closeForm = () => {
+    if (saving) return;
+    if (onClose) onClose();
+    else navigate('/admin/department-management');
+  };
 
-      {message.text ? <Alert severity={message.type} onClose={() => setMessage({ type: '', text: '' })} sx={{ marginBottom: '20px' }}>{message.text}</Alert> : null}
-      {loading ? <Alert severity="info" sx={{ marginBottom: '20px' }}>กำลังโหลดข้อมูลแผนก...</Alert> : null}
-
-      <Surface component="form" onSubmit={requestConfirmation} noValidate padding={0} sx={{ maxWidth: 860, overflow: 'hidden' }}>
-        <Box sx={{ padding: { xs: '20px', sm: '24px' }, borderBottom: '1px solid #D8E0EA', backgroundColor: '#F8FAFC' }}>
-          <Typography component="h2" variant="h6">ข้อมูลแผนก</Typography>
-          <Typography variant="body2" sx={{ color: '#475569', marginTop: '4px' }}>ระบุชื่อและรายละเอียดของแผนก</Typography>
-        </Box>
-        <Stack gap="20px" sx={{ padding: { xs: '20px', sm: '28px' } }}>
+  const formDialogs = (
+    <>
+      <Dialog
+        open={open}
+        onClose={closeForm}
+        fullWidth
+        maxWidth="sm"
+        slotProps={{
+          paper: {
+            component: 'form',
+            onSubmit: requestConfirmation,
+            noValidate: true,
+            sx: { width: 'calc(100% - 32px)', maxWidth: '540px', margin: 'auto', borderRadius: '18px', overflow: 'hidden' },
+          },
+        }}
+      >
+        <DialogTitle sx={{ padding: '18px 22px', borderBottom: 0, background: 'transparent', color: 'var(--role-text, #1E3A8A)', fontSize: '20px', fontWeight: 700 }}>
+          {isEditMode ? 'แก้ไขแผนก' : 'เพิ่มแผนก'}
+        </DialogTitle>
+        <DialogContent sx={{ padding: '22px 22px 24px !important' }}>
+          {message.text ? <Alert severity={message.type} onClose={() => setMessage({ type: '', text: '' })} sx={{ marginBottom: '20px' }}>{message.text}</Alert> : null}
+          {loading ? <Alert severity="info" sx={{ marginBottom: '20px' }}>กำลังโหลดข้อมูลแผนก...</Alert> : null}
           <TextField
+            fullWidth
             required
             label="ชื่อแผนก"
             placeholder="เช่น เทคโนโลยีสารสนเทศ"
@@ -130,23 +152,24 @@ function RoleDepartmentFormPage({ LayoutComponent, activeMenu, mode = 'add' }) {
             error={Boolean(errors.departmentName)}
             helperText={errors.departmentName || `${formData.departmentName.length}/100 ตัวอักษร`}
             slotProps={{ htmlInput: { maxLength: 100 } }}
+            sx={{ marginBottom: '22px' }}
           />
           <TextField
+            fullWidth
             multiline
-            minRows={4}
-            maxRows={8}
+            minRows={3}
+            maxRows={6}
             label="รายละเอียด"
             placeholder="ระบุหน้าที่หรือขอบเขตงานของแผนก"
             value={formData.description}
             onChange={(event) => updateField('description', event.target.value)}
-            helperText="ไม่บังคับ"
           />
-        </Stack>
-        <Stack direction={{ xs: 'column-reverse', sm: 'row' }} justifyContent="flex-end" gap="10px" sx={{ padding: { xs: '16px 20px', sm: '18px 28px' }, borderTop: '1px solid #D8E0EA', backgroundColor: '#F8FAFC' }}>
-          <Button type="button" variant="outlined" onClick={() => { setFormData(initialData); setErrors({}); }}>ล้างการแก้ไข</Button>
-          <Button type="submit" variant="contained" disabled={loading || saving}>{isEditMode ? 'บันทึกการแก้ไข' : 'เพิ่มแผนก'}</Button>
-        </Stack>
-      </Surface>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'flex-end', columnGap: '12px', rowGap: '10px', flexWrap: 'wrap', padding: '16px 22px 20px', borderTop: 0, backgroundColor: 'transparent' }}>
+          <Button type="button" variant="outlined" onClick={() => { setFormData(initialData); setErrors({}); }} sx={{ minWidth: '116px', height: '42px', borderRadius: '9px', fontSize: '13px', fontWeight: 600 }}>ล้างการแก้ไข</Button>
+          <Button type="submit" variant="contained" disabled={loading || saving} sx={{ minWidth: '148px', height: '42px', borderRadius: '9px', fontSize: '13px', fontWeight: 600 }}>{isEditMode ? 'บันทึกการแก้ไข' : 'เพิ่มแผนก'}</Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>ยืนยันการบันทึกข้อมูลแผนก</DialogTitle>
@@ -158,9 +181,17 @@ function RoleDepartmentFormPage({ LayoutComponent, activeMenu, mode = 'add' }) {
         </DialogContent>
         <DialogActions sx={{ padding: '14px 20px' }}>
           <Button variant="outlined" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button>
-          <Button variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>
+          <Button variant="contained" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>
         </DialogActions>
       </Dialog>
+    </>
+  );
+
+  if (dialogOnly) return formDialogs;
+
+  return (
+    <LayoutComponent activeMenu={activeMenu}>
+      {formDialogs}
     </LayoutComponent>
   );
 }

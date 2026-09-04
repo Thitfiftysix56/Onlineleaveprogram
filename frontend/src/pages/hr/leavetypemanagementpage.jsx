@@ -31,6 +31,7 @@ import {
 
 import HRLayout from '../../layouts/hrlayout.jsx';
 import { ConfirmationDialog, DataListToolbar } from '../../components/shareduiprimitives.jsx';
+import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -152,9 +153,6 @@ const translateLeaveType = (
 
     'Personal Leave':
       'ลากิจ',
-
-    'Maternity Leave':
-      'ลาคลอด',
 
     'Paternity Leave':
       'ลาเพื่อดูแลบุตร',
@@ -534,11 +532,14 @@ function LeaveTypeManagementPage() {
 
   return (
     <HRLayout activeMenu="Leave Type">
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <Button type="button" variant="contained" onClick={handleAddLeaveType}>+ เพิ่มประเภทการลา</Button>
+      </Box>
       {/* Header */}
 
       <Box
         sx={{
-          display: 'flex',
+          display: 'none',
 
           alignItems: {
             xs: 'flex-start',
@@ -591,7 +592,7 @@ function LeaveTypeManagementPage() {
               '150px',
 
             height:
-              '42px',
+              '40px',
 
             padding:
               '0 18px',
@@ -603,10 +604,10 @@ function LeaveTypeManagementPage() {
               '#FFFFFF',
 
             borderRadius:
-              '8px',
+              '9px',
 
             fontSize:
-              '12px',
+              '13px',
 
             fontWeight:
               700,
@@ -682,92 +683,27 @@ function LeaveTypeManagementPage() {
               '1fr',
 
             sm:
-              'repeat(2, 1fr)',
+              'repeat(2, minmax(0, 1fr))',
 
-            xl:
-              'repeat(4, 1fr)',
+            md:
+              'repeat(4, minmax(0, 1fr))',
           },
 
           gap:
-            '18px',
+            '16px',
 
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
-        {summaryCards.map(
-          (card) => (
-            <Paper
-              key={
-                card.title
-              }
-              elevation={0}
-              sx={{
-                minHeight: '116px',
-
-                padding:
-                  '20px',
-
-                backgroundColor: `${card.color}18`,
-
-                border: `1px solid ${card.color}45`,
-
-                borderRadius: '9px',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <Box
-                sx={{
-                  width: 'auto',
-
-                  height: 'auto',
-
-                  display:
-                    'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'flex-start',
-                  textAlign: 'left',
-
-                  backgroundColor: 'transparent',
-
-                  color: '#172033',
-
-                  borderRadius:
-                    0,
-
-                  fontSize: '26px',
-
-                  fontWeight: 700,
-                  order: 2,
-                  marginTop: '7px',
-                }}
-              >
-                {card.value}
-              </Box>
-
-              <Typography
-                sx={{
-                  color: '#64748B',
-
-                  fontSize: '12px',
-
-                  fontWeight:
-                    800,
-
-                  marginTop: 0,
-                  order: 1,
-                }}
-              >
-                {card.title}
-              </Typography>
-            </Paper>
-          ),
-        )}
+        {summaryCards.map((card) => (
+          <CompactSummaryCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            color={card.color}
+          />
+        ))}
       </Box>
 
       {/* Main Card */}
@@ -782,7 +718,10 @@ function LeaveTypeManagementPage() {
             '1px solid #E5E7EB',
 
           borderRadius:
-            '14px',
+            '20px',
+
+          boxShadow:
+            '0 4px 16px rgba(15, 23, 42, 0.04)',
 
           overflow:
             'hidden',
@@ -808,40 +747,17 @@ function LeaveTypeManagementPage() {
                 '18px',
 
               fontWeight:
-                800,
+                600,
             }}
           >
             รายการประเภทการลา
-          </Typography>
-
-          <Typography
-            sx={{
-              color:
-                '#64748B',
-
-              fontSize:
-                '12px',
-
-              marginTop:
-                '4px',
-            }}
-          >
-            แสดง{' '}
-            {
-              filteredLeaveTypes.length
-            }{' '}
-            จาก{' '}
-            {
-              leaveTypes.length
-            }{' '}
-            รายการ
           </Typography>
 
           <DataListToolbar
             searchValue={searchText}
             onSearchChange={setSearchText}
             searchPlaceholder="ค้นหาชื่อหรือรหัสประเภทลา"
-            resultLabel={searchText ? `พบ ${filteredLeaveTypes.length} รายการจากคำค้น “${searchText}”` : `พบ ${filteredLeaveTypes.length} รายการ`}
+            resultLabel=""
             activeFilters={statusFilter !== 'all' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}`, onDelete: () => setStatusFilter('all') }] : []}
             onClearFilters={handleClearFilters}
             filters={<FormControl size="small"><Select value={statusFilter === 'all' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'active' ? 'ใช้งานอยู่' : value === 'inactive' ? 'ไม่ใช้งาน' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'all')}><MenuItem value="active">ใช้งานอยู่</MenuItem><MenuItem value="inactive">ไม่ใช้งาน</MenuItem></Select></FormControl>}
@@ -1011,8 +927,8 @@ function LeaveTypeManagementPage() {
               minHeight:
                 '300px',
 
-              display:
-                'flex',
+          display:
+            'none',
 
               alignItems:
                 'center',
@@ -1357,7 +1273,16 @@ function LeaveTypeManagementPage() {
                 )}
               </TableBody>
             </Table>
-            {filteredLeaveTypes.length > rowsPerPage ? <TablePagination component="div" count={filteredLeaveTypes.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} /> : null}
+            <TablePagination
+              component="div"
+              count={filteredLeaveTypes.length}
+              page={page}
+              onPageChange={(_, nextPage) => setPage(nextPage)}
+              rowsPerPage={rowsPerPage}
+              rowsPerPageOptions={[rowsPerPage]}
+              labelRowsPerPage=""
+              labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.max(1, Math.ceil(filteredLeaveTypes.length / rowsPerPage))}`}
+            />
           </Box>
         ) : (
           /* Empty */

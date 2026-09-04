@@ -7,6 +7,7 @@ import {
   Navigate,
   Route,
   Routes,
+  useParams,
 } from 'react-router-dom';
 
 import ProtectedRoute from './components/protectedroute.jsx';
@@ -71,6 +72,8 @@ const HRLeaveRequestDetailPage = lazy(() => import('./pages/hr/hrleaverequestdet
 const HRProfilePage = lazy(() => import('./pages/hr/hrprofilepage.jsx'));
 const HRNotificationPage = lazy(() => import('./pages/hr/hrnotificationpage.jsx'));
 const HRChangePasswordPage = lazy(() => import('./pages/hr/hrchangepasswordpage.jsx'));
+const HRApprovalPendingListPage = lazy(() => import('./pages/hr/hrapprovalpendinglistpage.jsx'));
+const HRApprovalDetailPage = lazy(() => import('./pages/hr/hrapprovaldetailpage.jsx'));
 
 /* =========================
    Admin
@@ -81,7 +84,6 @@ const AdminCreateLeaveRequestPage = lazy(() => import('./pages/admin/createleave
 const AdminMyRequestsPage = lazy(() => import('./pages/admin/myrequestspage.jsx'));
 const AdminLeaveRequestDetailPage = lazy(() => import('./pages/admin/leaverequestdetailpage.jsx'));
 const UserManagementPage = lazy(() => import('./pages/admin/usermanagementpage.jsx'));
-const UserFormPage = lazy(() => import('./pages/admin/userformpage.jsx'));
 const DepartmentManagementPage = lazy(() => import('./pages/admin/departmentmanagementpage.jsx'));
 const DepartmentFormPage = lazy(() => import('./pages/admin/departmentformpage.jsx'));
 const PositionManagementPage = lazy(() => import('./pages/admin/positionmanagementpage.jsx'));
@@ -112,6 +114,11 @@ function RootRedirect() {
       replace
     />
   );
+}
+
+function UserManagementRouteForm({ mode }) {
+  const { userId } = useParams();
+  return <UserManagementPage initialFormMode={mode} initialUserId={userId} />;
 }
 
 function App() {
@@ -351,6 +358,9 @@ function App() {
           element={<Navigate to="/hr/dashboard" replace />}
         />
 
+        <Route path="/hr/approval" element={<HRApprovalPendingListPage />} />
+        <Route path="/hr/approval/:requestId" element={<HRApprovalDetailPage />} />
+
         <Route
           path="/hr/employee-management"
           element={
@@ -505,18 +515,14 @@ function App() {
         <Route
           path="/admin/user-management/add"
           element={
-            <UserFormPage
-              mode="add"
-            />
+            <UserManagementPage initialFormMode="add" />
           }
         />
 
         <Route
           path="/admin/user-management/:userId/edit"
           element={
-            <UserFormPage
-              mode="edit"
-            />
+            <UserManagementRouteForm mode="edit" />
           }
         />
 

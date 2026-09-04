@@ -35,7 +35,7 @@ const exact = new Map(Object.entries({
   'Search requests': 'ค้นหาคำขอลา', 'Search notifications': 'ค้นหาการแจ้งเตือน', 'Search employees': 'ค้นหาพนักงาน', 'Search users': 'ค้นหาผู้ใช้งาน',
   'First Name': 'ชื่อ', 'Last Name': 'นามสกุล', 'Hire Date': 'วันที่เริ่มงาน', 'Employment Date': 'วันที่เริ่มงาน',
   'Public Holiday': 'วันหยุดราชการ', 'Company Holiday': 'วันหยุดบริษัท', 'Special Holiday': 'วันหยุดพิเศษ',
-  'Annual Leave': 'ลาพักร้อน', 'Sick Leave': 'ลาป่วย', 'Personal Leave': 'ลากิจ', 'Maternity Leave': 'ลาคลอด',
+  'Annual Leave': 'ลาพักร้อน', 'Sick Leave': 'ลาป่วย', 'Personal Leave': 'ลากิจ',
   'Request ID': 'รหัสคำขอ', 'Request Number': 'เลขที่คำขอ', 'Date Range': 'ช่วงวันที่', 'Leave Period': 'ช่วงวันลา', Submitted: 'ส่งเมื่อ', Updated: 'อัปเดตเมื่อ',
   Total: 'รวม', 'Total Requests': 'คำขอทั้งหมด', 'Total Leave Days': 'วันลารวม', 'Total Entitlement': 'สิทธิ์ทั้งหมด', 'Available Days': 'วันลาที่ใช้ได้',
   'Pending Approval': 'รอการอนุมัติ', 'Waiting for your review': 'รอการตรวจสอบจากคุณ', 'Approved this month': 'อนุมัติในเดือนนี้', 'Rejected this month': 'ปฏิเสธในเดือนนี้',

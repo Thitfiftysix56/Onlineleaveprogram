@@ -12,7 +12,12 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
+  IconButton,
   InputAdornment,
   InputLabel,
   MenuItem,
@@ -30,6 +35,8 @@ import {
 
 import {
   CalendarMonthRounded,
+  CloseRounded,
+  SearchRounded,
 } from '@mui/icons-material';
 
 import {
@@ -38,6 +45,8 @@ import {
 
 import HRLayout from '../../layouts/hrlayout.jsx';
 import RequestNumberText from '../../components/requestnumbertext.jsx';
+import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
+import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 
 import {
@@ -67,9 +76,6 @@ const translateLeaveType = (
 
     'Personal Leave':
       'ลากิจ',
-
-    'Maternity Leave':
-      'ลาคลอด',
 
     'Paternity Leave':
       'ลาเพื่อดูแลบุตร',
@@ -168,10 +174,10 @@ const getStatusStyle = (
 
     cancelled: {
       backgroundColor:
-        '#E5E7EB',
+        '#FEE2E2',
 
       color:
-        '#64748B',
+        '#B91C1C',
     },
   };
 
@@ -336,7 +342,7 @@ function ThaiDateField({
           '& .MuiOutlinedInput-root':
             {
               height:
-                '48px',
+                '44px',
 
               borderRadius:
                 '9px',
@@ -509,6 +515,10 @@ const normalizeRequest = (
           'draft',
       ).toLowerCase(),
 
+    reason:
+      request.reason ||
+      '',
+
     approver:
       request.approver ||
       request.approverName ||
@@ -644,6 +654,7 @@ function HRReportsPage() {
   ] = useState('');
 
   const [page, setPage] = useState(0);
+  const [exportConfirmationOpen, setExportConfirmationOpen] = useState(false);
   const rowsPerPage = 5;
 
   /* =========================
@@ -1003,7 +1014,7 @@ function HRReportsPage() {
         '#F3E8FF',
 
       color:
-        '#7C3AED',
+        '#0891B2',
     },
   ];
 
@@ -1043,6 +1054,11 @@ function HRReportsPage() {
 
       navigate(
         `/hr/reports/leave-requests/${request.id}`,
+        {
+          state: {
+            requestData: request,
+          },
+        },
       );
     };
 
@@ -1234,113 +1250,33 @@ function HRReportsPage() {
 
   return (
     <HRLayout activeMenu="Reports">
-      {/* Header */}
-
       <Box
         sx={{
-          display:
-            'flex',
-
-          alignItems: {
-            xs:
-              'flex-start',
-
-            sm:
-              'center',
-          },
-
-          justifyContent:
-            'space-between',
-
-          flexDirection: {
-            xs:
-              'column',
-
-            sm:
-              'row',
-          },
-
-          gap:
-            '16px',
-
-          marginBottom:
-            '16px',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          marginBottom: '16px',
         }}
       >
-        <Typography
-          component="h1"
-          sx={{
-            color:
-              '#111827',
-
-            fontSize: {
-              xs:
-                '26px',
-
-              sm:
-                '30px',
-            },
-
-            fontWeight:
-              800,
-          }}
-        >
-          รายงานการลา
-        </Typography>
-
-        <Box sx={{ width: { xs: '100%', sm: 'auto' }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: '10px' }}>
         <Button
           type="button"
           variant="contained"
-          onClick={
-            handleExportReport
-          }
-          disabled={
-            loading
-          }
+          onClick={() => setExportConfirmationOpen(true)}
+          disabled={loading}
           sx={{
-            minWidth:
-              '140px',
-
-            height:
-              '42px',
-
-            padding:
-              '0 18px',
-
-            backgroundColor:
-              '#2563EB',
-
-            color:
-              '#FFFFFF',
-
-            borderRadius:
-              '8px',
-
-            fontSize:
-              '12px',
-
-            fontWeight:
-              700,
-
-            textTransform:
-              'none',
-
-            boxShadow:
-              'none',
-
-            '&:hover': {
-              backgroundColor:
-                '#1D4ED8',
-
-              boxShadow:
-                'none',
-            },
+            minWidth: '140px',
+            height: '42px',
+            padding: '0 18px',
+            borderRadius: '9px',
+            fontSize: '12px',
+            fontWeight: 700,
+            textTransform: 'none',
+            whiteSpace: 'nowrap',
+            boxShadow: 'none',
+            '&:hover': { boxShadow: 'none' },
           }}
         >
           ส่งออก Excel
         </Button>
-        </Box>
       </Box>
 
       {/* Messages */}
@@ -1399,92 +1335,27 @@ function HRReportsPage() {
               '1fr',
 
             sm:
-              'repeat(2, 1fr)',
+              'repeat(2, minmax(0, 1fr))',
 
-            xl:
-              'repeat(4, 1fr)',
+            md:
+              'repeat(4, minmax(0, 1fr))',
           },
 
           gap:
-            '18px',
+            '16px',
 
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
-        {summaryCards.map(
-          (card) => (
-            <Paper
-              key={
-                card.title
-              }
-              elevation={0}
-              sx={{
-                minHeight: '116px',
-
-                padding:
-                  '20px',
-
-                backgroundColor: `${card.color}18`,
-
-                border: `1px solid ${card.color}45`,
-
-                borderRadius: '9px',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <Box
-                sx={{
-                  width: 'auto',
-
-                  height: 'auto',
-
-                  display:
-                    'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'flex-start',
-                  textAlign: 'left',
-
-                  backgroundColor: 'transparent',
-
-                  color: '#172033',
-
-                  borderRadius:
-                    0,
-
-                  fontSize: '26px',
-
-                  fontWeight: 700,
-                  order: 2,
-                  marginTop: '7px',
-                }}
-              >
-                {card.value}
-              </Box>
-
-              <Typography
-                sx={{
-                  color: '#64748B',
-
-                  fontSize: '12px',
-
-                  fontWeight:
-                    800,
-
-                  marginTop: 0,
-                  order: 1,
-                }}
-              >
-                {card.title}
-              </Typography>
-            </Paper>
-          ),
-        )}
+        {summaryCards.map((card) => (
+          <CompactSummaryCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            color={card.color}
+          />
+        ))}
       </Box>
 
       {/* Main Card */}
@@ -1499,7 +1370,10 @@ function HRReportsPage() {
             '1px solid #E5E7EB',
 
           borderRadius:
-            '14px',
+            '20px',
+
+          boxShadow:
+            '0 4px 16px rgba(15, 23, 42, 0.04)',
 
           overflow:
             'hidden',
@@ -1516,68 +1390,158 @@ function HRReportsPage() {
               '1px solid #E5E7EB',
           }}
         >
-          <Typography
-            sx={{
-              color:
-                '#111827',
-
-              fontSize:
-                '18px',
-
-              fontWeight:
-                800,
-            }}
-          >
+          <Typography sx={{ color: '#111827', fontSize: '18px', fontWeight: 600 }}>
             รายการการลา
           </Typography>
 
-          <Typography
-            sx={{
-              color:
-                '#64748B',
+          <DataListToolbar
+            searchValue={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="ค้นหาเลขที่คำขอ ชื่อ หรือรหัสพนักงาน"
+            resultLabel=""
+            activeFilters={[
+              ...(departmentFilter !== 'all' ? [{
+                key: 'department',
+                label: `แผนก: ${departmentFilter}`,
+                onDelete: () => setDepartmentFilter('all'),
+              }] : []),
+              ...(leaveTypeFilter !== 'all' ? [{
+                key: 'leaveType',
+                label: `ประเภท: ${translateLeaveType(leaveTypeFilter)}`,
+                onDelete: () => setLeaveTypeFilter('all'),
+              }] : []),
+              ...(statusFilter !== 'all' ? [{
+                key: 'status',
+                label: `สถานะ: ${translateStatus(statusFilter)}`,
+                onDelete: () => setStatusFilter('all'),
+              }] : []),
+            ]}
+            filters={(
+              <>
+                <FormControl size="small">
+                  <Select
+                    value={departmentFilter === 'all' ? '' : departmentFilter}
+                    displayEmpty
+                    renderValue={(value) => value || 'แผนก'}
+                    inputProps={{ 'aria-label': 'แผนก' }}
+                    onChange={(event) => setDepartmentFilter(event.target.value || 'all')}
+                  >
+                    {departments.map((department) => (
+                      <MenuItem key={department} value={department}>{department}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-              fontSize:
-                '12px',
+                <FormControl size="small">
+                  <Select
+                    value={leaveTypeFilter === 'all' ? '' : leaveTypeFilter}
+                    displayEmpty
+                    renderValue={(value) => value ? translateLeaveType(value) : 'ประเภทการลา'}
+                    inputProps={{ 'aria-label': 'ประเภทการลา' }}
+                    onChange={(event) => setLeaveTypeFilter(event.target.value || 'all')}
+                  >
+                    {leaveTypes.map((leaveType) => (
+                      <MenuItem key={leaveType} value={leaveType}>{translateLeaveType(leaveType)}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-              marginTop:
-                '4px',
-            }}
-          >
-            แสดง{' '}
-            {
-              filteredRequests.length
-            }{' '}
-            จาก{' '}
-            {
-              leaveRequests.length
-            }{' '}
-            รายการ
-          </Typography>
+                <FormControl size="small">
+                  <Select
+                    value={statusFilter === 'all' ? '' : statusFilter}
+                    displayEmpty
+                    renderValue={(value) => value ? translateStatus(value) : 'สถานะ'}
+                    inputProps={{ 'aria-label': 'สถานะ' }}
+                    onChange={(event) => setStatusFilter(event.target.value || 'all')}
+                  >
+                    <MenuItem value="draft">ฉบับร่าง</MenuItem>
+                    <MenuItem value="pending">รออนุมัติ</MenuItem>
+                    <MenuItem value="approved">อนุมัติแล้ว</MenuItem>
+                    <MenuItem value="rejected">ปฏิเสธแล้ว</MenuItem>
+                    <MenuItem value="cancelled">ยกเลิกแล้ว</MenuItem>
+                  </Select>
+                </FormControl>
+              </>
+            )}
+            sx={{ marginTop: '14px' }}
+          />
 
           <Box
             sx={{
               display:
-                'grid',
+                'none',
 
               gridTemplateColumns: {
                 xs:
                   '1fr',
 
-                md:
+                sm:
                   'repeat(2, 1fr)',
 
-                xl:
-                  'minmax(240px, 1fr) minmax(150px, 0.7fr) minmax(150px, 0.7fr) minmax(130px, 0.6fr) minmax(170px, 0.75fr) minmax(170px, 0.75fr) auto',
+                lg:
+                  'minmax(240px, 1.5fr) repeat(3, minmax(150px, 1fr))',
               },
 
               gap:
-                '14px',
+                '12px',
+
+              alignItems:
+                'center',
 
               marginTop:
-                '20px',
+                '14px',
+
+              '& .MuiInputLabel-root': {
+                fontWeight: 400,
+              },
+
+              '& .MuiInputBase-input': {
+                fontWeight: 400,
+              },
+
+              '& > *': {
+                minWidth: 0,
+              },
             }}
           >
-            <TextField fullWidth label="ค้นหา" placeholder="เลขที่คำขอ ชื่อ หรือรหัสพนักงาน" value={searchText} onChange={(event) => setSearchText(event.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: '48px', borderRadius: '9px', '&.Mui-focused fieldset': { borderColor: theme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: theme.primary } }} />
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="ค้นหาเลขที่คำขอ ชื่อ หรือรหัสพนักงาน"
+              aria-label="ค้นหาเลขที่คำขอ ชื่อ หรือรหัสพนักงาน"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchRounded sx={{ color: '#94A3B8', fontSize: 20 }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchText ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        type="button"
+                        size="small"
+                        aria-label="ล้างคำค้นหา"
+                        onClick={() => setSearchText('')}
+                        sx={{ width: 30, height: 30 }}
+                      >
+                        <CloseRounded sx={{ fontSize: 18 }} />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                },
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  height: '44px',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '9px',
+                  '&.Mui-focused fieldset': { borderColor: theme.primary },
+                },
+              }}
+            />
 
             {/* Department */}
 
@@ -1600,8 +1564,8 @@ function HRReportsPage() {
                   )
                 }
                 sx={{
-                  height:
-                    '48px',
+              height:
+                '44px',
 
                   borderRadius:
                     '9px',
@@ -1651,7 +1615,7 @@ function HRReportsPage() {
                 }
                 sx={{
                   height:
-                    '48px',
+                    '46px',
 
                   borderRadius:
                     '9px',
@@ -1701,7 +1665,7 @@ function HRReportsPage() {
                 }
                 sx={{
                   height:
-                    '48px',
+                    '46px',
 
                   borderRadius:
                     '9px',
@@ -1730,6 +1694,33 @@ function HRReportsPage() {
               </Select>
             </FormControl>
 
+          </Box>
+
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2, minmax(0, 1fr))',
+                md: 'repeat(2, minmax(0, 1fr))',
+                lg: '360px 312px 148px minmax(0, 1fr)',
+              },
+              gap: '16px',
+              alignItems: 'center',
+              justifyContent: 'start',
+              marginTop: '12px',
+              '& .MuiInputLabel-root': {
+                fontWeight: 400,
+              },
+              '& .MuiInputBase-input': {
+                fontWeight: 400,
+              },
+              '& > *': {
+                minWidth: 0,
+              },
+            }}
+          >
+
             {/* Start Date */}
 
             <ThaiDateField
@@ -1753,66 +1744,32 @@ function HRReportsPage() {
                 setEndDate
               }
             />
-          </Box>
 
-          <Box
-            sx={{
-              display:
-                'flex',
-
-              justifyContent:
-                'flex-end',
-
-              marginTop:
-                '14px',
-            }}
-          >
             <Button
               type="button"
               variant="outlined"
-              onClick={
-                handleClearFilters
-              }
+              onClick={handleClearFilters}
               sx={{
-                minWidth:
-                  '110px',
-
-                height:
-                  '42px',
-
-                padding:
-                  '0 18px',
-
-                color:
-                  '#475569',
-
-                borderColor:
-                  '#CBD5E1',
-
-                borderRadius:
-                  '9px',
-
-                fontSize:
-                  '12px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
-
-                '&:hover': {
-                  backgroundColor:
-                    '#F8FAFC',
-
-                  borderColor:
-                    '#94A3B8',
-                },
+                minWidth: '112px',
+                height: '44px',
+                padding: '0 16px',
+                color: '#475569',
+                borderColor: '#CBD5E1',
+                borderRadius: '9px',
+                fontSize: '12px',
+                fontWeight: 500,
+                textTransform: 'none',
+                whiteSpace: 'nowrap',
+                width: { xs: '100%', sm: '148px' },
+                gridColumn: { lg: '3' },
+                justifySelf: { xs: 'stretch', sm: 'start' },
+                '&:hover': { backgroundColor: '#F8FAFC', borderColor: '#94A3B8' },
               }}
             >
               ล้างตัวกรอง
             </Button>
           </Box>
+
         </Box>
 
         {/* Loading */}
@@ -1910,28 +1867,21 @@ function HRReportsPage() {
                 <col
                   style={{
                     width:
-                      '7%',
+                      '8%',
                   }}
                 />
 
                 <col
                   style={{
                     width:
-                      '10%',
+                      '11%',
                   }}
                 />
 
                 <col
                   style={{
                     width:
-                      '12%',
-                  }}
-                />
-
-                <col
-                  style={{
-                    width:
-                      '5%',
+                      '15%',
                   }}
                 />
               </colgroup>
@@ -2354,7 +2304,7 @@ function HRReportsPage() {
                 rowsPerPage={rowsPerPage}
                 rowsPerPageOptions={[rowsPerPage]}
                 labelRowsPerPage=""
-                labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`}
+                labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredRequests.length / rowsPerPage)}`}
               />
             ) : null}
           </Box>
@@ -2456,6 +2406,17 @@ function HRReportsPage() {
           </Box>
         )}
       </Paper>
+
+      <Dialog open={exportConfirmationOpen} onClose={() => setExportConfirmationOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการส่งออกรายงาน</DialogTitle>
+        <DialogContent dividers>
+          <Typography>ต้องการส่งออกข้อมูลการลาตามตัวกรองปัจจุบันเป็นไฟล์ Excel ใช่หรือไม่</Typography>
+        </DialogContent>
+        <DialogActions sx={{ padding: '14px 20px' }}>
+          <Button type="button" variant="outlined" onClick={() => setExportConfirmationOpen(false)} sx={{ color: '#475569', borderColor: '#CBD5E1' }}>ยกเลิก</Button>
+          <Button type="button" variant="contained" onClick={() => { setExportConfirmationOpen(false); handleExportReport(); }} sx={{ backgroundColor: '#15803D', '&:hover': { backgroundColor: '#166534' } }}>ยืนยันส่งออก</Button>
+        </DialogActions>
+      </Dialog>
     </HRLayout>
   );
 }

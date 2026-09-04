@@ -30,18 +30,12 @@ import {
 } from '@mui/material';
 
 
-import {
-  useNavigate,
-} from 'react-router-dom';
-
 import AdminLayout from '../../layouts/adminlayout.jsx';
 import api from '../../api/axios.js';
 import TemporaryPasswordDialog from '../../components/temporarypassworddialog.jsx';
+import UserFormPage from './userformpage.jsx';
 import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
-
-import {
-  updateAuthUserRole,
-} from '../../utils/authstorage.js';
+import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
 
 /* =========================
    Options
@@ -271,10 +265,7 @@ const getStatusStyle = (
    Component
 ========================= */
 
-function UserManagementPage() {
-  const navigate =
-    useNavigate();
-
+function UserManagementPage({ initialFormMode, initialUserId }) {
   const [
     users,
     setUsers,
@@ -291,11 +282,6 @@ function UserManagementPage() {
   ] = useState('');
 
   const [
-    updatingStatusUserId,
-    setUpdatingStatusUserId,
-  ] = useState(null);
-
-  const [
     resettingPasswordUserId,
     setResettingPasswordUserId,
   ] = useState(null);
@@ -304,8 +290,6 @@ function UserManagementPage() {
     resetConfirmationUser,
     setResetConfirmationUser,
   ] = useState(null);
-
-  const [statusConfirmation, setStatusConfirmation] = useState(null);
 
   const [
     temporaryPasswordResult,
@@ -329,6 +313,11 @@ function UserManagementPage() {
 
   const [page, setPage] = useState(0);
   const rowsPerPage = 5;
+  const [formDialog, setFormDialog] = useState({
+    open: Boolean(initialFormMode),
+    mode: initialFormMode || 'add',
+    userId: initialUserId ? String(initialUserId) : '',
+  });
 
   const [
     actionMessage,
@@ -593,7 +582,7 @@ function UserManagementPage() {
         'บัญชีในระบบทั้งหมด',
 
       color:
-        '#EA580C',
+        '#2563EB',
     },
 
     {
@@ -651,114 +640,6 @@ function UserManagementPage() {
     };
 
   /* =========================
-     Role
-  ========================= */
-
-  const handleRoleChange = (
-    selectedUser,
-    nextRole,
-  ) => {
-    const result =
-      updateAuthUserRole({
-        userId:
-          selectedUser.id,
-
-        username:
-          selectedUser.username,
-
-        role:
-          normalizeValue(
-            nextRole,
-          ),
-      });
-
-    if (!result.success) {
-      showMessage(
-        result.error ||
-          'ไม่สามารถเปลี่ยนบทบาทผู้ใช้งานได้',
-        'error',
-      );
-
-      return;
-    }
-
-    loadUsers();
-
-    showMessage(
-      `เปลี่ยนบทบาทของ ${selectedUser.username} เป็น ${translateRole(
-        nextRole,
-      )} แล้ว`,
-      'success',
-    );
-  };
-
-  /* =========================
-     Status
-  ========================= */
-
-  const handleStatusChange =
-    async (
-      selectedUser,
-      nextStatus,
-    ) => {
-      setUpdatingStatusUserId(
-        selectedUser.id,
-      );
-
-      setActionMessage('');
-
-      try {
-        const response =
-          await api.patch(
-            `/admin/users/${selectedUser.id}/status`,
-            {
-              status:
-                nextStatus,
-            },
-          );
-
-        if (
-          response.data?.status !==
-          'ok'
-        ) {
-          throw new Error(
-            response.data?.message ||
-              'ไม่สามารถเปลี่ยนสถานะบัญชีได้',
-          );
-        }
-
-        await loadUsers();
-
-        showMessage(
-          `เปลี่ยนสถานะของ ${selectedUser.username} เป็น ${translateStatus(
-            nextStatus,
-          )} แล้ว`,
-          'success',
-        );
-      } catch (error) {
-        showMessage(
-          error.response?.data
-            ?.message ||
-            error.message ||
-            'ไม่สามารถเปลี่ยนสถานะบัญชีได้',
-          'error',
-        );
-      } finally {
-        setUpdatingStatusUserId(
-          null,
-        );
-      }
-    };
-
-  const requestStatusChange = (selectedUser, nextStatus) => {
-    if (nextStatus === 'Inactive' || nextStatus === 'Locked') {
-      setStatusConfirmation({ user: selectedUser, nextStatus });
-      return;
-    }
-    handleStatusChange(selectedUser, nextStatus);
-  };
-
-  /* =========================
      Action Menu
   ========================= */
 
@@ -783,9 +664,7 @@ function UserManagementPage() {
 
     handleCloseActionMenu();
 
-    navigate(
-      `/admin/user-management/${userId}/edit`,
-    );
+    setFormDialog({ open: true, mode: 'edit', userId: String(userId) });
   };
 
   const handleResetFromMenu = () => {
@@ -908,12 +787,15 @@ function UserManagementPage() {
     <AdminLayout
       activeMenu="User Management"
     >
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <Button type="button" variant="contained" onClick={() => setFormDialog({ open: true, mode: 'add', userId: '' })}>+ เพิ่มผู้ใช้งาน</Button>
+      </Box>
       {/* Header */}
 
       <Box
         sx={{
           display:
-            'flex',
+            'none',
 
           alignItems: {
             xs:
@@ -966,17 +848,13 @@ function UserManagementPage() {
         <Button
           type="button"
           variant="contained"
-          onClick={() =>
-            navigate(
-              '/admin/user-management/add',
-            )
-          }
+          onClick={() => setFormDialog({ open: true, mode: 'add', userId: '' })}
           sx={{
             minWidth:
               '145px',
 
             height:
-              '42px',
+              '40px',
 
             padding:
               '0 18px',
@@ -991,7 +869,7 @@ function UserManagementPage() {
               '9px',
 
             fontSize:
-              '12px',
+              '13px',
 
             fontWeight:
               700,
@@ -1080,135 +958,25 @@ function UserManagementPage() {
             sm:
               'repeat(2, minmax(0, 1fr))',
 
-            xl:
+            md:
               'repeat(4, minmax(0, 1fr))',
           },
 
           gap:
-            '18px',
+            '16px',
 
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
-        {summaryCards.map(
-          (card) => (
-            <Paper
-              key={
-                card.title
-              }
-              elevation={0}
-              sx={{
-                minHeight:
-                  '116px',
-
-                padding:
-                  '20px',
-
-                backgroundColor:
-                  `${card.color}0D`,
-
-                border:
-                  `1px solid ${card.color}2E`,
-
-                borderRadius:
-                  '9px',
-
-                boxSizing:
-                  'border-box',
-              }}
-            >
-              <Box
-                sx={{
-                  display:
-                    'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'space-between',
-
-                  gap:
-                    '12px',
-                }}
-              >
-                <Typography
-                  sx={{
-                    color:
-                      '#64748B',
-
-                    fontSize:
-                      '12px',
-
-                    fontWeight:
-                      700,
-                  }}
-                >
-                  {card.title}
-                </Typography>
-
-                <Box
-                  sx={{
-                    width:
-                      '9px',
-
-                    height:
-                      '9px',
-
-                    flexShrink:
-                      0,
-
-                    backgroundColor:
-                      card.color,
-
-                    borderRadius:
-                      '50%',
-
-                    boxShadow:
-                      `0 0 0 4px ${card.color}14`,
-                  }}
-                />
-              </Box>
-
-              <Typography
-                sx={{
-                  color:
-                    '#111827',
-
-                  fontSize:
-                    '32px',
-
-                  fontWeight:
-                    800,
-
-                  lineHeight:
-                    1.2,
-
-                  marginTop:
-                    '14px',
-                }}
-              >
-                {card.value}
-              </Typography>
-
-              <Typography
-                sx={{
-                  color:
-                    '#94A3B8',
-
-                  fontSize:
-                    '11px',
-
-                  marginTop:
-                    '13px',
-                }}
-              >
-                {card.helper}
-              </Typography>
-            </Paper>
-          ),
-        )}
+        {summaryCards.map((card) => (
+          <CompactSummaryCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            color={card.color}
+          />
+        ))}
       </Box>
 
       {/* User List */}
@@ -1232,7 +1000,10 @@ function UserManagementPage() {
             '1px solid #E5E7EB',
 
           borderRadius:
-            '14px',
+            '20px',
+
+          boxShadow:
+            '0 4px 16px rgba(15, 23, 42, 0.04)',
 
           overflow:
             'hidden',
@@ -1258,40 +1029,17 @@ function UserManagementPage() {
                 '17px',
 
               fontWeight:
-                800,
+                600,
             }}
           >
             รายการผู้ใช้งาน
-          </Typography>
-
-          <Typography
-            sx={{
-              color:
-                '#64748B',
-
-              fontSize:
-                '12px',
-
-              marginTop:
-                '4px',
-            }}
-          >
-            แสดง{' '}
-            {
-              filteredUsers.length
-            }{' '}
-            จาก{' '}
-            {
-              users.length
-            }{' '}
-            บัญชี
           </Typography>
 
           <DataListToolbar
             searchValue={searchText}
             onSearchChange={setSearchText}
             searchPlaceholder="ค้นหาชื่อ Username หรือ Email"
-            resultLabel={searchText ? `พบ ${filteredUsers.length} รายการจากคำค้น “${searchText}”` : `พบ ${filteredUsers.length} รายการ`}
+            resultLabel=""
             activeFilters={[
               ...(roleFilter !== 'All' ? [{ key: 'role', label: `บทบาท: ${translateRole(roleFilter)}`, onDelete: () => setRoleFilter('All') }] : []),
               ...(statusFilter !== 'All' ? [{ key: 'status', label: `สถานะ: ${translateStatus(statusFilter)}`, onDelete: () => setStatusFilter('All') }] : []),
@@ -1321,7 +1069,7 @@ function UserManagementPage() {
                 '18px',
             }}
           >
-            <TextField fullWidth label="ค้นหาผู้ใช้งาน" placeholder="ชื่อผู้ใช้ ชื่อพนักงาน รหัส หรืออีเมล" value={searchText} onChange={(event) => setSearchText(event.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: '46px', borderRadius: '9px', '&.Mui-focused fieldset': { borderColor: '#EA580C' } }, '& .MuiInputLabel-root.Mui-focused': { color: '#EA580C' } }} />
+            <TextField fullWidth label="ค้นหาผู้ใช้งาน" placeholder="ชื่อผู้ใช้ ชื่อพนักงาน รหัส หรืออีเมล" value={searchText} onChange={(event) => setSearchText(event.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: '44px', borderRadius: '11px', '&.Mui-focused fieldset': { borderColor: '#EA580C' } }, '& .MuiInputLabel-root.Mui-focused': { color: '#EA580C' } }} />
 
             <FormControl fullWidth>
               <InputLabel
@@ -1533,8 +1281,8 @@ function UserManagementPage() {
               maxWidth:
                 '100%',
 
-              overflow:
-                'hidden',
+              overflowX:
+                'auto',
             }}
           >
             <Table
@@ -1543,8 +1291,13 @@ function UserManagementPage() {
                 width:
                   '100%',
 
+                minWidth: '920px',
+
                 tableLayout:
-                  'fixed',
+                  'auto',
+
+                '& .MuiTableCell-head': { fontSize: '12px !important', padding: '13px 14px !important', whiteSpace: 'nowrap' },
+                '& .MuiTableCell-body': { fontSize: '12px !important', padding: '14px !important' },
               }}
             >
               <colgroup>
@@ -1678,7 +1431,7 @@ function UserManagementPage() {
                         hover
                         onClick={(event) => {
                           if (event.target.closest('button, input, [role="combobox"]')) return;
-                          navigate(`/admin/user-management/${user.id}/edit`);
+                          setFormDialog({ open: true, mode: 'edit', userId: String(user.id) });
                         }}
                         sx={{
                           cursor: 'pointer',
@@ -1806,93 +1559,25 @@ function UserManagementPage() {
                               '1px solid #E5E7EB',
                           }}
                         >
-                          <FormControl
-                            size="small"
-                            fullWidth
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '92px',
+                              minHeight: '32px',
+                              padding: '5px 12px',
+                              backgroundColor: roleStyle.backgroundColor,
+                              color: roleStyle.color,
+                              borderRadius: '999px',
+                              fontSize: '10.5px',
+                              fontWeight: 700,
+                              lineHeight: 1.35,
+                              textAlign: 'center',
+                            }}
                           >
-                            <Select
-                              value={
-                                user.role
-                              }
-                              onChange={(
-                                event,
-                              ) =>
-                                handleRoleChange(
-                                  user,
-                                  event.target.value,
-                                )
-                              }
-                              renderValue={(
-                                value,
-                              ) =>
-                                translateRole(
-                                  value,
-                                )
-                              }
-                              sx={{
-                                width:
-                                  '100%',
-
-                                height:
-                                  '34px',
-
-                                backgroundColor:
-                                  roleStyle.backgroundColor,
-
-                                color:
-                                  roleStyle.color,
-
-                                borderRadius:
-                                  '8px',
-
-                                fontSize:
-                                  '10.5px',
-
-                                fontWeight:
-                                  700,
-
-                                '& .MuiSelect-select':
-                                  {
-                                    paddingLeft:
-                                      '9px',
-
-                                    paddingRight:
-                                      '25px !important',
-
-                                    overflow:
-                                      'hidden',
-
-                                    textOverflow:
-                                      'ellipsis',
-                                  },
-
-                                '& .MuiOutlinedInput-notchedOutline':
-                                  {
-                                    borderColor:
-                                      `${roleStyle.color}55`,
-                                  },
-                              }}
-                            >
-                              {roleOptions.map(
-                                (
-                                  role,
-                                ) => (
-                                  <MenuItem
-                                    key={
-                                      role
-                                    }
-                                    value={
-                                      role
-                                    }
-                                  >
-                                    {translateRole(
-                                      role,
-                                    )}
-                                  </MenuItem>
-                                ),
-                              )}
-                            </Select>
-                          </FormControl>
+                            {translateRole(user.role)}
+                          </Box>
                         </TableCell>
 
                         {/* Status */}
@@ -1906,101 +1591,25 @@ function UserManagementPage() {
                               '1px solid #E5E7EB',
                           }}
                         >
-                          <FormControl
-                            size="small"
-                            fullWidth
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '92px',
+                              minHeight: '32px',
+                              padding: '5px 12px',
+                              backgroundColor: statusStyle.backgroundColor,
+                              color: statusStyle.color,
+                              borderRadius: '999px',
+                              fontSize: '10.5px',
+                              fontWeight: 700,
+                              lineHeight: 1.35,
+                              textAlign: 'center',
+                            }}
                           >
-                            <Select
-                              disabled={
-                                Number(
-                                  updatingStatusUserId,
-                                ) ===
-                                Number(
-                                  user.id,
-                                )
-                              }
-                              value={
-                                user.status
-                              }
-                              onChange={(
-                                event,
-                              ) =>
-                                requestStatusChange(
-                                  user,
-                                  event.target.value,
-                                )
-                              }
-                              renderValue={(
-                                value,
-                              ) =>
-                                translateStatus(
-                                  value,
-                                )
-                              }
-                              sx={{
-                                width:
-                                  '100%',
-
-                                height:
-                                  '34px',
-
-                                backgroundColor:
-                                  statusStyle.backgroundColor,
-
-                                color:
-                                  statusStyle.color,
-
-                                borderRadius:
-                                  '8px',
-
-                                fontSize:
-                                  '10.5px',
-
-                                fontWeight:
-                                  700,
-
-                                '& .MuiSelect-select':
-                                  {
-                                    paddingLeft:
-                                      '9px',
-
-                                    paddingRight:
-                                      '25px !important',
-
-                                    overflow:
-                                      'hidden',
-
-                                    textOverflow:
-                                      'ellipsis',
-                                  },
-
-                                '& .MuiOutlinedInput-notchedOutline':
-                                  {
-                                    borderColor:
-                                      `${statusStyle.color}55`,
-                                  },
-                              }}
-                            >
-                              {statusOptions.map(
-                                (
-                                  status,
-                                ) => (
-                                  <MenuItem
-                                    key={
-                                      status
-                                    }
-                                    value={
-                                      status
-                                    }
-                                  >
-                                    {translateStatus(
-                                      status,
-                                    )}
-                                  </MenuItem>
-                                ),
-                              )}
-                            </Select>
-                          </FormControl>
+                            {translateStatus(user.status)}
+                          </Box>
                         </TableCell>
 
                         {/* Last Login */}
@@ -2051,9 +1660,15 @@ function UserManagementPage() {
                               null
                             }
                             sx={{
-                              minWidth: 0,
+                              minWidth: '118px',
+                              height: '34px',
                               color: '#1D4ED8',
                               borderColor: '#BFDBFE',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              whiteSpace: 'nowrap',
+                              textTransform: 'none',
                               '&:hover': { backgroundColor: '#EFF6FF', borderColor: '#93C5FD' },
                             }}
                           >
@@ -2067,7 +1682,7 @@ function UserManagementPage() {
               </TableBody>
             </Table>
             {filteredUsers.length > rowsPerPage ? (
-              <TablePagination component="div" count={filteredUsers.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} />
+              <TablePagination component="div" count={filteredUsers.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredUsers.length / rowsPerPage)}`} />
             ) : null}
           </Box>
         ) : (
@@ -2242,10 +1857,10 @@ function UserManagementPage() {
 
             '&:hover': {
               color:
-                '#EA580C',
+                '#1E293B',
 
               backgroundColor:
-                '#FFF7ED',
+                '#F1F5F9',
             },
           }}
         >
@@ -2285,36 +1900,19 @@ function UserManagementPage() {
         </MenuItem>
       </Menu>
 
-      <Dialog
-        open={Boolean(statusConfirmation)}
-        fullWidth
-        maxWidth="sm"
-        onClose={() => updatingStatusUserId === null && setStatusConfirmation(null)}
-      >
-        <DialogTitle>ยืนยันการเปลี่ยนสถานะบัญชี</DialogTitle>
-        <DialogContent dividers>
-          <Typography>
-            ต้องการเปลี่ยนสถานะบัญชี <strong>{statusConfirmation?.user?.username}</strong> เป็น{' '}
-            <strong>{translateStatus(statusConfirmation?.nextStatus)}</strong> ใช่หรือไม่
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ padding: '14px 20px' }}>
-          <Button variant="outlined" disabled={updatingStatusUserId !== null} onClick={() => setStatusConfirmation(null)}>ยกเลิก</Button>
-          <Button
-            variant="contained"
-            color="error"
-            disabled={updatingStatusUserId !== null}
-            onClick={async () => {
-              const pending = statusConfirmation;
-              if (!pending) return;
-              await handleStatusChange(pending.user, pending.nextStatus);
-              setStatusConfirmation(null);
-            }}
-          >
-            {updatingStatusUserId !== null ? 'กำลังบันทึก...' : 'ยืนยัน'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {formDialog.open ? (
+        <UserFormPage
+          mode={formDialog.mode}
+          dialogOnly
+          open={formDialog.open}
+          userId={formDialog.userId}
+          onClose={() => setFormDialog((current) => ({ ...current, open: false }))}
+          onSaved={() => {
+            setFormDialog((current) => ({ ...current, open: false }));
+            loadUsers();
+          }}
+        />
+      ) : null}
 
       {/* Reset Password Confirmation */}
 
@@ -2472,6 +2070,7 @@ function UserManagementPage() {
         >
           <Button
             type="button"
+            variant="outlined"
             onClick={() =>
               setResetConfirmationUser(
                 null,
@@ -2482,14 +2081,14 @@ function UserManagementPage() {
               null
             }
             sx={{
-              color:
-                '#64748B',
-
-              fontWeight:
-                700,
-
-              textTransform:
-                'none',
+              minWidth: '96px',
+              height: '40px',
+              color: '#475569',
+              borderColor: '#CBD5E1',
+              borderRadius: '9px',
+              fontSize: '13px',
+              fontWeight: 600,
+              textTransform: 'none',
             }}
           >
             ยกเลิก
@@ -2509,17 +2108,20 @@ function UserManagementPage() {
               minWidth:
                 '130px',
 
+              height:
+                '40px',
+
               backgroundColor:
                 '#2563EB',
 
               borderRadius:
-                '8px',
+                '9px',
 
               fontSize:
-                '12px',
+                '13px',
 
               fontWeight:
-                700,
+                600,
 
               textTransform:
                 'none',

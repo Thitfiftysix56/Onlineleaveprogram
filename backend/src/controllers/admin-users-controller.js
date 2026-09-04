@@ -308,7 +308,7 @@ export async function createAdminUser(request, response) {
 
     await writeAuditLog(pool, {
       userId: request.user.userId,
-      action: 'user_created',
+      action: 'create_user',
       tableName: 'users',
       recordId: result.insertId,
       result: 'success',

@@ -31,6 +31,7 @@ import {
 
 import HRLayout from '../../layouts/hrlayout.jsx';
 import { ConfirmationDialog, DataListToolbar } from '../../components/shareduiprimitives.jsx';
+import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -505,11 +506,14 @@ function EmployeeManagementPage() {
 
   return (
     <HRLayout activeMenu="Employee Management">
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <Button type="button" variant="contained" onClick={handleAddEmployee}>+ เพิ่มพนักงาน</Button>
+      </Box>
       {/* Header */}
 
       <Box
         sx={{
-          display: 'flex',
+          display: 'none',
 
           alignItems: {
             xs: 'flex-start',
@@ -557,7 +561,7 @@ function EmployeeManagementPage() {
               '140px',
 
             height:
-              '42px',
+              '40px',
 
             padding:
               '0 18px',
@@ -569,10 +573,10 @@ function EmployeeManagementPage() {
               '#FFFFFF',
 
             borderRadius:
-              '8px',
+              '9px',
 
             fontSize:
-              '12px',
+              '13px',
 
             fontWeight:
               700,
@@ -647,83 +651,20 @@ function EmployeeManagementPage() {
               'repeat(3, minmax(0, 1fr))',
           },
 
-          gap: '18px',
+          gap: '16px',
 
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
-        {summaryCards.map(
-          (card) => (
-            <Paper
-              key={card.title}
-              elevation={0}
-              sx={{
-                minHeight: '116px',
-
-                padding:
-                  '20px',
-
-                backgroundColor: `${card.color}18`,
-
-                border: `1px solid ${card.color}45`,
-
-                borderRadius: '9px',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <Box
-                sx={{
-                  width: 'auto',
-
-                  height: 'auto',
-
-                  display:
-                    'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'flex-start',
-                  textAlign: 'left',
-
-                  backgroundColor: 'transparent',
-
-                  color: '#172033',
-
-                  borderRadius:
-                    0,
-
-                  fontSize: '26px',
-
-                  fontWeight: 700,
-                  order: 2,
-                  marginTop: '7px',
-                }}
-              >
-                {card.value}
-              </Box>
-
-              <Typography
-                sx={{
-                  color: '#64748B',
-
-                  fontSize: '12px',
-
-                  fontWeight:
-                    800,
-
-                  marginTop: 0,
-                  order: 1,
-                }}
-              >
-                {card.title}
-              </Typography>
-            </Paper>
-          ),
-        )}
+        {summaryCards.map((card) => (
+          <CompactSummaryCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            color={card.color}
+          />
+        ))}
       </Box>
 
       {/* Main Card */}
@@ -738,7 +679,10 @@ function EmployeeManagementPage() {
             '1px solid #E5E7EB',
 
           borderRadius:
-            '14px',
+            '20px',
+
+          boxShadow:
+            '0 4px 16px rgba(15, 23, 42, 0.04)',
 
           overflow:
             'hidden',
@@ -764,38 +708,17 @@ function EmployeeManagementPage() {
                 '18px',
 
               fontWeight:
-                800,
+                600,
             }}
           >
             รายชื่อพนักงาน
-          </Typography>
-
-          <Typography
-            sx={{
-              color:
-                '#64748B',
-
-              fontSize:
-                '12px',
-
-              marginTop:
-                '4px',
-            }}
-          >
-            แสดง{' '}
-            {
-              filteredEmployees.length
-            }{' '}
-            จาก{' '}
-            {employees.length}{' '}
-            รายการ
           </Typography>
 
           <DataListToolbar
             searchValue={searchText}
             onSearchChange={setSearchText}
             searchPlaceholder="ค้นหาชื่อ รหัส หรืออีเมล"
-            resultLabel={searchText ? `พบ ${filteredEmployees.length} รายการจากคำค้น “${searchText}”` : `พบ ${filteredEmployees.length} รายการ`}
+            resultLabel=""
             activeFilters={[
               ...(departmentFilter !== 'all' ? [{ key: 'department', label: `แผนก: ${departmentFilter}`, onDelete: () => setDepartmentFilter('all') }] : []),
               ...(statusFilter !== 'all' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'active' ? 'ใช้งานอยู่' : statusFilter === 'inactive' ? 'ไม่ใช้งาน' : 'ลาออก'}`, onDelete: () => setStatusFilter('all') }] : []),
@@ -1293,7 +1216,7 @@ function EmployeeManagementPage() {
                 )}
               </TableBody>
             </Table>
-            {filteredEmployees.length > rowsPerPage ? <TablePagination component="div" count={filteredEmployees.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} /> : null}
+            {filteredEmployees.length > rowsPerPage ? <TablePagination component="div" count={filteredEmployees.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredEmployees.length / rowsPerPage)}`} /> : null}
           </Box>
         ) : (
           /* Empty State */

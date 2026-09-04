@@ -30,11 +30,24 @@ export async function listLeaveReport(request, response) {
        lr.reason, lr.status, lr.submitted_at AS submittedAt, lr.created_at AS createdAt,
        e.employee_id AS employeeId, e.employee_code AS employeeCode,
        CONCAT(e.first_name, ' ', e.last_name) AS employeeName,
-       d.department_name AS department
+       d.department_name AS department,
+       CASE
+         WHEN approver.employee_id IS NOT NULL
+           THEN CONCAT(approver.first_name, ' ', approver.last_name)
+         WHEN lr.status = 'pending' AND LOWER(submitter_role.role_name) = 'supervisor'
+           THEN 'ฝ่ายบุคคล (HR)'
+         WHEN lr.status = 'pending' AND supervisor.employee_id IS NOT NULL
+           THEN CONCAT(supervisor.first_name, ' ', supervisor.last_name)
+         ELSE NULL
+       END AS approverName
      FROM leave_requests lr
      JOIN employees e ON e.employee_id = lr.employee_id
      JOIN leave_types lt ON lt.leave_type_id = lr.leave_type_id
      LEFT JOIN departments d ON d.department_id = e.department_id
+     LEFT JOIN employees approver ON approver.employee_id = lr.approver_employee_id
+     LEFT JOIN employees supervisor ON supervisor.employee_id = e.supervisor_id
+     LEFT JOIN users submitter_user ON submitter_user.employee_id = e.employee_id
+     LEFT JOIN roles submitter_role ON submitter_role.role_id = submitter_user.role_id
      ${where} ORDER BY lr.created_at DESC`, parameters,
   )
   response.json({ status: 'ok', data: { leaveRequests: rows } })

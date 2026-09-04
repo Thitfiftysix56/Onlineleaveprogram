@@ -32,6 +32,7 @@ import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
 import RequestNumberText from './requestnumbertext.jsx';
 import { DataListToolbar } from './shareduiprimitives.jsx';
 import { PageHeader } from './sharedvisualfoundation.jsx';
+import { roleDashboardCardSurfaceSx } from '../theme/rolecardsurface.js';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -229,12 +230,6 @@ const translateLeaveType = (
 
     'Personal Leave':
       'ลากิจ',
-
-    Maternity:
-      'ลาคลอด',
-
-    'Maternity Leave':
-      'ลาคลอด',
 
     Paternity:
       'ลาเพื่อดูแลบุตร',
@@ -623,7 +618,7 @@ const _translateNotificationMessage = (
    * Employee User submitted Annual Leave request LR-...
    */
   match = text.match(
-    /^(.+?) submitted (Annual Leave|Sick Leave|Personal Leave|Maternity Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) request (.+?)(?: for approval)?\.?$/i,
+    /^(.+?) submitted (Annual Leave|Sick Leave|Personal Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) request (.+?)(?: for approval)?\.?$/i,
   );
 
   if (match) {
@@ -636,7 +631,7 @@ const _translateNotificationMessage = (
    * Supervisor User approved Annual Leave request LR-...
    */
   match = text.match(
-    /^(.+?) approved (Annual Leave|Sick Leave|Personal Leave|Maternity Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) request (.+?)\.?$/i,
+    /^(.+?) approved (Annual Leave|Sick Leave|Personal Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) request (.+?)\.?$/i,
   );
 
   if (match) {
@@ -660,7 +655,7 @@ const _translateNotificationMessage = (
    * Personal Leave request LR-... was rejected by the supervisor.
    */
   match = text.match(
-    /^(Annual Leave|Sick Leave|Personal Leave|Maternity Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) request (.+?) was rejected by the supervisor\.?$/i,
+    /^(Annual Leave|Sick Leave|Personal Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) request (.+?) was rejected by the supervisor\.?$/i,
   );
 
   if (match) {
@@ -718,7 +713,7 @@ const _translateNotificationMessage = (
    * Updated Annual Leave entitlement for Employee User to 10 days.
    */
   match = text.match(
-    /^Updated (Annual Leave|Sick Leave|Personal Leave|Maternity Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) entitlement for (.+?) to (.+?) days?\.?$/i,
+    /^Updated (Annual Leave|Sick Leave|Personal Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) entitlement for (.+?) to (.+?) days?\.?$/i,
   );
 
   if (match) {
@@ -731,7 +726,7 @@ const _translateNotificationMessage = (
    * Annual Leave entitlement for Employee User was updated to 10 days.
    */
   match = text.match(
-    /^(Annual Leave|Sick Leave|Personal Leave|Maternity Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) entitlement for (.+?) was updated to (.+?) days?\.?$/i,
+    /^(Annual Leave|Sick Leave|Personal Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) entitlement for (.+?) was updated to (.+?) days?\.?$/i,
   );
 
   if (match) {
@@ -744,7 +739,7 @@ const _translateNotificationMessage = (
    * Updated Annual Leave entitlement for employee EMP001.
    */
   match = text.match(
-    /^Updated (Annual Leave|Sick Leave|Personal Leave|Maternity Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) entitlement for employee (.+?)\.?$/i,
+    /^Updated (Annual Leave|Sick Leave|Personal Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) entitlement for employee (.+?)\.?$/i,
   );
 
   if (match) {
@@ -1609,7 +1604,7 @@ function RoleNotificationPage({
     <LayoutComponent
       activeMenu="Notification"
     >
-      <PageHeader title={displayPageTitle} sx={{ marginBottom: '18px' }} />
+      <PageHeader title={displayPageTitle} />
 
       <Box
         sx={{
@@ -1959,24 +1954,15 @@ function RoleNotificationPage({
       <Paper
         elevation={0}
         sx={{
+          ...roleDashboardCardSurfaceSx,
           width:
             '100%',
-
-          backgroundColor:
-            '#FFFFFF',
-
-          border:
-            '1px solid #E5E7EB',
-
-          borderRadius:
-            '14px',
-
-          overflow:
-            'hidden',
+          '--role-primary': theme?.primary || '#2563EB',
+          '--role-secondary': theme?.dark || '#1D4ED8',
+          '--role-soft': theme?.soft || '#EFF6FF',
+          '--role-border': theme?.border || '#CBD5E1',
+          '--role-text': theme?.text || '#1E3A8A',
           ...(visualCalibration && {
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E8EEF5',
-            borderRadius: '18px',
             overflow: 'hidden',
             boxShadow:
               '0 8px 24px rgba(15, 23, 42, 0.04)',
@@ -1997,7 +1983,7 @@ function RoleNotificationPage({
                 xs: '14px',
                 sm: '16px 18px',
               },
-              backgroundColor: '#FFFFFF',
+              backgroundColor: 'transparent',
               border: 'none',
               borderBottom: '1px solid #EEF2F7',
               borderRadius: 0,

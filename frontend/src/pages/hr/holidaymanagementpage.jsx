@@ -1,6 +1,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
@@ -37,6 +38,7 @@ import {
 
 import HRLayout from '../../layouts/hrlayout.jsx';
 import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
+import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -238,10 +240,29 @@ function ThaiDateField({
   error = false,
   helperText = '',
 }) {
+  const nativeInputRef = useRef(null);
+  const openPicker = () => {
+    const input = nativeInputRef.current;
+    if (!input) return;
+    input.focus({ preventScroll: true });
+    if (typeof input.showPicker === 'function') input.showPicker();
+    else input.click();
+  };
+
   return (
     <Box
+      role="button"
+      tabIndex={0}
+      onClick={openPicker}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openPicker();
+        }
+      }}
       sx={{
         position: 'relative',
+        cursor: 'pointer',
       }}
     >
       <TextField
@@ -300,6 +321,7 @@ function ThaiDateField({
       />
 
       <input
+        ref={nativeInputRef}
         type="date"
         value={value}
         onChange={(event) =>
@@ -325,8 +347,8 @@ function ThaiDateField({
           opacity:
             0,
 
-          cursor:
-            'pointer',
+          pointerEvents:
+            'none',
         }}
       />
     </Box>
@@ -1072,12 +1094,15 @@ function HolidayManagementPage() {
 
   return (
     <HRLayout activeMenu="Holiday Management">
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <Button type="button" variant="contained" onClick={handleOpenAdd}>+ เพิ่มวันหยุด</Button>
+      </Box>
       {/* Header */}
 
       <Box
         sx={{
           display:
-            'flex',
+            'none',
 
           alignItems: {
             xs:
@@ -1137,7 +1162,7 @@ function HolidayManagementPage() {
               '140px',
 
             height:
-              '42px',
+              '40px',
 
             padding:
               '0 18px',
@@ -1149,10 +1174,10 @@ function HolidayManagementPage() {
               '#FFFFFF',
 
             borderRadius:
-              '8px',
+              '9px',
 
             fontSize:
-              '12px',
+              '13px',
 
             fontWeight:
               700,
@@ -1228,92 +1253,27 @@ function HolidayManagementPage() {
               '1fr',
 
             sm:
-              'repeat(2, 1fr)',
+              'repeat(2, minmax(0, 1fr))',
 
-            xl:
-              'repeat(4, 1fr)',
+            md:
+              'repeat(4, minmax(0, 1fr))',
           },
 
           gap:
-            '18px',
+            '16px',
 
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
-        {summaryCards.map(
-          (card) => (
-            <Paper
-              key={
-                card.title
-              }
-              elevation={0}
-              sx={{
-                minHeight: '116px',
-
-                padding:
-                  '20px',
-
-                backgroundColor: `${card.color}18`,
-
-                border: `1px solid ${card.color}45`,
-
-                borderRadius: '9px',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <Box
-                sx={{
-                  width: 'auto',
-
-                  height: 'auto',
-
-                  display:
-                    'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'flex-start',
-                  textAlign: 'left',
-
-                  backgroundColor: 'transparent',
-
-                  color: '#172033',
-
-                  borderRadius:
-                    0,
-
-                  fontSize: '26px',
-
-                  fontWeight: 700,
-                  order: 2,
-                  marginTop: '7px',
-                }}
-              >
-                {card.value}
-              </Box>
-
-              <Typography
-                sx={{
-                  color: '#64748B',
-
-                  fontSize: '12px',
-
-                  fontWeight:
-                    800,
-
-                  marginTop: 0,
-                  order: 1,
-                }}
-              >
-                {card.title}
-              </Typography>
-            </Paper>
-          ),
-        )}
+        {summaryCards.map((card) => (
+          <CompactSummaryCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            color={card.color}
+          />
+        ))}
       </Box>
 
       {/* Main Card */}
@@ -1328,7 +1288,10 @@ function HolidayManagementPage() {
             '1px solid #E5E7EB',
 
           borderRadius:
-            '14px',
+            '20px',
+
+          boxShadow:
+            '0 4px 16px rgba(15, 23, 42, 0.04)',
 
           overflow:
             'hidden',
@@ -1354,40 +1317,17 @@ function HolidayManagementPage() {
                 '18px',
 
               fontWeight:
-                800,
+                600,
             }}
           >
             รายการวันหยุด
-          </Typography>
-
-          <Typography
-            sx={{
-              color:
-                '#64748B',
-
-              fontSize:
-                '12px',
-
-              marginTop:
-                '4px',
-            }}
-          >
-            แสดง{' '}
-            {
-              filteredHolidays.length
-            }{' '}
-            จาก{' '}
-            {
-              holidays.length
-            }{' '}
-            รายการ
           </Typography>
 
           <DataListToolbar
             searchValue={searchText}
             onSearchChange={setSearchText}
             searchPlaceholder="ค้นหาชื่อวันหยุด"
-            resultLabel={searchText ? `พบ ${filteredHolidays.length} รายการจากคำค้น “${searchText}”` : `พบ ${filteredHolidays.length} รายการ`}
+            resultLabel=""
             activeFilters={[
               ...(yearFilter !== 'all' ? [{ key: 'year', label: `ปี: ${yearFilter}`, onDelete: () => setYearFilter('all') }] : []),
               ...(statusFilter !== 'all' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}`, onDelete: () => setStatusFilter('all') }] : []),
@@ -1845,7 +1785,7 @@ function HolidayManagementPage() {
                               'nowrap',
                           }}
                         >
-                          <Button type="button" size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); handleOpenDelete(holiday); }} sx={{ color: '#DC2626', borderColor: '#FECACA', '&:hover': { borderColor: '#DC2626', backgroundColor: '#FEF2F2' } }}>ลบ</Button>
+                          <Button type="button" size="small" variant="outlined" color="error" onClick={(event) => { event.stopPropagation(); handleOpenDelete(holiday); }}>ลบ</Button>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1853,7 +1793,7 @@ function HolidayManagementPage() {
                 )}
               </TableBody>
             </Table>
-            {filteredHolidays.length > rowsPerPage ? <TablePagination component="div" count={filteredHolidays.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} /> : null}
+            {filteredHolidays.length > rowsPerPage ? <TablePagination component="div" count={filteredHolidays.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredHolidays.length / rowsPerPage)}`} /> : null}
           </Box>
         ) : (
           /* Empty */
@@ -2163,7 +2103,7 @@ function HolidayManagementPage() {
               '16px 24px 22px',
 
             borderTop:
-              '1px solid #E5E7EB',
+              0,
 
             gap:
               '10px',
@@ -2186,10 +2126,10 @@ function HolidayManagementPage() {
                 '42px',
 
               color:
-                '#475569',
+                '#DC2626',
 
               borderColor:
-                '#CBD5E1',
+                '#FCA5A5',
 
               borderRadius:
                 '8px',
@@ -2202,6 +2142,12 @@ function HolidayManagementPage() {
 
               textTransform:
                 'none',
+
+              '&:hover': {
+                color: '#B91C1C',
+                borderColor: '#EF4444',
+                backgroundColor: '#FEF2F2',
+              },
             }}
           >
             ยกเลิก
@@ -2361,7 +2307,7 @@ function HolidayManagementPage() {
               '16px 24px 22px',
 
             borderTop:
-              '1px solid #E5E7EB',
+              0,
 
             gap:
               '10px',
@@ -2408,6 +2354,7 @@ function HolidayManagementPage() {
           <Button
             type="button"
             variant="contained"
+            color="error"
             disabled={
               deleting
             }

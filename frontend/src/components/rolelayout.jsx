@@ -58,6 +58,7 @@ import {
 import { getNotifications, markNotificationRead } from '../api/notification-service.js';
 
 import {
+  appPageBackground,
   colorTokens,
   radiusTokens,
   roleAccentTokens,
@@ -136,6 +137,9 @@ const roleRoutes = {
 
     'Leave Balance':
       '/hr/leave-balance',
+
+    Approval:
+      '/hr/approval',
 
     'Employee Management':
       '/hr/employee-management',
@@ -398,6 +402,8 @@ function RoleLayout({
     setMobileMenuOpen,
   ] = useState(false);
 
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
+
   const [notificationAnchor, setNotificationAnchor] = useState(null);
   const [accountAnchor, setAccountAnchor] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -431,6 +437,18 @@ function RoleLayout({
   const resolvedTheme =
     roleAccentTokens[currentRole] ||
     roleAccentTokens.employee;
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty('--role-primary', resolvedTheme.primary);
+    root.style.setProperty('--role-secondary', resolvedTheme.secondary || resolvedTheme.dark);
+    root.style.setProperty('--role-soft', resolvedTheme.soft);
+    root.style.setProperty('--role-border', resolvedTheme.border);
+    root.style.setProperty('--role-text', resolvedTheme.text);
+    root.style.setProperty('--role-focus', `${resolvedTheme.primary}1A`);
+    root.style.setProperty('--role-hover', resolvedTheme.hoverBackground || resolvedTheme.soft);
+    root.style.setProperty('--role-row-hover', `${resolvedTheme.primary}09`);
+  }, [resolvedTheme]);
 
   const profileViewPath = roleRoutes[currentRole].Profile;
   const editPersonalInformationPath = roleRoutes[currentRole]['Edit Personal Information'];
@@ -477,7 +495,7 @@ function RoleLayout({
     }
     setNotificationAnchor(null);
     const target = item.path || item.deepLink || (item.leaveRequestId
-      ? `/${currentRole}/${currentRole === 'supervisor' && item.type === 'leave-submitted' ? 'approval' : 'my-requests'}/${item.leaveRequestId}`
+      ? `/${currentRole}/${['supervisor', 'hr'].includes(currentRole) && item.type === 'leave-submitted' ? 'approval' : 'my-requests'}/${item.leaveRequestId}`
       : null);
     if (target) navigate(target);
   };
@@ -1393,7 +1411,7 @@ function RoleLayout({
         padding:
           isMobile
             ? '14px 56px 14px 20px'
-            : '16px 20px',
+            : '16px 58px 16px 20px',
 
         backgroundColor:
           '#FFFFFF',
@@ -1508,7 +1526,7 @@ function RoleLayout({
         minHeight:
           '100vh',
 
-        backgroundColor: colorTokens.background,
+        background: appPageBackground,
 
         overflowX:
           'hidden',
@@ -1861,6 +1879,31 @@ function RoleLayout({
       {/* =========================
           DESKTOP SIDEBAR
       ========================== */}
+      {!desktopSidebarOpen && (
+        <IconButton
+          type="button"
+          aria-label="เปิดเมนูนำทาง"
+          onClick={() => setDesktopSidebarOpen(true)}
+          sx={{
+            position: 'fixed',
+            top: '20px',
+            left: '18px',
+            zIndex: 19,
+            display: { xs: 'none', md: 'inline-flex' },
+            width: '42px',
+            height: '42px',
+            color: resolvedTheme.primary,
+            backgroundColor: 'transparent',
+            border: 0,
+            borderRadius: '8px',
+            boxShadow: 'none',
+            '&:hover': { backgroundColor: resolvedTheme.soft },
+          }}
+        >
+          <MenuRounded />
+        </IconButton>
+      )}
+
       <Box
         component="aside"
         sx={{
@@ -1877,7 +1920,7 @@ function RoleLayout({
             0,
 
           left:
-            0,
+            desktopSidebarOpen ? 0 : '-280px',
 
           zIndex:
             10,
@@ -1905,8 +1948,33 @@ function RoleLayout({
 
           overflowX:
             'hidden',
+
+          transition:
+            'left 220ms ease',
         }}
       >
+
+        <IconButton
+          type="button"
+          aria-label="ปิดเมนูนำทาง"
+          onClick={() => setDesktopSidebarOpen(false)}
+          sx={{
+            position: 'absolute',
+            top: '18px',
+            right: '14px',
+            zIndex: 3,
+            width: '40px',
+            height: '40px',
+            color: '#475569',
+            backgroundColor: 'transparent',
+            border: 0,
+            borderRadius: '8px',
+            boxShadow: 'none',
+            '&:hover': { color: resolvedTheme.primary, backgroundColor: resolvedTheme.soft },
+          }}
+        >
+          <MenuRounded />
+        </IconButton>
 
         {/* Brand */}
         {renderBrand(false)}
@@ -1985,7 +2053,7 @@ function RoleLayout({
               '100%',
 
             md:
-              'calc(100% - 280px)',
+              desktopSidebarOpen ? 'calc(100% - 280px)' : '100%',
           },
 
           minWidth:
@@ -1994,12 +2062,14 @@ function RoleLayout({
           minHeight:
             '100vh',
 
+          background: appPageBackground,
+
           marginLeft: {
             xs:
               0,
 
             md:
-              '280px',
+              desktopSidebarOpen ? '280px' : 0,
           },
 
           padding: {
@@ -2010,15 +2080,72 @@ function RoleLayout({
               '92px 24px 28px',
 
             md:
-              '32px',
+              desktopSidebarOpen ? '32px' : '32px 32px 32px 72px',
 
             lg:
-              '32px 40px',
+              desktopSidebarOpen ? '32px 40px' : '32px 40px 32px 72px',
           },
 
           overflowX:
             'hidden',
           position: 'relative',
+          transition: 'width 220ms ease, margin-left 220ms ease',
+          '& h1': {
+            fontSize: {
+              xs: '26px !important',
+              sm: '30px !important',
+            },
+            fontWeight: '700 !important',
+            lineHeight: '1.3 !important',
+            letterSpacing: '-0.02em !important',
+          },
+          '& h2': {
+            fontSize: '1.125rem',
+            fontWeight: '600',
+            lineHeight: '1.45',
+          },
+          '& h3, & h4, & h5, & h6': {
+            fontWeight: '600',
+          },
+          '& .MuiPaper-root:not(.MuiPopover-paper):not(.MuiDialog-paper)': {
+            borderRadius: '16px',
+          },
+          '& .MuiPaper-root:not(.MuiPopover-paper):not(.MuiDialog-paper) > .MuiBox-root:first-of-type': {
+            borderBottom: '0 !important',
+          },
+          '& .MuiPaper-root:not(.MuiPopover-paper):not(.MuiDialog-paper) > .MuiBox-root:last-of-type': {
+            borderTop: '0 !important',
+          },
+          '& .MuiButton-root': {
+            minHeight: '44px',
+            borderRadius: '11px',
+            fontWeight: '500',
+            paddingInline: '16px',
+          },
+          '& .MuiButton-sizeSmall': {
+            minHeight: '36px',
+          },
+          '& .MuiOutlinedInput-root:not(.MuiInputBase-multiline)': {
+            height: '44px',
+            minHeight: '44px',
+            borderRadius: '11px',
+          },
+          '& .MuiInputLabel-root, & .MuiFormLabel-root': {
+            fontSize: '0.875rem',
+            fontWeight: '500',
+          },
+          '& .MuiFormHelperText-root': {
+            fontSize: '0.75rem',
+            fontWeight: '400',
+            marginTop: '4px',
+          },
+          '& .MuiTableCell-head': {
+            height: '44px',
+            fontWeight: '600',
+          },
+          '& .MuiTableCell-root': {
+            paddingBlock: '12px',
+          },
           ...(isDashboardPage && {
             '& > .role-page-global-action + *': {
               paddingRight: '52px',

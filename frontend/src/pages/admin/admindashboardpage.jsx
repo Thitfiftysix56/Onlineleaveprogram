@@ -22,9 +22,9 @@ import { useNavigate } from 'react-router-dom';
 import AddRounded from '@mui/icons-material/AddRounded';
 
 import AdminLayout from '../../layouts/adminlayout.jsx';
-import { DashboardTablePagination, StatCard } from '../../components/shareduiprimitives.jsx';
+import { DashboardTablePagination } from '../../components/shareduiprimitives.jsx';
 import DashboardLeaveBalance from '../../components/dashboardleavebalance.jsx';
-import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
+import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 
 import {
@@ -1030,7 +1030,9 @@ function AdminDashboardPage() {
     <AdminLayout
       activeMenu="Dashboard"
     >
-      <PageHeader title="Dashboard" actions={<Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/admin/leave-request')} sx={{ height: 40, borderRadius: '9px', backgroundColor: '#2563EB', boxShadow: 'none', fontSize: '13px', fontWeight: 800, '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' } }}>สร้างคำขอลา</Button>} sx={{ marginBottom: '18px' }} />
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/admin/leave-request', { state: { returnTo: '/admin/dashboard' } })} sx={{ height: 40, borderRadius: '9px', backgroundColor: '#2563EB', boxShadow: 'none', fontSize: '13px', fontWeight: 800, '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' } }}>สร้างคำขอลา</Button>
+      </Box>
       {/* Header */}
 
       <Box
@@ -1062,7 +1064,7 @@ function AdminDashboardPage() {
         </Typography>
       </Box>
 
-      <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/admin/leave-request')} sx={{ display: 'none' }}>สร้างคำขอลา</Button>
+      <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/admin/leave-request', { state: { returnTo: '/admin/dashboard' } })} sx={{ display: 'none' }}>สร้างคำขอลา</Button>
 
       {/* Summary Cards */}
 
@@ -1082,21 +1084,18 @@ function AdminDashboardPage() {
               'repeat(4, minmax(0, 1fr))',
           },
 
-          gap: '12px',
+          gap: '16px',
 
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
         {summaryCards.map((card) => (
-          <StatCard
+          <CompactSummaryCard
             key={card.title}
             title={card.title}
             value={card.value}
-            supportingText={card.helper}
-            accent={card.accent}
-            compactInline
-            unit={card.unit}
+            color={card.color}
           />
         ))}
       </Box>
@@ -1115,7 +1114,7 @@ function AdminDashboardPage() {
               '1fr',
 
             xl:
-              'minmax(0, 1.65fr) minmax(320px, 1fr)',
+              'minmax(0, 1fr)',
           },
 
           gap:
@@ -1176,7 +1175,7 @@ function AdminDashboardPage() {
                   '17px',
 
                 fontWeight:
-                  800,
+                  600,
               }}
             >
               บัญชีผู้ใช้ล่าสุด
@@ -1563,6 +1562,7 @@ function AdminDashboardPage() {
         <Paper
           elevation={0}
           sx={{
+            display: 'none',
             backgroundColor:
               '#FFFFFF',
 
@@ -1609,7 +1609,7 @@ function AdminDashboardPage() {
                   '17px',
 
                 fontWeight:
-                  800,
+                  600,
               }}
             >
               กิจกรรมล่าสุด

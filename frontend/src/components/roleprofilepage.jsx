@@ -32,6 +32,7 @@ import {
 } from '../utils/authstorage.js';
 import RoleChangePasswordPage from './rolechangepasswordpage.jsx';
 import { PageHeader } from './sharedvisualfoundation.jsx';
+import { roleDashboardCardSurfaceSx } from '../theme/rolecardsurface.js';
 
 const EmbeddedProfileSection = ({ children }) => children;
 
@@ -208,6 +209,11 @@ function RoleProfilePage({
     border:
       theme?.border ||
       '#BFDBFE',
+
+    text:
+      theme?.text ||
+      theme?.dark ||
+      '#1E3A8A',
   };
 
   const loadProfile =
@@ -690,7 +696,8 @@ function RoleProfilePage({
     <LayoutComponent
       activeMenu={editMode ? 'Edit Personal Information' : ''}
     >
-      <PageHeader title={editMode ? 'แก้ไขข้อมูลส่วนตัว' : 'ข้อมูลส่วนตัว'} sx={{ marginBottom: '22px' }} />
+      <Box sx={{ width: '100%', maxWidth: '760px', marginInline: 'auto' }}>
+      <PageHeader title={editMode ? 'แก้ไขข้อมูลส่วนตัว' : 'ข้อมูลส่วนตัว'} />
       <Box
         sx={{
           display: 'none',
@@ -801,20 +808,8 @@ function RoleProfilePage({
         <Paper
           elevation={0}
           sx={{
-            backgroundColor:
-              '#FFFFFF',
-
-            border:
-              '1px solid #E8EEF5',
-
-            borderRadius:
-              '20px',
-
-            boxShadow:
-              '0 10px 30px rgba(15, 23, 42, 0.06)',
-
-            overflow:
-              'hidden',
+            ...roleDashboardCardSurfaceSx,
+            borderColor: '#E2E8F0',
           }}
         >
           <Box
@@ -1042,6 +1037,7 @@ function RoleProfilePage({
             <Button
               type="button"
               variant="contained"
+              color="secondary"
               onClick={() =>
                 navigate(`/${String(currentUser?.role || 'employee').toLowerCase()}/edit-personal-information`)
               }
@@ -1123,7 +1119,7 @@ function RoleProfilePage({
                   '17px',
 
                 fontWeight:
-                  800,
+                  600,
               }}
             >
               ข้อมูลบัญชี
@@ -1270,14 +1266,17 @@ function RoleProfilePage({
         slotProps={{
           paper: {
             sx: {
+              '--role-primary': resolvedTheme.primary,
+              '--role-soft': resolvedTheme.soft,
+              ...roleDashboardCardSurfaceSx,
               width:
-                'min(680px, calc(100% - 24px))',
+                'min(600px, calc(100% - 24px))',
               borderRadius:
                 '20px',
               overflow:
                 'hidden',
               border:
-                '1px solid #E8EEF5',
+                '1px solid #E2E8F0',
               boxShadow:
                 '0 18px 50px rgba(15, 23, 42, 0.14)',
             },
@@ -1289,19 +1288,15 @@ function RoleProfilePage({
             padding:
               '20px 24px',
             color:
-              '#111827',
+              resolvedTheme.text,
             fontSize:
-              '19px',
+              '20px',
             fontWeight:
-              800,
+              700,
             background:
-              `linear-gradient(
-                135deg,
-                #FFFFFF 0%,
-                ${resolvedTheme.soft} 100%
-              )`,
+              'transparent',
             borderBottom:
-              '1px solid #EEF2F7',
+              0,
           }}
         >
           แก้ไขข้อมูลส่วนตัว
@@ -1310,9 +1305,9 @@ function RoleProfilePage({
         <DialogContent
           sx={{
             padding:
-              '24px !important',
+              '18px 24px 24px !important',
             backgroundColor:
-              '#FFFFFF',
+              'transparent',
           }}
         >
           {editError && (
@@ -1419,10 +1414,6 @@ function RoleProfilePage({
                     '35px',
                   marginTop:
                     '12px',
-                  color:
-                    resolvedTheme.primary,
-                  borderColor:
-                    resolvedTheme.border,
                   backgroundColor:
                     '#FFFFFF',
                   borderRadius:
@@ -1446,6 +1437,7 @@ function RoleProfilePage({
                   <Button
                     type="button"
                     variant="text"
+                    color="error"
                     onClick={
                       handleRemoveImage
                     }
@@ -1636,14 +1628,15 @@ function RoleProfilePage({
             padding:
               '14px 24px 18px',
             backgroundColor:
-              '#F8FAFC',
+              'transparent',
             borderTop:
-              '1px solid #EEF2F7',
+              0,
           }}
         >
           <Button
             type="button"
             variant="outlined"
+            color="secondary"
             onClick={
               handleCloseEditProfile
             }
@@ -1655,10 +1648,6 @@ function RoleProfilePage({
                 '84px',
               height:
                 '40px',
-              color:
-                '#374151',
-              borderColor:
-                '#D1D5DB',
               borderRadius:
                 '10px',
               backgroundColor:
@@ -1685,8 +1674,6 @@ function RoleProfilePage({
                 '118px',
               height:
                 '40px',
-              backgroundColor:
-                resolvedTheme.primary,
               color:
                 '#FFFFFF',
               borderRadius:
@@ -1699,12 +1686,7 @@ function RoleProfilePage({
                 'none',
               boxShadow:
                 'none',
-              '&:hover': {
-                backgroundColor:
-                  resolvedTheme.dark,
-                boxShadow:
-                  'none',
-              },
+              '&:hover': { boxShadow: 'none' },
             }}
           >
             {saving
@@ -1713,6 +1695,7 @@ function RoleProfilePage({
           </Button>
         </DialogActions>
       </Dialog>
+      </Box>
     </LayoutComponent>
   );
 }

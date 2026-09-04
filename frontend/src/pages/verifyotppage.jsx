@@ -478,6 +478,20 @@ function VerifyOtpPage() {
               ? `ส่งรหัสอีกครั้ง (${secondsUntilResend} วินาที)`
               : 'ส่งรหัสอีกครั้ง'}
         </Button>
+
+        <Button
+          fullWidth
+          type="button"
+          disabled={isVerifying || isResending}
+          onClick={() => navigate('/forgot-password')}
+          sx={{
+            mt: 1,
+            color: '#475569',
+            textTransform: 'none',
+          }}
+        >
+          กลับไปแก้ไขอีเมล
+        </Button>
       </form>
     </PasswordRecoveryLayout>
   )

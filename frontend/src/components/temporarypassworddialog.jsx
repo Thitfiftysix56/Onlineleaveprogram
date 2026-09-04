@@ -131,8 +131,8 @@ function TemporaryPasswordDialog({
             onClick={handleCopy}
             disabled={!temporaryPassword}
             sx={{
-              color: '#7C3AED',
-              borderColor: '#7C3AED',
+              color: '#2563EB',
+              borderColor: '#93C5FD',
               textTransform: 'none',
               fontWeight: 700,
             }}
@@ -169,14 +169,16 @@ function TemporaryPasswordDialog({
       <DialogActions sx={{ padding: '16px 24px' }}>
         <Button
           type="button"
-          variant="contained"
+          variant="outlined"
           onClick={onClose}
           sx={{
-            backgroundColor: '#EA580C',
+            color: '#475569',
+            borderColor: '#CBD5E1',
             textTransform: 'none',
             fontWeight: 700,
             '&:hover': {
-              backgroundColor: '#C2410C',
+              backgroundColor: '#F8FAFC',
+              borderColor: '#94A3B8',
             },
           }}
         >

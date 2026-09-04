@@ -8,6 +8,7 @@ function HRLayout({
   const hrMenuItems = [
     'Dashboard',
     'My Requests',
+    'Approval',
     'Employee Management',
     'Leave Entitlement',
     'Leave Type',

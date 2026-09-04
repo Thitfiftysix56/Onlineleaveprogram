@@ -17,8 +17,8 @@ import {
   Typography,
 } from '@mui/material';
 import HRLayout from '../../layouts/hrlayout.jsx';
-import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
-import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
+import { BackButton, PageHeader } from '../../components/sharedvisualfoundation.jsx';
+import { roleDashboardCardSurfaceSx } from '../../theme/rolecardsurface.js';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getDepartments } from '../../api/department-service.js';
 import { getPositions } from '../../api/position-service.js';
@@ -259,7 +259,7 @@ function EmployeeFormPage({ mode = 'add' }) {
 
   return (
     <HRLayout activeMenu="Employee Management">
-      <PageHeader title={isEditMode ? 'แก้ไขพนักงาน' : 'เพิ่มพนักงาน'} actions={<Button type="button" variant="outlined" startIcon={<ArrowBackRounded />} onClick={() => navigate('/hr/employee-management')} sx={{ height: 40, color: '#475569', borderColor: '#CBD5E1', borderRadius: '9px', fontWeight: 700, '&:hover': { borderColor: '#94A3B8', backgroundColor: '#F8FAFC' } }}>กลับ</Button>} sx={{ marginBottom: '22px' }} />
+      <PageHeader title={isEditMode ? 'แก้ไขพนักงาน' : 'เพิ่มพนักงาน'} actions={<BackButton onClick={() => navigate('/hr/employee-management')}>กลับ</BackButton>} sx={{ maxWidth: '900px', marginInline: 'auto' }} />
 
       {successMessage && (
         <Alert
@@ -285,9 +285,28 @@ function EmployeeFormPage({ mode = 'add' }) {
         onSubmit={handleSubmit}
         noValidate
         sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '24px',
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: 'minmax(0, 1fr)',
+            lg: 'repeat(2, minmax(0, 1fr))',
+          },
+          gap: '16px',
+          width: '100%',
+          maxWidth: '900px',
+          marginInline: 'auto',
+          '& > .MuiPaper-root': {
+            borderRadius: '20px',
+            borderColor: '#E2E8F0',
+            boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+            ...roleDashboardCardSurfaceSx,
+          },
+          '& > .MuiPaper-root > .MuiBox-root:first-of-type': {
+            background: 'transparent !important',
+            borderBottom: '0 !important',
+          },
+          '& .MuiOutlinedInput-root': {
+            borderRadius: '10px',
+          },
         }}
       >
         <Paper
@@ -312,21 +331,12 @@ function EmployeeFormPage({ mode = 'add' }) {
               sx={{
                 color: '#111827',
                 fontSize: '18px',
-                fontWeight: 800,
+                fontWeight: 600,
               }}
             >
               ข้อมูลส่วนตัว
             </Typography>
 
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '4px',
-              }}
-            >
-              ข้อมูลสำหรับระบุตัวตนและติดต่อพนักงาน
-            </Typography>
           </Box>
 
           <Box
@@ -474,21 +484,12 @@ function EmployeeFormPage({ mode = 'add' }) {
               sx={{
                 color: '#111827',
                 fontSize: '18px',
-                fontWeight: 800,
+                fontWeight: 600,
               }}
             >
               ข้อมูลการทำงาน
             </Typography>
 
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '4px',
-              }}
-            >
-              ระบุแผนก ตำแหน่ง และผู้บังคับบัญชา
-            </Typography>
           </Box>
 
           <Box
@@ -634,6 +635,11 @@ function EmployeeFormPage({ mode = 'add' }) {
               }
               error={Boolean(errors.employmentDate)}
               helperText={errors.employmentDate}
+              onClick={(event) => {
+                const input = event.currentTarget.querySelector('input');
+                input?.focus();
+                input?.showPicker?.();
+              }}
               slotProps={{
                 inputLabel: {
                   shrink: true,
@@ -689,6 +695,7 @@ function EmployeeFormPage({ mode = 'add' }) {
         <Paper
           elevation={0}
           sx={{
+            gridColumn: '1 / -1',
             backgroundColor: '#FFFFFF',
             border: '1px solid #E5E7EB',
             borderRadius: '12px',
@@ -708,21 +715,12 @@ function EmployeeFormPage({ mode = 'add' }) {
               sx={{
                 color: '#111827',
                 fontSize: '18px',
-                fontWeight: 800,
+                fontWeight: 600,
               }}
             >
               ข้อมูลบัญชีผู้ใช้
             </Typography>
 
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '4px',
-              }}
-            >
-              กำหนดบทบาทและสถานะบัญชี
-            </Typography>
           </Box>
 
           <Box
@@ -820,85 +818,16 @@ function EmployeeFormPage({ mode = 'add' }) {
               </FormControl>
             </Box>
 
-            <Box
-              sx={{
-                padding: '16px',
-                backgroundColor: '#ECFDF5',
-                border: '1px solid #A7F3D0',
-                borderRadius: '8px',
-                marginTop: '24px',
-              }}
-            >
-              <Typography
-                sx={{
-                  color: '#047857',
-                  fontSize: '14px',
-                  fontWeight: 800,
-                }}
-              >
-                รหัสผ่านเริ่มต้น
-              </Typography>
-
-              <Typography
-                sx={{
-                  color: '#065F46',
-                  fontSize: '13px',
-                  lineHeight: 1.7,
-                  marginTop: '6px',
-                }}
-              >
-                ระบบจะสร้างรหัสผ่านเริ่มต้นเมื่อสร้างบัญชี พนักงานสามารถเปลี่ยนได้จากหน้าเปลี่ยนรหัสผ่าน
-              </Typography>
-            </Box>
           </Box>
         </Paper>
 
-        <Paper
-          elevation={0}
+        <Box
           sx={{
-            padding: {
-              xs: '20px',
-              sm: '24px',
-            },
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E5E7EB',
-            borderRadius: '12px',
+            gridColumn: '1 / -1',
             display: 'flex',
-            alignItems: {
-              xs: 'stretch',
-              sm: 'center',
-            },
-            justifyContent: 'space-between',
-            flexDirection: {
-              xs: 'column',
-              sm: 'row',
-            },
-            gap: '18px',
+            justifyContent: 'flex-end',
           }}
         >
-          <Box>
-            <Typography
-              sx={{
-                color: '#111827',
-                fontSize: '16px',
-                fontWeight: 800,
-              }}
-            >
-              {isEditMode ? 'บันทึกการแก้ไข' : 'เพิ่มพนักงาน'}
-            </Typography>
-
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '13px',
-                lineHeight: 1.6,
-                marginTop: '4px',
-              }}
-            >
-              ตรวจสอบข้อมูลที่จำเป็นก่อนบันทึก
-            </Typography>
-          </Box>
-
           <Box
             sx={{
               display: 'flex',
@@ -941,7 +870,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 minWidth: '150px',
                 height: '44px',
                 padding: '0 20px',
-                backgroundColor: '#2563EB',
+                backgroundColor: '#059669',
                 color: '#FFFFFF',
                 borderRadius: '8px',
                 fontSize: '14px',
@@ -950,7 +879,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 boxShadow: 'none',
 
                 '&:hover': {
-                  backgroundColor: '#1D4ED8',
+                  backgroundColor: '#047857',
                   boxShadow: 'none',
                 },
               }}
@@ -958,7 +887,7 @@ function EmployeeFormPage({ mode = 'add' }) {
               {saving ? 'กำลังบันทึก...' : 'บันทึก'}
             </Button>
           </Box>
-        </Paper>
+        </Box>
       </Box>
       <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกข้อมูลพนักงาน</DialogTitle>

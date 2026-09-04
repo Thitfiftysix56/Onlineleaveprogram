@@ -44,6 +44,14 @@ export const colorTokens = {
   },
 };
 
+export const appPageBackground = `
+  radial-gradient(circle at 12% 18%, rgba(96, 165, 250, 0.22), transparent 34%),
+  radial-gradient(circle at 86% 14%, rgba(167, 139, 250, 0.20), transparent 32%),
+  radial-gradient(circle at 16% 88%, rgba(52, 211, 153, 0.18), transparent 32%),
+  radial-gradient(circle at 88% 86%, rgba(251, 191, 36, 0.18), transparent 34%),
+  #F6F8FC
+`;
+
 
 export const roleAccentTokens = {
   /*

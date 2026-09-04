@@ -142,10 +142,10 @@ export default function DashboardLeaveBalance() {
           sx={{
             color: '#0F172A',
             fontSize: {
-              xs: '18px',
-              sm: '20px',
+              xs: '16px',
+              sm: '18px',
             },
-            fontWeight: 800,
+            fontWeight: 600,
           }}
         >
           สิทธิ์การลาของฉัน

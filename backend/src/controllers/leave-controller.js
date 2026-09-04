@@ -31,10 +31,13 @@ async function identity(connection, request) {
 export async function validateSubmissionParticipants(connection, employeeId) {
   const [rows] = await connection.execute(
     `SELECT e.employee_id, e.status AS employee_status, e.supervisor_id,
+            submitter_role.role_name AS submitter_role_name,
             s.status AS supervisor_employee_status,
             u.user_id AS supervisor_user_id, u.status AS supervisor_user_status,
             r.role_name AS supervisor_role_name
      FROM employees e
+     LEFT JOIN users submitter_user ON submitter_user.employee_id = e.employee_id
+     LEFT JOIN roles submitter_role ON submitter_role.role_id = submitter_user.role_id
      LEFT JOIN employees s ON s.employee_id = e.supervisor_id
      LEFT JOIN users u ON u.employee_id = s.employee_id
      LEFT JOIN roles r ON r.role_id = u.role_id
@@ -45,6 +48,19 @@ export async function validateSubmissionParticipants(connection, employeeId) {
   const participant = rows[0]
   if (!participant || String(participant.employee_status).toLowerCase() !== 'active') {
     return { error: 'บัญชีผู้ยื่นคำขอไม่ถูกต้องหรือไม่ได้เปิดใช้งาน' }
+  }
+  if (String(participant.submitter_role_name).toLowerCase() === 'supervisor') {
+    const [hrUsers] = await connection.execute(
+      `SELECT u.user_id
+       FROM users u
+       JOIN roles r ON r.role_id = u.role_id
+       JOIN employees e ON e.employee_id = u.employee_id
+       WHERE LOWER(r.role_name) = 'hr'
+         AND LOWER(u.status) = 'active'
+         AND LOWER(e.status) = 'active'`,
+    )
+    if (!hrUsers.length) return { error: 'ไม่สามารถส่งคำขอได้ เนื่องจากไม่มีบัญชี HR ที่พร้อมอนุมัติ' }
+    return { approverType: 'hr', approverUserIds: hrUsers.map((user) => user.user_id) }
   }
   if (!participant.supervisor_id || String(participant.supervisor_employee_status).toLowerCase() !== 'active') {
     return { error: 'ไม่สามารถส่งคำขอได้ กรุณาให้ฝ่ายบุคคลตรวจสอบหัวหน้างานโดยตรงที่เปิดใช้งานของคุณ' }
@@ -203,7 +219,7 @@ async function save(request,response,submitting) {
     const participants=submitting?await validateSubmissionParticipants(connection,employeeId):null; if(participants?.error)return rollbackError(connection,response,400,participants.error)
     let id=requestId; if(id) await connection.execute(`UPDATE leave_requests SET leave_type_id=?,start_date=?,end_date=?,leave_days=?,reason=?,status=?,submitted_at=${submitting?'NOW()':'NULL'} WHERE leave_request_id=?`,[v.leaveTypeId,v.startDate,v.endDate,v.days||0,v.reason,submitting?'pending':'draft',id])
     else { const [result]=await connection.execute(`INSERT INTO leave_requests(employee_id,leave_type_id,start_date,end_date,leave_days,reason,status,submitted_at) VALUES(?,?,?,?,?,?,?,${submitting?'NOW()':'NULL'})`,[employeeId,v.leaveTypeId,v.startDate,v.endDate,v.days||0,v.reason,submitting?'pending':'draft']); id=result.insertId }
-    if(submitting){ const [[storedCount]]=await connection.execute('SELECT COUNT(*) attachment_count FROM leave_request_attachments WHERE leave_request_id=?',[id]); const mustAttach=Boolean(v.type.requires_attachment)&&Number(v.days)>=Number(v.type.attachment_required_after_days||0); if(mustAttach&&!request.files?.length&&!Number(storedCount.attachment_count))return rollbackError(connection,response,400,'An attachment is required for this leave request.'); const requestNo=`LR-${new Date().toISOString().slice(0,10).replaceAll('-','')}-${String(id).padStart(6,'0')}`; await connection.execute('UPDATE leave_requests SET request_no=? WHERE leave_request_id=?',[requestNo,id]); await createNotification(connection,{userId:participants.supervisorUserId,type:'leave-submitted',title:'New leave request',message:`Leave request ${requestNo} is waiting for approval.`,leaveRequestId:id}) }
+    if(submitting){ const [[storedCount]]=await connection.execute('SELECT COUNT(*) attachment_count FROM leave_request_attachments WHERE leave_request_id=?',[id]); const mustAttach=Boolean(v.type.requires_attachment)&&Number(v.days)>=Number(v.type.attachment_required_after_days||0); if(mustAttach&&!request.files?.length&&!Number(storedCount.attachment_count))return rollbackError(connection,response,400,'An attachment is required for this leave request.'); const requestNo=`LR-${new Date().toISOString().slice(0,10).replaceAll('-','')}-${String(id).padStart(6,'0')}`; await connection.execute('UPDATE leave_requests SET request_no=? WHERE leave_request_id=?',[requestNo,id]); const approverUserIds=participants.approverUserIds||[participants.supervisorUserId]; for (const approverUserId of approverUserIds) await createNotification(connection,{userId:approverUserId,type:'leave-submitted',title:'New leave request',message:`Leave request ${requestNo} is waiting for approval.`,leaveRequestId:id}) }
     await storeFiles(connection,id,request.files)
     const row=await byId(connection,id)
     if(!row) throw new Error('Saved leave request could not be reloaded.')
@@ -219,11 +235,14 @@ export async function balance(request,response){const employeeId=await identity(
 
 export async function supervisorList(request,response){const supervisorId=await identity(pool,request);const [rows]=await pool.execute(`${select} WHERE e.supervisor_id=? AND lr.status='pending' AND lr.employee_id<>? ORDER BY lr.submitted_at`,[supervisorId,supervisorId]);response.json({status:'ok',data:{leaveRequests:await Promise.all(rows.map(x=>serialize(pool,x)))}})}
 export async function supervisorDetail(request,response){const supervisorId=await identity(pool,request);const row=await byId(pool,positiveId(request.params.requestId));if(!row){return error(response,404,'Leave request was not found.')}const [ok]=await pool.execute('SELECT employee_id FROM employees WHERE employee_id=? AND supervisor_id=?',[row.employee_id,supervisorId]);if(!ok.length||row.employee_id===supervisorId)return error(response,403,'Forbidden');response.json({status:'ok',data:{leaveRequest:await serialize(pool,row)}})}
+const submittedByRoleSql = `EXISTS (SELECT 1 FROM users submitter_user JOIN roles submitter_role ON submitter_role.role_id=submitter_user.role_id WHERE submitter_user.employee_id=lr.employee_id AND LOWER(submitter_role.role_name)=?)`
+export async function hrApprovalList(_request,response){const [rows]=await pool.execute(`${select} WHERE lr.status='pending' AND ${submittedByRoleSql} ORDER BY lr.submitted_at`,['supervisor']);response.json({status:'ok',data:{leaveRequests:await Promise.all(rows.map(x=>serialize(pool,x)))}})}
+export async function hrApprovalDetail(request,response){const row=await byId(pool,positiveId(request.params.requestId));if(!row)return error(response,404,'Leave request was not found.');const [ok]=await pool.execute(`SELECT lr.leave_request_id FROM leave_requests lr WHERE lr.leave_request_id=? AND ${submittedByRoleSql}`,[row.leave_request_id,'supervisor']);if(!ok.length)return error(response,403,'Forbidden');response.json({status:'ok',data:{leaveRequest:await serialize(pool,row)}})}
 export async function decide(request, response) {
   const connection = await pool.getConnection()
   try {
     await connection.beginTransaction()
-    const supervisorId = await identity(connection, request)
+    const approverId = await identity(connection, request)
     const requestId = positiveId(request.params.requestId)
     const decision = String(request.body.decision || '').toLowerCase()
     const reason = String(request.body.reason || '').trim()
@@ -233,11 +252,15 @@ export async function decide(request, response) {
     const [rows] = await connection.execute(`${select} WHERE lr.leave_request_id = ? FOR UPDATE`, [requestId])
     const row = rows[0]
     if (!row || row.status !== 'pending') return rollbackError(connection, response, 409, 'Request is not pending or was already reviewed.')
-    const [team] = await connection.execute(
-      'SELECT employee_id FROM employees WHERE employee_id = ? AND supervisor_id = ?',
-      [row.employee_id, supervisorId],
-    )
-    if (!team.length || row.employee_id === supervisorId) return rollbackError(connection, response, 403, 'Forbidden')
+    const approverRole = role(request)
+    const [submitterRoles] = await connection.execute('SELECT LOWER(r.role_name) role_name FROM users u JOIN roles r ON r.role_id=u.role_id WHERE u.employee_id=?',[row.employee_id])
+    const submitterRole = submitterRoles[0]?.role_name
+    if (approverRole === 'hr') {
+      if (submitterRole !== 'supervisor') return rollbackError(connection, response, 403, 'Forbidden')
+    } else {
+      const [team] = await connection.execute('SELECT employee_id FROM employees WHERE employee_id = ? AND supervisor_id = ?',[row.employee_id, approverId])
+      if (approverRole !== 'supervisor' || !team.length || row.employee_id === approverId) return rollbackError(connection, response, 403, 'Forbidden')
+    }
 
     if (decision === 'approved') {
       const balanceCheck = await recheckApprovalBalance(connection, row, requestId)
@@ -253,7 +276,7 @@ export async function decide(request, response) {
          SET status = 'approved', approver_employee_id = ?, approved_at = NOW(),
              rejected_at = NULL, rejection_reason = NULL
          WHERE leave_request_id = ?`,
-        [supervisorId, requestId],
+        [approverId, requestId],
       )
     } else {
       await connection.execute(
@@ -261,7 +284,7 @@ export async function decide(request, response) {
          SET status = 'rejected', approver_employee_id = ?, rejected_at = NOW(),
              approved_at = NULL, rejection_reason = ?
          WHERE leave_request_id = ?`,
-        [supervisorId, reason, requestId],
+        [approverId, reason, requestId],
       )
     }
 

@@ -28,10 +28,8 @@ import {
 } from '@mui/material';
 
 import { ConfirmationDialog, DataListToolbar } from './shareduiprimitives.jsx';
-
-import {
-  useNavigate,
-} from 'react-router-dom';
+import { CompactSummaryCard } from './sharedvisualfoundation.jsx';
+import RolePositionFormPage from './rolepositionformpage.jsx';
 
 import {
   getPositions,
@@ -120,10 +118,9 @@ function RolePositionManagementPage({
   LayoutComponent,
   activeMenu,
   theme,
+  initialFormMode,
+  initialPositionId,
 }) {
-  const navigate =
-    useNavigate();
-
   const [
     positions,
     setPositions,
@@ -156,6 +153,11 @@ function RolePositionManagementPage({
   const [page, setPage] = useState(0);
   const rowsPerPage = 5;
   const [disableTarget, setDisableTarget] = useState(null);
+  const [formDialog, setFormDialog] = useState({
+    open: Boolean(initialFormMode),
+    mode: initialFormMode || 'add',
+    positionId: initialPositionId ? String(initialPositionId) : '',
+  });
 
   const [
     actionMessage,
@@ -331,7 +333,7 @@ function RolePositionManagementPage({
         'ตำแหน่งในระบบทั้งหมด',
 
       color:
-        theme.primary,
+        '#2563EB',
     },
 
     {
@@ -394,17 +396,13 @@ function RolePositionManagementPage({
 
   const handleAddPosition =
     () => {
-      navigate(
-        '/admin/position-management/add',
-      );
+      setFormDialog({ open: true, mode: 'add', positionId: '' });
     };
 
   const handleEditPosition = (
     position,
   ) => {
-    navigate(
-      `/admin/position-management/${position.id}/edit`,
-    );
+    setFormDialog({ open: true, mode: 'edit', positionId: String(position.id) });
   };
 
   /* =========================
@@ -507,12 +505,15 @@ function RolePositionManagementPage({
     <LayoutComponent
       activeMenu={activeMenu}
     >
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <Button type="button" variant="contained" onClick={handleAddPosition}>+ เพิ่มตำแหน่ง</Button>
+      </Box>
       {/* Header */}
 
       <Box
         sx={{
           display:
-            'flex',
+            'none',
 
           alignItems: {
             xs:
@@ -572,7 +573,7 @@ function RolePositionManagementPage({
               '145px',
 
             height:
-              '42px',
+              '40px',
 
             padding:
               '0 18px',
@@ -587,7 +588,7 @@ function RolePositionManagementPage({
               '9px',
 
             fontSize:
-              '12px',
+              '13px',
 
             fontWeight:
               700,
@@ -673,135 +674,25 @@ function RolePositionManagementPage({
             sm:
               'repeat(2, minmax(0, 1fr))',
 
-            xl:
+            md:
               'repeat(4, minmax(0, 1fr))',
           },
 
           gap:
-            '18px',
+            '16px',
 
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
-        {summaryCards.map(
-          (card) => (
-            <Paper
-              key={
-                card.title
-              }
-              elevation={0}
-              sx={{
-                minHeight:
-                  '116px',
-
-                padding:
-                  '20px',
-
-                backgroundColor:
-                  `${card.color}0D`,
-
-                border:
-                  `1px solid ${card.color}2E`,
-
-                borderRadius:
-                  '9px',
-
-                boxSizing:
-                  'border-box',
-              }}
-            >
-              <Box
-                sx={{
-                  display:
-                    'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'space-between',
-
-                  gap:
-                    '12px',
-                }}
-              >
-                <Typography
-                  sx={{
-                    color:
-                      '#64748B',
-
-                    fontSize:
-                      '12px',
-
-                    fontWeight:
-                      700,
-                  }}
-                >
-                  {card.title}
-                </Typography>
-
-                <Box
-                  sx={{
-                    width:
-                      '9px',
-
-                    height:
-                      '9px',
-
-                    flexShrink:
-                      0,
-
-                    backgroundColor:
-                      card.color,
-
-                    borderRadius:
-                      '50%',
-
-                    boxShadow:
-                      `0 0 0 4px ${card.color}14`,
-                  }}
-                />
-              </Box>
-
-              <Typography
-                sx={{
-                  color:
-                    '#111827',
-
-                  fontSize:
-                    '32px',
-
-                  fontWeight:
-                    800,
-
-                  lineHeight:
-                    1.2,
-
-                  marginTop:
-                    '14px',
-                }}
-              >
-                {card.value}
-              </Typography>
-
-              <Typography
-                sx={{
-                  color:
-                    '#94A3B8',
-
-                  fontSize:
-                    '11px',
-
-                  marginTop:
-                    '13px',
-                }}
-              >
-                {card.helper}
-              </Typography>
-            </Paper>
-          ),
-        )}
+        {summaryCards.map((card) => (
+          <CompactSummaryCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            color={card.color}
+          />
+        ))}
       </Box>
 
       {/* Main Card */}
@@ -825,7 +716,10 @@ function RolePositionManagementPage({
             '1px solid #E5E7EB',
 
           borderRadius:
-            '14px',
+            '20px',
+
+          boxShadow:
+            '0 4px 16px rgba(15, 23, 42, 0.04)',
 
           overflow:
             'hidden',
@@ -851,40 +745,17 @@ function RolePositionManagementPage({
                 '17px',
 
               fontWeight:
-                800,
+                600,
             }}
           >
             รายการตำแหน่ง
-          </Typography>
-
-          <Typography
-            sx={{
-              color:
-                '#64748B',
-
-              fontSize:
-                '12px',
-
-              marginTop:
-                '4px',
-            }}
-          >
-            แสดง{' '}
-            {
-              filteredPositions.length
-            }{' '}
-            จาก{' '}
-            {
-              positions.length
-            }{' '}
-            ตำแหน่ง
           </Typography>
 
           <DataListToolbar
             searchValue={searchText}
             onSearchChange={setSearchText}
             searchPlaceholder="ค้นหาชื่อหรือตำแหน่ง"
-            resultLabel={searchText ? `พบ ${filteredPositions.length} รายการจากคำค้น “${searchText}”` : `พบ ${filteredPositions.length} รายการ`}
+            resultLabel=""
             activeFilters={statusFilter !== 'All' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'Active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}`, onDelete: () => setStatusFilter('All') }] : []}
             onClearFilters={handleClearFilters}
             filters={<FormControl size="small"><Select value={statusFilter === 'All' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'Active' ? 'ใช้งานอยู่' : value === 'Inactive' ? 'ไม่ใช้งาน' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'All')}><MenuItem value="Active">ใช้งานอยู่</MenuItem><MenuItem value="Inactive">ไม่ใช้งาน</MenuItem></Select></FormControl>}
@@ -1107,8 +978,8 @@ function RolePositionManagementPage({
               maxWidth:
                 '100%',
 
-              overflow:
-                'hidden',
+              overflowX:
+                'auto',
             }}
           >
             <Table
@@ -1117,8 +988,13 @@ function RolePositionManagementPage({
                 width:
                   '100%',
 
+                minWidth: '820px',
+
                 tableLayout:
-                  'fixed',
+                  'auto',
+
+                '& .MuiTableCell-head': { fontSize: '12px !important', padding: '13px 14px !important', whiteSpace: 'nowrap' },
+                '& .MuiTableCell-body': { fontSize: '12px !important', padding: '14px !important' },
 
                 '& th, & td':
                   {
@@ -1446,10 +1322,16 @@ function RolePositionManagementPage({
                             }
                             onClick={(event) => { event.stopPropagation(); if (isActive) setDisableTarget(position); else handleStatusChange(position); }}
                             sx={{
-                              minWidth: 0,
+                              minWidth: '96px',
+                              height: '34px',
                               color: isActive ? '#B42318' : '#15803D',
                               borderColor: isActive ? '#FCA5A5' : '#86EFAC',
-                              '&:hover': { backgroundColor: isActive ? '#FEE2E2' : '#DCFCE7' },
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              whiteSpace: 'nowrap',
+                              textTransform: 'none',
+                              '&:hover': { backgroundColor: isActive ? '#FEE2E2' : '#DCFCE7', borderColor: isActive ? '#EF4444' : '#22C55E' },
                             }}
                           >
                             {isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
@@ -1461,7 +1343,7 @@ function RolePositionManagementPage({
                 )}
               </TableBody>
             </Table>
-            {filteredPositions.length > rowsPerPage ? <TablePagination component="div" count={filteredPositions.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} /> : null}
+            {filteredPositions.length > rowsPerPage ? <TablePagination component="div" count={filteredPositions.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredPositions.length / rowsPerPage)}`} /> : null}
           </Box>
         ) : (
           /* Empty */
@@ -1616,6 +1498,20 @@ function RolePositionManagementPage({
         )}
       </Paper>
 
+      <RolePositionFormPage
+        LayoutComponent={LayoutComponent}
+        activeMenu={activeMenu}
+        mode={formDialog.mode}
+        dialogOnly
+        open={formDialog.open}
+        positionId={formDialog.positionId}
+        onClose={() => setFormDialog((current) => ({ ...current, open: false }))}
+        onSaved={() => {
+          setFormDialog((current) => ({ ...current, open: false }));
+          loadPositions();
+        }}
+      />
+
       {/* Action Menu */}
 
       <ConfirmationDialog
@@ -1697,10 +1593,10 @@ function RolePositionManagementPage({
 
             '&:hover': {
               color:
-                theme.primary,
+                '#1E293B',
 
               backgroundColor:
-                theme.soft,
+                '#F1F5F9',
             },
           }}
         >
@@ -1761,13 +1657,13 @@ function RolePositionManagementPage({
 
 const headerCellStyle = {
   padding:
-    '12px 8px',
+    '13px 14px',
 
   color:
     '#64748B',
 
   fontSize:
-    '10.5px',
+    '12px',
 
   fontWeight:
     800,
@@ -1776,7 +1672,7 @@ const headerCellStyle = {
     1.4,
 
   whiteSpace:
-    'normal',
+    'nowrap',
 
   wordBreak:
     'break-word',

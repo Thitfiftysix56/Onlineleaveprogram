@@ -58,11 +58,12 @@ import {
   updatePosition,
   updatePositionStatus,
 } from './controllers/hr-management-controller.js'
-import { requireAdmin, requireHrOrAdmin, requireSupervisor } from './middleware/authorization.js'
+import { requireAdmin, requireHr, requireHrOrAdmin, requireSupervisor } from './middleware/authorization.js'
+import { auditActivity } from './middleware/audit-activity.js'
 import {
   balance, cancelOwn, decide, deleteAttachment, deleteDraft, downloadAttachment,
   getOwn, leaveAttachmentsDirectory, listOwn, options, saveDraft, submit,
-  supervisorDetail, supervisorList, teamReport,
+  hrApprovalDetail, hrApprovalList, supervisorDetail, supervisorList, teamReport,
 } from './controllers/leave-controller.js'
 import {
   deleteNotification, listNotifications, markAllNotificationsRead, markNotificationRead,
@@ -98,6 +99,8 @@ expressApp.use(cors({
 expressApp.use(express.json({ limit: '1mb' }))
 expressApp.use(express.urlencoded({ extended: false }))
 expressApp.use(cookieParser())
+// Record successful business mutations after authentication/RBAC middleware has populated request.user.
+expressApp.use(auditActivity)
 expressApp.use(
   '/api/profile-images',
   requireAuthentication,
@@ -167,6 +170,9 @@ expressApp.get('/api/supervisor/approvals', ...authenticated, requireSupervisor,
 expressApp.get('/api/supervisor/approvals/:requestId', ...authenticated, requireSupervisor, supervisorDetail)
 expressApp.post('/api/supervisor/approvals/:requestId/decision', ...authenticated, requireSupervisor, decide)
 expressApp.get('/api/supervisor/team-report', ...authenticated, requireSupervisor, teamReport)
+expressApp.get('/api/hr/approvals', ...authenticated, requireHr, hrApprovalList)
+expressApp.get('/api/hr/approvals/:requestId', ...authenticated, requireHr, hrApprovalDetail)
+expressApp.post('/api/hr/approvals/:requestId/decision', ...authenticated, requireHr, decide)
 expressApp.get('/api/notifications', ...authenticated, listNotifications)
 expressApp.patch('/api/notifications/read-all', ...authenticated, markAllNotificationsRead)
 expressApp.patch('/api/notifications/:notificationId/read', ...authenticated, markNotificationRead)

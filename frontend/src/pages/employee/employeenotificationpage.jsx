@@ -66,7 +66,7 @@ function EmployeeNotificationPage() {
   return (
     <RoleNotificationPage
       LayoutComponent={CalibratedEmployeeLayout}
-      pageTitle="Employee Notification"
+      pageTitle="การแจ้งเตือน"
       pageDescription="Review updates about your leave requests, entitlement and account."
       initialNotifications={employeeNotifications}
       theme={employeeTheme}

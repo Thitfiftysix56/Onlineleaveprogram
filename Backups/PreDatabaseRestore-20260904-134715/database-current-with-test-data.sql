@@ -1,0 +1,1413 @@
+-- MariaDB dump 10.19  Distrib 10.4.32-MariaDB, for Win64 (AMD64)
+--
+-- Host: 127.0.0.1    Database: online_leave_approval_system
+-- ------------------------------------------------------
+-- Server version	10.6.27-MariaDB-ubu2204
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `audit_logs`
+--
+
+DROP TABLE IF EXISTS `audit_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `audit_logs` (
+  `audit_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned DEFAULT NULL,
+  `action` varchar(100) NOT NULL,
+  `table_name` varchar(100) DEFAULT NULL,
+  `record_id` bigint(20) unsigned DEFAULT NULL,
+  `detail` longtext DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`audit_id`),
+  KEY `idx_audit_logs_user_id` (`user_id`),
+  KEY `idx_audit_logs_action` (`action`),
+  KEY `idx_audit_logs_table_record` (`table_name`,`record_id`),
+  KEY `idx_audit_logs_created_at` (`created_at`),
+  KEY `idx_audit_logs_user_created` (`user_id`,`created_at`),
+  CONSTRAINT `fk_audit_logs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `audit_logs`
+--
+
+LOCK TABLES `audit_logs` WRITE;
+/*!40000 ALTER TABLE `audit_logs` DISABLE KEYS */;
+INSERT INTO `audit_logs` VALUES (1,4,'login','users',2,'{\"result\":\"success\",\"username\":\"admin001\",\"adminUserId\":null,\"userAgent\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Edg/152.0.0.0\"}','172.18.0.1','2026-09-04 13:18:39'),(2,4,'create_department','departments',7,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":4,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:01'),(3,4,'update_department','departments',7,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":4,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:01'),(4,4,'update_department_status','departments',7,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":4,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:01'),(5,4,'update_department_status','departments',7,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":4,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:01'),(6,4,'create_position','positions',9,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":4,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:01'),(7,4,'update_position','positions',9,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":4,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(8,4,'update_position_status','positions',9,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":4,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(9,4,'update_position_status','positions',9,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":4,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(10,3,'create_leave_type','leave_types',1,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(11,3,'update_leave_type','leave_types',1,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(12,3,'update_leave_type_status','leave_types',1,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(13,3,'update_leave_type_status','leave_types',1,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(14,3,'create_holiday','holidays',1,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(15,3,'update_holiday','holidays',1,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(16,3,'create_holiday','holidays',2,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(17,3,'delete_holiday','holidays',2,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(18,3,'update_employee','employees',2,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(19,3,'create_leave_entitlement','leave_entitlements',1,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(20,3,'create_leave_entitlement','leave_entitlements',2,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(21,3,'update_leave_entitlement','leave_entitlements',1,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(22,4,'update_user','users',2,'{\"result\":\"success\",\"username\":\"employee001\",\"adminUserId\":4,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(23,4,'update_user_status','users',2,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":4,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(24,2,'save_leave_draft','leave_requests',1,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(25,2,'save_leave_draft','leave_requests',1,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(26,2,'submit_leave','leave_requests',1,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(27,2,'cancel_leave','leave_requests',1,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(28,2,'submit_leave','leave_requests',2,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(29,2,'submit_leave','leave_requests',3,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(30,1,'leave_approved','leave_requests',2,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(31,1,'leave_rejected','leave_requests',3,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(32,1,'submit_leave','leave_requests',4,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(33,1,'submit_leave','leave_requests',5,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:02'),(34,3,'leave_approved','leave_requests',4,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:03'),(35,3,'leave_rejected','leave_requests',5,'{\"result\":\"success\",\"username\":\"\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:03'),(36,NULL,'login_failed','users',NULL,'{\"result\":\"failed\",\"username\":\"TEST_LOGIN_MKYMNZ\",\"adminUserId\":null,\"userAgent\":\"node\"}','127.0.0.1','2026-09-04 13:36:03'),(37,2,'login','users',1,'{\"result\":\"success\",\"username\":\"employee001\",\"adminUserId\":null,\"userAgent\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Edg/152.0.0.0\"}','172.18.0.1','2026-09-04 13:38:37');
+/*!40000 ALTER TABLE `audit_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `departments`
+--
+
+DROP TABLE IF EXISTS `departments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `departments` (
+  `department_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `department_name` varchar(100) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`department_id`),
+  UNIQUE KEY `uq_departments_name` (`department_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `departments`
+--
+
+LOCK TABLES `departments` WRITE;
+/*!40000 ALTER TABLE `departments` DISABLE KEYS */;
+INSERT INTO `departments` VALUES (1,'Information Technology','ฝ่ายเทคโนโลยีสารสนเทศ',1,'2026-07-17 08:13:43','2026-08-10 08:15:56'),(2,'Human Resources','ฝ่ายทรัพยากรบุคคล',1,'2026-07-17 08:13:43','2026-07-17 08:13:43'),(7,'TEST Department Updated MKYMNZ','TEST department updated for MKYMNZ',1,'2026-09-04 13:36:01','2026-09-04 13:36:01');
+/*!40000 ALTER TABLE `departments` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `employees`
+--
+
+DROP TABLE IF EXISTS `employees`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `employees` (
+  `employee_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `employee_code` varchar(20) NOT NULL,
+  `first_name` varchar(100) NOT NULL,
+  `last_name` varchar(100) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `email` varchar(100) NOT NULL,
+  `profile_image_url` varchar(255) DEFAULT NULL,
+  `department_id` int(10) unsigned NOT NULL,
+  `position_id` int(10) unsigned NOT NULL,
+  `supervisor_id` int(10) unsigned DEFAULT NULL,
+  `hire_date` date NOT NULL,
+  `status` enum('active','inactive','resigned') NOT NULL DEFAULT 'active',
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`employee_id`),
+  UNIQUE KEY `uq_employees_employee_code` (`employee_code`),
+  UNIQUE KEY `uq_employees_email` (`email`),
+  KEY `idx_employees_department_id` (`department_id`),
+  KEY `idx_employees_position_id` (`position_id`),
+  KEY `idx_employees_supervisor_id` (`supervisor_id`),
+  KEY `idx_employees_status` (`status`),
+  CONSTRAINT `fk_employees_department` FOREIGN KEY (`department_id`) REFERENCES `departments` (`department_id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_employees_position` FOREIGN KEY (`position_id`) REFERENCES `positions` (`position_id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_employees_supervisor` FOREIGN KEY (`supervisor_id`) REFERENCES `employees` (`employee_id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `employees`
+--
+
+LOCK TABLES `employees` WRITE;
+/*!40000 ALTER TABLE `employees` DISABLE KEYS */;
+INSERT INTO `employees` VALUES (1,'SUP-001','Supervisor','001','0810000001','supervisor001@organization.co.th',NULL,1,2,NULL,'2024-01-15','active','2026-07-17 08:17:20','2026-09-04 09:25:46'),(2,'EMP-001','Employee','001','0810000002','onlineleavesystem2026@gmail.com',NULL,1,1,1,'2025-01-10','active','2026-07-17 08:17:20','2026-09-04 09:39:00'),(3,'HR-001','HR','001','0810000003','hr001@organization.co.th',NULL,2,3,1,'2023-06-01','active','2026-07-17 08:17:20','2026-08-24 14:51:44'),(4,'ADM-001','Admin','001','0810000004','admin001@organization.co.th',NULL,1,4,1,'2023-01-05','active','2026-07-17 08:17:20','2026-08-24 14:51:44');
+/*!40000 ALTER TABLE `employees` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `holidays`
+--
+
+DROP TABLE IF EXISTS `holidays`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `holidays` (
+  `holiday_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `holiday_date` date NOT NULL,
+  `holiday_name` varchar(100) NOT NULL,
+  `holiday_type` varchar(50) NOT NULL DEFAULT 'Public Holiday',
+  `description` varchar(300) DEFAULT NULL,
+  `year` int(10) unsigned NOT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`holiday_id`),
+  UNIQUE KEY `uq_holidays_date` (`holiday_date`),
+  KEY `idx_holidays_year` (`year`),
+  KEY `idx_holidays_is_active` (`is_active`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `holidays`
+--
+
+LOCK TABLES `holidays` WRITE;
+/*!40000 ALTER TABLE `holidays` DISABLE KEYS */;
+INSERT INTO `holidays` VALUES (1,'2026-12-31','TEST Holiday Updated MKYMNZ','Company Holiday','TEST holiday updated for MKYMNZ',2026,1);
+/*!40000 ALTER TABLE `holidays` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `leave_approval_logs`
+--
+
+DROP TABLE IF EXISTS `leave_approval_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `leave_approval_logs` (
+  `approval_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `leave_request_id` int(10) unsigned NOT NULL,
+  `approver_id` int(10) unsigned NOT NULL,
+  `action` enum('approved','rejected') NOT NULL,
+  `comment` text DEFAULT NULL,
+  `acted_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`approval_id`),
+  KEY `idx_approval_logs_leave_request_id` (`leave_request_id`),
+  KEY `idx_approval_logs_approver_id` (`approver_id`),
+  KEY `idx_approval_logs_action` (`action`),
+  CONSTRAINT `fk_approval_logs_approver` FOREIGN KEY (`approver_id`) REFERENCES `users` (`user_id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_approval_logs_leave_request` FOREIGN KEY (`leave_request_id`) REFERENCES `leave_requests` (`leave_request_id`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `leave_approval_logs`
+--
+
+LOCK TABLES `leave_approval_logs` WRITE;
+/*!40000 ALTER TABLE `leave_approval_logs` DISABLE KEYS */;
+/*!40000 ALTER TABLE `leave_approval_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `leave_attachments`
+--
+
+DROP TABLE IF EXISTS `leave_attachments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `leave_attachments` (
+  `attachment_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `leave_request_id` int(10) unsigned NOT NULL,
+  `uploaded_by` int(10) unsigned NOT NULL,
+  `file_name` varchar(255) NOT NULL,
+  `storage_file_name` varchar(255) NOT NULL,
+  `file_path` varchar(500) NOT NULL,
+  `file_type` varchar(20) NOT NULL,
+  `mime_type` varchar(100) NOT NULL,
+  `file_size_bytes` bigint(20) unsigned NOT NULL,
+  `uploaded_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted_by` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`attachment_id`),
+  KEY `idx_attachments_leave_request_id` (`leave_request_id`),
+  KEY `idx_attachments_uploaded_by` (`uploaded_by`),
+  KEY `idx_attachments_deleted_by` (`deleted_by`),
+  CONSTRAINT `fk_attachments_deleted_by` FOREIGN KEY (`deleted_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `fk_attachments_leave_request` FOREIGN KEY (`leave_request_id`) REFERENCES `leave_requests` (`leave_request_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_attachments_uploaded_by` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`user_id`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `leave_attachments`
+--
+
+LOCK TABLES `leave_attachments` WRITE;
+/*!40000 ALTER TABLE `leave_attachments` DISABLE KEYS */;
+/*!40000 ALTER TABLE `leave_attachments` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `leave_entitlements`
+--
+
+DROP TABLE IF EXISTS `leave_entitlements`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `leave_entitlements` (
+  `entitlement_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `employee_id` int(10) unsigned NOT NULL,
+  `leave_type_id` int(10) unsigned NOT NULL,
+  `year` int(10) unsigned NOT NULL,
+  `total_days` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `used_days` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `updated_by` int(10) unsigned DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`entitlement_id`),
+  UNIQUE KEY `uq_leave_entitlements_employee_type_year` (`employee_id`,`leave_type_id`,`year`),
+  KEY `idx_leave_entitlements_employee_id` (`employee_id`),
+  KEY `idx_leave_entitlements_leave_type_id` (`leave_type_id`),
+  KEY `idx_leave_entitlements_year` (`year`),
+  KEY `idx_leave_entitlements_updated_by` (`updated_by`),
+  CONSTRAINT `fk_leave_entitlements_employee` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`employee_id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_leave_entitlements_leave_type` FOREIGN KEY (`leave_type_id`) REFERENCES `leave_types` (`leave_type_id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_leave_entitlements_updated_by` FOREIGN KEY (`updated_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `leave_entitlements`
+--
+
+LOCK TABLES `leave_entitlements` WRITE;
+/*!40000 ALTER TABLE `leave_entitlements` DISABLE KEYS */;
+INSERT INTO `leave_entitlements` VALUES (1,2,1,2026,35.00,1.00,3,'2026-09-04 13:36:02'),(2,1,1,2026,30.00,1.00,3,'2026-09-04 13:36:03');
+/*!40000 ALTER TABLE `leave_entitlements` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `leave_request_attachments`
+--
+
+DROP TABLE IF EXISTS `leave_request_attachments`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `leave_request_attachments` (
+  `attachment_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `leave_request_id` int(10) unsigned NOT NULL,
+  `original_name` varchar(255) NOT NULL,
+  `stored_name` varchar(255) NOT NULL,
+  `mime_type` varchar(100) NOT NULL,
+  `file_size` bigint(20) unsigned NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`attachment_id`),
+  KEY `idx_leave_attachments_request` (`leave_request_id`),
+  CONSTRAINT `fk_leave_attachments_request` FOREIGN KEY (`leave_request_id`) REFERENCES `leave_requests` (`leave_request_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `leave_request_attachments`
+--
+
+LOCK TABLES `leave_request_attachments` WRITE;
+/*!40000 ALTER TABLE `leave_request_attachments` DISABLE KEYS */;
+/*!40000 ALTER TABLE `leave_request_attachments` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `leave_requests`
+--
+
+DROP TABLE IF EXISTS `leave_requests`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `leave_requests` (
+  `leave_request_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `request_no` varchar(30) DEFAULT NULL,
+  `employee_id` int(10) unsigned NOT NULL,
+  `leave_type_id` int(10) unsigned NOT NULL,
+  `approver_employee_id` int(10) unsigned DEFAULT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `leave_days` decimal(5,2) NOT NULL,
+  `reason` text NOT NULL,
+  `status` enum('draft','pending','approved','rejected','cancelled') NOT NULL DEFAULT 'draft',
+  `submitted_at` datetime DEFAULT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `rejected_at` datetime DEFAULT NULL,
+  `rejection_reason` text DEFAULT NULL,
+  `cancelled_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`leave_request_id`),
+  UNIQUE KEY `uq_leave_requests_request_no` (`request_no`),
+  KEY `idx_leave_requests_employee_id` (`employee_id`),
+  KEY `idx_leave_requests_leave_type_id` (`leave_type_id`),
+  KEY `idx_leave_requests_approver_id` (`approver_employee_id`),
+  KEY `idx_leave_requests_status` (`status`),
+  KEY `idx_leave_requests_date_range` (`start_date`,`end_date`),
+  KEY `idx_leave_requests_employee_status_date` (`employee_id`,`status`,`start_date`),
+  KEY `idx_leave_requests_approver_status_submitted` (`approver_employee_id`,`status`,`submitted_at`),
+  CONSTRAINT `fk_leave_requests_approver` FOREIGN KEY (`approver_employee_id`) REFERENCES `employees` (`employee_id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_leave_requests_employee` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`employee_id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_leave_requests_leave_type` FOREIGN KEY (`leave_type_id`) REFERENCES `leave_types` (`leave_type_id`) ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `leave_requests`
+--
+
+LOCK TABLES `leave_requests` WRITE;
+/*!40000 ALTER TABLE `leave_requests` DISABLE KEYS */;
+INSERT INTO `leave_requests` VALUES (1,'LR-20260904-000001',2,1,NULL,'2026-10-06','2026-10-06',1.00,'TEST employee submitted request','cancelled','2026-09-04 13:36:02',NULL,NULL,NULL,'2026-09-04 13:36:02','2026-09-04 13:36:02','2026-09-04 13:36:02'),(2,'LR-20260904-000002',2,1,1,'2026-10-07','2026-10-07',1.00,'TEST employee approval request','approved','2026-09-04 13:36:02','2026-09-04 13:36:02',NULL,NULL,NULL,'2026-09-04 13:36:02','2026-09-04 13:36:02'),(3,'LR-20260904-000003',2,1,1,'2026-10-08','2026-10-08',1.00,'TEST employee rejection request','rejected','2026-09-04 13:36:02',NULL,'2026-09-04 13:36:02','TEST supervisor rejection reason',NULL,'2026-09-04 13:36:02','2026-09-04 13:36:02'),(4,'LR-20260904-000004',1,1,3,'2026-10-12','2026-10-12',1.00,'TEST supervisor approval request','approved','2026-09-04 13:36:02','2026-09-04 13:36:03',NULL,NULL,NULL,'2026-09-04 13:36:02','2026-09-04 13:36:03'),(5,'LR-20260904-000005',1,1,3,'2026-10-13','2026-10-13',1.00,'TEST supervisor rejection request','rejected','2026-09-04 13:36:02',NULL,'2026-09-04 13:36:03','TEST hr rejection reason',NULL,'2026-09-04 13:36:02','2026-09-04 13:36:03');
+/*!40000 ALTER TABLE `leave_requests` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `leave_types`
+--
+
+DROP TABLE IF EXISTS `leave_types`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `leave_types` (
+  `leave_type_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `leave_type_code` varchar(10) NOT NULL,
+  `leave_type_name` varchar(100) NOT NULL,
+  `description` varchar(300) DEFAULT NULL,
+  `annual_quota_days` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `minimum_days` decimal(5,2) NOT NULL DEFAULT 1.00,
+  `maximum_days_per_request` decimal(5,2) NOT NULL DEFAULT 1.00,
+  `requires_attachment` tinyint(1) NOT NULL DEFAULT 0,
+  `attachment_required_after_days` decimal(5,2) DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`leave_type_id`),
+  UNIQUE KEY `uq_leave_types_name` (`leave_type_name`),
+  UNIQUE KEY `uq_leave_types_code` (`leave_type_code`),
+  KEY `idx_leave_types_is_active` (`is_active`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `leave_types`
+--
+
+LOCK TABLES `leave_types` WRITE;
+/*!40000 ALTER TABLE `leave_types` DISABLE KEYS */;
+INSERT INTO `leave_types` VALUES (1,'TESTMKYMNZ','TEST Leave Type Updated MKYMNZ','TEST leave type updated for MKYMNZ',30.00,1.00,10.00,0,NULL,1,'2026-09-04 13:36:02','2026-09-04 13:36:02');
+/*!40000 ALTER TABLE `leave_types` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `notifications`
+--
+
+DROP TABLE IF EXISTS `notifications`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `notifications` (
+  `notification_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned NOT NULL,
+  `leave_request_id` int(10) unsigned DEFAULT NULL,
+  `title` varchar(255) NOT NULL,
+  `message` text NOT NULL,
+  `notification_type` varchar(50) NOT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`notification_id`),
+  KEY `idx_notifications_user_id` (`user_id`),
+  KEY `idx_notifications_leave_request_id` (`leave_request_id`),
+  KEY `idx_notifications_is_read` (`is_read`),
+  KEY `idx_notifications_created_at` (`created_at`),
+  KEY `idx_notifications_user_read_created` (`user_id`,`is_read`,`created_at`),
+  CONSTRAINT `fk_notifications_leave_request` FOREIGN KEY (`leave_request_id`) REFERENCES `leave_requests` (`leave_request_id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `notifications`
+--
+
+LOCK TABLES `notifications` WRITE;
+/*!40000 ALTER TABLE `notifications` DISABLE KEYS */;
+INSERT INTO `notifications` VALUES (1,1,1,'New leave request','Leave request LR-20260904-000001 is waiting for approval.','leave-submitted',0,'2026-09-04 13:36:02'),(2,1,2,'New leave request','Leave request LR-20260904-000002 is waiting for approval.','leave-submitted',0,'2026-09-04 13:36:02'),(3,1,3,'New leave request','Leave request LR-20260904-000003 is waiting for approval.','leave-submitted',0,'2026-09-04 13:36:02'),(4,2,2,'Leave request approved','LR-20260904-000002 was approved.','leave-approved',0,'2026-09-04 13:36:02'),(5,2,3,'Leave request rejected','LR-20260904-000003 was rejected: TEST supervisor rejection reason','leave-rejected',0,'2026-09-04 13:36:02'),(6,3,4,'New leave request','Leave request LR-20260904-000004 is waiting for approval.','leave-submitted',0,'2026-09-04 13:36:02'),(7,3,5,'New leave request','Leave request LR-20260904-000005 is waiting for approval.','leave-submitted',0,'2026-09-04 13:36:02'),(8,1,4,'Leave request approved','LR-20260904-000004 was approved.','leave-approved',0,'2026-09-04 13:36:03'),(9,1,5,'Leave request rejected','LR-20260904-000005 was rejected: TEST hr rejection reason','leave-rejected',0,'2026-09-04 13:36:03');
+/*!40000 ALTER TABLE `notifications` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `password_reset_otps`
+--
+
+DROP TABLE IF EXISTS `password_reset_otps`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `password_reset_otps` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned NOT NULL,
+  `otp_hash` char(64) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `verified_at` datetime DEFAULT NULL,
+  `used_at` datetime DEFAULT NULL,
+  `invalidated_at` datetime DEFAULT NULL,
+  `attempt_count` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `resend_count` tinyint(3) unsigned NOT NULL DEFAULT 0,
+  `requested_ip` varchar(45) DEFAULT NULL,
+  `requested_user_agent` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_password_reset_otps_user_id` (`user_id`),
+  KEY `idx_password_reset_otps_expires_at` (`expires_at`),
+  CONSTRAINT `fk_password_reset_otps_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `password_reset_otps`
+--
+
+LOCK TABLES `password_reset_otps` WRITE;
+/*!40000 ALTER TABLE `password_reset_otps` DISABLE KEYS */;
+/*!40000 ALTER TABLE `password_reset_otps` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `password_reset_tokens`
+--
+
+DROP TABLE IF EXISTS `password_reset_tokens`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `password_reset_tokens` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned NOT NULL,
+  `token_hash` char(64) NOT NULL,
+  `otp_id` bigint(20) unsigned NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `used_at` datetime DEFAULT NULL,
+  `invalidated_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_password_reset_tokens_token_hash` (`token_hash`),
+  KEY `idx_password_reset_tokens_user_id` (`user_id`),
+  KEY `idx_password_reset_tokens_expires_at` (`expires_at`),
+  KEY `fk_password_reset_tokens_otp` (`otp_id`),
+  CONSTRAINT `fk_password_reset_tokens_otp` FOREIGN KEY (`otp_id`) REFERENCES `password_reset_otps` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_password_reset_tokens_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `password_reset_tokens`
+--
+
+LOCK TABLES `password_reset_tokens` WRITE;
+/*!40000 ALTER TABLE `password_reset_tokens` DISABLE KEYS */;
+/*!40000 ALTER TABLE `password_reset_tokens` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `positions`
+--
+
+DROP TABLE IF EXISTS `positions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `positions` (
+  `position_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `position_name` varchar(100) NOT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`position_id`),
+  UNIQUE KEY `uq_positions_name` (`position_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `positions`
+--
+
+LOCK TABLES `positions` WRITE;
+/*!40000 ALTER TABLE `positions` DISABLE KEYS */;
+INSERT INTO `positions` VALUES (1,'Developer',1,'2026-07-17 08:13:43','2026-07-17 08:13:43'),(2,'Supervisor',1,'2026-07-17 08:13:43','2026-07-17 08:13:43'),(3,'Human Resource Officer',1,'2026-07-17 08:13:43','2026-07-17 08:13:43'),(4,'System Administrator',1,'2026-07-17 08:13:43','2026-07-17 08:13:43'),(9,'TEST Position Updated MKYMNZ',1,'2026-09-04 13:36:01','2026-09-04 13:36:02');
+/*!40000 ALTER TABLE `positions` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `roles`
+--
+
+DROP TABLE IF EXISTS `roles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `roles` (
+  `role_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `role_name` varchar(50) NOT NULL,
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`role_id`),
+  UNIQUE KEY `uq_roles_role_name` (`role_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `roles`
+--
+
+LOCK TABLES `roles` WRITE;
+/*!40000 ALTER TABLE `roles` DISABLE KEYS */;
+INSERT INTO `roles` VALUES (1,'Employee','พนักงานทั่วไป สามารถยื่นคำขอลาและตรวจสอบข้อมูลการลาของตนเอง',1),(2,'Supervisor','หัวหน้างาน สามารถพิจารณาอนุมัติหรือปฏิเสธคำขอลาของลูกทีม',1),(3,'HR','ฝ่ายทรัพยากรบุคคล จัดการข้อมูลพนักงาน ประเภทการลา สิทธิ์วันลา วันหยุด และรายงาน',1),(4,'Admin','ผู้ดูแลระบบ จัดการบัญชีผู้ใช้ Role แผนก ตำแหน่ง และตรวจสอบ Audit Log',1);
+/*!40000 ALTER TABLE `roles` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `users`
+--
+
+DROP TABLE IF EXISTS `users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `users` (
+  `user_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `employee_id` int(10) unsigned NOT NULL,
+  `role_id` int(10) unsigned NOT NULL,
+  `username` varchar(50) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `status` enum('active','inactive','locked') NOT NULL DEFAULT 'active',
+  `last_login_at` datetime DEFAULT NULL,
+  `password_changed_at` datetime DEFAULT NULL,
+  `must_change_password` tinyint(1) NOT NULL DEFAULT 0,
+  `token_version` int(10) unsigned NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`user_id`),
+  UNIQUE KEY `uq_users_employee_id` (`employee_id`),
+  UNIQUE KEY `uq_users_username` (`username`),
+  KEY `idx_users_role_id` (`role_id`),
+  KEY `idx_users_status` (`status`),
+  CONSTRAINT `fk_users_employee` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`employee_id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_users_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`role_id`) ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `users`
+--
+
+LOCK TABLES `users` WRITE;
+/*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES (1,1,2,'supervisor001','$2b$12$VQzPQSz9gQ0PWOE.VgYNpuRe6IEa0WIS81mh5cvBKcA2Fk9EExuO2','active','2026-09-04 13:38:37',NULL,0,0,'2026-07-17 08:21:55','2026-09-04 13:38:37'),(2,2,1,'employee001','$2b$12$JtcFHbmGmfFQkWecxgYH5erJYOrk7gV5tRG5V2dnsp0UK14J9z73y','active','2026-09-04 13:18:39','2026-08-05 10:54:56',0,6,'2026-07-17 08:21:55','2026-09-04 13:36:02'),(3,3,3,'hr001','$2b$12$ZSS3tO.XrAQiHZPQ37nF3OMrGR4G16XwYkLULzTNvAkDxN/p1EjHq','active','2026-09-04 10:07:58','2026-08-04 10:05:17',0,0,'2026-07-17 08:21:55','2026-09-04 10:07:58'),(4,4,4,'admin001','$2b$12$ik6WpN8quVKVFnHN.1fFG.T1Zs3uzo9nw6iRbFMf3zAEjdS2DMkEW','active','2026-09-04 10:17:14',NULL,0,0,'2026-07-17 08:21:55','2026-09-04 10:17:14');
+/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Temporary table structure for view `vw_admin_dashboard_summary`
+--
+
+DROP TABLE IF EXISTS `vw_admin_dashboard_summary`;
+/*!50001 DROP VIEW IF EXISTS `vw_admin_dashboard_summary`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_admin_dashboard_summary` AS SELECT
+ 1 AS `total_users`,
+  1 AS `active_users`,
+  1 AS `inactive_users`,
+  1 AS `locked_users`,
+  1 AS `active_departments`,
+  1 AS `active_positions`,
+  1 AS `total_audit_logs` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_audit_log_details`
+--
+
+DROP TABLE IF EXISTS `vw_audit_log_details`;
+/*!50001 DROP VIEW IF EXISTS `vw_audit_log_details`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_audit_log_details` AS SELECT
+ 1 AS `audit_id`,
+  1 AS `user_id`,
+  1 AS `username`,
+  1 AS `employee_id`,
+  1 AS `employee_code`,
+  1 AS `employee_name`,
+  1 AS `role_name`,
+  1 AS `action`,
+  1 AS `table_name`,
+  1 AS `record_id`,
+  1 AS `detail`,
+  1 AS `ip_address`,
+  1 AS `created_at` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_department_management`
+--
+
+DROP TABLE IF EXISTS `vw_department_management`;
+/*!50001 DROP VIEW IF EXISTS `vw_department_management`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_department_management` AS SELECT
+ 1 AS `department_id`,
+  1 AS `department_name`,
+  1 AS `description`,
+  1 AS `is_active`,
+  1 AS `created_at`,
+  1 AS `updated_at`,
+  1 AS `employee_count`,
+  1 AS `active_employee_count`,
+  1 AS `has_been_used` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_employee_dashboard_summary`
+--
+
+DROP TABLE IF EXISTS `vw_employee_dashboard_summary`;
+/*!50001 DROP VIEW IF EXISTS `vw_employee_dashboard_summary`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_employee_dashboard_summary` AS SELECT
+ 1 AS `employee_id`,
+  1 AS `employee_code`,
+  1 AS `employee_name`,
+  1 AS `total_requests`,
+  1 AS `draft_requests`,
+  1 AS `pending_requests`,
+  1 AS `approved_requests`,
+  1 AS `rejected_requests`,
+  1 AS `cancelled_requests`,
+  1 AS `approved_leave_days_this_year` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_employee_management`
+--
+
+DROP TABLE IF EXISTS `vw_employee_management`;
+/*!50001 DROP VIEW IF EXISTS `vw_employee_management`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_employee_management` AS SELECT
+ 1 AS `employee_id`,
+  1 AS `employee_code`,
+  1 AS `first_name`,
+  1 AS `last_name`,
+  1 AS `employee_name`,
+  1 AS `phone`,
+  1 AS `email`,
+  1 AS `hire_date`,
+  1 AS `employee_status`,
+  1 AS `created_at`,
+  1 AS `updated_at`,
+  1 AS `department_id`,
+  1 AS `department_name`,
+  1 AS `position_id`,
+  1 AS `position_name`,
+  1 AS `supervisor_id`,
+  1 AS `supervisor_employee_code`,
+  1 AS `supervisor_name`,
+  1 AS `user_id`,
+  1 AS `username`,
+  1 AS `account_status`,
+  1 AS `role_id`,
+  1 AS `role_name` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_holiday_management`
+--
+
+DROP TABLE IF EXISTS `vw_holiday_management`;
+/*!50001 DROP VIEW IF EXISTS `vw_holiday_management`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_holiday_management` AS SELECT
+ 1 AS `holiday_id`,
+  1 AS `holiday_date`,
+  1 AS `holiday_name`,
+  1 AS `holiday_year`,
+  1 AS `is_active`,
+  1 AS `date_status` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_hr_dashboard_summary`
+--
+
+DROP TABLE IF EXISTS `vw_hr_dashboard_summary`;
+/*!50001 DROP VIEW IF EXISTS `vw_hr_dashboard_summary`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_hr_dashboard_summary` AS SELECT
+ 1 AS `total_active_employees`,
+  1 AS `pending_requests`,
+  1 AS `approved_this_month`,
+  1 AS `rejected_this_month` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_hr_leave_reports`
+--
+
+DROP TABLE IF EXISTS `vw_hr_leave_reports`;
+/*!50001 DROP VIEW IF EXISTS `vw_hr_leave_reports`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_hr_leave_reports` AS SELECT
+ 1 AS `leave_request_id`,
+  1 AS `request_no`,
+  1 AS `employee_id`,
+  1 AS `employee_code`,
+  1 AS `employee_name`,
+  1 AS `department_id`,
+  1 AS `department_name`,
+  1 AS `position_id`,
+  1 AS `position_name`,
+  1 AS `leave_type_id`,
+  1 AS `leave_type_name`,
+  1 AS `start_date`,
+  1 AS `end_date`,
+  1 AS `leave_days`,
+  1 AS `status`,
+  1 AS `submitted_at`,
+  1 AS `approved_at`,
+  1 AS `rejected_at`,
+  1 AS `cancelled_at`,
+  1 AS `approver_employee_id`,
+  1 AS `approver_name` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_leave_balances`
+--
+
+DROP TABLE IF EXISTS `vw_leave_balances`;
+/*!50001 DROP VIEW IF EXISTS `vw_leave_balances`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_leave_balances` AS SELECT
+ 1 AS `entitlement_id`,
+  1 AS `employee_id`,
+  1 AS `employee_code`,
+  1 AS `employee_name`,
+  1 AS `leave_type_id`,
+  1 AS `leave_type_name`,
+  1 AS `year`,
+  1 AS `total_days`,
+  1 AS `used_days`,
+  1 AS `pending_days`,
+  1 AS `remaining_days`,
+  1 AS `available_days` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_leave_entitlement_details`
+--
+
+DROP TABLE IF EXISTS `vw_leave_entitlement_details`;
+/*!50001 DROP VIEW IF EXISTS `vw_leave_entitlement_details`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_leave_entitlement_details` AS SELECT
+ 1 AS `entitlement_id`,
+  1 AS `employee_id`,
+  1 AS `employee_code`,
+  1 AS `employee_name`,
+  1 AS `department_id`,
+  1 AS `department_name`,
+  1 AS `leave_type_id`,
+  1 AS `leave_type_name`,
+  1 AS `year`,
+  1 AS `total_days`,
+  1 AS `used_days`,
+  1 AS `pending_days`,
+  1 AS `remaining_days`,
+  1 AS `available_days`,
+  1 AS `updated_by`,
+  1 AS `updated_by_username`,
+  1 AS `updated_at` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_leave_request_details`
+--
+
+DROP TABLE IF EXISTS `vw_leave_request_details`;
+/*!50001 DROP VIEW IF EXISTS `vw_leave_request_details`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_leave_request_details` AS SELECT
+ 1 AS `leave_request_id`,
+  1 AS `request_no`,
+  1 AS `employee_id`,
+  1 AS `employee_code`,
+  1 AS `employee_name`,
+  1 AS `department_id`,
+  1 AS `department_name`,
+  1 AS `position_id`,
+  1 AS `position_name`,
+  1 AS `leave_type_id`,
+  1 AS `leave_type_name`,
+  1 AS `approver_employee_id`,
+  1 AS `approver_employee_code`,
+  1 AS `approver_name`,
+  1 AS `start_date`,
+  1 AS `end_date`,
+  1 AS `leave_days`,
+  1 AS `reason`,
+  1 AS `status`,
+  1 AS `submitted_at`,
+  1 AS `approved_at`,
+  1 AS `rejected_at`,
+  1 AS `cancelled_at`,
+  1 AS `created_at`,
+  1 AS `updated_at` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_leave_request_timeline`
+--
+
+DROP TABLE IF EXISTS `vw_leave_request_timeline`;
+/*!50001 DROP VIEW IF EXISTS `vw_leave_request_timeline`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_leave_request_timeline` AS SELECT
+ 1 AS `leave_request_id`,
+  1 AS `request_no`,
+  1 AS `event_type`,
+  1 AS `event_title`,
+  1 AS `event_detail`,
+  1 AS `actor_user_id`,
+  1 AS `actor_username`,
+  1 AS `event_at` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_leave_type_management`
+--
+
+DROP TABLE IF EXISTS `vw_leave_type_management`;
+/*!50001 DROP VIEW IF EXISTS `vw_leave_type_management`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_leave_type_management` AS SELECT
+ 1 AS `leave_type_id`,
+  1 AS `leave_type_name`,
+  1 AS `annual_quota_days`,
+  1 AS `requires_attachment`,
+  1 AS `attachment_required_after_days`,
+  1 AS `is_active`,
+  1 AS `created_at`,
+  1 AS `updated_at`,
+  1 AS `entitlement_count`,
+  1 AS `request_count`,
+  1 AS `has_been_used` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_notification_details`
+--
+
+DROP TABLE IF EXISTS `vw_notification_details`;
+/*!50001 DROP VIEW IF EXISTS `vw_notification_details`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_notification_details` AS SELECT
+ 1 AS `notification_id`,
+  1 AS `user_id`,
+  1 AS `username`,
+  1 AS `employee_id`,
+  1 AS `employee_code`,
+  1 AS `employee_name`,
+  1 AS `role_name`,
+  1 AS `leave_request_id`,
+  1 AS `request_no`,
+  1 AS `title`,
+  1 AS `message`,
+  1 AS `notification_type`,
+  1 AS `is_read`,
+  1 AS `created_at` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_pending_approvals`
+--
+
+DROP TABLE IF EXISTS `vw_pending_approvals`;
+/*!50001 DROP VIEW IF EXISTS `vw_pending_approvals`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_pending_approvals` AS SELECT
+ 1 AS `leave_request_id`,
+  1 AS `request_no`,
+  1 AS `supervisor_employee_id`,
+  1 AS `supervisor_employee_code`,
+  1 AS `supervisor_name`,
+  1 AS `employee_id`,
+  1 AS `employee_code`,
+  1 AS `employee_name`,
+  1 AS `department_name`,
+  1 AS `position_name`,
+  1 AS `leave_type_id`,
+  1 AS `leave_type_name`,
+  1 AS `start_date`,
+  1 AS `end_date`,
+  1 AS `leave_days`,
+  1 AS `reason`,
+  1 AS `submitted_at`,
+  1 AS `attachment_count` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_position_management`
+--
+
+DROP TABLE IF EXISTS `vw_position_management`;
+/*!50001 DROP VIEW IF EXISTS `vw_position_management`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_position_management` AS SELECT
+ 1 AS `position_id`,
+  1 AS `position_name`,
+  1 AS `is_active`,
+  1 AS `created_at`,
+  1 AS `updated_at`,
+  1 AS `employee_count`,
+  1 AS `active_employee_count`,
+  1 AS `has_been_used` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_supervisor_leave_summary`
+--
+
+DROP TABLE IF EXISTS `vw_supervisor_leave_summary`;
+/*!50001 DROP VIEW IF EXISTS `vw_supervisor_leave_summary`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_supervisor_leave_summary` AS SELECT
+ 1 AS `supervisor_employee_id`,
+  1 AS `supervisor_employee_code`,
+  1 AS `supervisor_name`,
+  1 AS `report_year`,
+  1 AS `report_month`,
+  1 AS `total_requests`,
+  1 AS `pending_requests`,
+  1 AS `approved_requests`,
+  1 AS `rejected_requests`,
+  1 AS `cancelled_requests` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_user_management`
+--
+
+DROP TABLE IF EXISTS `vw_user_management`;
+/*!50001 DROP VIEW IF EXISTS `vw_user_management`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_user_management` AS SELECT
+ 1 AS `user_id`,
+  1 AS `username`,
+  1 AS `account_status`,
+  1 AS `last_login_at`,
+  1 AS `created_at`,
+  1 AS `updated_at`,
+  1 AS `role_id`,
+  1 AS `role_name`,
+  1 AS `employee_id`,
+  1 AS `employee_code`,
+  1 AS `employee_name`,
+  1 AS `email`,
+  1 AS `employee_status`,
+  1 AS `department_id`,
+  1 AS `department_name`,
+  1 AS `position_id`,
+  1 AS `position_name` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `vw_user_profiles`
+--
+
+DROP TABLE IF EXISTS `vw_user_profiles`;
+/*!50001 DROP VIEW IF EXISTS `vw_user_profiles`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `vw_user_profiles` AS SELECT
+ 1 AS `user_id`,
+  1 AS `username`,
+  1 AS `account_status`,
+  1 AS `last_login_at`,
+  1 AS `role_id`,
+  1 AS `role_name`,
+  1 AS `employee_id`,
+  1 AS `employee_code`,
+  1 AS `first_name`,
+  1 AS `last_name`,
+  1 AS `full_name`,
+  1 AS `phone`,
+  1 AS `email`,
+  1 AS `hire_date`,
+  1 AS `employee_status`,
+  1 AS `department_id`,
+  1 AS `department_name`,
+  1 AS `position_id`,
+  1 AS `position_name`,
+  1 AS `supervisor_id`,
+  1 AS `supervisor_employee_code`,
+  1 AS `supervisor_name` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Dumping events for database 'online_leave_approval_system'
+--
+
+--
+-- Dumping routines for database 'online_leave_approval_system'
+--
+
+--
+-- Final view structure for view `vw_admin_dashboard_summary`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_admin_dashboard_summary`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_admin_dashboard_summary` AS select count(0) AS `total_users`,sum(case when `users`.`status` = 'active' then 1 else 0 end) AS `active_users`,sum(case when `users`.`status` = 'inactive' then 1 else 0 end) AS `inactive_users`,sum(case when `users`.`status` = 'locked' then 1 else 0 end) AS `locked_users`,(select count(0) from `departments` where `departments`.`is_active` = 1) AS `active_departments`,(select count(0) from `positions` where `positions`.`is_active` = 1) AS `active_positions`,(select count(0) from `audit_logs`) AS `total_audit_logs` from `users` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_audit_log_details`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_audit_log_details`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_audit_log_details` AS select `al`.`audit_id` AS `audit_id`,`al`.`user_id` AS `user_id`,`u`.`username` AS `username`,`e`.`employee_id` AS `employee_id`,`e`.`employee_code` AS `employee_code`,concat(`e`.`first_name`,' ',`e`.`last_name`) AS `employee_name`,`r`.`role_name` AS `role_name`,`al`.`action` AS `action`,`al`.`table_name` AS `table_name`,`al`.`record_id` AS `record_id`,`al`.`detail` AS `detail`,`al`.`ip_address` AS `ip_address`,`al`.`created_at` AS `created_at` from (((`audit_logs` `al` left join `users` `u` on(`u`.`user_id` = `al`.`user_id`)) left join `employees` `e` on(`e`.`employee_id` = `u`.`employee_id`)) left join `roles` `r` on(`r`.`role_id` = `u`.`role_id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_department_management`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_department_management`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_department_management` AS select `d`.`department_id` AS `department_id`,`d`.`department_name` AS `department_name`,`d`.`description` AS `description`,`d`.`is_active` AS `is_active`,`d`.`created_at` AS `created_at`,`d`.`updated_at` AS `updated_at`,count(`e`.`employee_id`) AS `employee_count`,sum(case when `e`.`status` = 'active' then 1 else 0 end) AS `active_employee_count`,case when count(`e`.`employee_id`) > 0 then 1 else 0 end AS `has_been_used` from (`departments` `d` left join `employees` `e` on(`e`.`department_id` = `d`.`department_id`)) group by `d`.`department_id`,`d`.`department_name`,`d`.`description`,`d`.`is_active`,`d`.`created_at`,`d`.`updated_at` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_employee_dashboard_summary`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_employee_dashboard_summary`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_employee_dashboard_summary` AS select `e`.`employee_id` AS `employee_id`,`e`.`employee_code` AS `employee_code`,concat(`e`.`first_name`,' ',`e`.`last_name`) AS `employee_name`,count(`lr`.`leave_request_id`) AS `total_requests`,sum(case when `lr`.`status` = 'draft' then 1 else 0 end) AS `draft_requests`,sum(case when `lr`.`status` = 'pending' then 1 else 0 end) AS `pending_requests`,sum(case when `lr`.`status` = 'approved' then 1 else 0 end) AS `approved_requests`,sum(case when `lr`.`status` = 'rejected' then 1 else 0 end) AS `rejected_requests`,sum(case when `lr`.`status` = 'cancelled' then 1 else 0 end) AS `cancelled_requests`,sum(case when `lr`.`status` = 'approved' and year(`lr`.`start_date`) = year(curdate()) then `lr`.`leave_days` else 0 end) AS `approved_leave_days_this_year` from (`employees` `e` left join `leave_requests` `lr` on(`lr`.`employee_id` = `e`.`employee_id`)) group by `e`.`employee_id`,`e`.`employee_code`,`e`.`first_name`,`e`.`last_name` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_employee_management`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_employee_management`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_employee_management` AS select `e`.`employee_id` AS `employee_id`,`e`.`employee_code` AS `employee_code`,`e`.`first_name` AS `first_name`,`e`.`last_name` AS `last_name`,concat(`e`.`first_name`,' ',`e`.`last_name`) AS `employee_name`,`e`.`phone` AS `phone`,`e`.`email` AS `email`,`e`.`hire_date` AS `hire_date`,`e`.`status` AS `employee_status`,`e`.`created_at` AS `created_at`,`e`.`updated_at` AS `updated_at`,`d`.`department_id` AS `department_id`,`d`.`department_name` AS `department_name`,`p`.`position_id` AS `position_id`,`p`.`position_name` AS `position_name`,`e`.`supervisor_id` AS `supervisor_id`,`supervisor`.`employee_code` AS `supervisor_employee_code`,concat(`supervisor`.`first_name`,' ',`supervisor`.`last_name`) AS `supervisor_name`,`u`.`user_id` AS `user_id`,`u`.`username` AS `username`,`u`.`status` AS `account_status`,`r`.`role_id` AS `role_id`,`r`.`role_name` AS `role_name` from (((((`employees` `e` join `departments` `d` on(`d`.`department_id` = `e`.`department_id`)) join `positions` `p` on(`p`.`position_id` = `e`.`position_id`)) left join `employees` `supervisor` on(`supervisor`.`employee_id` = `e`.`supervisor_id`)) left join `users` `u` on(`u`.`employee_id` = `e`.`employee_id`)) left join `roles` `r` on(`r`.`role_id` = `u`.`role_id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_holiday_management`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_holiday_management`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_holiday_management` AS select `holidays`.`holiday_id` AS `holiday_id`,`holidays`.`holiday_date` AS `holiday_date`,`holidays`.`holiday_name` AS `holiday_name`,`holidays`.`year` AS `holiday_year`,`holidays`.`is_active` AS `is_active`,case when `holidays`.`holiday_date` < curdate() then 'past' when `holidays`.`holiday_date` = curdate() then 'today' else 'upcoming' end AS `date_status` from `holidays` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_hr_dashboard_summary`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_hr_dashboard_summary`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_hr_dashboard_summary` AS select count(distinct case when `e`.`status` = 'active' then `e`.`employee_id` end) AS `total_active_employees`,count(distinct case when `lr`.`status` = 'pending' then `lr`.`leave_request_id` end) AS `pending_requests`,count(distinct case when `lr`.`status` = 'approved' and year(`lr`.`approved_at`) = year(curdate()) and month(`lr`.`approved_at`) = month(curdate()) then `lr`.`leave_request_id` end) AS `approved_this_month`,count(distinct case when `lr`.`status` = 'rejected' and year(`lr`.`rejected_at`) = year(curdate()) and month(`lr`.`rejected_at`) = month(curdate()) then `lr`.`leave_request_id` end) AS `rejected_this_month` from (`employees` `e` left join `leave_requests` `lr` on(`lr`.`employee_id` = `e`.`employee_id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_hr_leave_reports`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_hr_leave_reports`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_hr_leave_reports` AS select `lr`.`leave_request_id` AS `leave_request_id`,`lr`.`request_no` AS `request_no`,`lr`.`employee_id` AS `employee_id`,`e`.`employee_code` AS `employee_code`,concat(`e`.`first_name`,' ',`e`.`last_name`) AS `employee_name`,`d`.`department_id` AS `department_id`,`d`.`department_name` AS `department_name`,`p`.`position_id` AS `position_id`,`p`.`position_name` AS `position_name`,`lr`.`leave_type_id` AS `leave_type_id`,`lt`.`leave_type_name` AS `leave_type_name`,`lr`.`start_date` AS `start_date`,`lr`.`end_date` AS `end_date`,`lr`.`leave_days` AS `leave_days`,`lr`.`status` AS `status`,`lr`.`submitted_at` AS `submitted_at`,`lr`.`approved_at` AS `approved_at`,`lr`.`rejected_at` AS `rejected_at`,`lr`.`cancelled_at` AS `cancelled_at`,`lr`.`approver_employee_id` AS `approver_employee_id`,concat(`approver`.`first_name`,' ',`approver`.`last_name`) AS `approver_name` from (((((`leave_requests` `lr` join `employees` `e` on(`e`.`employee_id` = `lr`.`employee_id`)) join `departments` `d` on(`d`.`department_id` = `e`.`department_id`)) join `positions` `p` on(`p`.`position_id` = `e`.`position_id`)) join `leave_types` `lt` on(`lt`.`leave_type_id` = `lr`.`leave_type_id`)) left join `employees` `approver` on(`approver`.`employee_id` = `lr`.`approver_employee_id`)) where `lr`.`request_no` is not null */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_leave_balances`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_leave_balances`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_leave_balances` AS select `le`.`entitlement_id` AS `entitlement_id`,`le`.`employee_id` AS `employee_id`,`e`.`employee_code` AS `employee_code`,concat(`e`.`first_name`,' ',`e`.`last_name`) AS `employee_name`,`le`.`leave_type_id` AS `leave_type_id`,`lt`.`leave_type_name` AS `leave_type_name`,`le`.`year` AS `year`,`le`.`total_days` AS `total_days`,`le`.`used_days` AS `used_days`,coalesce(`p`.`pending_days`,0.00) AS `pending_days`,`le`.`total_days` - `le`.`used_days` AS `remaining_days`,`le`.`total_days` - `le`.`used_days` - coalesce(`p`.`pending_days`,0.00) AS `available_days` from (((`leave_entitlements` `le` join `employees` `e` on(`e`.`employee_id` = `le`.`employee_id`)) join `leave_types` `lt` on(`lt`.`leave_type_id` = `le`.`leave_type_id`)) left join (select `leave_requests`.`employee_id` AS `employee_id`,`leave_requests`.`leave_type_id` AS `leave_type_id`,year(`leave_requests`.`start_date`) AS `entitlement_year`,sum(`leave_requests`.`leave_days`) AS `pending_days` from `leave_requests` where `leave_requests`.`status` = 'pending' group by `leave_requests`.`employee_id`,`leave_requests`.`leave_type_id`,year(`leave_requests`.`start_date`)) `p` on(`p`.`employee_id` = `le`.`employee_id` and `p`.`leave_type_id` = `le`.`leave_type_id` and `p`.`entitlement_year` = `le`.`year`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_leave_entitlement_details`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_leave_entitlement_details`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_leave_entitlement_details` AS select `le`.`entitlement_id` AS `entitlement_id`,`le`.`employee_id` AS `employee_id`,`e`.`employee_code` AS `employee_code`,concat(`e`.`first_name`,' ',`e`.`last_name`) AS `employee_name`,`d`.`department_id` AS `department_id`,`d`.`department_name` AS `department_name`,`le`.`leave_type_id` AS `leave_type_id`,`lt`.`leave_type_name` AS `leave_type_name`,`le`.`year` AS `year`,`le`.`total_days` AS `total_days`,`le`.`used_days` AS `used_days`,coalesce(`p`.`pending_days`,0.00) AS `pending_days`,`le`.`total_days` - `le`.`used_days` AS `remaining_days`,`le`.`total_days` - `le`.`used_days` - coalesce(`p`.`pending_days`,0.00) AS `available_days`,`le`.`updated_by` AS `updated_by`,`updater`.`username` AS `updated_by_username`,`le`.`updated_at` AS `updated_at` from (((((`leave_entitlements` `le` join `employees` `e` on(`e`.`employee_id` = `le`.`employee_id`)) join `departments` `d` on(`d`.`department_id` = `e`.`department_id`)) join `leave_types` `lt` on(`lt`.`leave_type_id` = `le`.`leave_type_id`)) left join `users` `updater` on(`updater`.`user_id` = `le`.`updated_by`)) left join (select `leave_requests`.`employee_id` AS `employee_id`,`leave_requests`.`leave_type_id` AS `leave_type_id`,year(`leave_requests`.`start_date`) AS `entitlement_year`,sum(`leave_requests`.`leave_days`) AS `pending_days` from `leave_requests` where `leave_requests`.`status` = 'pending' group by `leave_requests`.`employee_id`,`leave_requests`.`leave_type_id`,year(`leave_requests`.`start_date`)) `p` on(`p`.`employee_id` = `le`.`employee_id` and `p`.`leave_type_id` = `le`.`leave_type_id` and `p`.`entitlement_year` = `le`.`year`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_leave_request_details`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_leave_request_details`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_leave_request_details` AS select `lr`.`leave_request_id` AS `leave_request_id`,`lr`.`request_no` AS `request_no`,`lr`.`employee_id` AS `employee_id`,`employee`.`employee_code` AS `employee_code`,concat(`employee`.`first_name`,' ',`employee`.`last_name`) AS `employee_name`,`department`.`department_id` AS `department_id`,`department`.`department_name` AS `department_name`,`position`.`position_id` AS `position_id`,`position`.`position_name` AS `position_name`,`lr`.`leave_type_id` AS `leave_type_id`,`leave_type`.`leave_type_name` AS `leave_type_name`,`lr`.`approver_employee_id` AS `approver_employee_id`,`approver`.`employee_code` AS `approver_employee_code`,concat(`approver`.`first_name`,' ',`approver`.`last_name`) AS `approver_name`,`lr`.`start_date` AS `start_date`,`lr`.`end_date` AS `end_date`,`lr`.`leave_days` AS `leave_days`,`lr`.`reason` AS `reason`,`lr`.`status` AS `status`,`lr`.`submitted_at` AS `submitted_at`,`lr`.`approved_at` AS `approved_at`,`lr`.`rejected_at` AS `rejected_at`,`lr`.`cancelled_at` AS `cancelled_at`,`lr`.`created_at` AS `created_at`,`lr`.`updated_at` AS `updated_at` from (((((`leave_requests` `lr` join `employees` `employee` on(`employee`.`employee_id` = `lr`.`employee_id`)) join `departments` `department` on(`department`.`department_id` = `employee`.`department_id`)) join `positions` `position` on(`position`.`position_id` = `employee`.`position_id`)) join `leave_types` `leave_type` on(`leave_type`.`leave_type_id` = `lr`.`leave_type_id`)) left join `employees` `approver` on(`approver`.`employee_id` = `lr`.`approver_employee_id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_leave_request_timeline`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_leave_request_timeline`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_leave_request_timeline` AS select `lr`.`leave_request_id` AS `leave_request_id`,`lr`.`request_no` AS `request_no`,'submitted' AS `event_type`,'Submitted by employee' AS `event_title`,concat('Leave request ',`lr`.`request_no`,' was submitted by the employee.') AS `event_detail`,`requester`.`user_id` AS `actor_user_id`,`requester`.`username` AS `actor_username`,`lr`.`submitted_at` AS `event_at` from (`leave_requests` `lr` left join `users` `requester` on(`requester`.`employee_id` = `lr`.`employee_id`)) where `lr`.`submitted_at` is not null union all select `lr`.`leave_request_id` AS `leave_request_id`,`lr`.`request_no` AS `request_no`,`lal`.`action` AS `event_type`,case when `lal`.`action` = 'approved' then 'Approved by supervisor' when `lal`.`action` = 'rejected' then 'Rejected by supervisor' end AS `event_title`,case when `lal`.`action` = 'approved' then concat('Leave request ',`lr`.`request_no`,' was approved.') when `lal`.`action` = 'rejected' then concat('Leave request ',`lr`.`request_no`,' was rejected. Reason: ',coalesce(`lal`.`comment`,'-')) end AS `event_detail`,`lal`.`approver_id` AS `actor_user_id`,`approver`.`username` AS `actor_username`,`lal`.`acted_at` AS `event_at` from ((`leave_approval_logs` `lal` join `leave_requests` `lr` on(`lr`.`leave_request_id` = `lal`.`leave_request_id`)) join `users` `approver` on(`approver`.`user_id` = `lal`.`approver_id`)) union all select `lr`.`leave_request_id` AS `leave_request_id`,`lr`.`request_no` AS `request_no`,'cancelled' AS `event_type`,'Cancelled by employee' AS `event_title`,concat('Leave request ',`lr`.`request_no`,' was cancelled by the employee.') AS `event_detail`,`requester`.`user_id` AS `actor_user_id`,`requester`.`username` AS `actor_username`,`lr`.`cancelled_at` AS `event_at` from (`leave_requests` `lr` left join `users` `requester` on(`requester`.`employee_id` = `lr`.`employee_id`)) where `lr`.`cancelled_at` is not null */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_leave_type_management`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_leave_type_management`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_leave_type_management` AS select `lt`.`leave_type_id` AS `leave_type_id`,`lt`.`leave_type_name` AS `leave_type_name`,`lt`.`annual_quota_days` AS `annual_quota_days`,`lt`.`requires_attachment` AS `requires_attachment`,`lt`.`attachment_required_after_days` AS `attachment_required_after_days`,`lt`.`is_active` AS `is_active`,`lt`.`created_at` AS `created_at`,`lt`.`updated_at` AS `updated_at`,count(distinct `le`.`entitlement_id`) AS `entitlement_count`,count(distinct `lr`.`leave_request_id`) AS `request_count`,case when count(distinct `le`.`entitlement_id`) > 0 or count(distinct `lr`.`leave_request_id`) > 0 then 1 else 0 end AS `has_been_used` from ((`leave_types` `lt` left join `leave_entitlements` `le` on(`le`.`leave_type_id` = `lt`.`leave_type_id`)) left join `leave_requests` `lr` on(`lr`.`leave_type_id` = `lt`.`leave_type_id`)) group by `lt`.`leave_type_id`,`lt`.`leave_type_name`,`lt`.`annual_quota_days`,`lt`.`requires_attachment`,`lt`.`attachment_required_after_days`,`lt`.`is_active`,`lt`.`created_at`,`lt`.`updated_at` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_notification_details`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_notification_details`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_notification_details` AS select `n`.`notification_id` AS `notification_id`,`n`.`user_id` AS `user_id`,`u`.`username` AS `username`,`e`.`employee_id` AS `employee_id`,`e`.`employee_code` AS `employee_code`,concat(`e`.`first_name`,' ',`e`.`last_name`) AS `employee_name`,`r`.`role_name` AS `role_name`,`n`.`leave_request_id` AS `leave_request_id`,`lr`.`request_no` AS `request_no`,`n`.`title` AS `title`,`n`.`message` AS `message`,`n`.`notification_type` AS `notification_type`,`n`.`is_read` AS `is_read`,`n`.`created_at` AS `created_at` from ((((`notifications` `n` join `users` `u` on(`u`.`user_id` = `n`.`user_id`)) join `employees` `e` on(`e`.`employee_id` = `u`.`employee_id`)) join `roles` `r` on(`r`.`role_id` = `u`.`role_id`)) left join `leave_requests` `lr` on(`lr`.`leave_request_id` = `n`.`leave_request_id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_pending_approvals`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_pending_approvals`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_pending_approvals` AS select `lr`.`leave_request_id` AS `leave_request_id`,`lr`.`request_no` AS `request_no`,`lr`.`approver_employee_id` AS `supervisor_employee_id`,`supervisor`.`employee_code` AS `supervisor_employee_code`,concat(`supervisor`.`first_name`,' ',`supervisor`.`last_name`) AS `supervisor_name`,`lr`.`employee_id` AS `employee_id`,`employee`.`employee_code` AS `employee_code`,concat(`employee`.`first_name`,' ',`employee`.`last_name`) AS `employee_name`,`department`.`department_name` AS `department_name`,`position`.`position_name` AS `position_name`,`lr`.`leave_type_id` AS `leave_type_id`,`leave_type`.`leave_type_name` AS `leave_type_name`,`lr`.`start_date` AS `start_date`,`lr`.`end_date` AS `end_date`,`lr`.`leave_days` AS `leave_days`,`lr`.`reason` AS `reason`,`lr`.`submitted_at` AS `submitted_at`,coalesce(`attachment_data`.`attachment_count`,0) AS `attachment_count` from ((((((`leave_requests` `lr` join `employees` `employee` on(`employee`.`employee_id` = `lr`.`employee_id`)) join `employees` `supervisor` on(`supervisor`.`employee_id` = `lr`.`approver_employee_id`)) join `departments` `department` on(`department`.`department_id` = `employee`.`department_id`)) join `positions` `position` on(`position`.`position_id` = `employee`.`position_id`)) join `leave_types` `leave_type` on(`leave_type`.`leave_type_id` = `lr`.`leave_type_id`)) left join (select `leave_attachments`.`leave_request_id` AS `leave_request_id`,count(0) AS `attachment_count` from `leave_attachments` where `leave_attachments`.`deleted_at` is null group by `leave_attachments`.`leave_request_id`) `attachment_data` on(`attachment_data`.`leave_request_id` = `lr`.`leave_request_id`)) where `lr`.`status` = 'pending' */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_position_management`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_position_management`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_position_management` AS select `p`.`position_id` AS `position_id`,`p`.`position_name` AS `position_name`,`p`.`is_active` AS `is_active`,`p`.`created_at` AS `created_at`,`p`.`updated_at` AS `updated_at`,count(`e`.`employee_id`) AS `employee_count`,sum(case when `e`.`status` = 'active' then 1 else 0 end) AS `active_employee_count`,case when count(`e`.`employee_id`) > 0 then 1 else 0 end AS `has_been_used` from (`positions` `p` left join `employees` `e` on(`e`.`position_id` = `p`.`position_id`)) group by `p`.`position_id`,`p`.`position_name`,`p`.`is_active`,`p`.`created_at`,`p`.`updated_at` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_supervisor_leave_summary`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_supervisor_leave_summary`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_supervisor_leave_summary` AS select `lr`.`approver_employee_id` AS `supervisor_employee_id`,`supervisor`.`employee_code` AS `supervisor_employee_code`,concat(`supervisor`.`first_name`,' ',`supervisor`.`last_name`) AS `supervisor_name`,year(coalesce(`lr`.`submitted_at`,`lr`.`created_at`)) AS `report_year`,month(coalesce(`lr`.`submitted_at`,`lr`.`created_at`)) AS `report_month`,count(0) AS `total_requests`,sum(case when `lr`.`status` = 'pending' then 1 else 0 end) AS `pending_requests`,sum(case when `lr`.`status` = 'approved' then 1 else 0 end) AS `approved_requests`,sum(case when `lr`.`status` = 'rejected' then 1 else 0 end) AS `rejected_requests`,sum(case when `lr`.`status` = 'cancelled' then 1 else 0 end) AS `cancelled_requests` from (`leave_requests` `lr` join `employees` `supervisor` on(`supervisor`.`employee_id` = `lr`.`approver_employee_id`)) where `lr`.`request_no` is not null group by `lr`.`approver_employee_id`,`supervisor`.`employee_code`,`supervisor`.`first_name`,`supervisor`.`last_name`,year(coalesce(`lr`.`submitted_at`,`lr`.`created_at`)),month(coalesce(`lr`.`submitted_at`,`lr`.`created_at`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_user_management`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_user_management`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_user_management` AS select `u`.`user_id` AS `user_id`,`u`.`username` AS `username`,`u`.`status` AS `account_status`,`u`.`last_login_at` AS `last_login_at`,`u`.`created_at` AS `created_at`,`u`.`updated_at` AS `updated_at`,`r`.`role_id` AS `role_id`,`r`.`role_name` AS `role_name`,`e`.`employee_id` AS `employee_id`,`e`.`employee_code` AS `employee_code`,concat(`e`.`first_name`,' ',`e`.`last_name`) AS `employee_name`,`e`.`email` AS `email`,`e`.`status` AS `employee_status`,`d`.`department_id` AS `department_id`,`d`.`department_name` AS `department_name`,`p`.`position_id` AS `position_id`,`p`.`position_name` AS `position_name` from ((((`users` `u` join `roles` `r` on(`r`.`role_id` = `u`.`role_id`)) join `employees` `e` on(`e`.`employee_id` = `u`.`employee_id`)) join `departments` `d` on(`d`.`department_id` = `e`.`department_id`)) join `positions` `p` on(`p`.`position_id` = `e`.`position_id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `vw_user_profiles`
+--
+
+/*!50001 DROP VIEW IF EXISTS `vw_user_profiles`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`leave_app`@`%` SQL SECURITY DEFINER */
+/*!50001 VIEW `vw_user_profiles` AS select `user_account`.`user_id` AS `user_id`,`user_account`.`username` AS `username`,`user_account`.`status` AS `account_status`,`user_account`.`last_login_at` AS `last_login_at`,`role`.`role_id` AS `role_id`,`role`.`role_name` AS `role_name`,`employee`.`employee_id` AS `employee_id`,`employee`.`employee_code` AS `employee_code`,`employee`.`first_name` AS `first_name`,`employee`.`last_name` AS `last_name`,concat(`employee`.`first_name`,' ',`employee`.`last_name`) AS `full_name`,`employee`.`phone` AS `phone`,`employee`.`email` AS `email`,`employee`.`hire_date` AS `hire_date`,`employee`.`status` AS `employee_status`,`department`.`department_id` AS `department_id`,`department`.`department_name` AS `department_name`,`position`.`position_id` AS `position_id`,`position`.`position_name` AS `position_name`,`employee`.`supervisor_id` AS `supervisor_id`,`supervisor`.`employee_code` AS `supervisor_employee_code`,concat(`supervisor`.`first_name`,' ',`supervisor`.`last_name`) AS `supervisor_name` from (((((`users` `user_account` join `roles` `role` on(`role`.`role_id` = `user_account`.`role_id`)) join `employees` `employee` on(`employee`.`employee_id` = `user_account`.`employee_id`)) join `departments` `department` on(`department`.`department_id` = `employee`.`department_id`)) join `positions` `position` on(`position`.`position_id` = `employee`.`position_id`)) left join `employees` `supervisor` on(`supervisor`.`employee_id` = `employee`.`supervisor_id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-09-04 13:47:31

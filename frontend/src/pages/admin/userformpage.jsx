@@ -32,6 +32,7 @@ import AdminLayout from '../../layouts/adminlayout.jsx';
 import api from '../../api/axios.js';
 import TemporaryPasswordDialog from '../../components/temporarypassworddialog.jsx';
 import { BackButton, PageHeader } from '../../components/sharedvisualfoundation.jsx';
+import { roleDashboardCardSurfaceSx } from '../../theme/rolecardsurface.js';
 
 const roleOptions = [
   'Employee',
@@ -161,19 +162,24 @@ const mapUserAccount = (user) => ({
 
 function UserFormPage({
   mode = 'add',
+  dialogOnly = false,
+  open = true,
+  userId: userIdProp,
+  onClose,
+  onSaved,
 }) {
   const navigate =
     useNavigate();
 
   const {
-    userId,
+    userId: routeUserId,
   } = useParams();
 
   const isEditMode =
     mode === 'edit';
 
   const numericUserId =
-    Number(userId);
+    Number(userIdProp || routeUserId);
 
   const [
     formData,
@@ -491,11 +497,6 @@ function UserFormPage({
       ? 'แก้ไขบัญชีผู้ใช้'
       : 'เพิ่มบัญชีผู้ใช้';
 
-  const pageDescription =
-    isEditMode
-      ? 'แก้ไขชื่อผู้ใช้ บทบาท และสถานะบัญชีของผู้ใช้ที่เลือก'
-      : 'สร้างบัญชีระบบให้พนักงานที่มีอยู่';
-
   const handleEmployeeChange = (
     employeeId,
   ) => {
@@ -713,13 +714,8 @@ function UserFormPage({
       setConfirmationOpen(false);
 
       if (isEditMode) {
-
-        navigate(
-          '/admin/user-management',
-          {
-            replace: true,
-          },
-        );
+        if (onSaved) onSaved(response.data);
+        else navigate('/admin/user-management', { replace: true });
       } else {
         if (!response.data?.temporaryPassword) {
           throw new Error(
@@ -761,23 +757,19 @@ function UserFormPage({
   };
 
   const handleCancel = () => {
-    navigate(
-      '/admin/user-management',
-    );
+    if (onClose) onClose();
+    else navigate('/admin/user-management');
   };
 
   const handleBack = () => {
-    navigate(
-      '/admin/user-management',
-    );
+    if (onClose) onClose();
+    else navigate('/admin/user-management');
   };
 
   const handleCloseTemporaryPassword = () => {
     setTemporaryPasswordResult(null);
-    navigate(
-      '/admin/user-management',
-      { replace: true },
-    );
+    if (onSaved) onSaved();
+    else navigate('/admin/user-management', { replace: true });
   };
 
   const getRoleColor = (
@@ -833,14 +825,39 @@ function UserFormPage({
       formData.role,
     );
 
+  const FormContainer = dialogOnly ? Dialog : AdminLayout;
+  const containerProps = dialogOnly
+    ? {
+        open,
+        onClose: () => !isSubmitting && handleBack(),
+        fullWidth: true,
+        maxWidth: 'md',
+        slotProps: {
+          paper: {
+            sx: {
+              width: 'calc(100% - 32px)',
+              maxWidth: '680px',
+              maxHeight: 'calc(100vh - 48px)',
+              borderRadius: '18px',
+            },
+          },
+        },
+      }
+    : { activeMenu: 'User Management' };
+
   return (
-    <AdminLayout activeMenu="User Management">
-      <PageHeader
-        title={pageTitle}
-        subtitle={pageDescription}
-        actions={<BackButton onClick={handleBack}>กลับ</BackButton>}
-        sx={{ marginBottom: '22px' }}
-      />
+    <FormContainer {...containerProps}>
+      {dialogOnly ? (
+        <DialogTitle sx={{ padding: '18px 24px', borderBottom: 0, background: 'transparent', color: 'var(--role-text, #9A3412)', fontSize: '20px', fontWeight: 700 }}>
+          {pageTitle}
+        </DialogTitle>
+      ) : (
+        <PageHeader
+          title={pageTitle}
+          actions={<BackButton onClick={handleBack}>กลับ</BackButton>}
+        />
+      )}
+      <Box className="user-form-dialog-body" sx={dialogOnly ? { padding: { xs: '16px', sm: '20px' }, overflowY: 'auto' } : { width: '100%', maxWidth: '820px', marginInline: 'auto' }}>
       <Box
         sx={{
           display: 'none',
@@ -867,21 +884,6 @@ function UserFormPage({
           }}
         >
           {pageTitle}
-        </Typography>
-
-        <Typography
-          sx={{
-            color:
-              '#6B7280',
-
-            fontSize:
-              '15px',
-
-            marginTop:
-              '6px',
-          }}
-        >
-          {pageDescription}
         </Typography>
 
         <Button
@@ -1001,7 +1003,7 @@ function UserFormPage({
         employeeOptions.length ===
           0 && (
           <Alert
-            severity="warning"
+            severity="error"
             sx={{
               marginBottom: '24px',
               borderRadius: '8px',
@@ -1030,10 +1032,31 @@ function UserFormPage({
           },
 
           gap:
-            '24px',
+            '16px',
 
           alignItems:
             'start',
+          '& > .MuiPaper-root': {
+            borderRadius: '20px',
+            borderColor: '#E2E8F0',
+            boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+            ...roleDashboardCardSurfaceSx,
+            ...(dialogOnly && {
+              border: 'none',
+              boxShadow: 'none',
+              background: 'transparent',
+              '&::after': {
+                display: 'none',
+              },
+            }),
+          },
+          '& > .MuiPaper-root > .MuiBox-root:first-of-type': {
+            background: 'transparent !important',
+            borderBottom: '0 !important',
+          },
+          '& .MuiOutlinedInput-root': {
+            borderRadius: '10px',
+          },
         }}
       >
         <Paper
@@ -1075,26 +1098,12 @@ function UserFormPage({
                   '18px',
 
                 fontWeight:
-                  800,
+                  600,
               }}
             >
               ข้อมูลบัญชีผู้ใช้
             </Typography>
 
-            <Typography
-              sx={{
-                color:
-                  '#6B7280',
-
-                fontSize:
-                  '14px',
-
-                marginTop:
-                  '4px',
-              }}
-            >
-              เลือกพนักงานและกำหนดค่าบัญชีสำหรับเข้าใช้งานระบบ
-            </Typography>
           </Box>
 
           <Box
@@ -1190,7 +1199,16 @@ function UserFormPage({
                 )}
               </Select>
 
-              <FormHelperText>
+              <FormHelperText
+                sx={{
+                  color: !errors.employeeId && (isEditMode || employeeOptions.length === 0)
+                    ? '#DC2626 !important'
+                    : undefined,
+                  fontWeight: !errors.employeeId && (isEditMode || employeeOptions.length === 0)
+                    ? 600
+                    : undefined,
+                }}
+              >
                 {errors.employeeId ||
                   (isEditMode
                     ? 'บัญชีนี้เชื่อมกับพนักงานแล้ว จึงไม่สามารถเปลี่ยนพนักงานได้'
@@ -1382,10 +1400,10 @@ function UserFormPage({
                 '12px',
 
               backgroundColor:
-                '#F9FAFB',
+                'transparent',
 
               borderTop:
-                '1px solid #E5E7EB',
+                0,
             }}
           >
             <Button
@@ -1451,7 +1469,7 @@ function UserFormPage({
                   '0 20px',
 
                 backgroundColor:
-                  '#2563EB',
+                  '#EA580C',
 
                 color:
                   '#FFFFFF',
@@ -1473,7 +1491,7 @@ function UserFormPage({
 
                 '&:hover': {
                   backgroundColor:
-                    '#1D4ED8',
+                    '#C2410C',
 
                   boxShadow:
                     'none',
@@ -1530,7 +1548,7 @@ function UserFormPage({
                   '17px',
 
                 fontWeight:
-                  800,
+                  600,
               }}
             >
               ตัวอย่างข้อมูลบัญชี
@@ -1838,7 +1856,7 @@ function UserFormPage({
         </DialogContent>
         <DialogActions sx={{ padding: '14px 20px' }}>
           <Button variant="outlined" disabled={isSubmitting} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button>
-          <Button variant="contained" color="success" disabled={isSubmitting} onClick={confirmSave}>{isSubmitting ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>
+          <Button variant="contained" disabled={isSubmitting} onClick={confirmSave}>{isSubmitting ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>
         </DialogActions>
       </Dialog>
 
@@ -1849,7 +1867,8 @@ function UserFormPage({
         temporaryPassword={temporaryPasswordResult?.temporaryPassword || ''}
         onClose={handleCloseTemporaryPassword}
       />
-    </AdminLayout>
+      </Box>
+    </FormContainer>
   );
 }
 

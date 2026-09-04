@@ -29,7 +29,8 @@ import {
 } from '@mui/material';
 import RequestNumberText from './requestnumbertext.jsx';
 import { DataListToolbar } from './shareduiprimitives.jsx';
-import { PageHeader } from './sharedvisualfoundation.jsx';
+import { HeaderlessPageTopOffset } from './sharedvisualfoundation.jsx';
+import { roleDashboardCardSurfaceSx } from '../theme/rolecardsurface.js';
 
 import {
   useLocation,
@@ -693,10 +694,10 @@ function RoleMyRequestsPage({
       value: summary.total,
       description: 'รวมทุกสถานะ',
       background:
-        'linear-gradient(135deg, #EAF3FF 0%, #FFFFFF 78%)',
-      borderColor: '#C9DDFB',
-      glowColor: 'rgba(59, 130, 246, 0.10)',
-      valueColor: '#2563EB',
+        `linear-gradient(135deg, ${theme.soft} 0%, #FFFFFF 78%)`,
+      borderColor: '#E2E8F0',
+      glowColor: `${theme.primary}18`,
+      valueColor: theme.primary,
     },
     {
       title: 'แบบร่าง',
@@ -752,7 +753,7 @@ function RoleMyRequestsPage({
     <LayoutComponent
       activeMenu="My Requests"
     >
-      <PageHeader title="คำขอลาของฉัน" sx={{ marginBottom: '10px' }} />
+      <HeaderlessPageTopOffset />
       <Box
         sx={{
           display: 'grid',
@@ -859,20 +860,12 @@ function RoleMyRequestsPage({
       <Paper
         elevation={0}
         sx={{
-          backgroundColor:
-            '#FFFFFF',
-
-          border:
-            '1px solid #E5E7EB',
-
-          borderRadius:
-            '20px',
-
-          overflow:
-            'hidden',
-
-          boxShadow:
-            '0 4px 16px rgba(15, 23, 42, 0.04)',
+          ...roleDashboardCardSurfaceSx,
+          '--role-primary': theme.primary,
+          '--role-secondary': theme.dark,
+          '--role-soft': theme.soft,
+          '--role-border': theme.border,
+          '--role-text': theme.text,
         }}
       >
         <Box
@@ -926,7 +919,7 @@ function RoleMyRequestsPage({
                   '18px',
 
                 fontWeight:
-                  800,
+                  600,
               }}
             >
               รายการคำขอลา
@@ -997,7 +990,7 @@ function RoleMyRequestsPage({
                 '18px',
             }}
           >
-            <TextField fullWidth size="small" label="ค้นหาคำขอ" placeholder="เลขที่คำขอ ประเภทการลา หรือเหตุผล" value={searchText} onChange={(event) => handleSearchChange(event.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: '46px', borderRadius: '9px', '&.Mui-focused fieldset': { borderColor: theme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: theme.primary } }} />
+            <TextField fullWidth size="small" label="ค้นหาคำขอ" placeholder="เลขที่คำขอ ประเภทการลา หรือเหตุผล" value={searchText} onChange={(event) => handleSearchChange(event.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: '44px', borderRadius: '11px', '&.Mui-focused fieldset': { borderColor: theme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: theme.primary } }} />
             <FormControl
               fullWidth
               size="small"
@@ -1187,7 +1180,7 @@ function RoleMyRequestsPage({
                     sx={{
                       width: '100%', padding: '15px', textAlign: 'left', font: 'inherit', color: 'inherit',
                       backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px',
-                      cursor: 'pointer', '&:hover': { borderColor: theme.border, backgroundColor: '#FAFCFF' },
+                      cursor: 'pointer', '&:hover': { borderColor: '#CBD5E1', backgroundColor: '#FAFCFF' },
                       '&:focus-visible': { outline: `3px solid ${theme.soft}`, outlineOffset: 2 },
                     }}
                   >
@@ -1204,13 +1197,13 @@ function RoleMyRequestsPage({
                     </Box>
                     {request.status === 'draft' ? (
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
-                        <Button type="button" size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); handleEditDraft(request); }} sx={{ color: '#2563EB', borderColor: '#BFDBFE' }}>แก้ไข</Button>
-                        <Button type="button" size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); openConfirmation('delete', request); }} sx={{ color: '#DC2626', borderColor: '#FECACA' }}>ลบ</Button>
+                        <Button type="button" size="small" variant="outlined" color="secondary" onClick={(event) => { event.stopPropagation(); handleEditDraft(request); }}>แก้ไข</Button>
+                        <Button type="button" size="small" variant="outlined" color="error" onClick={(event) => { event.stopPropagation(); openConfirmation('delete', request); }}>ลบ</Button>
                       </Box>
                     ) : null}
                     {request.status === 'pending' ? (
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
-                        <Button type="button" size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); openConfirmation('cancel', request); }} sx={{ color: '#DC2626', borderColor: '#FECACA' }}>ยกเลิก</Button>
+                        <Button type="button" size="small" variant="outlined" color="error" onClick={(event) => { event.stopPropagation(); openConfirmation('cancel', request); }}>ยกเลิก</Button>
                       </Box>
                     ) : null}
                   </Paper>
@@ -1230,7 +1223,7 @@ function RoleMyRequestsPage({
               <Table
                 sx={{
                   minWidth:
-                    theme.primary === '#2563EB' ? '780px' : '900px',
+                    theme.primary === '#2563EB' ? '780px' : theme.primary === '#059669' ? '820px' : '900px',
                 }}
               >
                 <TableHead>
@@ -1278,7 +1271,10 @@ function RoleMyRequestsPage({
                           'สถานะ',
 
                         align:
-                          'left',
+                          theme.primary === '#059669' ? 'center' : 'left',
+
+                        width:
+                          theme.primary === '#059669' ? '132px' : undefined,
                       },
 
                       {
@@ -1286,7 +1282,10 @@ function RoleMyRequestsPage({
                           'การดำเนินการ',
 
                         align:
-                          'right',
+                          theme.primary === '#059669' ? 'center' : 'right',
+
+                        width:
+                          theme.primary === '#059669' ? '124px' : undefined,
                       },
                     ].map(
                       (
@@ -1300,6 +1299,7 @@ function RoleMyRequestsPage({
                             heading.align
                           }
                           sx={{
+                            width: heading.width,
                             padding:
                               '13px 18px',
 
@@ -1491,6 +1491,7 @@ function RoleMyRequestsPage({
                           </TableCell>
 
                           <TableCell
+                            align={theme.primary === '#059669' ? 'center' : 'left'}
                             sx={{
                               padding:
                                 '16px 18px',
@@ -1536,7 +1537,7 @@ function RoleMyRequestsPage({
                           </TableCell>
 
                           <TableCell
-                            align="right"
+                            align={theme.primary === '#059669' ? 'center' : 'right'}
                             sx={{
                               padding:
                                 '16px 18px',
@@ -1554,7 +1555,7 @@ function RoleMyRequestsPage({
                                   'flex',
 
                                 justifyContent:
-                                  'flex-end',
+                                  theme.primary === '#059669' ? 'center' : 'flex-end',
 
                                 alignItems:
                                   'center',
@@ -1575,12 +1576,12 @@ function RoleMyRequestsPage({
                             >
                               {request.status === 'draft' ? (
                                 <>
-                                  <Button type="button" size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); handleEditDraft(request); }} sx={{ color: '#2563EB', borderColor: '#BFDBFE', '&:hover': { borderColor: '#2563EB', backgroundColor: '#EFF6FF' } }}>แก้ไข</Button>
-                                  <Button type="button" size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); openConfirmation('delete', request); }} sx={{ color: '#DC2626', borderColor: '#FECACA', '&:hover': { borderColor: '#DC2626', backgroundColor: '#FEF2F2' } }}>ลบ</Button>
+                                  <Button type="button" size="small" variant="outlined" color="secondary" onClick={(event) => { event.stopPropagation(); handleEditDraft(request); }}>แก้ไข</Button>
+                                  <Button type="button" size="small" variant="outlined" color="error" onClick={(event) => { event.stopPropagation(); openConfirmation('delete', request); }}>ลบ</Button>
                                 </>
                               ) : null}
                               {request.status === 'pending' ? (
-                                <Button type="button" size="small" variant="outlined" onClick={(event) => { event.stopPropagation(); openConfirmation('cancel', request); }} sx={{ color: '#DC2626', borderColor: '#FECACA', '&:hover': { borderColor: '#DC2626', backgroundColor: '#FEF2F2' } }}>ยกเลิก</Button>
+                                <Button type="button" size="small" variant="outlined" color="error" onClick={(event) => { event.stopPropagation(); openConfirmation('cancel', request); }}>ยกเลิก</Button>
                               ) : null}
                             </Box>
                           </TableCell>
@@ -1958,6 +1959,7 @@ function RoleMyRequestsPage({
           <Button
             type="button"
             variant="contained"
+            color="error"
             onClick={
               handleConfirmAction
             }

@@ -30,6 +30,7 @@ import {
 
 import HRLayout from '../../layouts/hrlayout.jsx';
 import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
+import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -51,7 +52,6 @@ const translateLeaveType = (value) => {
     'Annual Leave': 'ลาพักร้อน',
     'Sick Leave': 'ลาป่วย',
     'Personal Leave': 'ลากิจ',
-    'Maternity Leave': 'ลาคลอด',
     'Paternity Leave': 'ลาเพื่อดูแลบุตร',
     'Ordination Leave': 'ลาอุปสมบท',
     'Military Leave':
@@ -386,7 +386,7 @@ function LeaveEntitlementManagementPage() {
       setEntitlements(
         getResponseArray(
           entitlementResponse,
-          'entitlements',
+          'leaveEntitlements',
         ).map(
           normalizeEntitlement,
         ),
@@ -602,7 +602,7 @@ function LeaveEntitlementManagementPage() {
         theme.soft,
 
       color:
-        '#0F766E',
+        '#2563EB',
     },
 
     {
@@ -630,7 +630,7 @@ function LeaveEntitlementManagementPage() {
         '#FEE2E2',
 
       color:
-        '#EA580C',
+        '#B45309',
     },
 
     {
@@ -955,11 +955,14 @@ function LeaveEntitlementManagementPage() {
 
   return (
     <HRLayout activeMenu="Leave Entitlement">
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <Button type="button" variant="contained" onClick={handleOpenAdd}>+ เพิ่มสิทธิ์การลา</Button>
+      </Box>
       {/* Header */}
 
       <Box
         sx={{
-          display: 'flex',
+          display: 'none',
 
           alignItems: {
             xs: 'flex-start',
@@ -1007,7 +1010,7 @@ function LeaveEntitlementManagementPage() {
               '150px',
 
             height:
-              '42px',
+              '40px',
 
             padding:
               '0 18px',
@@ -1019,10 +1022,10 @@ function LeaveEntitlementManagementPage() {
               '#FFFFFF',
 
             borderRadius:
-              '8px',
+              '9px',
 
             fontSize:
-              '12px',
+              '13px',
 
             fontWeight:
               700,
@@ -1094,89 +1097,26 @@ function LeaveEntitlementManagementPage() {
             xs: '1fr',
 
             sm:
-              'repeat(2, 1fr)',
+              'repeat(2, minmax(0, 1fr))',
 
-            xl:
-              'repeat(4, 1fr)',
+            md:
+              'repeat(4, minmax(0, 1fr))',
           },
 
-          gap: '18px',
+          gap: '16px',
 
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
-        {summaryCards.map(
-          (card) => (
-            <Paper
-              key={card.title}
-              elevation={0}
-              sx={{
-                minHeight: '116px',
-
-                padding:
-                  '20px',
-
-                backgroundColor: `${card.color}18`,
-
-                border: `1px solid ${card.color}45`,
-
-                borderRadius: '9px',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <Box
-                sx={{
-                  width: 'auto',
-
-                  height: 'auto',
-
-                  display:
-                    'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'flex-start',
-                  textAlign: 'left',
-
-                  backgroundColor: 'transparent',
-
-                  color: '#172033',
-
-                  borderRadius:
-                    0,
-
-                  fontSize: '26px',
-
-                  fontWeight: 700,
-                  order: 2,
-                  marginTop: '7px',
-                }}
-              >
-                {card.value}
-              </Box>
-
-              <Typography
-                sx={{
-                  color: '#64748B',
-
-                  fontSize: '12px',
-
-                  fontWeight:
-                    800,
-
-                  marginTop: 0,
-                  order: 1,
-                }}
-              >
-                {card.title}
-              </Typography>
-            </Paper>
-          ),
-        )}
+        {summaryCards.map((card) => (
+          <CompactSummaryCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            color={card.color}
+          />
+        ))}
       </Box>
 
       {/* Main Card */}
@@ -1191,7 +1131,10 @@ function LeaveEntitlementManagementPage() {
             '1px solid #E5E7EB',
 
           borderRadius:
-            '14px',
+            '20px',
+
+          boxShadow:
+            '0 4px 16px rgba(15, 23, 42, 0.04)',
 
           overflow:
             'hidden',
@@ -1217,38 +1160,17 @@ function LeaveEntitlementManagementPage() {
                 '18px',
 
               fontWeight:
-                800,
+                600,
             }}
           >
             รายการสิทธิ์การลา
-          </Typography>
-
-          <Typography
-            sx={{
-              color:
-                '#64748B',
-
-              fontSize:
-                '12px',
-
-              marginTop:
-                '4px',
-            }}
-          >
-            แสดง{' '}
-            {
-              filteredEntitlements.length
-            }{' '}
-            จาก{' '}
-            {entitlements.length}{' '}
-            รายการ
           </Typography>
 
           <DataListToolbar
             searchValue={searchText}
             onSearchChange={setSearchText}
             searchPlaceholder="ค้นหาพนักงานหรือประเภทลา"
-            resultLabel={searchText ? `พบ ${filteredEntitlements.length} รายการจากคำค้น “${searchText}”` : `พบ ${filteredEntitlements.length} รายการ`}
+            resultLabel=""
             activeFilters={[
               ...(departmentFilter !== 'all' ? [{ key: 'department', label: `แผนก: ${departmentFilter}`, onDelete: () => setDepartmentFilter('all') }] : []),
               ...(leaveTypeFilter !== 'all' ? [{ key: 'type', label: `ประเภท: ${translateLeaveType(leaveTypes.find((item) => String(item.id) === String(leaveTypeFilter))?.name || leaveTypeFilter)}`, onDelete: () => setLeaveTypeFilter('all') }] : []),
@@ -1806,7 +1728,7 @@ function LeaveEntitlementManagementPage() {
                 )}
               </TableBody>
             </Table>
-            {filteredEntitlements.length > rowsPerPage ? <TablePagination component="div" count={filteredEntitlements.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} /> : null}
+            {filteredEntitlements.length > rowsPerPage ? <TablePagination component="div" count={filteredEntitlements.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredEntitlements.length / rowsPerPage)}`} /> : null}
           </Box>
         ) : (
           /* Empty */
@@ -2265,7 +2187,7 @@ function LeaveEntitlementManagementPage() {
               '16px 24px 22px',
 
             borderTop:
-              '1px solid #E5E7EB',
+              0,
 
             gap:
               '10px',

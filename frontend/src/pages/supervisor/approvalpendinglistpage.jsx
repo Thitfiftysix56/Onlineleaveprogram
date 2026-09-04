@@ -30,8 +30,8 @@ import {
 
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
 import RequestNumberText from '../../components/requestnumbertext.jsx';
-import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
 import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
+import { HeaderlessPageTopOffset } from '../../components/sharedvisualfoundation.jsx';
 import { roleAccentTokens } from '../../theme/tokens.js';
 
 import api from '../../api/axios.js';
@@ -54,9 +54,6 @@ const translateLeaveType = (
 
     'Personal Leave':
       'ลากิจ',
-
-    'Maternity Leave':
-      'ลาคลอด',
 
     'Paternity Leave':
       'ลาเพื่อดูแลบุตร',
@@ -246,7 +243,12 @@ const isSubmittedToday = (
   );
 };
 
-function ApprovalPendingListPage() {
+function ApprovalPendingListPage({
+  LayoutComponent = SupervisorLayout,
+  activeMenu = 'Approval',
+  approvalsApiPath = '/supervisor/approvals',
+  approvalPagePath = '/supervisor/approval',
+}) {
   const navigate =
     useNavigate();
 
@@ -298,7 +300,7 @@ function ApprovalPendingListPage() {
       try {
         const response =
           await api.get(
-            '/supervisor/approvals',
+            approvalsApiPath,
           );
 
         const leaveRequests =
@@ -356,7 +358,7 @@ function ApprovalPendingListPage() {
 
   useEffect(() => {
     loadPendingRequests();
-  }, []);
+  }, [approvalsApiPath]);
 
   const leaveTypeOptions =
     useMemo(() => {
@@ -531,15 +533,15 @@ function ApprovalPendingListPage() {
   const handleViewRequest =
     (request) => {
       navigate(
-        `/supervisor/approval/${request.id}`,
+        `${approvalPagePath}/${request.id}`,
       );
     };
 
   return (
-    <SupervisorLayout
-      activeMenu="Approval"
+    <LayoutComponent
+      activeMenu={activeMenu}
     >
-      <PageHeader title="รายการรออนุมัติ" sx={{ marginBottom: '10px' }} />
+      <HeaderlessPageTopOffset />
 
       {loadError && (
         <Alert
@@ -692,7 +694,7 @@ function ApprovalPendingListPage() {
                 '18px',
 
               fontWeight:
-                800,
+                600,
             }}
           >
             คำขอลาที่รอตรวจสอบ
@@ -732,7 +734,7 @@ function ApprovalPendingListPage() {
                 '20px',
             }}
           >
-            <TextField fullWidth label="ค้นหาคำขอ" placeholder="เลขที่คำขอ ชื่อพนักงาน หรือประเภทการลา" value={searchText} onChange={(event) => { setSearchText(event.target.value); setPage(0); }} sx={{ '& .MuiOutlinedInput-root': { height: '48px', borderRadius: '9px', '&.Mui-focused fieldset': { borderColor: supervisorTheme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: supervisorTheme.primary } }} />
+            <TextField fullWidth label="ค้นหาคำขอ" placeholder="เลขที่คำขอ ชื่อพนักงาน หรือประเภทการลา" value={searchText} onChange={(event) => { setSearchText(event.target.value); setPage(0); }} sx={{ '& .MuiOutlinedInput-root': { height: '44px', borderRadius: '11px', '&.Mui-focused fieldset': { borderColor: supervisorTheme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: supervisorTheme.primary } }} />
             <FormControl
               fullWidth
             >
@@ -1456,7 +1458,7 @@ function ApprovalPendingListPage() {
           </Box>
         )}
       </Paper>
-    </SupervisorLayout>
+    </LayoutComponent>
   );
 }
 

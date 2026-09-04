@@ -25,6 +25,10 @@ import { passwordMeetsPolicy } from '../utils/passwordpolicy.js';
 import usePasswordResetFlow from '../auth/usepasswordresetflow.js';
 
 const passwordFieldSx = {
+  '& .MuiInputLabel-root': {
+    fontWeight: 400,
+  },
+
   '& input::-ms-reveal': {
     display: 'none',
   },
@@ -161,6 +165,7 @@ function ResetPasswordPage() {
   return (
     <PasswordRecoveryLayout
       title="Reset Password"
+      compact
       description="สร้าง Password ใหม่สำหรับบัญชีของคุณ"
     >
       {message && (
@@ -179,6 +184,7 @@ function ResetPasswordPage() {
           fullWidth
           required
           autoFocus
+          size="small"
           type={
             showPassword
               ? 'text'
@@ -213,6 +219,7 @@ function ResetPasswordPage() {
         <TextField
           fullWidth
           required
+          size="small"
           type={
             showPassword
               ? 'text'
@@ -254,8 +261,8 @@ function ResetPasswordPage() {
           variant="contained"
           disabled={isSubmitting}
           sx={{
-            height: 48,
-            mt: 3,
+            height: 44,
+            mt: 2,
             textTransform: 'none',
             fontWeight: 800,
           }}

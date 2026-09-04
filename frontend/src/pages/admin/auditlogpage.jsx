@@ -5,6 +5,7 @@ import {
 } from 'react';
 
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -13,8 +14,6 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
-  InputAdornment,
-  InputLabel,
   MenuItem,
   Paper,
   Select,
@@ -28,16 +27,11 @@ import {
   Typography,
 } from '@mui/material';
 
-import {
-  CalendarMonthRounded,
-} from '@mui/icons-material';
-
 import AdminLayout from '../../layouts/adminlayout.jsx';
-import RequestNumberText from '../../components/requestnumbertext.jsx';
+import { CompactSummaryCard, HeaderlessPageTopOffset } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 import {
   formatAuditActivity,
-  formatAuditDetail,
 } from '../../utils/presentationformatter.js';
 
 /* =========================
@@ -528,8 +522,6 @@ const translateLeaveType = (
     'Personal Leave':
       'ลากิจ',
 
-    'Maternity Leave':
-      'ลาคลอด',
   };
 
   return (
@@ -686,27 +678,6 @@ const getDateOnly = (
   );
 };
 
-const formatDate = (
-  value,
-) => {
-  const date =
-    getDateOnly(
-      value,
-    );
-
-  if (!date) {
-    return '-';
-  }
-
-  const [
-    year,
-    month,
-    day,
-  ] = date.split('-');
-
-  return `${day}/${month}/${year}`;
-};
-
 const formatDateTime = (
   value,
 ) => {
@@ -745,125 +716,6 @@ const formatDateTime = (
     date.getMinutes(),
   )}`;
 };
-
-/* =========================
-   Date Input
-========================= */
-
-function AuditDateField({
-  label,
-  value,
-  onChange,
-}) {
-  return (
-    <Box
-      sx={{
-        position:
-          'relative',
-      }}
-    >
-      <TextField
-        fullWidth
-        label={label}
-        value={
-          value
-            ? formatDate(
-                value,
-              )
-            : ''
-        }
-        placeholder="วว/ดด/ปปปป"
-        slotProps={{
-          input: {
-            readOnly:
-              true,
-
-            endAdornment: (
-              <InputAdornment position="end">
-                <CalendarMonthRounded
-                  sx={{
-                    color:
-                      '#64748B',
-
-                    fontSize:
-                      '19px',
-                  }}
-                />
-              </InputAdornment>
-            ),
-          },
-
-          inputLabel: {
-            shrink:
-              true,
-          },
-        }}
-        sx={{
-          '& .MuiOutlinedInput-root':
-            {
-              height:
-                '46px',
-
-              borderRadius:
-                '9px',
-
-              '&.Mui-focused fieldset':
-                {
-                  borderColor:
-                    adminTheme.primary,
-                },
-            },
-
-          '& .MuiInputLabel-root.Mui-focused':
-            {
-              color:
-                adminTheme.primary,
-            },
-
-          '& .MuiInputBase-input::placeholder':
-            {
-              opacity:
-                1,
-
-              color:
-                '#94A3B8',
-            },
-        }}
-      />
-
-      <input
-        type="date"
-        value={value}
-        onChange={(
-          event,
-        ) =>
-          onChange(
-            event.target.value,
-          )
-        }
-        style={{
-          position:
-            'absolute',
-
-          inset:
-            0,
-
-          width:
-            '100%',
-
-          height:
-            '100%',
-
-          opacity:
-            0,
-
-          cursor:
-            'pointer',
-        }}
-      />
-    </Box>
-  );
-}
 
 /* =========================
    UI Styles
@@ -1056,10 +908,10 @@ function AuditLogPage() {
   const [page, setPage] = useState(0);
   const rowsPerPage = 5;
   const [loadError, setLoadError] = useState('');
-  void loadError;
 
   useEffect(() => {
     let active = true;
+    setLoadError('');
     api.get('/admin/audit-logs')
       .then((response) => {
         if (active) setLoadedAuditLogs(response.data?.data?.auditLogs || []);
@@ -1083,16 +935,6 @@ function AuditLogPage() {
     actionFilter,
     setActionFilter,
   ] = useState('All');
-
-  const [
-    startDate,
-    setStartDate,
-  ] = useState('');
-
-  const [
-    endDate,
-    setEndDate,
-  ] = useState('');
 
   const [
     selectedLog,
@@ -1130,12 +972,13 @@ function AuditLogPage() {
       label:
         'จัดการผู้ใช้งาน',
 
-      actions: [
-        'CREATE_USER',
-        'UPDATE_USER',
-        'UPDATE_USER_STATUS',
-        'RESET_PASSWORD',
-        'ADMIN_PASSWORD_RESET',
+        actions: [
+          'CREATE_USER',
+          'UPDATE_USER',
+          'UPDATE_USER_STATUS',
+          'RESET_PASSWORD',
+          'ADMIN_PASSWORD_RESET',
+          'UPDATE_PROFILE',
       ],
     },
 
@@ -1147,8 +990,10 @@ function AuditLogPage() {
         'คำขอลา',
 
       actions: [
-        'CREATE_LEAVE',
-        'SUBMIT_LEAVE',
+          'CREATE_LEAVE',
+          'SAVE_LEAVE_DRAFT',
+          'DELETE_LEAVE_DRAFT',
+          'SUBMIT_LEAVE',
         'APPROVE_LEAVE',
         'REJECT_LEAVE',
         'CANCEL_LEAVE',
@@ -1166,9 +1011,15 @@ function AuditLogPage() {
         'จัดการพนักงาน',
 
       actions: [
-        'CREATE_EMPLOYEE',
-        'UPDATE_EMPLOYEE',
-        'UPDATE_ENTITLEMENT',
+          'CREATE_EMPLOYEE',
+          'UPDATE_EMPLOYEE',
+          'UPDATE_EMPLOYEE_STATUS',
+          'UPDATE_ENTITLEMENT',
+          'CREATE_LEAVE_ENTITLEMENT',
+          'UPDATE_LEAVE_ENTITLEMENT',
+          'CREATE_LEAVE_TYPE',
+          'UPDATE_LEAVE_TYPE',
+          'UPDATE_LEAVE_TYPE_STATUS',
       ],
     },
 
@@ -1180,10 +1031,15 @@ function AuditLogPage() {
         'โครงสร้างองค์กร',
 
       actions: [
-        'CREATE_DEPARTMENT',
-        'UPDATE_DEPARTMENT',
-        'CREATE_POSITION',
-        'UPDATE_POSITION',
+          'CREATE_DEPARTMENT',
+          'UPDATE_DEPARTMENT',
+          'UPDATE_DEPARTMENT_STATUS',
+          'CREATE_POSITION',
+          'UPDATE_POSITION',
+          'UPDATE_POSITION_STATUS',
+          'CREATE_HOLIDAY',
+          'UPDATE_HOLIDAY',
+          'DELETE_HOLIDAY',
       ],
     },
 
@@ -1234,35 +1090,7 @@ function AuditLogPage() {
             ).includes(
               keyword,
             ) ||
-            normalizeValue(
-              formatAuditActivity(
-                log.action,
-              ),
-            ).includes(
-              keyword,
-            ) ||
-            normalizeValue(
-              log.action,
-            ).includes(
-              keyword,
-            ) ||
-            normalizeValue(
-              translateTable(
-                log.tableName,
-              ),
-            ).includes(
-              keyword,
-            ) ||
-            normalizeValue(
-              formatAuditDetail(log),
-            ).includes(
-              keyword,
-            ) ||
-            normalizeValue(
-              log.ipAddress,
-            ).includes(
-              keyword,
-            );
+            normalizeValue(log.action).includes(keyword);
 
           const matchesRole =
             roleFilter ===
@@ -1282,27 +1110,10 @@ function AuditLogPage() {
                 ).toUpperCase(),
               );
 
-          const logDate =
-            getDateOnly(
-              log.createdAt,
-            );
-
-          const matchesStart =
-            !startDate ||
-            logDate >=
-              startDate;
-
-          const matchesEnd =
-            !endDate ||
-            logDate <=
-              endDate;
-
           return (
             matchesSearch &&
             matchesRole &&
-            matchesAction &&
-            matchesStart &&
-            matchesEnd
+            matchesAction
           );
         },
       );
@@ -1311,8 +1122,6 @@ function AuditLogPage() {
       roleFilter,
       actionFilter,
       actionGroups,
-      startDate,
-      endDate,
       loadedAuditLogs,
     ]);
 
@@ -1323,7 +1132,7 @@ function AuditLogPage() {
 
   useEffect(() => {
     setPage(0);
-  }, [searchText, roleFilter, actionFilter, startDate, endDate]);
+  }, [searchText, roleFilter, actionFilter]);
 
   /* =========================
      Summary
@@ -1406,7 +1215,7 @@ function AuditLogPage() {
         'กิจกรรมที่บันทึกในระบบ',
 
       color:
-        adminTheme.primary,
+        '#0891B2',
     },
 
     {
@@ -1461,8 +1270,6 @@ function AuditLogPage() {
       setSearchText('');
       setRoleFilter('All');
       setActionFilter('All');
-      setStartDate('');
-      setEndDate('');
     };
 
   const handleCloseDialog =
@@ -1478,11 +1285,12 @@ function AuditLogPage() {
     <AdminLayout
       activeMenu="Audit Log"
     >
+      <HeaderlessPageTopOffset />
       {/* Header */}
 
       <Box
         sx={{
-          display: 'flex',
+          display: 'none',
           alignItems: { xs: 'stretch', sm: 'center' },
           justifyContent: 'space-between',
           flexDirection: { xs: 'column', sm: 'row' },
@@ -1527,133 +1335,32 @@ function AuditLogPage() {
             sm:
               'repeat(2, minmax(0, 1fr))',
 
-            xl:
+            md:
               'repeat(4, minmax(0, 1fr))',
           },
 
           gap:
-            '18px',
+            '16px',
 
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
-        {summaryCards.map(
-          (card) => (
-            <Paper
-              key={
-                card.title
-              }
-              elevation={0}
-              sx={{
-                minHeight:
-                  '116px',
-
-                padding:
-                  '20px',
-
-                backgroundColor:
-                  `${card.color}0D`,
-
-                border:
-                  `1px solid ${card.color}2E`,
-
-                borderRadius:
-                  '9px',
-              }}
-            >
-              <Box
-                sx={{
-                  display:
-                    'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'space-between',
-
-                  gap:
-                    '12px',
-                }}
-              >
-                <Typography
-                  sx={{
-                    color:
-                      '#64748B',
-
-                    fontSize:
-                      '12px',
-
-                    fontWeight:
-                      700,
-                  }}
-                >
-                  {card.title}
-                </Typography>
-
-                <Box
-                  sx={{
-                    width:
-                      '9px',
-
-                    height:
-                      '9px',
-
-                    flexShrink:
-                      0,
-
-                    backgroundColor:
-                      card.color,
-
-                    borderRadius:
-                      '50%',
-
-                    boxShadow:
-                      `0 0 0 4px ${card.color}14`,
-                  }}
-                />
-              </Box>
-
-              <Typography
-                sx={{
-                  color:
-                    '#111827',
-
-                  fontSize:
-                    '32px',
-
-                  fontWeight:
-                    800,
-
-                  lineHeight:
-                    1.2,
-
-                  marginTop:
-                    '14px',
-                }}
-              >
-                {card.value}
-              </Typography>
-
-              <Typography
-                sx={{
-                  color:
-                    '#94A3B8',
-
-                  fontSize:
-                    '11px',
-
-                  marginTop:
-                    '13px',
-                }}
-              >
-                {card.helper}
-              </Typography>
-            </Paper>
-          ),
-        )}
+        {summaryCards.map((card) => (
+          <CompactSummaryCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            color={card.color}
+          />
+        ))}
       </Box>
+
+      {loadError ? (
+        <Alert severity="error" sx={{ marginBottom: '16px' }}>
+          {loadError}
+        </Alert>
+      ) : null}
 
       {/* Main Card */}
 
@@ -1676,7 +1383,10 @@ function AuditLogPage() {
             '1px solid #E5E7EB',
 
           borderRadius:
-            '14px',
+            '20px',
+
+          boxShadow:
+            '0 4px 16px rgba(15, 23, 42, 0.04)',
 
           overflow:
             'hidden',
@@ -1718,7 +1428,7 @@ function AuditLogPage() {
                     '17px',
 
                   fontWeight:
-                    800,
+                    600,
                 }}
               >
                 รายการประวัติการใช้งาน
@@ -1739,7 +1449,7 @@ function AuditLogPage() {
                   '1fr',
 
                 md:
-                  'minmax(260px, 1.5fr) repeat(2, minmax(150px, 0.7fr))',
+                  'minmax(280px, 1.5fr) repeat(2, minmax(170px, 0.7fr))',
               },
 
               gap:
@@ -1749,22 +1459,16 @@ function AuditLogPage() {
                 '18px',
             }}
           >
-            <TextField fullWidth label="ค้นหาประวัติ" placeholder="ผู้ใช้งาน กิจกรรม รายละเอียด หรือ IP" value={searchText} onChange={(event) => setSearchText(event.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: '46px', borderRadius: '9px', '&.Mui-focused fieldset': { borderColor: adminTheme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: adminTheme.primary } }} />
+            <TextField fullWidth label="ชื่อผู้ใช้งาน" placeholder="ค้นหาชื่อผู้ใช้งาน" value={searchText} onChange={(event) => setSearchText(event.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: '44px', borderRadius: '11px', '&.Mui-focused fieldset': { borderColor: adminTheme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: adminTheme.primary } }} />
 
             <FormControl
               fullWidth
             >
-              <InputLabel
-                id="audit-role-filter-label"
-              >
-                บทบาท
-              </InputLabel>
-
               <Select
-                labelId="audit-role-filter-label"
                 value={roleFilter === 'All' ? '' : roleFilter}
                 displayEmpty
                 renderValue={(value) => value ? translateRole(value) : 'บทบาท'}
+                inputProps={{ 'aria-label': 'บทบาท' }}
                 onChange={(
                   event,
                 ) =>
@@ -1801,17 +1505,11 @@ function AuditLogPage() {
             <FormControl
               fullWidth
             >
-              <InputLabel
-                id="audit-action-filter-label"
-              >
-                ประเภทกิจกรรม
-              </InputLabel>
-
               <Select
-                labelId="audit-action-filter-label"
                 value={actionFilter === 'All' ? '' : actionFilter}
                 displayEmpty
                 renderValue={(value) => value ? actionGroups.find((group) => group.value === value)?.label || value : 'ประเภทกิจกรรม'}
+                inputProps={{ 'aria-label': 'ประเภทกิจกรรม' }}
                 onChange={(
                   event,
                 ) =>
@@ -1845,98 +1543,6 @@ function AuditLogPage() {
             </FormControl>
           </Box>
 
-          {/* Filter Row 2 */}
-
-          <Box
-            sx={{
-              display:
-                'grid',
-
-              gridTemplateColumns: {
-                xs:
-                  '1fr',
-
-                sm:
-                  'repeat(2, minmax(0, 1fr)) auto',
-              },
-
-              gap:
-                '12px',
-
-              marginTop:
-                '12px',
-            }}
-          >
-            <AuditDateField
-              label="ตั้งแต่วันที่"
-              value={
-                startDate
-              }
-              onChange={
-                setStartDate
-              }
-            />
-
-            <AuditDateField
-              label="ถึงวันที่"
-              value={
-                endDate
-              }
-              onChange={
-                setEndDate
-              }
-            />
-
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={
-                handleClearFilters
-              }
-              sx={{
-                minWidth:
-                  '105px',
-
-                height:
-                  '46px',
-
-                padding:
-                  '0 14px',
-
-                color:
-                  '#475569',
-
-                borderColor:
-                  '#CBD5E1',
-
-                borderRadius:
-                  '9px',
-
-                fontSize:
-                  '11px',
-
-                fontWeight:
-                  700,
-
-                whiteSpace:
-                  'nowrap',
-
-                textTransform:
-                  'none',
-
-                '&:hover':
-                  {
-                    backgroundColor:
-                      '#F8FAFC',
-
-                    borderColor:
-                      '#94A3B8',
-                  },
-              }}
-            >
-              ล้างตัวกรอง
-            </Button>
-          </Box>
         </Box>
 
         {/* Table */}
@@ -1951,8 +1557,8 @@ function AuditLogPage() {
               maxWidth:
                 '100%',
 
-              overflow:
-                'hidden',
+              overflowX:
+                'auto',
             }}
           >
             <Table
@@ -1961,8 +1567,16 @@ function AuditLogPage() {
                 width:
                   '100%',
 
+                minWidth: '520px',
+
                 tableLayout:
                   'fixed',
+
+                marginInline:
+                  'auto',
+
+                '& .MuiTableCell-head': { fontSize: '12px !important', padding: '13px 14px !important', whiteSpace: 'nowrap' },
+                '& .MuiTableCell-body': { fontSize: '12px !important', padding: '14px !important' },
 
                 '& th, & td':
                   {
@@ -1972,48 +1586,9 @@ function AuditLogPage() {
               }}
             >
               <colgroup>
-                <col
-                  style={{
-                    width:
-                      '14%',
-                  }}
-                />
-
-                <col
-                  style={{
-                    width:
-                      '17%',
-                  }}
-                />
-
-                <col
-                  style={{
-                    width:
-                      '11%',
-                  }}
-                />
-
-                <col
-                  style={{
-                    width:
-                      '17%',
-                  }}
-                />
-
-                <col
-                  style={{
-                    width:
-                      '15%',
-                  }}
-                />
-
-                <col
-                  style={{
-                    width:
-                      '26%',
-                  }}
-                />
-
+                <col style={{ width: '42%' }} />
+                <col style={{ width: '22%' }} />
+                <col style={{ width: '36%' }} />
               </colgroup>
 
               <TableHead>
@@ -2024,6 +1599,7 @@ function AuditLogPage() {
                   }}
                 >
                   <TableCell
+                    align="left"
                     sx={
                       headerCellStyle
                     }
@@ -2041,35 +1617,12 @@ function AuditLogPage() {
                   </TableCell>
 
                   <TableCell
+                    align="left"
                     sx={
                       headerCellStyle
                     }
                   >
                     กิจกรรม
-                  </TableCell>
-
-                  <TableCell
-                    sx={
-                      headerCellStyle
-                    }
-                  >
-                    วันที่ / เวลา
-                  </TableCell>
-
-                  <TableCell
-                    sx={
-                      headerCellStyle
-                    }
-                  >
-                    ข้อมูลที่เกี่ยวข้อง
-                  </TableCell>
-
-                  <TableCell
-                    sx={
-                      headerCellStyle
-                    }
-                  >
-                    รายละเอียด
                   </TableCell>
 
                 </TableRow>
@@ -2115,6 +1668,7 @@ function AuditLogPage() {
                         {/* User */}
 
                         <TableCell
+                          align="left"
                           sx={{
                             padding:
                               '13px 8px',
@@ -2132,13 +1686,16 @@ function AuditLogPage() {
                                 '11px',
 
                               fontWeight:
-                                800,
+                                600,
 
                               lineHeight:
                                 1.4,
 
                               wordBreak:
                                 'break-word',
+
+                              textAlign:
+                                'left',
                             }}
                           >
                             {
@@ -2162,6 +1719,9 @@ function AuditLogPage() {
 
                               wordBreak:
                                 'break-word',
+
+                              textAlign:
+                                'left',
                             }}
                           >
                             {
@@ -2224,6 +1784,7 @@ function AuditLogPage() {
                         {/* Action */}
 
                         <TableCell
+                          align="left"
                           sx={{
                             padding:
                               '13px 6px',
@@ -2276,98 +1837,11 @@ function AuditLogPage() {
                                   paddingRight:
                                     '7px',
                                 },
+
+                              marginInline:
+                                0,
                             }}
                           />
-                        </TableCell>
-
-                        {/* Date */}
-
-                        <TableCell
-                          sx={{
-                            padding: '13px 8px',
-                            color: '#64748B',
-                            fontSize: '10.5px',
-                            lineHeight: 1.45,
-                            whiteSpace: 'normal',
-                            borderBottom: '1px solid #E5E7EB',
-                          }}
-                        >
-                          {formatDateTime(log.createdAt)}
-                        </TableCell>
-
-                        {/* Target */}
-
-                        <TableCell
-                          sx={{
-                            padding:
-                              '13px 8px',
-
-                            color:
-                              '#475569',
-
-                            fontSize:
-                              '10px',
-
-                            lineHeight:
-                              1.45,
-
-                            wordBreak:
-                              'break-word',
-
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          {translateTable(
-                            log.tableName,
-                          )}
-
-                          {log.recordId !==
-                          null
-                            ? ` #${log.recordId}`
-                            : ''}
-                        </TableCell>
-
-                        {/* Detail */}
-
-                        <TableCell
-                          sx={{
-                            padding:
-                              '13px 8px',
-
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          <Typography
-                            sx={{
-                              color:
-                                '#475569',
-
-                              fontSize:
-                                '10px',
-
-                              lineHeight:
-                                1.5,
-
-                              display:
-                                '-webkit-box',
-
-                              WebkitLineClamp:
-                                2,
-
-                              WebkitBoxOrient:
-                                'vertical',
-
-                              overflow:
-                                'hidden',
-
-                              wordBreak:
-                                'break-word',
-                            }}
-                          >
-                            <RequestNumberText>{formatAuditDetail(log)}</RequestNumberText>
-                          </Typography>
                         </TableCell>
 
                       </TableRow>
@@ -2377,7 +1851,7 @@ function AuditLogPage() {
               </TableBody>
             </Table>
             {filteredAuditLogs.length > rowsPerPage ? (
-              <TablePagination component="div" count={filteredAuditLogs.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={({ from, to, count }) => `${from}-${to} จาก ${count}`} />
+              <TablePagination component="div" count={filteredAuditLogs.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredAuditLogs.length / rowsPerPage)}`} />
             ) : null}
           </Box>
         ) : (
@@ -2585,7 +2059,7 @@ function AuditLogPage() {
                 },
 
                 gap:
-                  '20px',
+                  '12px',
               }}
             >
               {[
@@ -2668,6 +2142,7 @@ function AuditLogPage() {
                     key={
                       item.label
                     }
+                    sx={{ padding: '12px 14px', backgroundColor: '#F8FAFC', border: '1px solid #E5E7EB', borderRadius: '10px' }}
                   >
                     <Typography
                       sx={{
@@ -2711,65 +2186,6 @@ function AuditLogPage() {
                 ),
               )}
 
-              <Box
-                sx={{
-                  gridColumn: {
-                    xs:
-                      'auto',
-
-                    sm:
-                      '1 / -1',
-                  },
-
-                  padding:
-                    '18px',
-
-                  backgroundColor:
-                    '#F8FAFC',
-
-                  border:
-                    '1px solid #E5E7EB',
-
-                  borderRadius:
-                    '10px',
-                }}
-              >
-                <Typography
-                  sx={{
-                    color:
-                      '#94A3B8',
-
-                    fontSize:
-                      '10px',
-
-                    fontWeight:
-                      700,
-                  }}
-                >
-                  รายละเอียดกิจกรรม
-                </Typography>
-
-                <Typography
-                  sx={{
-                    color:
-                      '#374151',
-
-                    fontSize:
-                      '13px',
-
-                    lineHeight:
-                      1.7,
-
-                    marginTop:
-                      '8px',
-
-                    wordBreak:
-                      'break-word',
-                  }}
-                >
-                  {formatAuditDetail(selectedLog)}
-                </Typography>
-              </Box>
             </Box>
           )}
         </DialogContent>
@@ -2822,7 +2238,10 @@ function AuditLogPage() {
 
               '&:hover': {
                 backgroundColor:
-                  adminTheme.dark,
+                  '#F8FAFC',
+
+                borderColor:
+                  '#94A3B8',
 
                 boxShadow:
                   'none',

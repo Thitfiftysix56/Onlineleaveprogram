@@ -27,7 +27,7 @@ import AddRounded from '@mui/icons-material/AddRounded';
 import HRLayout from '../../layouts/hrlayout.jsx';
 import { DashboardTablePagination } from '../../components/shareduiprimitives.jsx';
 import DashboardLeaveBalance from '../../components/dashboardleavebalance.jsx';
-import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
+import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -395,6 +395,7 @@ function HRDashboardPage() {
       value: employees.length,
       unit: 'คน',
       description: 'พนักงานทั้งหมดในระบบ',
+      color: '#2563EB',
       background: 'linear-gradient(135deg, #EAF3FF 0%, #FFFFFF 78%)',
       borderColor: '#C9DDFB',
       glowColor: 'rgba(59, 130, 246, 0.10)',
@@ -404,6 +405,7 @@ function HRDashboardPage() {
       value: activeEmployees.length,
       unit: 'คน',
       description: 'พนักงานที่มีสถานะใช้งาน',
+      color: '#15803D',
       background: 'linear-gradient(135deg, #E5F9EE 0%, #FFFFFF 78%)',
       borderColor: '#A7E8C3',
       glowColor: 'rgba(34, 197, 94, 0.10)',
@@ -413,6 +415,7 @@ function HRDashboardPage() {
       value: activeLeaveTypes.length,
       unit: 'ประเภท',
       description: 'ประเภทลาที่เปิดใช้งาน',
+      color: '#7C3AED',
       background: 'linear-gradient(135deg, #F3E8FF 0%, #FFFFFF 78%)',
       borderColor: '#DDD6FE',
       glowColor: 'rgba(124, 58, 237, 0.10)',
@@ -422,6 +425,7 @@ function HRDashboardPage() {
       value: currentYearHolidays.length,
       unit: 'วัน',
       description: `วันหยุดองค์กรปี ${currentYear}`,
+      color: '#D97706',
       background: 'linear-gradient(135deg, #FFF6D8 0%, #FFFFFF 78%)',
       borderColor: '#F6D66B',
       glowColor: 'rgba(245, 158, 11, 0.11)',
@@ -434,14 +438,12 @@ function HRDashboardPage() {
 
   return (
     <HRLayout activeMenu="Dashboard">
-      <PageHeader
-        title="Dashboard"
-        actions={
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
           <Button
             type="button"
             variant="contained"
             startIcon={<AddRounded />}
-            onClick={() => navigate('/hr/leave-request')}
+            onClick={() => navigate('/hr/leave-request', { state: { returnTo: '/hr/dashboard' } })}
             sx={{
               height: '40px',
               padding: '0 16px',
@@ -459,9 +461,7 @@ function HRDashboardPage() {
           >
             สร้างคำขอลา
           </Button>
-        }
-        sx={{ marginBottom: '24px' }}
-      />
+      </Box>
       {/* Header */}
       <Typography
         component="h1"
@@ -482,7 +482,7 @@ function HRDashboardPage() {
         Dashboard
       </Typography>
 
-      <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/hr/leave-request')} sx={{ display: 'none' }}>สร้างคำขอลา</Button>
+      <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/hr/leave-request', { state: { returnTo: '/hr/dashboard' } })} sx={{ display: 'none' }}>สร้างคำขอลา</Button>
 
       {error && (
         <Alert
@@ -527,59 +527,21 @@ function HRDashboardPage() {
             sx={{
               display: 'grid',
               gridTemplateColumns: {
-                xs: 'repeat(2, minmax(0, 1fr))',
+                xs: '1fr',
+                sm: 'repeat(2, minmax(0, 1fr))',
                 md: 'repeat(4, minmax(0, 1fr))',
               },
-              gap: { xs: '12px', sm: '16px' },
-              marginBottom: '22px',
+              gap: '16px',
+              marginBottom: '16px',
             }}
           >
             {summaryCards.map((card) => (
-              <Paper
+              <CompactSummaryCard
                 key={card.title}
-                elevation={0}
-                sx={{
-                  position: 'relative',
-                  overflow: 'hidden',
-                  minHeight: { xs: '132px', sm: '148px' },
-                  padding: { xs: '18px', sm: '22px 24px' },
-                  background: card.background,
-                  border: `1px solid ${card.borderColor}`,
-                  borderRadius: '18px',
-                  boxShadow: '0 8px 24px rgba(15, 23, 42, 0.06)',
-                  transition: 'transform 160ms ease, box-shadow 160ms ease',
-                  '&::after': {
-                    content: '""',
-                    position: 'absolute',
-                    width: '108px',
-                    height: '108px',
-                    top: '-44px',
-                    right: '-26px',
-                    borderRadius: '50%',
-                    backgroundColor: card.glowColor,
-                    pointerEvents: 'none',
-                  },
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 12px 28px rgba(15, 23, 42, 0.09)',
-                  },
-                }}
-              >
-                <Typography sx={{ position: 'relative', zIndex: 1, color: '#334155', fontSize: '14px', fontWeight: 700 }}>
-                  {card.title}
-                </Typography>
-                <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'baseline', gap: '7px', marginTop: '12px' }}>
-                  <Typography sx={{ color: '#0F172A', fontSize: { xs: '28px', sm: '32px' }, fontWeight: 900, lineHeight: 1.15 }}>
-                    {card.value}
-                  </Typography>
-                  <Typography sx={{ color: '#64748B', fontSize: '12px', fontWeight: 700 }}>
-                    {card.unit}
-                  </Typography>
-                </Box>
-                <Typography sx={{ position: 'relative', zIndex: 1, color: '#64748B', fontSize: '12px', fontWeight: 500, marginTop: '8px' }}>
-                  {card.description}
-                </Typography>
-              </Paper>
+                title={card.title}
+                value={card.value}
+                color={card.color}
+              />
             ))}
           </Box>
 
@@ -655,26 +617,12 @@ function HRDashboardPage() {
                       '18px',
 
                     fontWeight:
-                      800,
+                      600,
                   }}
                 >
                   พนักงานล่าสุด
                 </Typography>
 
-                <Typography
-                  sx={{
-                    color:
-                      '#64748B',
-
-                    fontSize:
-                      '12px',
-
-                    marginTop:
-                      '3px',
-                  }}
-                >
-                  แสดงข้อมูลพนักงานล่าสุด
-                </Typography>
               </Box>
 
               <Button

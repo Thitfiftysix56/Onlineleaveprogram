@@ -20,7 +20,7 @@ import AddRounded from '@mui/icons-material/AddRounded';
 
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
 import RequestNumberText from '../../components/requestnumbertext.jsx';
-import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
+import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
 import DashboardLeaveBalance from '../../components/dashboardleavebalance.jsx';
 import { DashboardTablePagination } from '../../components/shareduiprimitives.jsx';
 import { roleAccentTokens } from '../../theme/tokens.js';
@@ -226,9 +226,6 @@ const translateLeaveType = (
     'Personal Leave':
       'ลากิจ',
 
-    'Maternity Leave':
-      'ลาคลอด',
-
     'Paternity Leave':
       'ลาเพื่อดูแลบุตร',
 
@@ -366,10 +363,6 @@ const _translateNotificationMessage = (
     .replace(
       /Personal Leave/gi,
       'ลากิจ',
-    )
-    .replace(
-      /Maternity Leave/gi,
-      'ลาคลอด',
     );
 };
 
@@ -692,7 +685,9 @@ function SupervisorDashboardPage() {
     <SupervisorLayout
       activeMenu="Dashboard"
     >
-      <PageHeader title="Dashboard" actions={<Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/supervisor/leave-request')} sx={{ height: 40, borderRadius: '9px', backgroundColor: '#2563EB', boxShadow: 'none', fontSize: '13px', fontWeight: 800, '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' } }}>สร้างคำขอลา</Button>} />
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/supervisor/leave-request', { state: { returnTo: '/supervisor/dashboard' } })} sx={{ height: 40, borderRadius: '9px', backgroundColor: '#2563EB', boxShadow: 'none', fontSize: '13px', fontWeight: 800, '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' } }}>สร้างคำขอลา</Button>
+      </Box>
 
       {/* Summary Cards */}
       <Box
@@ -715,173 +710,19 @@ function SupervisorDashboardPage() {
             '16px',
 
           marginBottom:
-            '24px',
+            '16px',
         }}
       >
         {summaryCards.map(
           (card) => (
-            <Paper
-              key={
-                card.title
-              }
-              elevation={0}
-              sx={{
-                position:
-                  'relative',
-
-                overflow:
-                  'hidden',
-
-                display:
-                  'flex',
-
-                alignItems:
-                  'baseline',
-
-                justifyContent:
-                  'space-between',
-
-                gap:
-                  '8px',
-
-                minHeight:
-                  '72px',
-
-                padding:
-                  '18px',
-
-                background:
-                  card.gradient,
-
-                border:
-                  '1px solid #E6EAF0',
-
-                borderRadius:
-                  '20px',
-
-                boxShadow:
-                  '0 8px 24px rgba(15, 23, 42, 0.06)',
-
-                '&::after': {
-                  content:
-                    '""',
-
-                  position:
-                    'absolute',
-
-                  width:
-                    '112px',
-
-                  height:
-                    '112px',
-
-                  top:
-                    '-46px',
-
-                  right:
-                    '-38px',
-
-                  borderRadius:
-                    '50%',
-
-                  backgroundColor:
-                    card.glowColor,
-
-                  filter:
-                    'blur(3px)',
-
-                  pointerEvents:
-                    'none',
-                },
-              }}
-            >
-              <Typography
-                noWrap
-                sx={{
-                  position:
-                    'relative',
-
-                  zIndex:
-                    1,
-
-                  color:
-                    '#374151',
-
-                  fontSize:
-                    '14px',
-
-                  fontWeight:
-                    700,
-                }}
-              >
-                {card.title}
-              </Typography>
-
-              <Typography
-                noWrap
-                sx={{
-                  position:
-                    'relative',
-
-                  zIndex:
-                    1,
-
-                  marginTop:
-                    0,
-
-                  color:
-                    card.valueColor,
-
-                  fontSize: {
-                    xs:
-                      '18px',
-
-                    md:
-                      '18px',
-                  },
-
-                  fontWeight:
-                    800,
-
-                  lineHeight:
-                    1,
-
-                  letterSpacing:
-                    '-0.02em',
-                }}
-              >
-                {card.value}
-              </Typography>
-
-              <Typography
-                sx={{
-                  position:
-                    'relative',
-
-                  display:
-                    'none',
-
-                  zIndex:
-                    1,
-
-                  marginTop:
-                    '12px',
-
-                  color:
-                    '#64748B',
-
-                  fontSize:
-                    '12px',
-
-                  fontWeight:
-                    500,
-                }}
-              >
-                {
-                  card.description
-                }
-              </Typography>
-            </Paper>
+            <CompactSummaryCard
+              key={card.title}
+              title={card.title}
+              value={card.value}
+              color={card.valueColor}
+              background={card.gradient}
+              glowColor={card.glowColor}
+            />
           ),
         )}
       </Box>
@@ -952,7 +793,7 @@ function SupervisorDashboardPage() {
                   '18px',
 
                 fontWeight:
-                  800,
+                  600,
               }}
             >
               คำขอลาที่รออนุมัติ
@@ -1460,7 +1301,7 @@ function SupervisorDashboardPage() {
                     '18px',
 
                   fontWeight:
-                    800,
+                    600,
                 }}
               >
                 การแจ้งเตือนล่าสุด

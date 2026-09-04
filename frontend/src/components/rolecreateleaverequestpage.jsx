@@ -27,7 +27,8 @@ import {
 } from '@mui/material';
 
 import CalendarMonthRounded from '@mui/icons-material/CalendarMonthRounded';
-import { PageHeader } from './sharedvisualfoundation.jsx';
+import { BackButton, PageHeader } from './sharedvisualfoundation.jsx';
+import { roleDashboardCardSurfaceSx } from '../theme/rolecardsurface.js';
 
 import {
   useLocation,
@@ -467,6 +468,13 @@ function RoleCreateLeaveRequestPage({
     ) &&
     editRequestId > 0;
 
+  const requestedBackPath = location.state?.returnTo;
+  const backPath =
+    typeof requestedBackPath === 'string' &&
+    requestedBackPath.startsWith(`/${currentRole}/`)
+      ? requestedBackPath
+      : `/${currentRole}/my-requests`;
+
   const [
     formData,
     setFormData,
@@ -561,7 +569,6 @@ function RoleCreateLeaveRequestPage({
           reason: draft.reason || '',
         });
         setAttachments(Array.isArray(draft.attachments) ? draft.attachments : []);
-        setMessage({ severity: 'info', text: `กำลังแก้ไขร่างคำขอ #${draft.id}` });
       })
       .catch((error) => {
         if (active) {
@@ -1749,89 +1756,99 @@ function RoleCreateLeaveRequestPage({
       <Box
         sx={{
           width: '100%',
-          maxWidth: '980px',
+          maxWidth: isEditMode ? '700px' : '760px',
           marginInline: 'auto',
+          '--role-primary': theme.primary,
+          '--role-secondary': theme.dark,
+          '--role-soft': theme.soft,
+          '--role-border': theme.border,
+          '--role-text': theme.text,
+          paddingTop: {
+            xs: '10px',
+            sm: '18px',
+          },
         }}
       >
-      <PageHeader title={isEditMode ? 'แก้ไขคำขอลาฉบับร่าง' : 'ยื่นคำขอลา'} />
+      <PageHeader
+        title={isEditMode ? 'แก้ไขคำขอลาฉบับร่าง' : 'ยื่นคำขอลา'}
+        actions={(
+          <BackButton
+            aria-label={backPath.endsWith('/dashboard') ? 'กลับไปหน้าแดชบอร์ด' : 'กลับไปยังรายการคำขอลา'}
+            onClick={() => navigate(backPath)}
+          >
+            กลับ
+          </BackButton>
+        )}
+      />
 
-      <Box
+      <Paper
+        elevation={0}
         sx={{
           width: '100%',
-          maxWidth: '980px',
-          margin: '0 auto 16px',
-          display: 'grid',
+          maxWidth: '900px',
+          margin: '0 auto 24px',
+          display: 'none',
           gridTemplateColumns: {
             xs: '1fr',
             sm: 'repeat(3, minmax(0, 1fr))',
           },
-          gap: '16px',
+          overflow: 'hidden',
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #D8E0EA',
+          borderRadius: '16px',
+          boxShadow: '0 1px 2px rgba(15, 23, 42, 0.035)',
         }}
       >
         {[
           {
             title: 'วันทำงาน',
             value: formatDays(requestedDays),
-            description: 'นับเป็นวันลา',
-            background: 'linear-gradient(135deg, #EAF3FF 0%, #F7FAFF 68%, #FFFFFF 100%)',
-            glowColor: 'rgba(96, 165, 250, 0.18)',
-            valueColor: '#2563EB',
+            background: theme.soft,
+            valueColor: theme.primary,
           },
           {
             title: 'วันหยุดสุดสัปดาห์',
             value: formatDays(workingDaySummary.weekendDays),
-            description: 'ไม่นับเป็นวันลา',
-            background: 'linear-gradient(135deg, #FFF8DC 0%, #FFFCF1 68%, #FFFFFF 100%)',
-            glowColor: 'rgba(250, 204, 21, 0.18)',
+            background: '#FFFBEB',
             valueColor: '#B45309',
           },
           {
             title: 'วันหยุดองค์กร',
             value: formatDays(workingDaySummary.holidayDays),
-            description: 'ไม่นับเป็นวันลา',
-            background: 'linear-gradient(135deg, #FFF0F1 0%, #FFF8F8 68%, #FFFFFF 100%)',
-            glowColor: 'rgba(248, 113, 113, 0.16)',
+            background: '#FFF5F5',
             valueColor: '#DC2626',
           },
         ].map((card) => (
-          <Paper
+          <Box
             key={card.title}
-            elevation={0}
             sx={{
-              position: 'relative',
-              overflow: 'hidden',
               display: 'flex',
-              alignItems: 'baseline',
+              alignItems: 'center',
               justifyContent: 'space-between',
-              gap: '8px',
-              minHeight: '72px',
-              padding: '18px',
-              background: card.background,
-              border: '1px solid #E6EAF0',
-              borderRadius: '20px',
-              boxShadow: '0 8px 24px rgba(15, 23, 42, 0.07)',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                width: '118px',
-                height: '118px',
-                top: '-47px',
-                right: '-38px',
-                borderRadius: '50%',
-                backgroundColor: card.glowColor,
-                filter: 'blur(3px)',
-                pointerEvents: 'none',
+              gap: '12px',
+              minHeight: '64px',
+              padding: '14px 18px',
+              backgroundColor: card.background,
+              borderRight: {
+                xs: 0,
+                sm: '1px solid #D8E0EA',
+              },
+              borderBottom: {
+                xs: '1px solid #D8E0EA',
+                sm: 0,
+              },
+              '&:last-of-type': {
+                borderRight: 0,
+                borderBottom: 0,
               },
             }}
           >
             <Typography
               noWrap
               sx={{
-                position: 'relative',
-                zIndex: 1,
-                color: '#374151',
-                fontSize: '15px',
-                fontWeight: 700,
+                color: '#334155',
+                fontSize: '14px',
+                fontWeight: 500,
                 lineHeight: 1.4,
               }}
             >
@@ -1840,12 +1857,9 @@ function RoleCreateLeaveRequestPage({
 
             <Typography
               sx={{
-                position: 'relative',
-                zIndex: 1,
-                marginTop: 0,
                 color: card.valueColor,
-                fontSize: '18px',
-                fontWeight: 800,
+                fontSize: '17px',
+                fontWeight: 700,
                 lineHeight: 1,
                 letterSpacing: '-0.02em',
               }}
@@ -1853,52 +1867,9 @@ function RoleCreateLeaveRequestPage({
               {card.value}
             </Typography>
 
-            <Typography
-              sx={{
-                display: 'none',
-                position: 'relative',
-                zIndex: 1,
-                marginTop: '9px',
-                color: '#64748B',
-                fontSize: '12px',
-                fontWeight: 500,
-              }}
-            >
-              {card.description}
-            </Typography>
-          </Paper>
+          </Box>
         ))}
-      </Box>
-      <Box
-        sx={{
-          display: 'none',
-          marginBottom:
-            '28px',
-        }}
-      >
-        <Typography
-          component="h1"
-          sx={{
-            color:
-              '#111827',
-
-            fontSize: {
-              xs:
-                '26px',
-
-              sm:
-                '30px',
-            },
-
-            fontWeight:
-              800,
-          }}
-        >
-          {isEditMode
-            ? 'แก้ไขคำขอลาฉบับร่าง'
-            : 'ยื่นคำขอลา'}
-        </Typography>
-      </Box>
+      </Paper>
 
       {message && (
         <Alert
@@ -1915,7 +1886,7 @@ function RoleCreateLeaveRequestPage({
               '100%',
 
             maxWidth:
-              '980px',
+              '900px',
 
             margin:
               '0 auto 20px',
@@ -1939,7 +1910,7 @@ function RoleCreateLeaveRequestPage({
             '100%',
 
           maxWidth:
-            '980px',
+            '900px',
 
           margin:
             '0 auto',
@@ -1952,7 +1923,7 @@ function RoleCreateLeaveRequestPage({
           },
 
           gap:
-            '16px',
+            '20px',
 
           alignItems:
             'start',
@@ -1961,34 +1932,30 @@ function RoleCreateLeaveRequestPage({
         <Paper
           elevation={0}
           sx={{
-            backgroundColor:
-              '#FFFFFF',
-
-            border:
-              '1px solid #E5E7EB',
-
-            borderRadius:
-              '20px',
-
-            boxShadow:
-              '0 4px 16px rgba(15, 23, 42, 0.04)',
-
-            overflow:
-              'hidden',
+            ...roleDashboardCardSurfaceSx,
+            borderColor: '#E2E8F0',
           }}
         >
           <Box
             sx={{
               padding: {
                 xs:
-                  '18px',
+                  '16px 18px',
 
                 sm:
-                  '20px 24px',
+                  '17px 26px',
               },
 
               borderBottom:
-                '1px solid #E5E7EB',
+                '1px solid #D8E0EA',
+
+              backgroundColor: '#F8FAFC',
+
+              display: 'none',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap',
             }}
           >
             <Typography
@@ -1997,24 +1964,55 @@ function RoleCreateLeaveRequestPage({
                   '#111827',
 
                 fontSize:
-                  '18px',
+                  '16px',
 
                 fontWeight:
-                  800,
+                  600,
               }}
             >
               ข้อมูลการลา
             </Typography>
+
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: '8px',
+                flexWrap: 'wrap',
+                marginLeft: 'auto',
+              }}
+            >
+              <Button
+                type="button"
+                size="small"
+                variant="outlined"
+                onClick={handleSaveDraft}
+                sx={{
+                  minWidth: '104px',
+                  height: '36px',
+                  color: theme.primary,
+                  borderColor: theme.primary,
+                  borderRadius: '11px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  textTransform: 'none',
+                }}
+              >
+                {isEditMode ? 'อัปเดตร่าง' : 'บันทึกร่าง'}
+              </Button>
+
+            </Box>
           </Box>
 
           <Box
             sx={{
               padding: {
                 xs:
-                  '18px',
+                  '40px 20px 26px',
 
                 sm:
-                  '22px 24px',
+                  '48px 28px 30px',
               },
 
               display:
@@ -2028,8 +2026,11 @@ function RoleCreateLeaveRequestPage({
                   'repeat(2, minmax(0, 1fr))',
               },
 
-              gap:
-                '18px',
+              columnGap:
+                '24px',
+
+              rowGap:
+                '16px',
             }}
           >
             <FormControl
@@ -2072,7 +2073,7 @@ function RoleCreateLeaveRequestPage({
                 }
                 sx={{
                   borderRadius:
-                    '10px',
+                    '11px',
                 }}
               >
                 {calculatedLeaveTypes.length >
@@ -2170,6 +2171,73 @@ function RoleCreateLeaveRequestPage({
               }
             />
 
+            {formData.startDate &&
+              formData.endDate && (
+              <Box
+                sx={{
+                  gridColumn: {
+                    xs: 'auto',
+                    md: '1 / -1',
+                  },
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '6px',
+                  padding: '10px 12px',
+                  color: '#334155',
+                  backgroundColor: '#F1F5F9',
+                  borderRadius: '9px',
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: '13px',
+                    fontWeight: 600,
+                  }}
+                >
+                  ใช้สิทธิ์ {formatDays(requestedDays)} วันทำงาน
+                </Typography>
+
+                {(workingDaySummary.weekendDays > 0 ||
+                  workingDaySummary.holidayDays > 0) && (
+                  <Typography
+                    sx={{
+                      color: '#64748B',
+                      fontSize: '12px',
+                    }}
+                  >
+                    • ไม่นับวันหยุด{' '}
+                    {formatDays(
+                      workingDaySummary.weekendDays +
+                        workingDaySummary.holidayDays,
+                    )}{' '}
+                    วัน
+                  </Typography>
+                )}
+
+                {selectedLeaveType && (
+                  <Typography
+                    sx={{
+                      marginLeft: { sm: 'auto' },
+                      color: theme.primary,
+                      fontSize: '12px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    คงเหลือหลังลา{' '}
+                    {formatDays(
+                      Math.max(
+                        0,
+                        selectedLeaveType.availableDays -
+                          requestedDays,
+                      ),
+                    )}{' '}
+                    วัน
+                  </Typography>
+                )}
+              </Box>
+            )}
+
             {policyErrors.length >
               0 && (
               <Alert
@@ -2184,7 +2252,7 @@ function RoleCreateLeaveRequestPage({
                   },
 
                   borderRadius:
-                    '10px',
+                    '16px',
                 }}
               >
                 {policyErrors.map(
@@ -2227,7 +2295,7 @@ function RoleCreateLeaveRequestPage({
                   },
 
                   borderRadius:
-                    '10px',
+                    '16px',
                 }}
               >
                 <Typography
@@ -2273,8 +2341,8 @@ function RoleCreateLeaveRequestPage({
               fullWidth
               required
               multiline
-              minRows={5}
-              maxRows={8}
+              minRows={3}
+              maxRows={6}
               label="เหตุผลการลา"
               placeholder="กรอกเหตุผลการลา"
               value={
@@ -2317,7 +2385,7 @@ function RoleCreateLeaveRequestPage({
                 '& .MuiOutlinedInput-root':
                   {
                     borderRadius:
-                      '10px',
+                      '11px',
                   },
               }}
             />
@@ -2331,6 +2399,12 @@ function RoleCreateLeaveRequestPage({
                   md:
                     '1 / -1',
                 },
+
+                paddingTop: '16px',
+
+                marginTop: '2px',
+
+                borderTop: 0,
               }}
             >
               <Typography
@@ -2341,8 +2415,8 @@ function RoleCreateLeaveRequestPage({
                   fontSize:
                     '14px',
 
-                  fontWeight:
-                    800,
+                fontWeight:
+                    600,
                 }}
               >
                 ไฟล์แนบ
@@ -2378,10 +2452,10 @@ function RoleCreateLeaveRequestPage({
                 variant="outlined"
                 sx={{
                   height:
-                    '42px',
+                  '40px',
 
                   marginTop:
-                    '14px',
+                  '10px',
 
                   padding:
                     '0 18px',
@@ -2393,13 +2467,13 @@ function RoleCreateLeaveRequestPage({
                     theme.primary,
 
                   borderRadius:
-                    '10px',
+                    '11px',
 
                   fontSize:
                     '13px',
 
                   fontWeight:
-                    700,
+                    500,
 
                   textTransform:
                     'none',
@@ -2487,7 +2561,7 @@ function RoleCreateLeaveRequestPage({
                             '1px solid #E5E7EB',
 
                           borderRadius:
-                            '10px',
+                            '11px',
                         }}
                       >
                         <Box
@@ -2573,148 +2647,75 @@ function RoleCreateLeaveRequestPage({
 
           <Box
             sx={{
-              padding: {
-                xs:
-                  '20px',
-
-                sm:
-                  '22px 28px',
-              },
-
-              display:
-                'flex',
-
-              justifyContent:
-                'flex-end',
-
-              flexDirection: {
-                xs:
-                  'column-reverse',
-
-                sm:
-                  'row',
-              },
-
-              gap:
-                '12px',
-
-              backgroundColor:
-                '#F9FAFB',
-
-              borderTop:
-                '1px solid #E5E7EB',
+              padding: { xs: '16px 18px', sm: '18px 28px' },
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              gap: '10px',
+              flexWrap: 'wrap',
+              borderTop: 0,
+              backgroundColor: 'transparent',
             }}
           >
             <Button
               type="button"
               variant="outlined"
-              onClick={
-                handleReset
-              }
+              onClick={handleReset}
               sx={{
-                minWidth:
-                  '100px',
-
-                height:
-                  '44px',
-
-                color:
-                  '#374151',
-
-                borderColor:
-                  '#D1D5DB',
-
-                borderRadius:
-                  '10px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
+                minWidth: '100px',
+                height: '44px',
+                color: '#374151',
+                borderColor: '#D1D5DB',
+                borderRadius: '11px',
+                fontSize: '13px',
+                fontWeight: 500,
+                textTransform: 'none',
               }}
             >
-              {isEditMode
-                ? 'คืนค่าร่าง'
-                : 'ล้างข้อมูล'}
+              {isEditMode ? 'คืนค่าร่าง' : 'ล้างข้อมูล'}
             </Button>
 
             <Button
               type="button"
               variant="outlined"
-              onClick={
-                handleSaveDraft
-              }
+              onClick={handleSaveDraft}
               sx={{
-                minWidth:
-                  '120px',
-
-                height:
-                  '44px',
-
-                color:
-                  theme.primary,
-
-                borderColor:
-                  theme.primary,
-
-                borderRadius:
-                  '10px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
+                minWidth: '112px',
+                height: '44px',
+                color: theme.primary,
+                borderColor: theme.border,
+                borderRadius: '11px',
+                fontSize: '13px',
+                fontWeight: 500,
+                textTransform: 'none',
               }}
             >
-              {isEditMode
-                ? 'อัปเดตร่าง'
-                : 'บันทึกร่าง'}
+              {isEditMode ? 'อัปเดตร่าง' : 'บันทึกร่าง'}
             </Button>
 
             <Button
               type="submit"
               variant="contained"
               sx={{
-                minWidth:
-                  '145px',
-
-                height:
-                  '44px',
-
-                backgroundColor:
-                  '#2563EB',
-
-                color:
-                  '#FFFFFF',
-
-                borderRadius:
-                  '10px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
-
-                boxShadow:
-                  'none',
-
+                minWidth: '130px',
+                height: '44px',
+                backgroundColor: theme.primary,
+                color: '#FFFFFF',
+                borderRadius: '11px',
+                fontSize: '13px',
+                fontWeight: 500,
+                textTransform: 'none',
+                boxShadow: 'none',
                 '&:hover': {
-                  backgroundColor:
-                    '#1D4ED8',
-
-                  boxShadow:
-                    'none',
+                  backgroundColor: theme.dark,
+                  boxShadow: 'none',
                 },
               }}
             >
-              {isEditMode
-                ? 'ส่งร่างที่แก้ไข'
-                : 'ส่งคำขอ'}
+              {isEditMode ? 'ส่งร่างที่แก้ไข' : 'ส่งคำขอ'}
             </Button>
           </Box>
+
         </Paper>
 
         <Paper
@@ -2937,7 +2938,7 @@ function RoleCreateLeaveRequestPage({
               {selectedLeaveType && workingDaySummary.workingDays > 0 ? <Box sx={{ gridColumn: { sm: '1 / -1' }, padding: '12px 14px', backgroundColor: '#F8FAFC', borderRadius: '10px' }}><Typography sx={{ color: '#64748B', fontSize: '11px', fontWeight: 700 }}>คงเหลือหลังอนุมัติ</Typography><Typography sx={{ color: '#0F172A', fontSize: '18px', fontWeight: 800 }}>{formatDays(Math.max(0, selectedLeaveType.availableDays - workingDaySummary.workingDays))} วัน</Typography></Box> : null}
             </Box>
           </DialogContent>
-          <DialogActions sx={{ padding: '14px 20px' }}><Button variant="outlined" onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button><Button variant="contained" onClick={confirmSubmit} sx={{ backgroundColor: '#2563EB' }}>ยืนยันส่งคำขอ</Button></DialogActions>
+          <DialogActions sx={{ padding: '14px 20px' }}><Button variant="outlined" onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button><Button variant="contained" onClick={confirmSubmit} sx={{ backgroundColor: theme.primary, '&:hover': { backgroundColor: theme.dark } }}>ยืนยันส่งคำขอ</Button></DialogActions>
         </Dialog>
       </Box>
       </Box>

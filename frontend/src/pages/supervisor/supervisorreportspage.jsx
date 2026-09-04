@@ -26,8 +26,7 @@ import { useNavigate } from 'react-router-dom';
 
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
 import RequestNumberText from '../../components/requestnumbertext.jsx';
-import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
-import { StatCard } from '../../components/shareduiprimitives.jsx';
+import { CompactSummaryCard, HeaderlessPageTopOffset } from '../../components/sharedvisualfoundation.jsx';
 import { roleAccentTokens } from '../../theme/tokens.js';
 import api from '../../api/axios.js';
 
@@ -66,7 +65,6 @@ const leaveTypeLabels = {
   'Annual Leave': 'ลาพักร้อน',
   'Sick Leave': 'ลาป่วย',
   'Personal Leave': 'ลากิจ',
-  'Maternity Leave': 'ลาคลอด',
   'Paternity Leave': 'ลาเพื่อดูแลบุตร',
   'Ordination Leave': 'ลาอุปสมบท',
   'Military Leave': 'ลาเพื่อรับราชการทหาร',
@@ -160,8 +158,8 @@ function ThaiDateField({
         }}
         sx={{
           '& .MuiOutlinedInput-root': {
-            height: '48px',
-            borderRadius: '9px',
+            height: '44px',
+            borderRadius: '11px',
           },
 
           '& .MuiOutlinedInput-input': {
@@ -373,8 +371,7 @@ function SupervisorReportsPage() {
 
   return (
     <SupervisorLayout activeMenu="Team Reports">
-      <PageHeader title="รายงานทีม" sx={{ marginBottom: '10px' }} />
-
+      <HeaderlessPageTopOffset />
       {error && (
         <Alert
           severity="error"
@@ -403,31 +400,13 @@ function SupervisorReportsPage() {
         }}
       >
         {summaryCards.map((card) => (
-          <StatCard
+          <CompactSummaryCard
             key={card.title}
             title={card.title}
             value={card.value}
-            accent={card.accent}
-            compactInline
-            sx={{
-              minHeight: '72px',
-              padding: '18px',
-              background: card.gradient,
-              borderColor: '#E6EAF0',
-              borderRadius: '20px',
-              boxShadow: '0 8px 24px rgba(15, 23, 42, 0.06)',
-              '&::before': { display: 'none' },
-              '& > [aria-hidden="true"]': {
-                width: '112px',
-                height: '112px',
-                top: '-46px',
-                right: '-38px',
-                backgroundColor: card.glowColor,
-                filter: 'blur(3px)',
-                opacity: 1,
-              },
-              '& > .MuiStack-root': { position: 'relative', zIndex: 1 },
-            }}
+            color={card.accent === 'warning' ? '#B45309' : card.accent === 'success' ? '#15803D' : card.accent === 'error' ? '#DC2626' : '#2563EB'}
+            background={card.gradient}
+            glowColor={card.glowColor}
           />
         ))}
       </Box>
@@ -458,7 +437,7 @@ function SupervisorReportsPage() {
               color: '#111827',
 
               fontSize: '18px',
-              fontWeight: 800,
+              fontWeight: 600,
             }}
           >
             ประวัติการลาของลูกทีม
@@ -495,8 +474,8 @@ function SupervisorReportsPage() {
                   )
                 }
                 sx={{
-                  height: '48px',
-                  borderRadius: '9px',
+                  height: '44px',
+                  borderRadius: '11px',
                 }}
               >
                 <MenuItem value="pending">
@@ -531,8 +510,8 @@ function SupervisorReportsPage() {
                   )
                 }
                 sx={{
-                  height: '48px',
-                  borderRadius: '9px',
+                  height: '44px',
+                  borderRadius: '11px',
                 }}
               >
                 {leaveTypes.map(
@@ -573,7 +552,7 @@ function SupervisorReportsPage() {
               onClick={clearFilters}
               sx={{
                 order: 5,
-                height: '48px',
+                height: '44px',
 
                 gridColumn: {
                   xs: 'auto',
@@ -585,7 +564,7 @@ function SupervisorReportsPage() {
                 color: '#475569',
 
                 borderColor: '#CBD5E1',
-                borderRadius: '9px',
+                borderRadius: '11px',
 
                 fontSize: '12px',
                 fontWeight: 700,
@@ -858,7 +837,8 @@ function SupervisorReportsPage() {
                 onPageChange={(_, nextPage) => setPage(nextPage)}
                 rowsPerPage={rowsPerPage}
                 rowsPerPageOptions={[rowsPerPage]}
-                labelRowsPerPage="รายการต่อหน้า"
+                labelRowsPerPage=""
+                labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredRequests.length / rowsPerPage)}`}
               />
             ) : null}
           </Box>

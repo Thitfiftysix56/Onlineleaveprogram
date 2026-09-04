@@ -17,7 +17,6 @@ import {
 
 import {
   CheckRounded,
-  LockRounded,
   VisibilityOffRounded,
   VisibilityRounded,
 } from '@mui/icons-material';
@@ -28,6 +27,7 @@ import {
 
 import api from '../api/axios.js';
 import { PageHeader } from './sharedvisualfoundation.jsx';
+import { roleDashboardCardSurfaceSx } from '../theme/rolecardsurface.js';
 
 import {
   getCurrentUser,
@@ -191,9 +191,9 @@ function PasswordField({
         sx={{
           '& .MuiOutlinedInput-root':
             {
-              height: '50px',
+              height: '44px',
               backgroundColor: '#FFFFFF',
-              borderRadius: '12px',
+              borderRadius: '11px',
 
               '& fieldset': {
                 borderColor: '#E2E8F0',
@@ -582,18 +582,9 @@ function RoleChangePasswordPage({
     <LayoutComponent
       activeMenu="Change Password"
     >
-      <Box
-        sx={{
-          width: '100%',
-          maxWidth: '620px',
-          marginInline: 'auto',
-        }}
-      >
       <PageHeader
         title="เปลี่ยนรหัสผ่าน"
-        sx={{
-          marginBottom: '18px',
-        }}
+        sx={{ maxWidth: '620px', marginInline: 'auto' }}
       />
 
       {(errorMessage ||
@@ -610,10 +601,8 @@ function RoleChangePasswordPage({
           }}
           sx={{
             width: '100%',
-            maxWidth: '760px',
-            marginBottom: '16px',
-            borderRadius: '10px',
-            fontSize: '12px',
+            maxWidth: '620px',
+            margin: '0 auto 16px',
           }}
         >
           {errorMessage ||
@@ -634,40 +623,31 @@ function RoleChangePasswordPage({
         <Paper
           elevation={0}
           sx={{
-            background:
-              `linear-gradient(
-                135deg,
-                #FFFFFF 0%,
-                ${resolvedTheme.soft || '#EFF6FF'} 100%
-              )`,
-            border:
-              '1px solid #E6ECF3',
-            borderRadius: '20px',
-            overflow: 'hidden',
-            boxShadow:
-              `0 10px 28px ${resolvedTheme.primary}12`,
+            ...roleDashboardCardSurfaceSx,
+            borderColor: '#E2E8F0',
           }}
         >
           <Box
             sx={{
               padding: {
-                xs: '20px 18px 18px',
-                sm: '22px 24px 20px',
+                xs: '20px',
+                sm: '24px 28px',
               },
+              background: `linear-gradient(180deg, ${resolvedTheme.soft} 0%, #FFFFFF 150px)`,
             }}
           >
             <Box
               sx={{
                 width: '100%',
                 maxWidth: '480px',
-                margin: '0 auto 18px',
+                margin: '0 auto 20px',
               }}
             >
               <Typography
                 sx={{
-                  color: resolvedTheme.dark,
-                  fontSize: '14px',
-                  fontWeight: 800,
+                  color: '#0F172A',
+                  fontSize: '16px',
+                  fontWeight: 600,
                 }}
               >
                 ตั้งรหัสผ่านใหม่
@@ -679,7 +659,7 @@ function RoleChangePasswordPage({
               sx={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '18px',
+                gap: '20px',
                 width: '100%',
                 maxWidth: '480px',
                 margin: '0 auto',
@@ -751,7 +731,7 @@ function RoleChangePasswordPage({
                     display: 'flex',
                     flexWrap: 'wrap',
                     gap: '7px',
-                    marginTop: '10px',
+                    marginTop: '8px',
                   }}
                 >
                   {passwordChecks.map(
@@ -763,9 +743,9 @@ function RoleChangePasswordPage({
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '5px',
-                          minHeight: '26px',
-                          padding: '4px 8px',
+                          gap: '6px',
+                          minHeight: '28px',
+                          padding: '5px 9px',
                           backgroundColor:
                             requirement.passed
                               ? '#F0FDF4'
@@ -776,7 +756,7 @@ function RoleChangePasswordPage({
                       >
                         <CheckRounded
                           sx={{
-                            fontSize: '12px',
+                            fontSize: '14px',
                             color:
                               requirement.passed
                                 ? '#16A34A'
@@ -790,8 +770,8 @@ function RoleChangePasswordPage({
                               requirement.passed
                                 ? '#166534'
                                 : '#64748B',
-                            fontSize: '9.5px',
-                            fontWeight: 600,
+                            fontSize: '11.5px',
+                            fontWeight: 500,
                             lineHeight: 1.2,
                           }}
                         >
@@ -845,8 +825,8 @@ function RoleChangePasswordPage({
                           passwordsMatch
                             ? '#15803D'
                             : '#DC2626',
-                        fontSize: '10px',
-                        fontWeight: 600,
+                        fontSize: '12px',
+                        fontWeight: 500,
                       }}
                     >
                       {passwordsMatch
@@ -861,9 +841,11 @@ function RoleChangePasswordPage({
           <Box
             sx={{
               padding: {
-                xs: '0 18px 20px',
-                sm: '0 22px 22px',
+                xs: '16px 20px 20px',
+                sm: '18px 28px 24px',
               },
+              borderTop: 0,
+              backgroundColor: 'transparent',
             }}
           >
             <Box
@@ -884,14 +866,14 @@ function RoleChangePasswordPage({
               }
               sx={{
                 minWidth: '142px',
-                height: '40px',
-                padding: '0 18px',
+                height: '44px',
+                padding: '0 20px',
                 backgroundColor:
                   resolvedTheme.primary,
                 color: '#FFFFFF',
-                borderRadius: '9px',
-                fontSize: '12px',
-                fontWeight: 700,
+                borderRadius: '11px',
+                fontSize: '13px',
+                fontWeight: 500,
                 textTransform: 'none',
                 boxShadow:
                   `0 5px 12px ${resolvedTheme.primary}28`,
@@ -938,7 +920,6 @@ function RoleChangePasswordPage({
             </Box>
           </Box>
         </Paper>
-      </Box>
       </Box>
     </LayoutComponent>
 

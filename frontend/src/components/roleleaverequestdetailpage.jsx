@@ -27,7 +27,7 @@ import {
   useParams,
 } from 'react-router-dom';
 
-import { cancelLeaveRequest, decideLeaveRequest, deleteLeaveDraft, getMyLeaveRequest, getSupervisorApproval } from '../api/leave-service.js';
+import { cancelLeaveRequest, decideHrLeaveRequest, decideLeaveRequest, deleteLeaveDraft, getHrApproval, getLeaveReportRequests, getMyLeaveRequest, getSupervisorApproval } from '../api/leave-service.js';
 
 function RoleLeaveRequestDetailPage({
   LayoutComponent,
@@ -85,6 +85,11 @@ function RoleLeaveRequestDetailPage({
 
   const isSupervisor =
     viewerMode === 'supervisor';
+
+  const isHrApprover =
+    viewerMode === 'hr-approver';
+
+  const isApprover = isSupervisor || isHrApprover;
 
   const isHR =
     viewerMode === 'hr';
@@ -237,6 +242,10 @@ function RoleLeaveRequestDetailPage({
       return '/hr/reports';
     }
 
+    if (viewerMode === 'hr-approver') {
+      return '/hr/approval';
+    }
+
     if (
       viewerMode === 'admin-metadata'
     ) {
@@ -253,15 +262,33 @@ function RoleLeaveRequestDetailPage({
   useEffect(() => {
     let active = true;
     const load = async () => {
-    let storedRequest = null;
+    const routedRequest =
+      isHR &&
+      Number(location.state?.requestData?.id) === numericRequestId
+        ? location.state.requestData
+        : null;
+
+    let storedRequest = requestData || routedRequest;
 
     if (
+      !storedRequest &&
       Number.isInteger(
         numericRequestId,
       ) &&
       numericRequestId > 0
     ) {
-      storedRequest = isSupervisor ? await getSupervisorApproval(numericRequestId) : await getMyLeaveRequest(numericRequestId);
+      if (isSupervisor) {
+        storedRequest = await getSupervisorApproval(numericRequestId);
+      } else if (isHrApprover) {
+        storedRequest = await getHrApproval(numericRequestId);
+      } else if (isHR) {
+        const reportRequests = await getLeaveReportRequests();
+        storedRequest = reportRequests.find(
+          (item) => Number(item.id ?? item.leaveRequestId ?? item.leave_request_id) === numericRequestId,
+        ) || null;
+      } else {
+        storedRequest = await getMyLeaveRequest(numericRequestId);
+      }
     }
 
     if (
@@ -311,6 +338,9 @@ function RoleLeaveRequestDetailPage({
     currentRole,
     isOwner,
     isSupervisor,
+    isHrApprover,
+    isHR,
+    location.state,
     numericRequestId,
     requestData,
     requestId,
@@ -334,11 +364,11 @@ function RoleLeaveRequestDetailPage({
     currentStatus === 'pending';
 
   const canApprove =
-    isSupervisor &&
+    isApprover &&
     currentStatus === 'pending';
 
   const canReject =
-    isSupervisor &&
+    isApprover &&
     currentStatus === 'pending';
 
   const hasAvailableAction =
@@ -488,6 +518,12 @@ function RoleLeaveRequestDetailPage({
       ? `Draft #${request.id}`
       : '-');
 
+  const pageTitle = isApprover
+    ? `พิจารณาคำขอ ${requestReference}`
+    : isHR
+      ? `รายละเอียดคำขอ ${requestReference}`
+      : `คำขอลา ${requestReference}`;
+
   const handleEditDraft = () => {
     if (
       !canEditDraft ||
@@ -597,7 +633,7 @@ function RoleLeaveRequestDetailPage({
         return;
       }
 
-      let updatedRequest; try { await decideLeaveRequest(request.id, 'rejected', normalizedReason); updatedRequest={...request,status:'rejected',rejectionReason:normalizedReason,reviewedAt:new Date().toISOString()}; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'ไม่สามารถปฏิเสธคำขอได้'}); }
+      let updatedRequest; try { await (isHrApprover ? decideHrLeaveRequest : decideLeaveRequest)(request.id, 'rejected', normalizedReason); updatedRequest={...request,status:'rejected',rejectionReason:normalizedReason,reviewedAt:new Date().toISOString()}; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'ไม่สามารถปฏิเสธคำขอได้'}); }
 
       if (!updatedRequest) {
         setMessage({
@@ -626,7 +662,7 @@ function RoleLeaveRequestDetailPage({
     if (
       selectedAction === 'approve'
     ) {
-      let updatedRequest; try { await decideLeaveRequest(request.id, 'approved'); updatedRequest={...request,status:'approved',reviewedAt:new Date().toISOString()}; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'ไม่สามารถอนุมัติคำขอได้'}); }
+      let updatedRequest; try { await (isHrApprover ? decideHrLeaveRequest : decideLeaveRequest)(request.id, 'approved'); updatedRequest={...request,status:'approved',reviewedAt:new Date().toISOString()}; } catch(error) { setMessage({severity:'error',text:error.response?.data?.message||'ไม่สามารถอนุมัติคำขอได้'}); }
 
       if (!updatedRequest) {
         setMessage({
@@ -952,13 +988,12 @@ function RoleLeaveRequestDetailPage({
         }}
       >
       <PageHeader
-        title="รายละเอียดคำขอลา"
+        title={pageTitle}
         actions={
           <BackButton onClick={handleBack}>
             กลับ
           </BackButton>
         }
-        sx={{ marginBottom: '14px' }}
       />
 
       <Paper
@@ -969,8 +1004,8 @@ function RoleLeaveRequestDetailPage({
           marginBottom: '16px',
           padding: 0,
           background:
-            'linear-gradient(135deg, #EDF5FF 0%, #FFFFFF 72%)',
-          border: '1px solid #D8E6FB',
+            `linear-gradient(135deg, ${theme.soft} 0%, #FFFFFF 72%)`,
+          border: '1px solid #E2E8F0',
           borderRadius: '20px',
           boxShadow:
             '0 8px 24px rgba(15, 23, 42, 0.055)',
@@ -982,8 +1017,8 @@ function RoleLeaveRequestDetailPage({
             top: '-84px',
             right: '-38px',
             borderRadius: '50%',
-            backgroundColor:
-              'rgba(59, 130, 246, 0.08)',
+            backgroundColor: theme.primary,
+            opacity: 0.07,
             pointerEvents: 'none',
           },
         }}
@@ -1027,7 +1062,7 @@ function RoleLeaveRequestDetailPage({
             >
               <Typography
                 sx={{
-                  color: '#2563EB',
+                  color: theme.primary,
                   fontSize: {
                     xs: '15px',
                     sm: '16px',
@@ -1067,10 +1102,10 @@ function RoleLeaveRequestDetailPage({
               },
               borderLeft: {
                 xs: 'none',
-                md: '1px solid rgba(148, 163, 184, 0.28)',
+                md: 'none',
               },
               borderTop: {
-                xs: '1px solid rgba(148, 163, 184, 0.28)',
+                xs: 'none',
                 md: 'none',
               },
             }}
@@ -1305,18 +1340,19 @@ function RoleLeaveRequestDetailPage({
 
                   fontSize: '18px',
 
-                  fontWeight: 800,
+                  fontWeight: 600,
                 }}
               >
                 ข้อมูลคำขอ
               </Typography>
-              {isSupervisor && (canApprove || canReject) ? (
+              {isApprover && (canApprove || canReject) ? (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {canApprove && (
                     <Button
                       type="button"
                       size="small"
                       variant="contained"
+                      color="success"
                       onClick={() => openActionDialog('approve')}
                       sx={{
                         height: '36px',
@@ -1337,6 +1373,7 @@ function RoleLeaveRequestDetailPage({
                       type="button"
                       size="small"
                       variant="outlined"
+                      color="error"
                       onClick={() => openActionDialog('reject')}
                       sx={{
                         height: '36px',
@@ -1354,10 +1391,10 @@ function RoleLeaveRequestDetailPage({
                   )}
                 </Box>
               ) : null}
-              {!isSupervisor && hasAvailableAction ? (
+              {!isApprover && hasAvailableAction ? (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {canEditDraft ? (
-                    <Button type="button" size="small" variant="outlined" onClick={handleEditDraft}>
+                    <Button type="button" size="small" variant="outlined" color="secondary" onClick={handleEditDraft}>
                       แก้ไขร่าง
                     </Button>
                   ) : null}
@@ -1376,6 +1413,7 @@ function RoleLeaveRequestDetailPage({
                     <Button
                       type="button"
                       size="small"
+                      color="error"
                       variant="outlined"
                       onClick={() => openActionDialog('cancel')}
                       sx={{
@@ -1608,7 +1646,7 @@ function RoleLeaveRequestDetailPage({
 
                   fontSize: '18px',
 
-                  fontWeight: 800,
+                  fontWeight: 600,
                 }}
               >
                 เอกสารแนบ
@@ -1845,7 +1883,7 @@ function RoleLeaveRequestDetailPage({
 
                 fontSize: '18px',
 
-                fontWeight: 800,
+                fontWeight: 600,
               }}
             >
               ลำดับเหตุการณ์การอนุมัติ
@@ -2027,7 +2065,7 @@ function RoleLeaveRequestDetailPage({
 
                 fontSize: '16px',
 
-                fontWeight: 800,
+                fontWeight: 600,
               }}
             >
               การดำเนินการที่ทำได้
@@ -2066,6 +2104,7 @@ function RoleLeaveRequestDetailPage({
                   <Button
                     type="button"
                     variant="contained"
+                    color="secondary"
                     onClick={
                       handleEditDraft
                     }
@@ -2107,6 +2146,7 @@ function RoleLeaveRequestDetailPage({
                   <Button
                     type="button"
                     variant="outlined"
+                    color="error"
                     onClick={() =>
                       openActionDialog(
                         'delete',
@@ -2146,6 +2186,7 @@ function RoleLeaveRequestDetailPage({
                   <Button
                     type="button"
                     variant="outlined"
+                    color="error"
                     onClick={() =>
                       openActionDialog(
                         'cancel',
@@ -2191,6 +2232,7 @@ function RoleLeaveRequestDetailPage({
                   <Button
                     type="button"
                     variant="contained"
+                    color="success"
                     onClick={() =>
                       openActionDialog(
                         'approve',
@@ -2234,6 +2276,7 @@ function RoleLeaveRequestDetailPage({
                   <Button
                     type="button"
                     variant="outlined"
+                    color="error"
                     onClick={() =>
                       openActionDialog(
                         'reject',
@@ -2436,7 +2479,7 @@ function RoleLeaveRequestDetailPage({
               '16px 24px 20px',
 
             borderTop:
-              '1px solid #E5E7EB',
+              0,
           }}
         >
           <Button
@@ -2469,6 +2512,7 @@ function RoleLeaveRequestDetailPage({
           <Button
             type="button"
             variant="contained"
+            color={selectedAction === 'approve' ? 'success' : 'error'}
             onClick={
               handleConfirmAction
             }
