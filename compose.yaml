@@ -92,6 +92,7 @@ services:
       - "3307:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
+      - ./Backups/Before-Mentor-Test-20260904-135531/database-before-mentor-test.sql:/docker-entrypoint-initdb.d/01-before-mentor-test.sql:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
@@ -130,7 +131,6 @@ services:
 
 volumes:
   mariadb_data:
-    external: true
     name: online-leave-system_mariadb_data
 
   frontend_node_modules:
