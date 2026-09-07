@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -292,7 +293,7 @@ function ApprovalPendingListPage({
     setRowsPerPage,
   ] = useState(5);
 
-  const loadPendingRequests =
+  const loadPendingRequests = useCallback(
     async () => {
       setLoading(true);
       setLoadError('');
@@ -354,11 +355,13 @@ function ApprovalPendingListPage({
       } finally {
         setLoading(false);
       }
-    };
+    },
+    [approvalsApiPath],
+  );
 
   useEffect(() => {
     loadPendingRequests();
-  }, [approvalsApiPath]);
+  }, [loadPendingRequests]);
 
   const leaveTypeOptions =
     useMemo(() => {
@@ -404,6 +407,9 @@ function ApprovalPendingListPage({
             request.department,
             request.position,
             request.leaveType,
+            translateLeaveType(
+              request.leaveType,
+            ),
             request.reason,
           ]
             .filter(Boolean)
@@ -534,6 +540,12 @@ function ApprovalPendingListPage({
     (request) => {
       navigate(
         `${approvalPagePath}/${request.id}`,
+        {
+          state: {
+            returnTo: `${window.location.pathname}${window.location.search}`,
+            returnLabel: 'รายการรออนุมัติ',
+          },
+        },
       );
     };
 
@@ -680,9 +692,6 @@ function ApprovalPendingListPage({
               xs: '18px',
               sm: '20px 22px',
             },
-
-            borderBottom:
-              '1px solid #E5E7EB',
           }}
         >
           <Typography
@@ -1412,49 +1421,9 @@ function ApprovalPendingListPage({
               {requests.length ===
               0
                 ? 'เมื่อพนักงานในทีมส่งคำขอลา รายการจะแสดงที่หน้านี้'
-                : 'ลองเปลี่ยนหรือล้างตัวกรองเพื่อดูรายการอื่น'}
+                : 'ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่าเพื่อดูรายการอื่น'}
             </Typography>
 
-            {requests.length >
-              0 && (
-              <Button
-                type="button"
-                variant="outlined"
-                onClick={
-                  handleClearFilters
-                }
-                sx={{
-                  height:
-                    '40px',
-
-                  marginTop:
-                    '18px',
-
-                  padding:
-                    '0 16px',
-
-                  color:
-                    supervisorTheme.primary,
-
-                  borderColor:
-                    supervisorTheme.border,
-
-                  borderRadius:
-                    '8px',
-
-                  fontSize:
-                    '12px',
-
-                  fontWeight:
-                    700,
-
-                  textTransform:
-                    'none',
-                }}
-              >
-                ล้างตัวกรอง
-              </Button>
-            )}
           </Box>
         )}
       </Paper>

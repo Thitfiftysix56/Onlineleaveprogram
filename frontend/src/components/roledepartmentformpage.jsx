@@ -123,7 +123,7 @@ function RoleDepartmentFormPage({
   const formDialogs = (
     <>
       <Dialog
-        open={open}
+        open={open && !confirmationOpen}
         onClose={closeForm}
         fullWidth
         maxWidth="sm"
@@ -173,15 +173,15 @@ function RoleDepartmentFormPage({
 
       <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>ยืนยันการบันทึกข้อมูลแผนก</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent>
           <Stack gap="8px">
             <Typography><strong>ชื่อแผนก:</strong> {formData.departmentName.trim()}</Typography>
             <Typography><strong>รายละเอียด:</strong> {formData.description.trim() || '-'}</Typography>
           </Stack>
         </DialogContent>
         <DialogActions sx={{ padding: '14px 20px' }}>
-          <Button variant="outlined" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button>
-          <Button variant="contained" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>
+          <Button variant="outlined" color="secondary" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button>
+          <Button variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>
         </DialogActions>
       </Dialog>
     </>

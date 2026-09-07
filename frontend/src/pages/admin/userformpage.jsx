@@ -828,7 +828,7 @@ function UserFormPage({
   const FormContainer = dialogOnly ? Dialog : AdminLayout;
   const containerProps = dialogOnly
     ? {
-        open,
+        open: open && !confirmationOpen,
         onClose: () => !isSubmitting && handleBack(),
         fullWidth: true,
         maxWidth: 'md',
@@ -1469,7 +1469,7 @@ function UserFormPage({
                   '0 20px',
 
                 backgroundColor:
-                  '#EA580C',
+                  '#2563EB',
 
                 color:
                   '#FFFFFF',
@@ -1491,7 +1491,7 @@ function UserFormPage({
 
                 '&:hover': {
                   backgroundColor:
-                    '#C2410C',
+                    '#1D4ED8',
 
                   boxShadow:
                     'none',
@@ -1846,7 +1846,7 @@ function UserFormPage({
 
       <Dialog open={confirmationOpen} onClose={() => !isSubmitting && setConfirmationOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>ยืนยันการบันทึกบัญชีผู้ใช้</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent>
           <Box sx={{ display: 'grid', gap: '8px' }}>
             <Typography><strong>พนักงาน:</strong> {selectedEmployee?.employeeName || '-'}</Typography>
             <Typography><strong>ชื่อผู้ใช้:</strong> {formData.username.trim() || '-'}</Typography>
@@ -1855,8 +1855,8 @@ function UserFormPage({
           </Box>
         </DialogContent>
         <DialogActions sx={{ padding: '14px 20px' }}>
-          <Button variant="outlined" disabled={isSubmitting} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button>
-          <Button variant="contained" disabled={isSubmitting} onClick={confirmSave}>{isSubmitting ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>
+          <Button variant="outlined" color="secondary" disabled={isSubmitting} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button>
+          <Button variant="contained" color="success" disabled={isSubmitting} onClick={confirmSave}>{isSubmitting ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>
         </DialogActions>
       </Dialog>
 

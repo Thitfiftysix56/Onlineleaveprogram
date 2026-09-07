@@ -486,12 +486,23 @@ function LeaveEntitlementManagementPage() {
         (item) => {
           const matchesSearch =
             !keyword ||
-            item.employeeCode
-              .toLowerCase()
-              .includes(keyword) ||
-            item.employeeName
-              .toLowerCase()
-              .includes(keyword);
+            [
+              item.employeeCode,
+              item.employeeName,
+              item.department,
+              item.leaveType,
+              translateLeaveType(
+                item.leaveType,
+              ),
+              item.year,
+            ]
+              .map((value) =>
+                String(value || '')
+                  .toLowerCase(),
+              )
+              .some((value) =>
+                value.includes(keyword),
+              );
 
           const matchesDepartment =
             departmentFilter ===
@@ -1146,9 +1157,6 @@ function LeaveEntitlementManagementPage() {
           sx={{
             padding:
               '20px 24px',
-
-            borderBottom:
-              '1px solid #E5E7EB',
           }}
         >
           <Typography
@@ -1174,7 +1182,7 @@ function LeaveEntitlementManagementPage() {
             activeFilters={[
               ...(departmentFilter !== 'all' ? [{ key: 'department', label: `แผนก: ${departmentFilter}`, onDelete: () => setDepartmentFilter('all') }] : []),
               ...(leaveTypeFilter !== 'all' ? [{ key: 'type', label: `ประเภท: ${translateLeaveType(leaveTypes.find((item) => String(item.id) === String(leaveTypeFilter))?.name || leaveTypeFilter)}`, onDelete: () => setLeaveTypeFilter('all') }] : []),
-              ...(yearFilter !== 'all' ? [{ key: 'year', label: `ปี: ${yearFilter}`, onDelete: () => setYearFilter('all') }] : []),
+              ...(yearFilter !== String(currentYear) ? [{ key: 'year', label: `ปี: ${yearFilter}`, onDelete: () => setYearFilter(String(currentYear)) }] : []),
             ]}
             onClearFilters={handleClearFilters}
             filters={<><FormControl size="small"><Select value={departmentFilter === 'all' ? '' : departmentFilter} displayEmpty renderValue={(value) => value || 'แผนก'} inputProps={{ 'aria-label': 'แผนก' }} onChange={(event) => setDepartmentFilter(event.target.value || 'all')}>{departments.map((department) => <MenuItem key={department} value={department}>{department}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={leaveTypeFilter === 'all' ? '' : leaveTypeFilter} displayEmpty renderValue={(value) => value ? translateLeaveType(leaveTypes.find((item) => String(item.id) === String(value))?.name || value) : 'ประเภทลา'} inputProps={{ 'aria-label': 'ประเภทลา' }} onChange={(event) => setLeaveTypeFilter(event.target.value || 'all')}>{leaveTypes.map((leaveType) => <MenuItem key={leaveType.id} value={String(leaveType.id)}>{translateLeaveType(leaveType.name)}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={yearFilter === 'all' ? '' : yearFilter} displayEmpty renderValue={(value) => value || 'ปี'} inputProps={{ 'aria-label': 'ปี' }} onChange={(event) => setYearFilter(event.target.value || 'all')}>{years.map((year) => <MenuItem key={year} value={String(year)}>{year}</MenuItem>)}</Select></FormControl></>}
@@ -1494,7 +1502,6 @@ function LeaveEntitlementManagementPage() {
                     'สิทธิ์ทั้งหมด',
                     'ใช้ไปแล้ว',
                     'คงเหลือ',
-                    'การดำเนินการ',
                   ].map(
                     (
                       heading,
@@ -1720,8 +1727,6 @@ function LeaveEntitlementManagementPage() {
                             วัน
                           </Box>
                         </TableCell>
-
-                        <TableCell />
                       </TableRow>
                     );
                   },
@@ -1820,7 +1825,7 @@ function LeaveEntitlementManagementPage() {
                   '5px',
               }}
             >
-              ลองเปลี่ยนหรือล้างตัวกรอง
+              ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่า
             </Typography>
           </Box>
         )}
@@ -1831,7 +1836,7 @@ function LeaveEntitlementManagementPage() {
       ====================== */}
 
       <Dialog
-        open={dialogOpen}
+        open={dialogOpen && !confirmationOpen}
         onClose={
           handleCloseDialog
         }
@@ -2266,7 +2271,7 @@ function LeaveEntitlementManagementPage() {
 
               '&:hover': {
                 backgroundColor:
-                  theme.dark,
+                  '#1D4ED8',
 
                 boxShadow:
                   'none',
@@ -2279,7 +2284,7 @@ function LeaveEntitlementManagementPage() {
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm"><DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกสิทธิ์การลา</DialogTitle><DialogContent dividers><Typography>พนักงาน: {employees.find((item) => Number(item.id) === Number(formData.employeeId))?.fullName || '-'}</Typography><Typography sx={{ marginTop: '8px' }}>ประเภทการลา: {translateLeaveType(leaveTypes.find((item) => Number(item.id) === Number(formData.leaveTypeId))?.name || '-')}</Typography><Typography sx={{ marginTop: '8px' }}>ปี: {formData.year} · สิทธิ์ {formData.totalDays} วัน · ใช้แล้ว {formData.usedDays} วัน</Typography></DialogContent><DialogActions sx={{ padding: '14px 20px' }}><Button variant="outlined" disabled={saving} onClick={() => setConfirmationOpen(false)} sx={{ color: '#475569', borderColor: '#CBD5E1' }}>กลับไปแก้ไข</Button><Button variant="contained" disabled={saving} onClick={confirmSave} sx={{ backgroundColor: '#15803D', '&:hover': { backgroundColor: '#166534' } }}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions></Dialog>
+      <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm"><DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกสิทธิ์การลา</DialogTitle><DialogContent><Typography>พนักงาน: {employees.find((item) => Number(item.id) === Number(formData.employeeId))?.fullName || '-'}</Typography><Typography sx={{ marginTop: '8px' }}>ประเภทการลา: {translateLeaveType(leaveTypes.find((item) => Number(item.id) === Number(formData.leaveTypeId))?.name || '-')}</Typography><Typography sx={{ marginTop: '8px' }}>ปี: {formData.year} · สิทธิ์ {formData.totalDays} วัน · ใช้แล้ว {formData.usedDays} วัน</Typography></DialogContent><DialogActions sx={{ padding: '14px 20px' }}><Button variant="outlined" color="secondary" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button><Button variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions></Dialog>
     </HRLayout>
   );
 }

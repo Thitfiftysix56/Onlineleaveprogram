@@ -61,7 +61,7 @@ function TemporaryPasswordDialog({
         {title}
       </DialogTitle>
 
-      <DialogContent dividers>
+      <DialogContent>
         <Alert
           severity="warning"
           sx={{ marginBottom: '20px' }}

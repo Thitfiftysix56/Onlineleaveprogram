@@ -14,9 +14,12 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
+  IconButton,
+  InputAdornment,
   MenuItem,
   Paper,
   Select,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -26,6 +29,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+
+import CloseRounded from '@mui/icons-material/CloseRounded';
 
 import AdminLayout from '../../layouts/adminlayout.jsx';
 import { CompactSummaryCard, HeaderlessPageTopOffset } from '../../components/sharedvisualfoundation.jsx';
@@ -778,10 +783,23 @@ const getActionStyle = (
     ).toUpperCase();
 
   if (
+    normalized.includes('FAILED') ||
+    normalized.includes('REJECT') ||
+    normalized.includes('DELETE') ||
+    normalized.includes('LOCK') ||
+    normalized.includes('CANCEL') ||
+    normalized.includes('RATE_LIMITED')
+  ) {
+    return {
+      backgroundColor: '#FEF2F2',
+      color: '#B91C1C',
+    };
+  }
+
+  if (
     [
       'LOGIN',
       'LOGOUT',
-      'LOGIN_FAILED',
     ].includes(
       normalized,
     )
@@ -809,26 +827,6 @@ const getActionStyle = (
 
       color:
         '#047857',
-    };
-  }
-
-  if (
-    normalized.includes(
-      'REJECT',
-    ) ||
-    normalized.includes(
-      'DELETE',
-    ) ||
-    normalized.includes(
-      'LOCK',
-    )
-  ) {
-    return {
-      backgroundColor:
-        '#FEF2F2',
-
-      color:
-        '#B91C1C',
     };
   }
 
@@ -1090,7 +1088,17 @@ function AuditLogPage() {
             ).includes(
               keyword,
             ) ||
-            normalizeValue(log.action).includes(keyword);
+            normalizeValue(log.action).includes(keyword) ||
+            normalizeValue(
+              formatAuditActivity(
+                log.action,
+              ),
+            ).includes(keyword) ||
+            normalizeValue(
+              translateRole(
+                log.role,
+              ),
+            ).includes(keyword);
 
           const matchesRole =
             roleFilter ===
@@ -1265,12 +1273,10 @@ function AuditLogPage() {
      Actions
   ========================= */
 
-  const handleClearFilters =
-    () => {
-      setSearchText('');
-      setRoleFilter('All');
-      setActionFilter('All');
-    };
+  const activeFilterChips = [
+    ...(roleFilter !== 'All' ? [{ key: 'role', label: `บทบาท: ${translateRole(roleFilter)}`, onDelete: () => setRoleFilter('All') }] : []),
+    ...(actionFilter !== 'All' ? [{ key: 'action', label: `กิจกรรม: ${actionGroups.find((group) => group.value === actionFilter)?.label || actionFilter}`, onDelete: () => setActionFilter('All') }] : []),
+  ];
 
   const handleCloseDialog =
     () => {
@@ -1398,9 +1404,6 @@ function AuditLogPage() {
           sx={{
             padding:
               '20px 22px',
-
-            borderBottom:
-              '1px solid #E5E7EB',
           }}
         >
           <Box
@@ -1448,8 +1451,7 @@ function AuditLogPage() {
                 xs:
                   '1fr',
 
-                md:
-                  'minmax(280px, 1.5fr) repeat(2, minmax(170px, 0.7fr))',
+                md: 'minmax(280px, 1.5fr) repeat(2, minmax(170px, 0.7fr))',
               },
 
               gap:
@@ -1459,7 +1461,7 @@ function AuditLogPage() {
                 '18px',
             }}
           >
-            <TextField fullWidth label="ชื่อผู้ใช้งาน" placeholder="ค้นหาชื่อผู้ใช้งาน" value={searchText} onChange={(event) => setSearchText(event.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: '44px', borderRadius: '11px', '&.Mui-focused fieldset': { borderColor: adminTheme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: adminTheme.primary } }} />
+            <TextField fullWidth label="ชื่อผู้ใช้งาน" placeholder="ค้นหาชื่อผู้ใช้งาน" value={searchText} onChange={(event) => setSearchText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); event.target.blur(); } }} slotProps={{ input: { endAdornment: searchText ? <InputAdornment position="end"><IconButton type="button" size="small" aria-label="ล้างคำค้นหา" onClick={() => setSearchText('')}><CloseRounded fontSize="small" /></IconButton></InputAdornment> : null } }} sx={{ '& .MuiOutlinedInput-root': { height: '44px', borderRadius: '11px', '&.Mui-focused fieldset': { borderColor: adminTheme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: adminTheme.primary } }} />
 
             <FormControl
               fullWidth
@@ -1541,7 +1543,15 @@ function AuditLogPage() {
                 )}
               </Select>
             </FormControl>
+
           </Box>
+          {activeFilterChips.length > 0 ? (
+            <Stack direction="row" alignItems="center" gap="8px" useFlexGap flexWrap="wrap" sx={{ marginTop: '12px' }}>
+              {activeFilterChips.map((filter) => (
+                <Chip key={filter.key} size="small" label={filter.label} onDelete={filter.onDelete} sx={{ backgroundColor: adminTheme.soft }} />
+              ))}
+            </Stack>
+          ) : null}
 
         </Box>
 
@@ -1947,55 +1957,9 @@ function AuditLogPage() {
                   '5px',
               }}
             >
-              ลองเปลี่ยนหรือล้างตัวกรอง
+              ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่า
             </Typography>
 
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={
-                handleClearFilters
-              }
-              sx={{
-                height:
-                  '40px',
-
-                marginTop:
-                  '18px',
-
-                padding:
-                  '0 16px',
-
-                color:
-                  adminTheme.primary,
-
-                borderColor:
-                  adminTheme.primary,
-
-                borderRadius:
-                  '8px',
-
-                fontSize:
-                  '12px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
-
-                '&:hover':
-                  {
-                    backgroundColor:
-                      adminTheme.soft,
-
-                    borderColor:
-                      adminTheme.dark,
-                  },
-              }}
-            >
-              ล้างตัวกรอง
-            </Button>
           </Box>
         )}
       </Paper>

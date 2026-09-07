@@ -1033,6 +1033,7 @@ function EmployeeDashboardPage() {
   ) => {
     navigate(
       `/employee/my-requests/${requestId}`,
+      { state: { returnTo: '/employee/dashboard', returnLabel: 'แดชบอร์ด' } },
     );
   };
 
@@ -1052,6 +1053,7 @@ function EmployeeDashboardPage() {
     navigate(
       notification.path ||
         '/employee/notification',
+      { state: { returnTo: '/employee/dashboard', returnLabel: 'แดชบอร์ด' } },
     );
   };
 

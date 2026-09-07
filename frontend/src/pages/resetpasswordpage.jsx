@@ -83,7 +83,7 @@ function ResetPasswordPage() {
     ) {
       setMessage({
         severity: 'error',
-        text: 'Password ใหม่ไม่เป็นไปตามเงื่อนไขที่กำหนด',
+        text: 'รหัสผ่านใหม่ไม่เป็นไปตามเงื่อนไขที่กำหนด',
       });
 
       return;
@@ -92,7 +92,7 @@ function ResetPasswordPage() {
     if (newPassword !== confirmPassword) {
       setMessage({
         severity: 'error',
-        text: 'Password ที่ยืนยันไม่ตรงกัน',
+        text: 'รหัสผ่านที่ยืนยันไม่ตรงกัน',
       });
 
       return;
@@ -147,8 +147,8 @@ function ResetPasswordPage() {
         edge="end"
         aria-label={
           showPassword
-            ? 'ซ่อน Password'
-            : 'แสดง Password'
+            ? 'ซ่อนรหัสผ่าน'
+            : 'แสดงรหัสผ่าน'
         }
         onClick={handleTogglePasswordVisibility}
         onMouseDown={handlePasswordIconMouseDown}
@@ -164,9 +164,9 @@ function ResetPasswordPage() {
 
   return (
     <PasswordRecoveryLayout
-      title="Reset Password"
+      title="ตั้งรหัสผ่านใหม่"
       compact
-      description="สร้าง Password ใหม่สำหรับบัญชีของคุณ"
+      description="สร้างรหัสผ่านใหม่สำหรับบัญชีของคุณ"
     >
       {message && (
         <Alert
@@ -190,7 +190,7 @@ function ResetPasswordPage() {
               ? 'text'
               : 'password'
           }
-          label="New Password"
+          label="รหัสผ่านใหม่"
           value={newPassword}
           disabled={isSubmitting}
           autoComplete="new-password"
@@ -225,7 +225,7 @@ function ResetPasswordPage() {
               ? 'text'
               : 'password'
           }
-          label="Confirm New Password"
+          label="ยืนยันรหัสผ่านใหม่"
           value={confirmPassword}
           disabled={isSubmitting}
           autoComplete="new-password"
@@ -243,7 +243,7 @@ function ResetPasswordPage() {
           helperText={
             confirmPassword &&
             confirmPassword !== newPassword
-              ? 'Password ที่ยืนยันไม่ตรงกัน'
+              ? 'รหัสผ่านที่ยืนยันไม่ตรงกัน'
               : ''
           }
           onChange={(event) => {
@@ -269,7 +269,7 @@ function ResetPasswordPage() {
         >
           {isSubmitting
             ? 'กำลังรีเซ็ตรหัสผ่าน...'
-            : 'Reset Password'}
+            : 'ตั้งรหัสผ่านใหม่'}
         </Button>
       </form>
     </PasswordRecoveryLayout>

@@ -17,6 +17,7 @@ const [{ expressApp }, { pool }, { default: jwt }] = await Promise.all([
 let server
 let baseUrl
 const originalExecute = pool.execute
+const originalGetConnection = pool.getConnection
 
 test.before(async () => {
   await new Promise((resolve) => { server = expressApp.listen(0, '127.0.0.1', resolve) })
@@ -25,6 +26,7 @@ test.before(async () => {
 
 test.after(async () => {
   pool.execute = originalExecute
+  pool.getConnection = originalGetConnection
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
   await pool.end()
 })
@@ -99,24 +101,34 @@ test('employee create rejects invalid department and position', async () => {
   assert.equal(response.status, 400)
 })
 
-test('employee create rejects duplicate code and duplicate email', async () => {
+test('employee create ignores a supplied code and rejects duplicate email', async () => {
   const payload = { employeeCode: 'TST010', firstName: 'New', lastName: 'Employee', email: 'new@example.test', departmentId: 1, positionId: 1, hireDate: '2026-01-01', status: 'active' }
-  let results = [[[{ department_id: 1 }]], [[{ position_id: 1 }]], [[{ employee_id: 10, employee_code: 'TST010', email: 'old@example.test' }]]]
-  pool.execute = async () => results.shift()
-  assert.equal((await fetch(`${baseUrl}/api/hr/employees`, { method: 'POST', headers: auth(), body: JSON.stringify(payload) })).status, 409)
-  results = [[[{ department_id: 1 }]], [[{ position_id: 1 }]], [[{ employee_id: 10, employee_code: 'OTHER', email: 'new@example.test' }]]]
+  const results = [[[{ department_id: 1 }]], [[{ position_id: 1 }]], [[{ employee_id: 10, employee_code: 'OTHER', email: 'new@example.test' }]]]
   pool.execute = async () => results.shift()
   assert.equal((await fetch(`${baseUrl}/api/hr/employees`, { method: 'POST', headers: auth(), body: JSON.stringify(payload) })).status, 409)
 })
 
 test('employee create, update and status update succeed with parameterized SQL', async () => {
-  let results = [[[{ department_id: 1 }]], [[{ position_id: 1 }]], [[]], [{ insertId: 10 }], [[employeeRow]]]
+  let results = [[[{ department_id: 1 }]], [[{ position_id: 1 }]], [[]], [[employeeRow]]]
   const queries = []
   pool.execute = async (sql, parameters) => { queries.push({ sql, parameters }); return results.shift() }
+  const connectionQueries = []
+  const connectionResults = [[{ insertId: 10 }], [[]], [{ affectedRows: 1 }]]
+  pool.getConnection = async () => ({
+    beginTransaction: async () => {},
+    commit: async () => {},
+    rollback: async () => {},
+    release: () => {},
+    execute: async (sql, parameters) => {
+      connectionQueries.push({ sql, parameters })
+      return connectionResults.shift()
+    },
+  })
   const payload = { employeeCode: 'TST010', firstName: 'Test', lastName: 'Employee', email: 'test10@example.test', phone: '0812345678', departmentId: 1, positionId: 1, hireDate: '2026-01-01', status: 'active' }
   let response = await fetch(`${baseUrl}/api/hr/employees`, { method: 'POST', headers: auth(), body: JSON.stringify(payload) })
   assert.equal(response.status, 201)
-  assert.equal(queries[3].parameters[0], 'TST010')
+  assert.match(connectionQueries[0].parameters[0], /^TMP-/)
+  assert.equal(connectionQueries[2].parameters[0], 'EMP-010')
 
   results = [[[employeeRow]], [[{ department_id: 1 }]], [[{ position_id: 1 }]], [[]], [{ affectedRows: 1 }], [[employeeRow]]]
   pool.execute = async () => results.shift()
@@ -182,9 +194,33 @@ test('leave type list/get/create/update/status and validation work', async () =>
   const valid = { ...invalid, defaultDays: 10 }
   assert.equal((await fetch(`${baseUrl}/api/hr/leave-types`, { method: 'POST', headers: auth(), body: JSON.stringify({ ...valid, maximumDaysPerRequest: '' }) })).status, 400)
   assert.equal((await fetch(`${baseUrl}/api/hr/leave-types`, { method: 'POST', headers: auth(), body: JSON.stringify({ ...valid, minimumDays: 6, maximumDaysPerRequest: 5 }) })).status, 400)
-  let results = [[[]], [{ insertId: 1 }], [[leaveTypeRow]]]
+  let results = [[[]]]
   pool.execute = async () => results.shift()
-  assert.equal((await fetch(`${baseUrl}/api/hr/leave-types`, { method: 'POST', headers: auth(), body: JSON.stringify(valid) })).status, 201)
+  const createQueries = []
+  const generatedLeaveType = { ...leaveTypeRow, leave_type_code: 'LT-001' }
+  const createResults = [
+    [{ insertId: 1 }],
+    [[]],
+    [{ affectedRows: 1 }],
+    [[generatedLeaveType]],
+  ]
+  pool.getConnection = async () => ({
+    beginTransaction: async () => {},
+    commit: async () => {},
+    rollback: async () => {},
+    release: () => {},
+    execute: async (sql, parameters) => {
+      createQueries.push({ sql, parameters })
+      return createResults.shift()
+    },
+  })
+  const createResponse = await fetch(`${baseUrl}/api/hr/leave-types`, { method: 'POST', headers: auth(), body: JSON.stringify({ ...valid, code: 'MANUAL' }) })
+  const createBody = await createResponse.json()
+  assert.equal(createResponse.status, 201)
+  assert.equal(createBody.data.leaveType.code, 'LT-001')
+  assert.match(createQueries[0].parameters[0], /^TMP-LT-/)
+  assert.deepEqual(createQueries[2].parameters, ['LT-001', 1])
+  pool.getConnection = originalGetConnection
   pool.execute = async () => [[{ leave_type_id: 2, leave_type_code: 'ANN', leave_type_name: 'Other' }]]
   assert.equal((await fetch(`${baseUrl}/api/hr/leave-types`, { method: 'POST', headers: auth(), body: JSON.stringify(valid) })).status, 409)
   let updateResults = [[[leaveTypeRow]], [[]], [{ affectedRows: 1 }], [[leaveTypeRow]]]

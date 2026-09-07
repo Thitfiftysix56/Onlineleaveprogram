@@ -23,6 +23,7 @@ import {
   MenuItem,
   Paper,
   Select,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -822,33 +823,26 @@ function HRReportsPage() {
               request.leaveType,
             ).toLowerCase();
 
+          const searchableText = [
+            request.requestNo,
+            request.employeeName,
+            request.employeeCode,
+            request.department,
+            request.leaveType,
+            translatedLeaveType,
+            translateStatus(
+              request.status,
+            ),
+          ]
+            .map((value) =>
+              String(value || '')
+                .toLowerCase(),
+            )
+            .join(' ');
+
           const matchesSearch =
             !keyword ||
-            String(
-              request.requestNo ||
-                '',
-            )
-              .toLowerCase()
-              .includes(
-                keyword,
-              ) ||
-            String(
-              request.employeeName ||
-                '',
-            )
-              .toLowerCase()
-              .includes(
-                keyword,
-              ) ||
-            String(
-              request.employeeCode ||
-                '',
-            )
-              .toLowerCase()
-              .includes(
-                keyword,
-              ) ||
-            translatedLeaveType.includes(
+            searchableText.includes(
               keyword,
             );
 
@@ -1022,29 +1016,33 @@ function HRReportsPage() {
      Actions
   ========================= */
 
-  const handleClearFilters =
-    () => {
-      setSearchText('');
-
-      setDepartmentFilter(
-        'all',
-      );
-
-      setLeaveTypeFilter(
-        'all',
-      );
-
-      setStatusFilter(
-        'all',
-      );
-
-      setStartDate('');
-      setEndDate('');
-
-      setActionMessage(
-        null,
-      );
-    };
+  const activeFilterChips = [
+    ...(departmentFilter !== 'all' ? [{
+      key: 'department',
+      label: `แผนก: ${departmentFilter}`,
+      onDelete: () => setDepartmentFilter('all'),
+    }] : []),
+    ...(leaveTypeFilter !== 'all' ? [{
+      key: 'leaveType',
+      label: `ประเภท: ${translateLeaveType(leaveTypeFilter)}`,
+      onDelete: () => setLeaveTypeFilter('all'),
+    }] : []),
+    ...(statusFilter !== 'all' ? [{
+      key: 'status',
+      label: `สถานะ: ${translateStatus(statusFilter)}`,
+      onDelete: () => setStatusFilter('all'),
+    }] : []),
+    ...(startDate ? [{
+      key: 'startDate',
+      label: `วันที่เริ่มต้น: ${formatDate(startDate)}`,
+      onDelete: () => setStartDate(''),
+    }] : []),
+    ...(endDate ? [{
+      key: 'endDate',
+      label: `วันที่สิ้นสุด: ${formatDate(endDate)}`,
+      onDelete: () => setEndDate(''),
+    }] : []),
+  ];
 
   const handleViewRequest =
     (request) => {
@@ -1057,6 +1055,8 @@ function HRReportsPage() {
         {
           state: {
             requestData: request,
+            returnTo: `${window.location.pathname}${window.location.search}`,
+            returnLabel: 'รายงานการลา',
           },
         },
       );
@@ -1385,9 +1385,6 @@ function HRReportsPage() {
           sx={{
             padding:
               '20px 24px',
-
-            borderBottom:
-              '1px solid #E5E7EB',
           }}
         >
           <Typography sx={{ color: '#111827', fontSize: '18px', fontWeight: 600 }}>
@@ -1398,24 +1395,6 @@ function HRReportsPage() {
             searchValue={searchText}
             onSearchChange={setSearchText}
             searchPlaceholder="ค้นหาเลขที่คำขอ ชื่อ หรือรหัสพนักงาน"
-            resultLabel=""
-            activeFilters={[
-              ...(departmentFilter !== 'all' ? [{
-                key: 'department',
-                label: `แผนก: ${departmentFilter}`,
-                onDelete: () => setDepartmentFilter('all'),
-              }] : []),
-              ...(leaveTypeFilter !== 'all' ? [{
-                key: 'leaveType',
-                label: `ประเภท: ${translateLeaveType(leaveTypeFilter)}`,
-                onDelete: () => setLeaveTypeFilter('all'),
-              }] : []),
-              ...(statusFilter !== 'all' ? [{
-                key: 'status',
-                label: `สถานะ: ${translateStatus(statusFilter)}`,
-                onDelete: () => setStatusFilter('all'),
-              }] : []),
-            ]}
             filters={(
               <>
                 <FormControl size="small">
@@ -1703,12 +1682,13 @@ function HRReportsPage() {
                 xs: '1fr',
                 sm: 'repeat(2, minmax(0, 1fr))',
                 md: 'repeat(2, minmax(0, 1fr))',
-                lg: '360px 312px 148px minmax(0, 1fr)',
+                lg: '280px 280px',
               },
-              gap: '16px',
+              columnGap: '16px',
+              rowGap: '12px',
               alignItems: 'center',
               justifyContent: 'start',
-              marginTop: '12px',
+              marginTop: '16px',
               '& .MuiInputLabel-root': {
                 fontWeight: 400,
               },
@@ -1745,30 +1725,31 @@ function HRReportsPage() {
               }
             />
 
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={handleClearFilters}
-              sx={{
-                minWidth: '112px',
-                height: '44px',
-                padding: '0 16px',
-                color: '#475569',
-                borderColor: '#CBD5E1',
-                borderRadius: '9px',
-                fontSize: '12px',
-                fontWeight: 500,
-                textTransform: 'none',
-                whiteSpace: 'nowrap',
-                width: { xs: '100%', sm: '148px' },
-                gridColumn: { lg: '3' },
-                justifySelf: { xs: 'stretch', sm: 'start' },
-                '&:hover': { backgroundColor: '#F8FAFC', borderColor: '#94A3B8' },
-              }}
-            >
-              ล้างตัวกรอง
-            </Button>
           </Box>
+
+          {activeFilterChips.length > 0 ? (
+            <Stack
+              direction="row"
+              alignItems="center"
+              gap="8px"
+              useFlexGap
+              flexWrap="wrap"
+              sx={{ marginTop: '12px' }}
+            >
+              {activeFilterChips.map((filter) => (
+                <Chip
+                  key={filter.key}
+                  size="small"
+                  label={filter.label}
+                  onDelete={filter.onDelete}
+                  sx={{
+                    backgroundColor: 'var(--role-hover, #F1F5F9)',
+                    color: '#334155',
+                  }}
+                />
+              ))}
+            </Stack>
+          ) : null}
 
         </Box>
 
@@ -2401,7 +2382,7 @@ function HRReportsPage() {
                   '5px',
               }}
             >
-              ลองเปลี่ยนหรือล้างตัวกรอง
+              ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่า
             </Typography>
           </Box>
         )}
@@ -2409,7 +2390,7 @@ function HRReportsPage() {
 
       <Dialog open={exportConfirmationOpen} onClose={() => setExportConfirmationOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการส่งออกรายงาน</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent>
           <Typography>ต้องการส่งออกข้อมูลการลาตามตัวกรองปัจจุบันเป็นไฟล์ Excel ใช่หรือไม่</Typography>
         </DialogContent>
         <DialogActions sx={{ padding: '14px 20px' }}>

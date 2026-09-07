@@ -40,7 +40,9 @@ const leaveTypeLabels = {
   'other leave': 'ลาอื่น ๆ',
 };
 
-const thaiLeaveType = (value) => leaveTypeLabels[normalize(value).toLowerCase()] || normalize(value);
+export const formatLeaveType = (value) => leaveTypeLabels[normalize(value).toLowerCase()] || normalize(value);
+
+const thaiLeaveType = formatLeaveType;
 
 export const formatNotificationMessage = (message) => {
   const text = normalize(message);

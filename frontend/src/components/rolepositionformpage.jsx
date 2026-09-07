@@ -122,7 +122,7 @@ function RolePositionFormPage({
 
   const formDialogs = (
     <>
-      <Dialog open={open} onClose={closeForm} fullWidth maxWidth="sm" slotProps={{ paper: { component: 'form', onSubmit: requestConfirmation, noValidate: true, sx: { width: 'calc(100% - 32px)', maxWidth: '480px', margin: 'auto', borderRadius: '18px', overflow: 'hidden' } } }}>
+      <Dialog open={open && !confirmationOpen} onClose={closeForm} fullWidth maxWidth="sm" slotProps={{ paper: { component: 'form', onSubmit: requestConfirmation, noValidate: true, sx: { width: 'calc(100% - 32px)', maxWidth: '480px', margin: 'auto', borderRadius: '18px', overflow: 'hidden' } } }}>
         <DialogTitle sx={{ padding: '18px 22px', borderBottom: 0, background: 'transparent', color: 'var(--role-text, #1E3A8A)', fontSize: '20px', fontWeight: 700 }}>
           {isEditMode ? 'แก้ไขตำแหน่ง' : 'เพิ่มตำแหน่ง'}
         </DialogTitle>
@@ -169,10 +169,10 @@ function RolePositionFormPage({
 
       <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>ยืนยันการบันทึกข้อมูลตำแหน่ง</DialogTitle>
-        <DialogContent dividers><Typography><strong>ชื่อตำแหน่ง:</strong> {formData.positionName.trim()}</Typography></DialogContent>
+        <DialogContent><Typography><strong>ชื่อตำแหน่ง:</strong> {formData.positionName.trim()}</Typography></DialogContent>
         <DialogActions sx={{ padding: '14px 20px' }}>
-          <Button variant="outlined" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button>
-          <Button variant="contained" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>
+          <Button variant="outlined" color="secondary" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button>
+          <Button variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>
         </DialogActions>
       </Dialog>
     </>

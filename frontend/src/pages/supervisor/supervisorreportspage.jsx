@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Box,
-  Button,
+  Chip,
   CircularProgress,
   FormControl,
   IconButton,
@@ -11,6 +11,7 @@ import {
   MenuItem,
   Paper,
   Select,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -362,12 +363,12 @@ function SupervisorReportsPage() {
     },
   ];
 
-  const clearFilters = () => {
-    setStatus('');
-    setLeaveType('');
-    setStartDate('');
-    setEndDate('');
-  };
+  const activeFilterChips = [
+    ...(status ? [{ key: 'status', label: `สถานะ: ${statusLabels[status]}`, onDelete: () => setStatus('') }] : []),
+    ...(leaveType ? [{ key: 'leaveType', label: `ประเภท: ${translateLeaveType(leaveTypes.find(([id]) => id === String(leaveType))?.[1])}`, onDelete: () => setLeaveType('') }] : []),
+    ...(startDate ? [{ key: 'startDate', label: `วันที่เริ่มต้น: ${formatDate(startDate)}`, onDelete: () => setStartDate('') }] : []),
+    ...(endDate ? [{ key: 'endDate', label: `วันที่สิ้นสุด: ${formatDate(endDate)}`, onDelete: () => setEndDate('') }] : []),
+  ];
 
   return (
     <SupervisorLayout activeMenu="Team Reports">
@@ -427,9 +428,6 @@ function SupervisorReportsPage() {
         <Box
           sx={{
             padding: '20px 24px',
-
-            borderBottom:
-              '1px solid #E5E7EB',
           }}
         >
           <Typography
@@ -452,7 +450,7 @@ function SupervisorReportsPage() {
 
                 md: 'repeat(2, 1fr)',
 
-                lg: 'repeat(4, minmax(150px, 1fr)) auto',
+                lg: 'repeat(4, minmax(150px, 1fr))',
               },
 
               gap: '16px',
@@ -545,41 +543,14 @@ function SupervisorReportsPage() {
               min={startDate || undefined}
             />
 
-            {/* ล้างตัวกรอง */}
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={clearFilters}
-              sx={{
-                order: 5,
-                height: '44px',
-
-                gridColumn: {
-                  xs: 'auto',
-                  md: 'auto',
-                },
-
-                minWidth: '120px',
-
-                color: '#475569',
-
-                borderColor: '#CBD5E1',
-                borderRadius: '11px',
-
-                fontSize: '12px',
-                fontWeight: 700,
-
-                textTransform: 'none',
-
-                '&:hover': {
-                  backgroundColor: '#F8FAFC',
-                  borderColor: '#94A3B8',
-                },
-              }}
-            >
-              ล้างตัวกรอง
-            </Button>
           </Box>
+          {activeFilterChips.length > 0 ? (
+            <Stack direction="row" alignItems="center" gap="8px" useFlexGap flexWrap="wrap" sx={{ marginTop: '12px' }}>
+              {activeFilterChips.map((filter) => (
+                <Chip key={filter.key} size="small" label={filter.label} onDelete={filter.onDelete} sx={{ backgroundColor: theme.soft }} />
+              ))}
+            </Stack>
+          ) : null}
         </Box>
 
         {/* Loading */}
@@ -671,11 +642,11 @@ function SupervisorReportsPage() {
                         key={request.id}
                         hover
                         tabIndex={0}
-                        onClick={() => navigate(`/supervisor/approval/${request.id}`)}
+                        onClick={() => navigate(`/supervisor/approval/${request.id}`, { state: { returnTo: `${window.location.pathname}${window.location.search}`, returnLabel: 'รายงานทีม' } })}
                         onKeyDown={(event) => {
                           if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault();
-                            navigate(`/supervisor/approval/${request.id}`);
+                            navigate(`/supervisor/approval/${request.id}`, { state: { returnTo: `${window.location.pathname}${window.location.search}`, returnLabel: 'รายงานทีม' } });
                           }
                         }}
                         sx={{
@@ -903,7 +874,7 @@ function SupervisorReportsPage() {
                 marginTop: '5px',
               }}
             >
-              ลองเปลี่ยนหรือล้างตัวกรอง
+              ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่า
             </Typography>
           </Box>
         )}

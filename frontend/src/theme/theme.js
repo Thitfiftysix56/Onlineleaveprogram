@@ -331,8 +331,12 @@ const theme = createTheme({
       styleOverrides: {
         select: {
           minHeight: 'auto',
-          display: 'flex',
-          alignItems: 'center',
+          display: 'block',
+          minWidth: 0,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          paddingRight: '36px !important',
         },
       },
     },

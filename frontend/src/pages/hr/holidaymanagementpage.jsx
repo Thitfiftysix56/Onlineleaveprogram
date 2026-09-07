@@ -564,7 +564,16 @@ function HolidayManagementPage() {
                 .toLowerCase()
                 .includes(
                   keyword,
-                );
+                ) ||
+              formatDate(
+                holiday.date,
+              )
+                .toLowerCase()
+                .includes(keyword) ||
+              (holiday.isActive
+                ? 'ใช้งานอยู่'
+                : 'ไม่ใช้งาน')
+                .includes(keyword);
 
             const matchesYear =
               yearFilter ===
@@ -1303,9 +1312,6 @@ function HolidayManagementPage() {
           sx={{
             padding:
               '20px 24px',
-
-            borderBottom:
-              '1px solid #E5E7EB',
           }}
         >
           <Typography
@@ -1329,7 +1335,7 @@ function HolidayManagementPage() {
             searchPlaceholder="ค้นหาชื่อวันหยุด"
             resultLabel=""
             activeFilters={[
-              ...(yearFilter !== 'all' ? [{ key: 'year', label: `ปี: ${yearFilter}`, onDelete: () => setYearFilter('all') }] : []),
+              ...(yearFilter !== String(currentYear) ? [{ key: 'year', label: `ปี: ${yearFilter}`, onDelete: () => setYearFilter(String(currentYear)) }] : []),
               ...(statusFilter !== 'all' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}`, onDelete: () => setStatusFilter('all') }] : []),
             ]}
             onClearFilters={handleClearFilters}
@@ -1888,7 +1894,7 @@ function HolidayManagementPage() {
                   '5px',
               }}
             >
-              ลองเปลี่ยนหรือล้างตัวกรอง
+              ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่า
             </Typography>
           </Box>
         )}
@@ -1900,7 +1906,7 @@ function HolidayManagementPage() {
 
       <Dialog
         open={
-          dialogOpen
+          dialogOpen && !confirmationOpen
         }
         onClose={
           handleCloseDialog
@@ -2192,7 +2198,7 @@ function HolidayManagementPage() {
 
               '&:hover': {
                 backgroundColor:
-                  theme.dark,
+                  '#1D4ED8',
 
                 boxShadow:
                   'none',
@@ -2205,7 +2211,7 @@ function HolidayManagementPage() {
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm"><DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกวันหยุด</DialogTitle><DialogContent dividers><Typography><strong>ชื่อวันหยุด:</strong> {formData.name}</Typography><Typography sx={{ marginTop: '8px' }}><strong>วันที่:</strong> {formData.date || '-'}</Typography><Typography sx={{ marginTop: '8px' }}><strong>สถานะ:</strong> {formData.status === 'active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}</Typography></DialogContent><DialogActions sx={{ padding: '14px 20px' }}><Button variant="outlined" disabled={saving} onClick={() => setConfirmationOpen(false)} sx={{ color: '#475569', borderColor: '#CBD5E1' }}>กลับไปแก้ไข</Button><Button variant="contained" disabled={saving} onClick={confirmSave} sx={{ backgroundColor: '#15803D', '&:hover': { backgroundColor: '#166534' } }}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions></Dialog>
+      <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm"><DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกวันหยุด</DialogTitle><DialogContent><Typography><strong>ชื่อวันหยุด:</strong> {formData.name}</Typography><Typography sx={{ marginTop: '8px' }}><strong>วันที่:</strong> {formData.date || '-'}</Typography><Typography sx={{ marginTop: '8px' }}><strong>สถานะ:</strong> {formData.status === 'active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}</Typography></DialogContent><DialogActions sx={{ padding: '14px 20px' }}><Button variant="outlined" color="secondary" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button><Button variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions></Dialog>
 
       {/* =========================
           Delete Dialog

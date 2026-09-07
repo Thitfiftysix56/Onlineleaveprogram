@@ -34,7 +34,7 @@ function ForgotPasswordPage() {
     if (!normalizedEmail) {
       setMessage({
         severity: 'error',
-        text: 'กรุณากรอก Email',
+        text: 'กรุณากรอกอีเมล',
       })
       return
     }
@@ -84,7 +84,7 @@ function ForgotPasswordPage() {
   }
 
   return (
-    <PasswordRecoveryLayout title="Forgot Password">
+    <PasswordRecoveryLayout title="ลืมรหัสผ่าน">
       {message && (
         <Alert
           severity={message.severity}
@@ -112,11 +112,11 @@ function ForgotPasswordPage() {
           type="text"
           inputMode="email"
           autoComplete="new-password"
-          label="Email"
-          placeholder="กรอก Email"
+          label="อีเมล"
+          placeholder="กรอกอีเมล"
           value={email}
           disabled={isSubmitting}
-          helperText="ระบบจะส่ง OTP เฉพาะ Email ที่ลงทะเบียนไว้กับบัญชีเท่านั้น"
+          helperText="ระบบจะส่งรหัสยืนยันเฉพาะอีเมลที่ลงทะเบียนไว้กับบัญชีเท่านั้น"
           onChange={(event) => {
             setEmail(event.target.value)
 

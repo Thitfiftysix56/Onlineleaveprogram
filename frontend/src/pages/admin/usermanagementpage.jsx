@@ -499,7 +499,17 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
               user.email,
             ).includes(
               keyword,
-            );
+            ) ||
+            normalizeValue(
+              translateRole(
+                user.role,
+              ),
+            ).includes(keyword) ||
+            normalizeValue(
+              translateStatus(
+                user.status,
+              ),
+            ).includes(keyword);
 
           const matchesRole =
             roleFilter ===
@@ -1015,9 +1025,6 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
           sx={{
             padding:
               '20px 22px',
-
-            borderBottom:
-              '1px solid #E5E7EB',
           }}
         >
           <Typography
@@ -1038,7 +1045,7 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
           <DataListToolbar
             searchValue={searchText}
             onSearchChange={setSearchText}
-            searchPlaceholder="ค้นหาชื่อ Username หรือ Email"
+            searchPlaceholder="ค้นหาชื่อ ชื่อผู้ใช้ หรืออีเมล"
             resultLabel=""
             activeFilters={[
               ...(roleFilter !== 'All' ? [{ key: 'role', label: `บทบาท: ${translateRole(roleFilter)}`, onDelete: () => setRoleFilter('All') }] : []),
@@ -1781,7 +1788,7 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
               {users.length ===
               0
                 ? 'ยังไม่มีบัญชีผู้ใช้งานในระบบ'
-                : 'ลองเปลี่ยนหรือล้างตัวกรอง'}
+                : 'ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่า'}
             </Typography>
           </Box>
         )}

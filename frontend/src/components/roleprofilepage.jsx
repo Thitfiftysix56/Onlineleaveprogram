@@ -339,56 +339,6 @@ function RoleProfilePage({
     }
   };
 
-  const openEditProfile = (
-    selectImage = false,
-  ) => {
-    if (!profile) {
-      return;
-    }
-
-    setEditForm({
-      fullName:
-        profile.fullName ||
-        '',
-
-      email:
-        profile.email ||
-        '',
-
-      phone:
-        profile.phone ||
-        '',
-    });
-
-    setSelectedImage(
-      null,
-    );
-
-    setImagePreview(
-      profile
-        .profileImageUrl ||
-        '',
-    );
-
-    setRemoveImage(
-      false,
-    );
-
-    setEditError('');
-
-    setEditOpen(true);
-
-    if (selectImage) {
-      window.setTimeout(
-        () =>
-          fileInputRef
-            .current
-            ?.click(),
-        0,
-      );
-    }
-  };
-
   const handleImageChange =
     (event) => {
       const file =
@@ -1154,10 +1104,7 @@ function RoleProfilePage({
               }}
             >
               {profileItems.map(
-                (
-                  item,
-                  index,
-                ) => (
+                (item) => (
                   <Box
                     key={
                       item.label

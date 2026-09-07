@@ -2699,7 +2699,7 @@ function RoleCreateLeaveRequestPage({
               sx={{
                 minWidth: '130px',
                 height: '44px',
-                backgroundColor: theme.primary,
+                backgroundColor: '#2563EB',
                 color: '#FFFFFF',
                 borderRadius: '11px',
                 fontSize: '13px',
@@ -2707,7 +2707,7 @@ function RoleCreateLeaveRequestPage({
                 textTransform: 'none',
                 boxShadow: 'none',
                 '&:hover': {
-                  backgroundColor: theme.dark,
+                  backgroundColor: '#1D4ED8',
                   boxShadow: 'none',
                 },
               }}
@@ -2925,7 +2925,7 @@ function RoleCreateLeaveRequestPage({
 
         <Dialog open={confirmationOpen} onClose={() => setConfirmationOpen(false)} fullWidth maxWidth="sm">
           <DialogTitle>ยืนยันการส่งคำขอลา</DialogTitle>
-          <DialogContent dividers>
+          <DialogContent>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: '14px' }}>
               {summaryItems.map(([label, value]) => (
                 <Box key={label} sx={{ minWidth: 0 }}>
@@ -2938,7 +2938,7 @@ function RoleCreateLeaveRequestPage({
               {selectedLeaveType && workingDaySummary.workingDays > 0 ? <Box sx={{ gridColumn: { sm: '1 / -1' }, padding: '12px 14px', backgroundColor: '#F8FAFC', borderRadius: '10px' }}><Typography sx={{ color: '#64748B', fontSize: '11px', fontWeight: 700 }}>คงเหลือหลังอนุมัติ</Typography><Typography sx={{ color: '#0F172A', fontSize: '18px', fontWeight: 800 }}>{formatDays(Math.max(0, selectedLeaveType.availableDays - workingDaySummary.workingDays))} วัน</Typography></Box> : null}
             </Box>
           </DialogContent>
-          <DialogActions sx={{ padding: '14px 20px' }}><Button variant="outlined" onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button><Button variant="contained" onClick={confirmSubmit} sx={{ backgroundColor: theme.primary, '&:hover': { backgroundColor: theme.dark } }}>ยืนยันส่งคำขอ</Button></DialogActions>
+          <DialogActions sx={{ padding: '14px 20px' }}><Button variant="outlined" color="secondary" onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button><Button variant="contained" onClick={confirmSubmit}>ยืนยันส่งคำขอ</Button></DialogActions>
         </Dialog>
       </Box>
       </Box>

@@ -1975,9 +1975,6 @@ function RoleNotificationPage({
           sx={{
             padding:
               '20px 22px',
-
-            borderBottom:
-              '1px solid #E5E7EB',
             ...(visualCalibration && {
               padding: {
                 xs: '14px',
@@ -1985,7 +1982,7 @@ function RoleNotificationPage({
               },
               backgroundColor: 'transparent',
               border: 'none',
-              borderBottom: '1px solid #EEF2F7',
+              borderBottom: 0,
               borderRadius: 0,
               marginBottom: 0,
               boxShadow: 'none',
@@ -2052,6 +2049,7 @@ function RoleNotificationPage({
               ...(statusFilter !== 'All' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'Unread' ? 'ยังไม่ได้อ่าน' : 'อ่านแล้ว'}`, onDelete: () => setStatusFilter('All') }] : []),
             ]}
             onClearFilters={handleClearFilters}
+            showClearFilters={false}
             filters={<FormControl size="small"><Select value={statusFilter === 'All' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'Unread' ? 'ยังไม่ได้อ่าน' : value === 'Read' ? 'อ่านแล้ว' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'All')}><MenuItem value="Unread">ยังไม่ได้อ่าน</MenuItem><MenuItem value="Read">อ่านแล้ว</MenuItem></Select></FormControl>}
             sx={{
               marginTop: 0,
@@ -2814,62 +2812,10 @@ function RoleNotificationPage({
               }}
             >
               {(searchText || statusFilter !== 'All' || categoryFilter !== 'All')
-                ? 'ลองเปลี่ยนหรือล้างตัวกรอง'
+                ? 'ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่า'
                 : 'ขณะนี้ยังไม่มีการแจ้งเตือนสำหรับบัญชีนี้'}
             </Typography>
 
-            {(searchText ||
-              statusFilter !==
-                'All' ||
-              categoryFilter !==
-                'All') && (
-              <Button
-                type="button"
-                variant="outlined"
-                onClick={
-                  handleClearFilters
-                }
-                sx={{
-                  height:
-                    '40px',
-
-                  marginTop:
-                    '18px',
-
-                  padding:
-                    '0 16px',
-
-                  color:
-                    theme?.primary,
-
-                  borderColor:
-                    theme?.primary,
-
-                  borderRadius:
-                    '8px',
-
-                  fontSize:
-                    '11px',
-
-                  fontWeight:
-                    700,
-
-                  textTransform:
-                    'none',
-
-                  '&:hover':
-                    {
-                      backgroundColor:
-                        theme?.soft,
-
-                      borderColor:
-                        theme?.dark,
-                    },
-                }}
-              >
-                ล้างตัวกรอง
-              </Button>
-            )}
           </Box>
         )}
       </Paper>

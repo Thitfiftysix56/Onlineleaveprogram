@@ -317,6 +317,18 @@ function EmployeeManagementPage() {
               .includes(keyword) ||
             employee.position
               .toLowerCase()
+              .includes(keyword) ||
+            employee.department
+              .toLowerCase()
+              .includes(keyword) ||
+            String(
+              employee.status === 'active'
+                ? 'ใช้งานอยู่'
+                : employee.status === 'inactive'
+                  ? 'ไม่ใช้งาน'
+                  : employee.status,
+            )
+              .toLowerCase()
               .includes(keyword);
 
           const matchesDepartment =
@@ -427,6 +439,7 @@ function EmployeeManagementPage() {
   const handleAddEmployee = () => {
     navigate(
       '/hr/employee-management/add',
+      { state: { returnTo: `${window.location.pathname}${window.location.search}` } },
     );
   };
 
@@ -435,6 +448,7 @@ function EmployeeManagementPage() {
   ) => {
     navigate(
       `/hr/employee-management/${employee.id}/edit`,
+      { state: { returnTo: `${window.location.pathname}${window.location.search}` } },
     );
   };
 
@@ -694,9 +708,6 @@ function EmployeeManagementPage() {
           sx={{
             padding:
               '20px 24px',
-
-            borderBottom:
-              '1px solid #E5E7EB',
           }}
         >
           <Typography
@@ -1311,7 +1322,7 @@ function EmployeeManagementPage() {
                   '5px',
               }}
             >
-              ลองเปลี่ยนหรือล้างตัวกรอง
+              ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่า
             </Typography>
           </Box>
         )}

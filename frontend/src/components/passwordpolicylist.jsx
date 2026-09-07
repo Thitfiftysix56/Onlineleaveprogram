@@ -48,7 +48,7 @@ function PasswordPolicyList({
         /[^A-Za-z0-9\s]/.test(password),
     },
     {
-      label: 'ไม่ซ้ำกับ Username หรือ Email',
+      label: 'ไม่ซ้ำกับชื่อผู้ใช้หรืออีเมล',
       isValid:
         hasPassword &&
         (

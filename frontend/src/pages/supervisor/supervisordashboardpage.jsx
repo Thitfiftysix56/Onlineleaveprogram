@@ -659,6 +659,7 @@ function SupervisorDashboardPage() {
 
     navigate(
       `/supervisor/approval/${requestId}`,
+      { state: { returnTo: '/supervisor/dashboard', returnLabel: 'แดชบอร์ด' } },
     );
   };
 
@@ -678,6 +679,7 @@ function SupervisorDashboardPage() {
     navigate(
       notification.path ||
         '/supervisor/notifications',
+      { state: { returnTo: '/supervisor/dashboard', returnLabel: 'แดชบอร์ด' } },
     );
   };
 

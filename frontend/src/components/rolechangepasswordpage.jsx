@@ -869,20 +869,20 @@ function RoleChangePasswordPage({
                 height: '44px',
                 padding: '0 20px',
                 backgroundColor:
-                  resolvedTheme.primary,
+                  '#2563EB',
                 color: '#FFFFFF',
                 borderRadius: '11px',
                 fontSize: '13px',
                 fontWeight: 500,
                 textTransform: 'none',
                 boxShadow:
-                  `0 5px 12px ${resolvedTheme.primary}28`,
+                  '0 5px 12px rgba(37, 99, 235, 0.16)',
 
                 '&:hover': {
                   backgroundColor:
-                    resolvedTheme.dark,
+                    '#1D4ED8',
                   boxShadow:
-                    `0 6px 14px ${resolvedTheme.primary}36`,
+                    '0 6px 14px rgba(37, 99, 235, 0.22)',
                 },
 
                 '&.Mui-disabled': {

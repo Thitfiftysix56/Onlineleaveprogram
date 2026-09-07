@@ -5,7 +5,6 @@ import {
 } from 'react';
 
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -31,6 +30,7 @@ import RequestNumberText from './requestnumbertext.jsx';
 import { DataListToolbar } from './shareduiprimitives.jsx';
 import { HeaderlessPageTopOffset } from './sharedvisualfoundation.jsx';
 import { roleDashboardCardSurfaceSx } from '../theme/rolecardsurface.js';
+import { formatLeaveType } from '../utils/presentationformatter.js';
 
 import {
   useLocation,
@@ -253,10 +253,7 @@ function RoleMyRequestsPage({
     setYearFilter,
   ] = useState('all');
 
-  const [
-    message,
-    setMessage,
-  ] = useState(null);
+  const [, setMessage] = useState(null);
 
   const [
     selectedRequest,
@@ -322,6 +319,11 @@ function RoleMyRequestsPage({
                 '',
             ).toLowerCase();
 
+          const displayedLeaveType =
+            formatLeaveType(
+              request.leaveType,
+            ).toLowerCase();
+
           const reason =
             String(
               request.reason ||
@@ -351,6 +353,9 @@ function RoleMyRequestsPage({
                 keyword,
               ) ||
             leaveType.includes(
+              keyword,
+            ) ||
+            displayedLeaveType.includes(
               keyword,
             ) ||
             reason.includes(
@@ -542,6 +547,12 @@ function RoleMyRequestsPage({
   ) => {
     navigate(
       `/${currentRole}/my-requests/${request.id}`,
+      {
+        state: {
+          returnTo: `${location.pathname}${location.search}`,
+          returnLabel: 'รายการคำขอลา',
+        },
+      },
     );
   };
 
@@ -550,6 +561,7 @@ function RoleMyRequestsPage({
   ) => {
     navigate(
       `/${currentRole}/leave-request?edit=${request.id}`,
+      { state: { returnTo: `${location.pathname}${location.search}` } },
     );
   };
 
@@ -877,9 +889,6 @@ function RoleMyRequestsPage({
               sm:
                 '18px 22px 12px',
             },
-
-            borderBottom:
-              '1px solid #E5E7EB',
           }}
         >
           <Box
@@ -1738,54 +1747,9 @@ function RoleMyRequestsPage({
                   '5px',
               }}
             >
-              ลองเปลี่ยนตัวกรองหรือล้างตัวกรองแล้วค้นหาอีกครั้ง
+              ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่าแล้วค้นหาอีกครั้ง
             </Typography>
 
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={
-                handleClearFilters
-              }
-              sx={{
-                height:
-                  '40px',
-
-                marginTop:
-                  '18px',
-
-                padding:
-                  '0 18px',
-
-                color:
-                  theme.primary,
-
-                borderColor:
-                  theme.primary,
-
-                borderRadius:
-                  '8px',
-
-                fontSize:
-                  '13px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
-
-                '&:hover': {
-                  backgroundColor:
-                    theme.soft,
-
-                  borderColor:
-                    theme.dark,
-                },
-              }}
-            >
-              ล้างตัวกรอง
-            </Button>
           </Box>
         )}
       </Paper>

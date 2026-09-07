@@ -19,13 +19,19 @@ import {
 import HRLayout from '../../layouts/hrlayout.jsx';
 import { BackButton, PageHeader } from '../../components/sharedvisualfoundation.jsx';
 import { roleDashboardCardSurfaceSx } from '../../theme/rolecardsurface.js';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { createLeaveType, getLeaveType, updateLeaveType } from '../../api/leave-type-service.js';
 
 function LeaveTypeFormPage({ mode = 'add' }) {
   const isEditMode = mode === 'edit';
   const navigate = useNavigate();
+  const location = useLocation();
   const { leaveTypeId } = useParams();
+  const returnTo =
+    typeof location.state?.returnTo === 'string' &&
+    location.state.returnTo.startsWith('/')
+      ? location.state.returnTo
+      : '/hr/leave-types';
   const initialFormData = {
     code: '',
     name: '',
@@ -81,7 +87,6 @@ function LeaveTypeFormPage({ mode = 'add' }) {
   const validateForm = () => {
     const validationErrors = {};
 
-    const code = formData.code.trim().toUpperCase();
     const name = formData.name.trim();
     const description = formData.description.trim();
 
@@ -90,14 +95,6 @@ function LeaveTypeFormPage({ mode = 'add' }) {
     const maximumDaysPerRequest = Number(
       formData.maximumDaysPerRequest,
     );
-
-    if (!code) {
-      validationErrors.code =
-        'กรุณากรอกรหัสประเภทการลา';
-    } else if (!/^[A-Z0-9]{2,10}$/.test(code)) {
-      validationErrors.code =
-        'ใช้ตัวอักษร A-Z หรือตัวเลข จำนวน 2–10 ตัว';
-    }
 
     if (!name) {
       validationErrors.name =
@@ -188,7 +185,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
 
   const confirmSave = async () => {
     const leaveTypeData = {
-      code: formData.code.trim().toUpperCase(),
+      ...(isEditMode ? { code: formData.code } : {}),
       name: formData.name.trim(),
       description: formData.description.trim(),
       defaultDays: Number(formData.defaultDays),
@@ -206,7 +203,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
       const result = isEditMode ? await updateLeaveType(leaveTypeId, leaveTypeData) : await createLeaveType(leaveTypeData);
       setConfirmationOpen(false);
       setSuccessMessage(result.message || 'บันทึกประเภทการลาเรียบร้อยแล้ว');
-      window.setTimeout(() => navigate('/hr/leave-types'), 500);
+      window.setTimeout(() => navigate(returnTo), 500);
     } catch (error) { setErrorMessage(error.response?.data?.message || 'ไม่สามารถบันทึกประเภทการลาได้'); }
     finally { setSaving(false); }
   };
@@ -224,7 +221,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
 
   return (
     <HRLayout activeMenu="Leave Type">
-      <PageHeader title={isEditMode ? 'แก้ไขประเภทการลา' : 'เพิ่มประเภทการลา'} actions={<BackButton onClick={() => navigate('/hr/leave-types')}>กลับ</BackButton>} sx={{ maxWidth: '820px', marginInline: 'auto' }} />
+      <PageHeader title={isEditMode ? 'แก้ไขประเภทการลา' : 'เพิ่มประเภทการลา'} actions={<BackButton onClick={() => navigate(returnTo)}>กลับ</BackButton>} sx={{ maxWidth: '920px', marginInline: 'auto' }} />
 
       {successMessage && (
         <Alert
@@ -247,23 +244,43 @@ function LeaveTypeFormPage({ mode = 'add' }) {
         noValidate
         sx={{
           display: 'grid',
-          gridTemplateColumns: {
-            xs: 'minmax(0, 1fr)',
-            lg: 'repeat(2, minmax(0, 1fr))',
-          },
-          gap: '16px',
+          gridTemplateColumns: 'minmax(0, 1fr)',
+          gap: 0,
           width: '100%',
-          maxWidth: '820px',
+          maxWidth: '920px',
           marginInline: 'auto',
+          ...roleDashboardCardSurfaceSx,
+          padding: {
+            xs: '20px',
+            sm: '28px 32px',
+          },
+          background: 'linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 82%, var(--role-soft, #ECFDF5) 100%)',
+          border: '0',
+          borderRadius: '20px',
+          boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
           '& > .MuiPaper-root': {
-            borderRadius: '20px',
-            borderColor: '#E2E8F0',
-            boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
-            ...roleDashboardCardSurfaceSx,
+            background: 'transparent !important',
+            border: '0 !important',
+            borderRadius: '0 !important',
+            boxShadow: 'none !important',
+            overflow: 'visible',
           },
           '& > .MuiPaper-root > .MuiBox-root:first-of-type': {
             background: 'transparent !important',
             borderBottom: '0 !important',
+            padding: {
+              xs: '8px 0 10px',
+              sm: '10px 4px 12px',
+            },
+          },
+          '& > .MuiPaper-root > .MuiBox-root:last-of-type': {
+            padding: {
+              xs: '12px 0 24px',
+              sm: '14px 4px 28px',
+            },
+          },
+          '& > .MuiPaper-root + .MuiPaper-root': {
+            marginTop: '2px',
           },
           '& .MuiOutlinedInput-root': {
             borderRadius: '10px',
@@ -273,7 +290,6 @@ function LeaveTypeFormPage({ mode = 'add' }) {
         <Paper
           elevation={0}
           sx={{
-            gridRow: { lg: 'span 2' },
             backgroundColor: '#FFFFFF',
             border: '1px solid #E5E7EB',
             borderRadius: '12px',
@@ -317,22 +333,17 @@ function LeaveTypeFormPage({ mode = 'add' }) {
           >
             <TextField
               fullWidth
-              required
               label="รหัสประเภทการลา"
-              placeholder="เช่น AL"
-              value={formData.code}
-              onChange={(event) =>
-                handleInputChange(
-                  'code',
-                  event.target.value.toUpperCase(),
-                )
-              }
-              error={Boolean(errors.code)}
+              value={isEditMode ? formData.code : 'ระบบสร้างอัตโนมัติเมื่อบันทึก'}
               helperText={
-                errors.code ||
-                'ใช้ตัวอักษร A-Z หรือตัวเลข จำนวน 2–10 ตัว'
+                isEditMode
+                  ? 'รหัสประเภทการลาไม่สามารถแก้ไขได้'
+                  : 'ระบบจะกำหนดรหัสรูปแบบ LT-xxx ให้อัตโนมัติ'
               }
               slotProps={{
+                input: {
+                  readOnly: true,
+                },
                 htmlInput: {
                   maxLength: 10,
                 },
@@ -340,6 +351,15 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '8px',
+                  ...(!isEditMode && {
+                    backgroundColor: '#F8FAFC',
+                  }),
+                },
+                '& .MuiInputBase-input': {
+                  ...(!isEditMode && {
+                    color: '#64748B',
+                    WebkitTextFillColor: '#64748B',
+                  }),
                 },
               }}
             />
@@ -668,6 +688,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
             gridColumn: '1 / -1',
             display: 'flex',
             justifyContent: 'flex-end',
+            paddingTop: '4px',
           }}
         >
           <Box
@@ -712,7 +733,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
                 minWidth: '160px',
                 height: '44px',
                 padding: '0 20px',
-                backgroundColor: '#059669',
+                backgroundColor: '#2563EB',
                 color: '#FFFFFF',
                 borderRadius: '8px',
                 fontSize: '14px',
@@ -721,7 +742,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
                 boxShadow: 'none',
 
                 '&:hover': {
-                  backgroundColor: '#047857',
+                  backgroundColor: '#1D4ED8',
                   boxShadow: 'none',
                 },
               }}
@@ -731,7 +752,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
           </Box>
         </Box>
       </Box>
-      <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm"><DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกประเภทการลา</DialogTitle><DialogContent dividers><Box sx={{ display: 'grid', gap: '10px' }}><Typography><strong>รหัส:</strong> {formData.code}</Typography><Typography><strong>ชื่อ:</strong> {formData.name}</Typography><Typography><strong>สิทธิ์เริ่มต้น:</strong> {formData.defaultDays} วัน</Typography><Typography><strong>ช่วงวันที่ขอ:</strong> {formData.minimumDays}-{formData.maximumDaysPerRequest} วัน</Typography><Typography><strong>เอกสารแนบ:</strong> {formData.attachmentRequired === 'Yes' ? 'จำเป็น' : 'ไม่จำเป็น'}</Typography></Box></DialogContent><DialogActions sx={{ padding: '14px 20px' }}><Button type="button" variant="outlined" disabled={saving} onClick={() => setConfirmationOpen(false)} sx={{ color: '#475569', borderColor: '#CBD5E1' }}>กลับไปแก้ไข</Button><Button type="button" variant="contained" disabled={saving} onClick={confirmSave} sx={{ backgroundColor: '#15803D', '&:hover': { backgroundColor: '#166534' } }}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions></Dialog>
+      <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm"><DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกประเภทการลา</DialogTitle><DialogContent><Box sx={{ display: 'grid', gap: '10px' }}><Typography><strong>รหัส:</strong> {isEditMode ? formData.code : 'ระบบสร้างอัตโนมัติ'}</Typography><Typography><strong>ชื่อ:</strong> {formData.name}</Typography><Typography><strong>สิทธิ์เริ่มต้น:</strong> {formData.defaultDays} วัน</Typography><Typography><strong>ช่วงวันที่ขอ:</strong> {formData.minimumDays}-{formData.maximumDaysPerRequest} วัน</Typography><Typography><strong>เอกสารแนบ:</strong> {formData.attachmentRequired === 'Yes' ? 'จำเป็น' : 'ไม่จำเป็น'}</Typography></Box></DialogContent><DialogActions sx={{ padding: '14px 20px' }}><Button type="button" variant="outlined" color="secondary" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button><Button type="button" variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions></Dialog>
     </HRLayout>
   );
 }

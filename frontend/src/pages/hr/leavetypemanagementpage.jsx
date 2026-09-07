@@ -174,6 +174,11 @@ const translateLeaveType = (
   );
 };
 
+const translateStatus = (status) =>
+  String(status || '').toLowerCase() === 'active'
+    ? 'ใช้งานอยู่'
+    : 'ไม่ใช้งาน';
+
 const formatDays = (
   value,
 ) => {
@@ -319,6 +324,11 @@ function LeaveTypeManagementPage() {
             translatedName.includes(
               keyword,
             ) ||
+            translateStatus(
+              leaveType.status,
+            )
+              .toLowerCase()
+              .includes(keyword) ||
             leaveType.description
               .toLowerCase()
               .includes(
@@ -443,6 +453,7 @@ function LeaveTypeManagementPage() {
     () => {
       navigate(
         '/hr/leave-types/add',
+        { state: { returnTo: `${window.location.pathname}${window.location.search}` } },
       );
     };
 
@@ -450,6 +461,7 @@ function LeaveTypeManagementPage() {
     (leaveType) => {
       navigate(
         `/hr/leave-types/${leaveType.id}/edit`,
+        { state: { returnTo: `${window.location.pathname}${window.location.search}` } },
       );
     };
 
@@ -733,9 +745,6 @@ function LeaveTypeManagementPage() {
           sx={{
             padding:
               '20px 24px',
-
-            borderBottom:
-              '1px solid #E5E7EB',
           }}
         >
           <Typography
@@ -760,6 +769,7 @@ function LeaveTypeManagementPage() {
             resultLabel=""
             activeFilters={statusFilter !== 'all' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}`, onDelete: () => setStatusFilter('all') }] : []}
             onClearFilters={handleClearFilters}
+            showClearFilters={false}
             filters={<FormControl size="small"><Select value={statusFilter === 'all' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'active' ? 'ใช้งานอยู่' : value === 'inactive' ? 'ไม่ใช้งาน' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'all')}><MenuItem value="active">ใช้งานอยู่</MenuItem><MenuItem value="inactive">ไม่ใช้งาน</MenuItem></Select></FormControl>}
             sx={{ marginTop: '16px' }}
           />
@@ -1377,7 +1387,7 @@ function LeaveTypeManagementPage() {
                   '5px',
               }}
             >
-              ลองเปลี่ยนหรือล้างตัวกรอง
+              ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่า
             </Typography>
           </Box>
         )}

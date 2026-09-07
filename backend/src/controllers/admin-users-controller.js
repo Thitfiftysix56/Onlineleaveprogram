@@ -116,8 +116,8 @@ async function findRole(role) {
   return roles[0] || null
 }
 
-async function findUserById(userId) {
-  const [users] = await pool.execute(
+async function findUserById(userId, executor = pool) {
+  const [users] = await executor.execute(
     `${userDetailQuery}
      WHERE u.user_id = ?
      LIMIT 1`,
@@ -125,6 +125,61 @@ async function findUserById(userId) {
   )
 
   return users[0] || null
+}
+
+const employeeCodePrefixes = {
+  employee: 'EMP',
+  supervisor: 'SUP',
+  hr: 'HR',
+  admin: 'ADM',
+}
+
+function employeeCodePrefix(roleName) {
+  return employeeCodePrefixes[String(roleName || '').trim().toLowerCase()] || 'EMP'
+}
+
+async function syncEmployeeCodeWithRole(
+  executor,
+  employeeId,
+  currentCode,
+  roleName,
+) {
+  const prefix = employeeCodePrefix(roleName)
+  const expectedPrefix = `${prefix}-`
+
+  if (String(currentCode || '').toUpperCase().startsWith(expectedPrefix)) {
+    return currentCode
+  }
+
+  const [existingCodes] = await executor.execute(
+    `SELECT employee_code
+     FROM employees
+     WHERE employee_id <> ?
+       AND employee_code LIKE ?`,
+    [employeeId, `${expectedPrefix}%`],
+  )
+  const usedSequences = new Set(
+    existingCodes
+      .map(({ employee_code: code }) => {
+        const match = String(code || '').toUpperCase().match(
+          new RegExp(`^${prefix}-(\\d+)$`),
+        )
+        return match ? Number(match[1]) : null
+      })
+      .filter(Number.isInteger),
+  )
+  let sequence = 1
+  while (usedSequences.has(sequence)) sequence += 1
+  const employeeCode = `${prefix}-${String(sequence).padStart(3, '0')}`
+
+  await executor.execute(
+    `UPDATE employees
+     SET employee_code = ?, updated_at = NOW()
+     WHERE employee_id = ?`,
+    [employeeCode, employeeId],
+  )
+
+  return employeeCode
 }
 
 function internalError(response, label, error) {
@@ -220,6 +275,7 @@ export async function getAdminUser(request, response) {
 }
 
 export async function createAdminUser(request, response) {
+  let connection
   try {
     const employeeId = Number(request.body.employeeId)
     const username = normalizeUsername(request.body.username)
@@ -248,7 +304,7 @@ export async function createAdminUser(request, response) {
     }
 
     const [employees] = await pool.execute(
-      `SELECT e.employee_id, u.user_id
+      `SELECT e.employee_id, e.employee_code, u.user_id
        FROM employees AS e
        LEFT JOIN users AS u
          ON u.employee_id = e.employee_id
@@ -298,13 +354,22 @@ export async function createAdminUser(request, response) {
 
     const temporaryPassword = generateTemporaryPassword()
     const passwordHash = await bcrypt.hash(temporaryPassword, 12)
-    const [result] = await pool.execute(
+    connection = await pool.getConnection()
+    await connection.beginTransaction()
+    await syncEmployeeCodeWithRole(
+      connection,
+      employeeId,
+      employee.employee_code,
+      role.role_name,
+    )
+    const [result] = await connection.execute(
       `INSERT INTO users
          (employee_id, role_id, username, password_hash, status, must_change_password)
        VALUES (?, ?, ?, ?, ?, 1)`,
       [employeeId, role.role_id, username, passwordHash, status],
     )
-    const createdUser = await findUserById(result.insertId)
+    const createdUser = await findUserById(result.insertId, connection)
+    await connection.commit()
 
     await writeAuditLog(pool, {
       userId: request.user.userId,
@@ -327,6 +392,7 @@ export async function createAdminUser(request, response) {
       mustChangePassword: true,
     })
   } catch (error) {
+    if (connection) await connection.rollback()
     if (error.code === 'ER_DUP_ENTRY') {
       return response.status(409).json({
         status: 'error',
@@ -335,10 +401,13 @@ export async function createAdminUser(request, response) {
     }
 
     return internalError(response, 'Create admin user error:', error)
+  } finally {
+    if (connection) connection.release()
   }
 }
 
 export async function updateAdminUser(request, response) {
+  let connection
   try {
     const userId = Number(request.params.userId)
     const username = normalizeUsername(request.body.username)
@@ -400,7 +469,15 @@ export async function updateAdminUser(request, response) {
       })
     }
 
-    await pool.execute(
+    connection = await pool.getConnection()
+    await connection.beginTransaction()
+    await syncEmployeeCodeWithRole(
+      connection,
+      existingUser.employee_id,
+      existingUser.employee_code,
+      role.role_name,
+    )
+    await connection.execute(
       `UPDATE users
        SET username = ?,
            role_id = ?,
@@ -409,7 +486,8 @@ export async function updateAdminUser(request, response) {
        WHERE user_id = ?`,
       [username, role.role_id, status, userId],
     )
-    const updatedUser = await findUserById(userId)
+    const updatedUser = await findUserById(userId, connection)
+    await connection.commit()
 
     return response.status(200).json({
       status: 'ok',
@@ -417,6 +495,7 @@ export async function updateAdminUser(request, response) {
       user: publicAdminUserDetail(updatedUser),
     })
   } catch (error) {
+    if (connection) await connection.rollback()
     if (error.code === 'ER_DUP_ENTRY') {
       return response.status(409).json({
         status: 'error',
@@ -425,6 +504,8 @@ export async function updateAdminUser(request, response) {
     }
 
     return internalError(response, 'Update admin user error:', error)
+  } finally {
+    if (connection) connection.release()
   }
 }
 

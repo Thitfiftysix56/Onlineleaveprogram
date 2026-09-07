@@ -139,7 +139,7 @@ export async function getEmployee(request, response) {
 }
 
 async function validateEmployee(body, currentId = null) {
-  const employeeCode = trim(body.employeeCode).toUpperCase()
+  const employeeCode = currentId ? trim(body.employeeCode).toUpperCase() : ''
   const firstName = trim(body.firstName)
   const lastName = trim(body.lastName)
   const email = lower(body.email)
@@ -149,7 +149,7 @@ async function validateEmployee(body, currentId = null) {
   const supervisorId = body.supervisorId ? positiveId(body.supervisorId) : null
   const hireDate = validDate(body.hireDate)
   const status = lower(body.status)
-  if (!employeeCode || employeeCode.length > 20) return { error: 'Employee code is required and must not exceed 20 characters.' }
+  if (currentId && (!employeeCode || employeeCode.length > 20)) return { error: 'Employee code is required and must not exceed 20 characters.' }
   if (!firstName || !lastName || firstName.length > 100 || lastName.length > 100) return { error: 'First name and last name are required.' }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 100) return { error: 'A valid email is required.' }
   if (phone && phone.length > 20) return { error: 'Phone must not exceed 20 characters.' }
@@ -162,32 +162,64 @@ async function validateEmployee(body, currentId = null) {
   }
   if (!hireDate) return { error: 'A valid hire date is required.' }
   if (!employeeStatuses.has(status)) return { error: 'Status must be active, inactive or resigned.' }
-  const [duplicates] = await pool.execute(
-    `SELECT employee_id, employee_code, email FROM employees
-     WHERE (employee_code = ? OR email = ?) AND employee_id <> ? LIMIT 1`,
-    [employeeCode, email, currentId || 0],
-  )
+  const [duplicates] = currentId
+    ? await pool.execute(
+        `SELECT employee_id, employee_code, email FROM employees
+         WHERE (employee_code = ? OR email = ?) AND employee_id <> ? LIMIT 1`,
+        [employeeCode, email, currentId],
+      )
+    : await pool.execute(
+        'SELECT employee_id, employee_code, email FROM employees WHERE email = ? LIMIT 1',
+        [email],
+      )
   if (duplicates.length) {
-    return { error: lower(duplicates[0].employee_code) === lower(employeeCode) ? 'Employee code is already in use.' : 'Email is already in use.', conflict: true }
+    return { error: currentId && lower(duplicates[0].employee_code) === lower(employeeCode) ? 'Employee code is already in use.' : 'Email is already in use.', conflict: true }
   }
   return { value: { employeeCode, firstName, lastName, email, phone, departmentId, positionId, supervisorId, hireDate, status } }
 }
 
+async function nextEmployeeCode(connection, employeeId) {
+  let sequence = Number(employeeId)
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
+    const code = `EMP-${String(sequence).padStart(3, '0')}`
+    const [matches] = await connection.execute(
+      'SELECT employee_id FROM employees WHERE employee_code = ? LIMIT 1',
+      [code],
+    )
+    if (!matches.length) return code
+    sequence += 1
+  }
+  throw new Error('Unable to generate a unique employee code.')
+}
+
 export async function createEmployee(request, response) {
+  let connection
   try {
     const validation = await validateEmployee(request.body)
     if (validation.error) return sendError(response, validation.conflict ? 409 : 400, validation.error)
     const v = validation.value
-    const [result] = await pool.execute(
+    connection = await pool.getConnection()
+    await connection.beginTransaction()
+    const temporaryCode = `TMP-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`.toUpperCase()
+    const [result] = await connection.execute(
       `INSERT INTO employees (employee_code, first_name, last_name, phone, email, department_id, position_id, supervisor_id, hire_date, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [v.employeeCode, v.firstName, v.lastName, v.phone, v.email, v.departmentId, v.positionId, v.supervisorId, v.hireDate, v.status],
+      [temporaryCode, v.firstName, v.lastName, v.phone, v.email, v.departmentId, v.positionId, v.supervisorId, v.hireDate, v.status],
     )
+    const employeeCode = await nextEmployeeCode(connection, result.insertId)
+    await connection.execute(
+      'UPDATE employees SET employee_code = ? WHERE employee_id = ?',
+      [employeeCode, result.insertId],
+    )
+    await connection.commit()
     const row = await employeeById(result.insertId)
     return response.status(201).json({ status: 'ok', message: 'Employee created successfully', data: { employee: employeeData(row) } })
   } catch (error) {
+    if (connection) await connection.rollback()
     if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'Employee code or email is already in use.')
     return internalError(response, 'Create employee error:', error)
+  } finally {
+    if (connection) connection.release()
   }
 }
 
@@ -195,8 +227,12 @@ export async function updateEmployee(request, response) {
   try {
     const id = positiveId(request.params.employeeId)
     if (!id) return sendError(response, 400, 'A valid employeeId is required.')
-    if (!await employeeById(id)) return sendError(response, 404, 'Employee was not found.')
-    const validation = await validateEmployee(request.body, id)
+    const existingEmployee = await employeeById(id)
+    if (!existingEmployee) return sendError(response, 404, 'Employee was not found.')
+    const validation = await validateEmployee(
+      { ...request.body, employeeCode: existingEmployee.employee_code },
+      id,
+    )
     if (validation.error) return sendError(response, validation.conflict ? 409 : 400, validation.error)
     const v = validation.value
     await pool.execute(
@@ -413,8 +449,8 @@ function leaveTypeData(row) {
 const leaveTypeSelect = `SELECT leave_type_id, leave_type_code, leave_type_name, description,
   annual_quota_days, minimum_days, maximum_days_per_request, requires_attachment,
   attachment_required_after_days, is_active, created_at, updated_at FROM leave_types`
-async function leaveTypeById(id) {
-  const [rows] = await pool.execute(`${leaveTypeSelect} WHERE leave_type_id = ? LIMIT 1`, [id])
+async function leaveTypeById(id, executor = pool) {
+  const [rows] = await executor.execute(`${leaveTypeSelect} WHERE leave_type_id = ? LIMIT 1`, [id])
   return rows[0] || null
 }
 export async function listLeaveTypes(_request, response) {
@@ -432,8 +468,8 @@ export async function getLeaveType(request, response) {
     return response.json({ status: 'ok', message: 'Leave type retrieved successfully', data: { leaveType: leaveTypeData(row) } })
   } catch (error) { return internalError(response, 'Get leave type error:', error) }
 }
-async function validateLeaveType(body, currentId = null) {
-  const code = trim(body.code).toUpperCase()
+async function validateLeaveType(body, currentId = null, currentCode = '') {
+  const code = currentId ? currentCode : ''
   const name = trim(body.name)
   const description = trim(body.description)
   const defaultDays = decimal(body.defaultDays)
@@ -445,7 +481,6 @@ async function validateLeaveType(body, currentId = null) {
     ? decimal(body.attachmentRequiredAfterDays, 0.01)
     : null
   const isActive = activeValue(body.isActive ?? body.status)
-  if (!/^[A-Z0-9]{2,10}$/.test(code)) return { error: 'Code must contain 2-10 uppercase letters or numbers.' }
   if (!name || name.length > 100) return { error: 'Leave type name is required and must not exceed 100 characters.' }
   if (description.length < 5 || description.length > 300) return { error: 'Description must contain 5-300 characters.' }
   if (defaultDays === null) return { error: 'Default days must be between 0 and 365.' }
@@ -455,32 +490,64 @@ async function validateLeaveType(body, currentId = null) {
   if (isActive === null) return { error: 'Status must be Active or Inactive.' }
   const [duplicates] = await pool.execute(
     `SELECT leave_type_id, leave_type_code, leave_type_name FROM leave_types
-     WHERE (leave_type_code = ? OR LOWER(leave_type_name) = LOWER(?)) AND leave_type_id <> ? LIMIT 1`,
-    [code, name, currentId || 0],
+     WHERE LOWER(leave_type_name) = LOWER(?) AND leave_type_id <> ? LIMIT 1`,
+    [name, currentId || 0],
   )
-  if (duplicates.length) return { error: duplicates[0].leave_type_code === code ? 'Leave type code is already in use.' : 'Leave type name is already in use.', conflict: true }
+  if (duplicates.length) return { error: 'Leave type name is already in use.', conflict: true }
   return { value: { code, name, description, defaultDays, minimumDays, maximumDays, attachmentRequired: attachmentRequired ? 1 : 0, attachmentAfter, isActive } }
 }
+async function nextLeaveTypeCode(connection, leaveTypeId) {
+  let sequence = Number(leaveTypeId)
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
+    const code = `LT-${String(sequence).padStart(3, '0')}`
+    const [matches] = await connection.execute(
+      'SELECT leave_type_id FROM leave_types WHERE leave_type_code = ? LIMIT 1',
+      [code],
+    )
+    if (!matches.length) return code
+    sequence += 1
+  }
+  throw new Error('Unable to generate a unique leave type code.')
+}
 async function saveLeaveType(request, response, id = null) {
-  if (id && !await leaveTypeById(id)) return sendError(response, 404, 'Leave type was not found.')
-  const validation = await validateLeaveType(request.body, id)
+  const existingLeaveType = id ? await leaveTypeById(id) : null
+  if (id && !existingLeaveType) return sendError(response, 404, 'Leave type was not found.')
+  const validation = await validateLeaveType(request.body, id, existingLeaveType?.leave_type_code)
   if (validation.error) return sendError(response, validation.conflict ? 409 : 400, validation.error)
   const v = validation.value
-  let savedId = id
   const parameters = [v.code, v.name, v.description, v.defaultDays, v.minimumDays, v.maximumDays, v.attachmentRequired, v.attachmentAfter, v.isActive]
-  if (id) await pool.execute(
-    `UPDATE leave_types SET leave_type_code = ?, leave_type_name = ?, description = ?, annual_quota_days = ?, minimum_days = ?, maximum_days_per_request = ?, requires_attachment = ?, attachment_required_after_days = ?, is_active = ? WHERE leave_type_id = ?`,
-    [...parameters, id],
-  )
-  else {
-    const [result] = await pool.execute(
-      `INSERT INTO leave_types (leave_type_code, leave_type_name, description, annual_quota_days, minimum_days, maximum_days_per_request, requires_attachment, attachment_required_after_days, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      parameters,
+  if (id) {
+    await pool.execute(
+      `UPDATE leave_types SET leave_type_code = ?, leave_type_name = ?, description = ?, annual_quota_days = ?, minimum_days = ?, maximum_days_per_request = ?, requires_attachment = ?, attachment_required_after_days = ?, is_active = ? WHERE leave_type_id = ?`,
+      [...parameters, id],
     )
-    savedId = result.insertId
+    const row = await leaveTypeById(id)
+    return response.status(200).json({ status: 'ok', message: 'Leave type updated successfully', data: { leaveType: leaveTypeData(row) } })
   }
-  const row = await leaveTypeById(savedId)
-  return response.status(id ? 200 : 201).json({ status: 'ok', message: `Leave type ${id ? 'updated' : 'created'} successfully`, data: { leaveType: leaveTypeData(row) } })
+
+  let connection
+  try {
+    connection = await pool.getConnection()
+    await connection.beginTransaction()
+    const temporaryCode = `TMP-LT-${Date.now().toString(36)}`.toUpperCase()
+    const [result] = await connection.execute(
+      `INSERT INTO leave_types (leave_type_code, leave_type_name, description, annual_quota_days, minimum_days, maximum_days_per_request, requires_attachment, attachment_required_after_days, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [temporaryCode, ...parameters.slice(1)],
+    )
+    const code = await nextLeaveTypeCode(connection, result.insertId)
+    await connection.execute(
+      'UPDATE leave_types SET leave_type_code = ? WHERE leave_type_id = ?',
+      [code, result.insertId],
+    )
+    const row = await leaveTypeById(result.insertId, connection)
+    await connection.commit()
+    return response.status(201).json({ status: 'ok', message: 'Leave type created successfully', data: { leaveType: leaveTypeData(row) } })
+  } catch (error) {
+    if (connection) await connection.rollback()
+    throw error
+  } finally {
+    if (connection) connection.release()
+  }
 }
 export async function createLeaveType(request, response) {
   try { return await saveLeaveType(request, response) } catch (error) {

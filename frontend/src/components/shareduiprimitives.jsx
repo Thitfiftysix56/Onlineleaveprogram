@@ -223,7 +223,7 @@ export function ConfirmationDialog({ open, title, description, confirmLabel = '�
       destructive={tone === 'error'}
       actions={(
         <>
-        <Button type="button" variant="outlined" disabled={loading} onClick={onCancel}>ยกเลิก</Button>
+        <Button type="button" variant="outlined" color="secondary" disabled={loading} onClick={onCancel}>ยกเลิก</Button>
         <Button type="button" variant="contained" color={tone} disabled={loading} onClick={onConfirm}>
           {loading ? 'กำลังบันทึก...' : confirmLabel}
         </Button>
@@ -239,12 +239,9 @@ export function DataListToolbar({
   searchPlaceholder = 'ค้นหา',
   filters,
   activeFilters = [],
-  onClearFilters,
   resultLabel,
   sx,
 }) {
-  const hasActiveFilters = activeFilters.length > 0;
-
   return (
     <Box sx={{ width: '100%', ...sx }}>
       <Stack
@@ -257,6 +254,12 @@ export function DataListToolbar({
           size="small"
           value={searchValue}
           onChange={(event) => onSearchChange?.(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              event.target.blur();
+            }
+          }}
           placeholder={searchPlaceholder}
           aria-label={searchPlaceholder}
           slotProps={{
@@ -299,13 +302,15 @@ export function DataListToolbar({
               columnGap: `${spacingTokens.lg}px`,
               rowGap: `${spacingTokens.md}px`,
               '& .MuiFormControl-root': {
-                minWidth: { xs: 0, sm: 148 },
-                flex: { xs: '1 1 calc(50% - 8px)', sm: '0 0 148px' },
+                minWidth: { xs: 0, sm: 176 },
+                flex: { xs: '1 1 calc(50% - 8px)', sm: '0 1 196px' },
               },
               '& .MuiOutlinedInput-root': { height: 44, backgroundColor: '#FFFFFF' },
               '& .MuiSelect-select': {
-                display: 'flex',
-                alignItems: 'center',
+                display: 'block',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
                 minWidth: 0,
                 paddingRight: '36px !important',
                 lineHeight: 1.4,
@@ -317,7 +322,7 @@ export function DataListToolbar({
         ) : null}
       </Stack>
 
-      {resultLabel || hasActiveFilters ? <Stack
+      {resultLabel || activeFilters.length > 0 ? <Stack
         direction={{ xs: 'column', sm: 'row' }}
         alignItems={{ xs: 'flex-start', sm: 'center' }}
         justifyContent="space-between"
@@ -327,7 +332,7 @@ export function DataListToolbar({
         <Typography variant="body2" sx={{ color: colorTokens.text.secondary, fontWeight: 600 }}>
           {resultLabel}
         </Typography>
-        {hasActiveFilters ? (
+        {activeFilters.length > 0 ? (
           <Stack direction="row" alignItems="center" gap={`${spacingTokens.xs}px`} useFlexGap flexWrap="wrap">
             {activeFilters.map((filter) => (
               <Chip
@@ -338,11 +343,6 @@ export function DataListToolbar({
                 sx={{ backgroundColor: 'var(--role-hover, #F1F5F9)', color: colorTokens.text.secondary }}
               />
             ))}
-            {onClearFilters ? (
-              <Button type="button" size="small" variant="text" onClick={onClearFilters}>
-                ล้างตัวกรอง
-              </Button>
-            ) : null}
           </Stack>
         ) : null}
       </Stack> : null}

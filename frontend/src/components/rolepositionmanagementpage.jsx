@@ -258,7 +258,12 @@ function RolePositionManagementPage({
               position.positionName,
             ).includes(
               keyword,
-            );
+            ) ||
+            normalizeValue(
+              translateStatus(
+                position.status,
+              ),
+            ).includes(keyword);
 
           const matchesStatus =
             statusFilter ===
@@ -731,9 +736,6 @@ function RolePositionManagementPage({
           sx={{
             padding:
               '20px 22px',
-
-            borderBottom:
-              '1px solid #E5E7EB',
           }}
         >
           <Typography
@@ -758,6 +760,7 @@ function RolePositionManagementPage({
             resultLabel=""
             activeFilters={statusFilter !== 'All' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'Active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}`, onDelete: () => setStatusFilter('All') }] : []}
             onClearFilters={handleClearFilters}
+            showClearFilters={false}
             filters={<FormControl size="small"><Select value={statusFilter === 'All' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'Active' ? 'ใช้งานอยู่' : value === 'Inactive' ? 'ไม่ใช้งาน' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'All')}><MenuItem value="Active">ใช้งานอยู่</MenuItem><MenuItem value="Inactive">ไม่ใช้งาน</MenuItem></Select></FormControl>}
             sx={{ marginTop: '16px' }}
           />
@@ -1441,59 +1444,9 @@ function RolePositionManagementPage({
               {positions.length ===
               0
                 ? 'ยังไม่มีข้อมูลตำแหน่งในระบบ'
-                : 'ลองเปลี่ยนหรือล้างตัวกรอง'}
+                : 'ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่า'}
             </Typography>
 
-            {(searchText ||
-              statusFilter !==
-                'All') && (
-              <Button
-                type="button"
-                variant="outlined"
-                onClick={
-                  handleClearFilters
-                }
-                sx={{
-                  height:
-                    '40px',
-
-                  marginTop:
-                    '18px',
-
-                  padding:
-                    '0 16px',
-
-                  color:
-                    theme.primary,
-
-                  borderColor:
-                    theme.primary,
-
-                  borderRadius:
-                    '8px',
-
-                  fontSize:
-                    '12px',
-
-                  fontWeight:
-                    700,
-
-                  textTransform:
-                    'none',
-
-                  '&:hover':
-                    {
-                      backgroundColor:
-                        theme.soft,
-
-                      borderColor:
-                        theme.dark,
-                    },
-                }}
-              >
-                ล้างตัวกรอง
-              </Button>
-            )}
           </Box>
         )}
       </Paper>
