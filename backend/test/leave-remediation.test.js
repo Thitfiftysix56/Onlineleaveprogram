@@ -9,7 +9,7 @@ process.env.DB_USER = 'test_user'
 process.env.JWT_SECRET = 'leave-remediation-test-secret-with-at-least-32-bytes'
 
 const [
-  { calculateApprovalAvailability, calculateDisplayedRemaining, calculateWorkingDays, isValidLeaveReason, recheckApprovalBalance, validateSubmissionParticipants },
+  { calculateApprovalAvailability, calculateDisplayedRemaining, calculateRequestAvailability, calculateWorkingDays, isSickLeaveType, isValidLeaveReason, recheckApprovalBalance, validateLeaveStartDatePolicy, validateSubmissionParticipants },
   { isAllowedLeaveAttachment },
 ] = await Promise.all([
   import('../src/controllers/leave-controller.js'),
@@ -31,6 +31,11 @@ test('leave reason rejects digits, symbols, emoji, and blank values', () => {
 test('displayed remaining is affected only by approved usage', () => {
   assert.equal(calculateDisplayedRemaining({ total_days: 10, used_days: 2, pending_days: 3 }), 8)
   assert.equal(calculateDisplayedRemaining({ total_days: 10, used_days: 5, pending_days: 0 }), 5)
+})
+
+test('request availability reserves pending requests without counting them as used', () => {
+  assert.equal(calculateRequestAvailability({ total_days: 10, used_days: 2, pending_days: 3 }), 5)
+  assert.equal(calculateRequestAvailability({ total_days: 5, used_days: 0, pending_days: 5 }), 0)
 })
 
 function connectionWithParticipant(overrides = {}) {
@@ -110,27 +115,26 @@ test('TA-002 rejects a disallowed MIME with an allowed extension', () => {
   assert.equal(isAllowedLeaveAttachment({ originalname: 'report.pdf', mimetype: 'text/plain' }), false)
 })
 
-test('TA-004 approval availability subtracts used and other pending days', () => {
-  assert.equal(calculateApprovalAvailability({ total_days: '10.00', used_days: '2.00' }, '3.00'), 5)
+test('approval availability is reduced only by approved usage', () => {
+  assert.equal(calculateApprovalAvailability({ total_days: '10.00', used_days: '2.00' }, '3.00'), 8)
 })
 
-test('TA-004 current request is not double-counted when excluded from pending input', () => {
+test('a pending request does not reduce the displayed approval availability', () => {
   const currentRequestDays = 4
   const availableForCurrent = calculateApprovalAvailability({ total_days: 10, used_days: 2 }, 3)
   assert.equal(currentRequestDays <= availableForCurrent, true)
 })
 
-test('TA-004 rejects the balance condition when other pending usage leaves insufficient availability', () => {
-  const currentRequestDays = 4
-  const availableForCurrent = calculateApprovalAvailability({ total_days: 10, used_days: 2 }, 5)
-  assert.equal(currentRequestDays <= availableForCurrent, false)
+test('other pending requests reserve request availability before approval', () => {
+  const requestedDays = 4
+  const availableToRequest = calculateRequestAvailability({ total_days: 10, used_days: 2, pending_days: 5 })
+  assert.equal(requestedDays <= availableToRequest, false)
 })
 
-test('TA-004 implementation locks entitlement and excludes the current request from pending usage', async () => {
+test('approval implementation locks entitlement and checks current approved usage', async () => {
   const calls = []
   const results = [
     [[{ entitlement_id: 7, total_days: '10.00', used_days: '2.00' }]],
-    [[{ pending_days: '3.00' }]],
   ]
   const connection = {
     execute: async (sql, parameters) => {
@@ -142,6 +146,19 @@ test('TA-004 implementation locks entitlement and excludes the current request f
   const result = await recheckApprovalBalance(connection, row, 99)
   assert.equal(result.allowed, true)
   assert.match(calls[0].sql, /FOR UPDATE/)
-  assert.match(calls[1].sql, /leave_request_id <> \?/)
-  assert.deepEqual(calls[1].parameters, [10, 2, 2026, 99])
+  assert.equal(calls.length, 1)
+})
+
+test('general leave must be requested at least three calendar days in advance', () => {
+  const annualLeave = { leave_type_name: 'Annual Leave' }
+  assert.match(validateLeaveStartDatePolicy('2026-09-10', annualLeave, '2026-09-08'), /3 วัน/)
+  assert.equal(validateLeaveStartDatePolicy('2026-09-11', annualLeave, '2026-09-08'), null)
+})
+
+test('sick leave can start today or in the past', () => {
+  const sickLeave = { leave_type_name: 'Sick Leave' }
+  assert.equal(isSickLeaveType(sickLeave), true)
+  assert.equal(isSickLeaveType({ leave_type_name: 'ลาป่วย' }), true)
+  assert.equal(validateLeaveStartDatePolicy('2026-09-08', sickLeave, '2026-09-08'), null)
+  assert.equal(validateLeaveStartDatePolicy('2026-09-01', sickLeave, '2026-09-08'), null)
 })

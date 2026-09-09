@@ -681,7 +681,7 @@ function EmployeeDashboardPage() {
           );
 
       const calculatedBalances =
-        (balanceData?.balances || []).map((balance) => ({ ...balance, year: balanceData.year, totalDays: balance.total, usedDays: balance.used, pendingDays: balance.pending, remainingDays: balance.remaining, availableDays: balance.remaining }));
+        (balanceData?.balances || []).map((balance) => ({ ...balance, year: balanceData.year, totalDays: balance.total, usedDays: balance.used, pendingDays: balance.pending, remainingDays: balance.remaining, availableDays: balance.available ?? Math.max(Number(balance.remaining || 0) - Number(balance.pending || 0), 0) }));
 
       const employeeNotifications =
         (notificationData?.notifications || []).map((notification) => ({ ...notification, isRead: Boolean(notification.read) })).sort(
@@ -808,6 +808,13 @@ function EmployeeDashboardPage() {
       ],
     );
 
+  const draftRequestCount = useMemo(
+    () => leaveRequests.filter(
+      (request) => normalizeStatus(request.status) === 'draft',
+    ).length,
+    [leaveRequests],
+  );
+
   const approvedRequestCount =
     useMemo(
       () =>
@@ -844,15 +851,6 @@ function EmployeeDashboardPage() {
             0,
         )} วัน`,
 
-      description:
-        annualBalance
-          ?.pendingDays >
-        0
-          ? `รออนุมัติ ${formatDays(
-              annualBalance.pendingDays,
-            )} วัน`
-          : 'สิทธิ์คงเหลือ',
-
       backgroundColor:
         '#EFF6FF',
 
@@ -876,15 +874,6 @@ function EmployeeDashboardPage() {
             0,
         )} วัน`,
 
-      description:
-        sickBalance
-          ?.pendingDays >
-        0
-          ? `รออนุมัติ ${formatDays(
-              sickBalance.pendingDays,
-            )} วัน`
-          : 'สิทธิ์คงเหลือ',
-
       backgroundColor:
         '#FFF1F2',
 
@@ -903,9 +892,6 @@ function EmployeeDashboardPage() {
 
       value:
         pendingRequestCount,
-
-      description:
-        'กำลังรอการพิจารณา',
 
       backgroundColor:
         '#FFFBEB',
@@ -926,9 +912,6 @@ function EmployeeDashboardPage() {
       value:
         approvedRequestCount,
 
-      description:
-        `ปี ${currentYear}`,
-
       backgroundColor:
         '#ECFDF5',
 
@@ -946,17 +929,15 @@ function EmployeeDashboardPage() {
   // four cards intentionally contain request counts only.
   const summaryCards = [
     {
-      title: 'คำขอทั้งหมด',
-      value: leaveRequests.length,
-      description: 'รวมทุกสถานะ',
-      background: 'linear-gradient(135deg, #EAF3FF 0%, #F7FAFF 68%, #FFFFFF 100%)',
-      glowColor: 'rgba(96, 165, 250, 0.18)',
-      valueColor: '#2563EB',
+      title: 'แบบร่าง',
+      value: draftRequestCount,
+      background: 'linear-gradient(135deg, #F1F5F9 0%, #FFFFFF 78%)',
+      glowColor: 'rgba(100, 116, 139, 0.12)',
+      valueColor: '#64748B',
     },
     {
       ...dashboardCardCandidates[2],
       title: 'รออนุมัติ',
-      description: 'กำลังรอการพิจารณา',
       background: 'linear-gradient(135deg, #FFF8DC 0%, #FFFCF1 68%, #FFFFFF 100%)',
       glowColor: 'rgba(250, 204, 21, 0.18)',
       valueColor: '#B45309',
@@ -964,7 +945,6 @@ function EmployeeDashboardPage() {
     {
       ...dashboardCardCandidates[3],
       title: 'อนุมัติแล้ว',
-      description: 'คำขอที่ได้รับอนุมัติ',
       background: 'linear-gradient(135deg, #EAFBF2 0%, #F6FEF9 68%, #FFFFFF 100%)',
       glowColor: 'rgba(74, 222, 128, 0.18)',
       valueColor: '#15803D',
@@ -972,7 +952,6 @@ function EmployeeDashboardPage() {
     {
       title: 'ไม่อนุมัติ',
       value: rejectedRequestCount,
-      description: 'คำขอที่ไม่ได้รับอนุมัติ',
       background: 'linear-gradient(135deg, #FFF0F1 0%, #FFF8F8 68%, #FFFFFF 100%)',
       glowColor: 'rgba(248, 113, 113, 0.16)',
       valueColor: '#DC2626',
@@ -1062,41 +1041,6 @@ function EmployeeDashboardPage() {
       activeMenu="Dashboard"
       calibrated
     >
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
-          <Button
-            type="button"
-            variant="contained"
-            startIcon={<AddRoundedIcon sx={{ fontSize: 19 }} />}
-            onClick={() =>
-              navigate(
-                '/employee/leave-request',
-                { state: { returnTo: '/employee/dashboard' } },
-              )
-            }
-            sx={{
-              height: '40px',
-              padding: '0 16px',
-              backgroundColor: '#2563EB',
-              color: '#FFFFFF',
-              borderRadius: '9px',
-              fontSize: '13px',
-              fontWeight: 700,
-              textTransform: 'none',
-              boxShadow: 'none',
-              transition: 'background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
-              '&:hover': {
-                backgroundColor: '#1D4ED8',
-                boxShadow: '0 6px 16px rgba(37, 99, 235, 0.22)',
-                transform: 'translateY(-1px)',
-              },
-              '&:active': { transform: 'translateY(0)', boxShadow: 'none' },
-              '&:focus-visible': { outline: '3px solid #BFDBFE', outlineOffset: 2 },
-            }}
-          >
-            สร้างคำขอลา
-          </Button>
-      </Box>
-
       <Box
         sx={{
           display:

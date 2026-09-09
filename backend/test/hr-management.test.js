@@ -113,7 +113,15 @@ test('employee create, update and status update succeed with parameterized SQL',
   const queries = []
   pool.execute = async (sql, parameters) => { queries.push({ sql, parameters }); return results.shift() }
   const connectionQueries = []
-  const connectionResults = [[{ insertId: 10 }], [[]], [{ affectedRows: 1 }]]
+  const connectionResults = [
+    [{ insertId: 10 }],
+    [[]],
+    [{ affectedRows: 1 }],
+    [{ affectedRows: 1 }],
+    [{ affectedRows: 1 }],
+    [[{ user_id: 4 }]],
+    [{ affectedRows: 1 }],
+  ]
   pool.getConnection = async () => ({
     beginTransaction: async () => {},
     commit: async () => {},
@@ -129,8 +137,12 @@ test('employee create, update and status update succeed with parameterized SQL',
   assert.equal(response.status, 201)
   assert.match(connectionQueries[0].parameters[0], /^TMP-/)
   assert.equal(connectionQueries[2].parameters[0], 'EMP-010')
+  assert.match(connectionQueries[5].sql, /LOWER\(r\.role_name\) = 'admin'/)
+  assert.match(connectionQueries[6].sql, /INSERT INTO notifications/)
+  assert.equal(connectionQueries[6].parameters[0], 4)
+  assert.equal(connectionQueries[6].parameters[4], 'employee-account-required')
 
-  results = [[[employeeRow]], [[{ department_id: 1 }]], [[{ position_id: 1 }]], [[]], [{ affectedRows: 1 }], [[employeeRow]]]
+  results = [[[employeeRow]], [[{ department_id: 1 }]], [[{ position_id: 1 }]], [[]], [{ affectedRows: 1 }], [{ affectedRows: 1 }], [{ affectedRows: 1 }], [[employeeRow]]]
   pool.execute = async () => results.shift()
   response = await fetch(`${baseUrl}/api/hr/employees/10`, { method: 'PUT', headers: auth(), body: JSON.stringify(payload) })
   assert.equal(response.status, 200)
@@ -139,6 +151,29 @@ test('employee create, update and status update succeed with parameterized SQL',
   pool.execute = async () => results.shift()
   response = await fetch(`${baseUrl}/api/hr/employees/10/status`, { method: 'PATCH', headers: auth(), body: JSON.stringify({ status: 'inactive' }) })
   assert.equal(response.status, 200)
+})
+
+test('employee delete requires inactive data without business references and removes generated entitlements', async () => {
+  pool.execute = async () => [[employeeRow]]
+  assert.equal((await fetch(`${baseUrl}/api/hr/employees/10`, { method: 'DELETE', headers: auth() })).status, 409)
+
+  const inactiveEmployee = { ...employeeRow, status: 'inactive' }
+  let results = [[[inactiveEmployee]], [[{ user_count: 0, request_count: 0, entitlement_count: 3, subordinate_count: 0 }]]]
+  pool.execute = async () => results.shift()
+  const deleteQueries = []
+  pool.getConnection = async () => ({
+    beginTransaction: async () => {},
+    commit: async () => {},
+    rollback: async () => {},
+    release: () => {},
+    execute: async (sql, parameters) => {
+      deleteQueries.push({ sql, parameters })
+      return [{ affectedRows: 1 }]
+    },
+  })
+  assert.equal((await fetch(`${baseUrl}/api/hr/employees/10`, { method: 'DELETE', headers: auth() })).status, 200)
+  assert.match(deleteQueries[0].sql, /DELETE FROM leave_entitlements/)
+  assert.match(deleteQueries[1].sql, /DELETE FROM employees/)
 })
 
 test('department list/get/create/update/status and duplicate validation', async () => {
@@ -166,6 +201,16 @@ test('department list/get/create/update/status and duplicate validation', async 
   assert.equal((await fetch(`${baseUrl}/api/hr/departments`, { method: 'POST', headers: auth(), body: JSON.stringify({ departmentName: 'IT', status: 'Active' }) })).status, 409)
 })
 
+test('department delete requires inactive department without employees', async () => {
+  pool.execute = async () => [[departmentRow]]
+  assert.equal((await fetch(`${baseUrl}/api/hr/departments/1`, { method: 'DELETE', headers: auth() })).status, 409)
+
+  const unusedDepartment = { ...departmentRow, is_active: 0, employee_count: 0, active_employee_count: 0 }
+  let results = [[[unusedDepartment]], [{ affectedRows: 1 }]]
+  pool.execute = async () => results.shift()
+  assert.equal((await fetch(`${baseUrl}/api/hr/departments/1`, { method: 'DELETE', headers: auth() })).status, 200)
+})
+
 test('position list/get/create/update/status, duplicate and 404 work', async () => {
   pool.execute = async () => [[positionRow]]
   assert.equal((await fetch(`${baseUrl}/api/hr/positions`, { headers: auth() })).status, 200)
@@ -185,6 +230,16 @@ test('position list/get/create/update/status, duplicate and 404 work', async () 
   assert.equal((await fetch(`${baseUrl}/api/hr/positions/999`, { headers: auth() })).status, 404)
 })
 
+test('position delete requires inactive position without employees', async () => {
+  pool.execute = async () => [[positionRow]]
+  assert.equal((await fetch(`${baseUrl}/api/hr/positions/1`, { method: 'DELETE', headers: auth() })).status, 409)
+
+  const unusedPosition = { ...positionRow, is_active: 0, employee_count: 0 }
+  let results = [[[unusedPosition]], [{ affectedRows: 1 }]]
+  pool.execute = async () => results.shift()
+  assert.equal((await fetch(`${baseUrl}/api/hr/positions/1`, { method: 'DELETE', headers: auth() })).status, 200)
+})
+
 test('leave type list/get/create/update/status and validation work', async () => {
   pool.execute = async () => [[leaveTypeRow]]
   assert.equal((await fetch(`${baseUrl}/api/hr/leave-types`, { headers: auth() })).status, 200)
@@ -202,6 +257,8 @@ test('leave type list/get/create/update/status and validation work', async () =>
     [{ insertId: 1 }],
     [[]],
     [{ affectedRows: 1 }],
+    [{ affectedRows: 1 }],
+    [{ affectedRows: 1 }],
     [[generatedLeaveType]],
   ]
   pool.getConnection = async () => ({
@@ -218,17 +275,53 @@ test('leave type list/get/create/update/status and validation work', async () =>
   const createBody = await createResponse.json()
   assert.equal(createResponse.status, 201)
   assert.equal(createBody.data.leaveType.code, 'LT-001')
-  assert.match(createQueries[0].parameters[0], /^TMP-LT-/)
+  assert.match(createQueries[0].parameters[0], /^TL[A-Z0-9]{8}$/)
+  assert.ok(createQueries[0].parameters[0].length <= 10)
   assert.deepEqual(createQueries[2].parameters, ['LT-001', 1])
+  assert.match(createQueries[3].sql, /INSERT INTO leave_entitlements/)
+  assert.equal(createQueries[3].parameters.at(-1), 1)
+  assert.match(createQueries[4].sql, /UPDATE leave_entitlements/)
   pool.getConnection = originalGetConnection
   pool.execute = async () => [[{ leave_type_id: 2, leave_type_code: 'ANN', leave_type_name: 'Other' }]]
   assert.equal((await fetch(`${baseUrl}/api/hr/leave-types`, { method: 'POST', headers: auth(), body: JSON.stringify(valid) })).status, 409)
-  let updateResults = [[[leaveTypeRow]], [[]], [{ affectedRows: 1 }], [[leaveTypeRow]]]
+  let updateResults = [[[leaveTypeRow]], [[]], [[{ maximum_approved_days: 0 }]], [{ affectedRows: 1 }], [{ affectedRows: 1 }], [{ affectedRows: 1 }], [[leaveTypeRow]]]
   pool.execute = async () => updateResults.shift()
   assert.equal((await fetch(`${baseUrl}/api/hr/leave-types/1`, { method: 'PUT', headers: auth(), body: JSON.stringify(valid) })).status, 200)
+  updateResults = [[[leaveTypeRow]], [[]], [[{ maximum_approved_days: 6 }]]]
+  pool.execute = async () => updateResults.shift()
+  assert.equal((await fetch(`${baseUrl}/api/hr/leave-types/1`, { method: 'PUT', headers: auth(), body: JSON.stringify({ ...valid, defaultDays: 5 }) })).status, 409)
   updateResults = [[[leaveTypeRow]], [{ affectedRows: 1 }]]
   pool.execute = async () => updateResults.shift()
   assert.equal((await fetch(`${baseUrl}/api/hr/leave-types/1/status`, { method: 'PATCH', headers: auth(), body: JSON.stringify({ status: 'Inactive' }) })).status, 200)
+})
+
+test('leave type delete ignores unused generated entitlements but protects business history', async () => {
+  const originalConnectionFactory = pool.getConnection
+  pool.execute = async () => [[leaveTypeRow]]
+  assert.equal((await fetch(`${baseUrl}/api/hr/leave-types/1`, { method: 'DELETE', headers: auth() })).status, 409)
+
+  const inactiveLeaveType = { ...leaveTypeRow, is_active: 0 }
+  let results = [[[inactiveLeaveType]], [[{ request_count: 1, used_entitlement_count: 0 }]]]
+  pool.execute = async () => results.shift()
+  assert.equal((await fetch(`${baseUrl}/api/hr/leave-types/1`, { method: 'DELETE', headers: auth() })).status, 409)
+
+  results = [[[inactiveLeaveType]], [[{ request_count: 0, used_entitlement_count: 0 }]]]
+  pool.execute = async () => results.shift()
+  const deleteQueries = []
+  pool.getConnection = async () => ({
+    beginTransaction: async () => {},
+    commit: async () => {},
+    rollback: async () => {},
+    release: () => {},
+    execute: async (sql, parameters) => {
+      deleteQueries.push({ sql, parameters })
+      return [{ affectedRows: 1 }]
+    },
+  })
+  assert.equal((await fetch(`${baseUrl}/api/hr/leave-types/1`, { method: 'DELETE', headers: auth() })).status, 200)
+  assert.match(deleteQueries[0].sql, /DELETE FROM leave_entitlements/)
+  assert.match(deleteQueries[1].sql, /DELETE FROM leave_types/)
+  pool.getConnection = originalConnectionFactory
 })
 
 test('holiday list/get/create/update/delete and validation work', async () => {
@@ -241,6 +334,13 @@ test('holiday list/get/create/update/delete and validation work', async () => {
   let results = [[[]], [{ insertId: 1 }], [[holidayRow]]]
   pool.execute = async () => results.shift()
   assert.equal((await fetch(`${baseUrl}/api/hr/holidays`, { method: 'POST', headers: auth(), body: JSON.stringify(valid) })).status, 201)
+  results = [[[]], [{ insertId: 2 }], [[holidayRow]]]
+  pool.execute = async () => results.shift()
+  assert.equal((await fetch(`${baseUrl}/api/hr/holidays`, {
+    method: 'POST',
+    headers: auth(),
+    body: JSON.stringify({ holidayName: 'Company Day', holidayDate: '2026-12-06', isActive: true }),
+  })).status, 201)
   pool.execute = async () => [[{ holiday_id: 2 }]]
   assert.equal((await fetch(`${baseUrl}/api/hr/holidays`, { method: 'POST', headers: auth(), body: JSON.stringify(valid) })).status, 409)
   results = [[[holidayRow]], [[]], [{ affectedRows: 1 }], [[holidayRow]]]
@@ -253,28 +353,24 @@ test('holiday list/get/create/update/delete and validation work', async () => {
   assert.equal((await fetch(`${baseUrl}/api/hr/holidays/999`, { headers: auth() })).status, 404)
 })
 
-test('leave entitlement list/get/create/update and validation work', async () => {
+test('leave entitlements are readable but cannot be changed per employee', async () => {
   pool.execute = async () => [[entitlementRow]]
   assert.equal((await fetch(`${baseUrl}/api/hr/leave-entitlements`, { headers: auth() })).status, 200)
   assert.equal((await fetch(`${baseUrl}/api/hr/leave-entitlements/1`, { headers: auth() })).status, 200)
-  const valid = { employeeId: 10, leaveTypeId: 1, year: 2026, totalDays: 10, usedDays: 2 }
-  pool.execute = async () => [[]]
-  assert.equal((await fetch(`${baseUrl}/api/hr/leave-entitlements`, { method: 'POST', headers: auth(), body: JSON.stringify(valid) })).status, 400)
-  let results = [[[{ employee_id: 10 }]], [[]]]
-  pool.execute = async () => results.shift()
-  assert.equal((await fetch(`${baseUrl}/api/hr/leave-entitlements`, { method: 'POST', headers: auth(), body: JSON.stringify(valid) })).status, 400)
-  results = [[[{ employee_id: 10 }]], [[{ leave_type_id: 1 }]], [[{ entitlement_id: 2 }]]]
-  pool.execute = async () => results.shift()
-  assert.equal((await fetch(`${baseUrl}/api/hr/leave-entitlements`, { method: 'POST', headers: auth(), body: JSON.stringify(valid) })).status, 409)
-  results = [[[{ employee_id: 10 }]], [[{ leave_type_id: 1 }]]]
-  pool.execute = async () => results.shift()
-  assert.equal((await fetch(`${baseUrl}/api/hr/leave-entitlements`, { method: 'POST', headers: auth(), body: JSON.stringify({ ...valid, usedDays: 11 }) })).status, 400)
-  results = [[[{ employee_id: 10 }]], [[{ leave_type_id: 1 }]], [[]], [{ insertId: 1 }], [[entitlementRow]]]
-  pool.execute = async () => results.shift()
-  assert.equal((await fetch(`${baseUrl}/api/hr/leave-entitlements`, { method: 'POST', headers: auth(), body: JSON.stringify(valid) })).status, 201)
-  results = [[[{ employee_id: 10 }]], [[{ leave_type_id: 1 }]], [[entitlementRow]], [[]], [{ affectedRows: 1 }], [[entitlementRow]]]
-  pool.execute = async () => results.shift()
-  assert.equal((await fetch(`${baseUrl}/api/hr/leave-entitlements/1`, { method: 'PUT', headers: auth(), body: JSON.stringify(valid) })).status, 200)
+
+  const payload = { employeeId: 10, leaveTypeId: 1, year: 2026, totalDays: 10 }
+  let response = await fetch(`${baseUrl}/api/hr/leave-entitlements`, {
+    method: 'POST', headers: auth(), body: JSON.stringify(payload),
+  })
+  assert.equal(response.status, 409)
+  assert.match((await response.json()).message, /อัตโนมัติ/)
+
+  response = await fetch(`${baseUrl}/api/hr/leave-entitlements/1`, {
+    method: 'PUT', headers: auth(), body: JSON.stringify(payload),
+  })
+  assert.equal(response.status, 409)
+  assert.match((await response.json()).message, /อัตโนมัติ/)
+
   pool.execute = async () => [[]]
   assert.equal((await fetch(`${baseUrl}/api/hr/leave-entitlements/999`, { headers: auth() })).status, 404)
 })

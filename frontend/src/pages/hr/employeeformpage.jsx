@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Box,
@@ -9,6 +9,8 @@ import {
   DialogTitle,
   FormControl,
   FormHelperText,
+  IconButton,
+  InputAdornment,
   InputLabel,
   MenuItem,
   Paper,
@@ -16,8 +18,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import CalendarMonthRounded from '@mui/icons-material/CalendarMonthRounded';
 import HRLayout from '../../layouts/hrlayout.jsx';
-import { BackButton, PageHeader } from '../../components/sharedvisualfoundation.jsx';
+import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
 import { roleDashboardCardSurfaceSx } from '../../theme/rolecardsurface.js';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getDepartments } from '../../api/department-service.js';
@@ -28,6 +31,54 @@ import {
   getEmployees,
   updateEmployee,
 } from '../../api/employee-service.js';
+
+function formatThaiDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return '';
+  const [year, month, day] = value.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+function ThaiDateField({ label, value, onChange, error, helperText }) {
+  const pickerRef = useRef(null);
+  const openPicker = () => {
+    const picker = pickerRef.current;
+    if (!picker) return;
+    try {
+      if (typeof picker.showPicker === 'function') picker.showPicker();
+      else picker.click();
+    } catch {
+      picker.click();
+    }
+  };
+
+  return (
+    <Box sx={{ position: 'relative' }}>
+      <TextField
+        fullWidth
+        required
+        label={label}
+        value={formatThaiDate(value)}
+        placeholder="วว/ดด/ปปปป"
+        error={error}
+        helperText={helperText}
+        onClick={openPicker}
+        slotProps={{
+          input: {
+            readOnly: true,
+            endAdornment: <InputAdornment position="end"><IconButton type="button" aria-label={`เลือก${label}`} onClick={openPicker} edge="end"><CalendarMonthRounded fontSize="small" /></IconButton></InputAdornment>,
+          },
+          inputLabel: { shrink: true },
+        }}
+        sx={{
+          '& .MuiOutlinedInput-root': { borderRadius: '8px', '&.Mui-focused fieldset': { borderColor: '#059669' } },
+          '& .MuiInputBase-input::placeholder': { opacity: 1, color: '#64748B' },
+          '& .MuiInputLabel-root.Mui-focused': { color: '#059669' },
+        }}
+      />
+      <input ref={pickerRef} type="date" value={value} onChange={(event) => onChange(event.target.value)} style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', insetInlineStart: 0, bottom: 0 }} />
+    </Box>
+  );
+}
 
 function EmployeeFormPage({ mode = 'add' }) {
   const navigate = useNavigate();
@@ -59,6 +110,7 @@ function EmployeeFormPage({ mode = 'add' }) {
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [confirmationError, setConfirmationError] = useState('');
 
   const [departments, setDepartments] = useState([]);
   const [positions, setPositions] = useState([]);
@@ -198,6 +250,7 @@ function EmployeeFormPage({ mode = 'add' }) {
 
     setSuccessMessage('');
     setErrorMessage('');
+    setConfirmationError('');
 
     if (!validateForm()) {
       return;
@@ -220,15 +273,19 @@ function EmployeeFormPage({ mode = 'add' }) {
       status: formData.status,
     };
     setSaving(true);
+    setConfirmationError('');
     try {
       const result = isEditMode
         ? await updateEmployee(employeeId, employeeData)
         : await createEmployee(employeeData);
       setConfirmationOpen(false);
+      setConfirmationError('');
       setSuccessMessage(result.message || `${isEditMode ? 'แก้ไข' : 'เพิ่ม'}พนักงานเรียบร้อยแล้ว`);
       window.setTimeout(() => navigate(returnTo), 500);
     } catch (error) {
-      setErrorMessage(error.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลพนักงานได้');
+      const message = error.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลพนักงานได้';
+      setErrorMessage(message);
+      setConfirmationError(message);
     } finally {
       setSaving(false);
     }
@@ -260,7 +317,7 @@ function EmployeeFormPage({ mode = 'add' }) {
 
   return (
     <HRLayout activeMenu="Employee Management">
-      <PageHeader title={isEditMode ? 'แก้ไขพนักงาน' : 'เพิ่มพนักงาน'} actions={<BackButton onClick={() => navigate(returnTo)}>กลับ</BackButton>} sx={{ maxWidth: '900px', marginInline: 'auto' }} />
+      <PageHeader title={isEditMode ? 'แก้ไขพนักงาน' : 'เพิ่มพนักงาน'} actions={<Button type="button" variant="outlined" onClick={() => navigate(returnTo)}>ยกเลิก</Button>} sx={{ maxWidth: '900px', marginInline: 'auto' }} />
 
       {successMessage && (
         <Alert
@@ -639,74 +696,12 @@ function EmployeeFormPage({ mode = 'add' }) {
               </Select>
             </FormControl>
 
-            <TextField
-              id="employment-date"
-              fullWidth
-              required
-              type="date"
+            <ThaiDateField
               label="วันที่เริ่มงาน"
               value={formData.employmentDate}
-              onChange={(event) =>
-                handleInputChange(
-                  'employmentDate',
-                  event.target.value,
-                )
-              }
+              onChange={(value) => handleInputChange('employmentDate', value)}
               error={Boolean(errors.employmentDate)}
               helperText={errors.employmentDate}
-              onClick={(event) => {
-                const input = event.currentTarget.querySelector('input');
-                input?.focus();
-                input?.showPicker?.();
-              }}
-              slotProps={{
-                inputLabel: {
-                  shrink: true,
-                },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                  color: formData.employmentDate
-                    ? '#111827'
-                    : '#6B7280',
-
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#059669',
-                  },
-                },
-
-                '& .MuiInputLabel-root': {
-                  color: '#6B7280',
-                },
-
-                '& .MuiInputLabel-root.Mui-focused': {
-                  color: '#059669',
-                },
-
-                '& input[type="date"]': {
-                  color: formData.employmentDate
-                    ? '#111827'
-                    : '#6B7280',
-                },
-
-                '& input[type="date"]::-webkit-datetime-edit': {
-                  color: formData.employmentDate
-                    ? '#111827'
-                    : '#6B7280',
-                },
-
-                '& input[type="date"]::-webkit-datetime-edit-fields-wrapper': {
-                  color: formData.employmentDate
-                    ? '#111827'
-                    : '#6B7280',
-                },
-
-                '& input[type="date"]::-webkit-calendar-picker-indicator': {
-                  opacity: 0.7,
-                  cursor: 'pointer',
-                },
-              }}
             />
           </Box>
         </Paper>
@@ -907,9 +902,14 @@ function EmployeeFormPage({ mode = 'add' }) {
           </Box>
         </Box>
       </Box>
-      <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm">
+      <Dialog open={confirmationOpen} onClose={() => { if (!saving) { setConfirmationOpen(false); setConfirmationError(''); } }} fullWidth maxWidth="sm">
         <DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกข้อมูลพนักงาน</DialogTitle>
         <DialogContent>
+          {confirmationError ? (
+            <Alert severity="error" sx={{ marginBottom: '16px' }}>
+              {confirmationError}
+            </Alert>
+          ) : null}
           <Box sx={{ display: 'grid', gap: '10px' }}>
             <Typography><strong>ชื่อ:</strong> {formData.firstName} {formData.lastName}</Typography>
             <Typography><strong>รหัสพนักงาน:</strong> {isEditMode ? formData.employeeId : 'ระบบสร้างอัตโนมัติ'}</Typography>
@@ -918,7 +918,7 @@ function EmployeeFormPage({ mode = 'add' }) {
             <Typography><strong>ตำแหน่ง:</strong> {positions.find((item) => String(item.positionId) === String(formData.position))?.positionName || '-'}</Typography>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ padding: '14px 20px' }}><Button type="button" variant="outlined" color="secondary" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button><Button type="button" variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions>
+        <DialogActions sx={{ padding: '14px 20px' }}><Button type="button" variant="outlined" color="secondary" disabled={saving} onClick={() => { setConfirmationOpen(false); setConfirmationError(''); }}>กลับไปแก้ไข</Button><Button type="button" variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions>
       </Dialog>
     </HRLayout>
   );

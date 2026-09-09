@@ -248,6 +248,47 @@ export function CompactSummaryCard({
   );
 }
 
+export function InlineListSummary({ items = [], sx, ...props }) {
+  if (!items.length) return null;
+
+  return (
+    <Stack
+      {...props}
+      direction="row"
+      alignItems="center"
+      useFlexGap
+      flexWrap="wrap"
+      sx={{
+        columnGap: `${spacingTokens.xl}px`,
+        rowGap: `${spacingTokens.sm}px`,
+        marginBottom: `${spacingTokens.lg}px`,
+        color: colorTokens.text.secondary,
+        ...sx,
+      }}
+    >
+      {items.map((item, index) => (
+        <Box
+          key={item.title || item.label}
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'baseline',
+            gap: `${spacingTokens.xs}px`,
+            paddingRight: index < items.length - 1 ? `${spacingTokens.xl}px` : 0,
+            borderRight: index < items.length - 1 ? `1px solid ${colorTokens.border}` : 0,
+          }}
+        >
+          <Typography sx={{ color: colorTokens.text.secondary, fontSize: 12, fontWeight: 600 }}>
+            {item.title || item.label}
+          </Typography>
+          <Typography sx={{ color: item.color || colorTokens.text.primary, fontSize: 15, fontWeight: 700 }}>
+            {item.value}{item.unit ? ` ${item.unit}` : ''}
+          </Typography>
+        </Box>
+      ))}
+    </Stack>
+  );
+}
+
 const surfaceVariants = {
   default: {
     backgroundColor: '#FFFFFF',

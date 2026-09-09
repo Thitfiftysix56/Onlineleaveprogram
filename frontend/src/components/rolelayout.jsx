@@ -482,6 +482,20 @@ function RoleLayout({
     return () => window.removeEventListener('notification-read-state-changed', refreshUnreadCount);
   }, [loadNotifications]);
 
+  useEffect(() => {
+    const refreshWhenActive = () => {
+      if (document.visibilityState === 'visible') loadNotifications();
+    };
+    const intervalId = window.setInterval(loadNotifications, 30000);
+    window.addEventListener('focus', refreshWhenActive);
+    document.addEventListener('visibilitychange', refreshWhenActive);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshWhenActive);
+      document.removeEventListener('visibilitychange', refreshWhenActive);
+    };
+  }, [loadNotifications]);
+
   const isNotificationRead = (item) => Boolean(item.read ?? item.isRead ?? item.readAt);
   const unreadCount = notifications.filter((item) => !isNotificationRead(item)).length;
 
@@ -725,7 +739,7 @@ function RoleLayout({
   );
 
   const renderGlobalActions = () => (
-    <Box sx={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+    <Box sx={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
       <IconButton
         type="button"
         aria-label="เปิดการแจ้งเตือน"
@@ -740,6 +754,15 @@ function RoleLayout({
           <NotificationsNoneRounded />
         </Badge>
       </IconButton>
+      <Button
+        type="button"
+        variant="contained"
+        startIcon={<AddCircleOutlineRounded />}
+        onClick={() => navigate(`/${currentRole}/leave-request`, { state: { returnTo: `/${currentRole}/dashboard` } })}
+        sx={{ height: 40, minHeight: '40px !important', borderRadius: '9px', backgroundColor: '#2563EB', boxShadow: 'none', fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap', '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' } }}
+      >
+        สร้างคำขอลา
+      </Button>
     </Box>
   );
 
@@ -2146,31 +2169,15 @@ function RoleLayout({
           '& .MuiTableCell-root': {
             paddingBlock: '12px',
           },
-          ...(isDashboardPage && {
-            '& > .role-page-global-action + *': {
-              paddingRight: '52px',
-              boxSizing: 'border-box',
-            },
-          }),
         }}
       >
         {isDashboardPage && (
           <Box
             className="role-page-global-action"
             sx={{
-              position: 'absolute',
-              zIndex: 5,
-              top: {
-                xs: '88px',
-                sm: '92px',
-                md: '32px',
-              },
-              right: {
-                xs: '18px',
-                sm: '24px',
-                md: '32px',
-                lg: '40px',
-              },
+              display: 'flex',
+              justifyContent: 'flex-end',
+              marginBottom: '16px',
             }}
           >
             {renderGlobalActions()}

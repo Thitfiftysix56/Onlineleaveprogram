@@ -1,4 +1,5 @@
 import { pool } from '../config/database.js'
+import { createNotification } from '../services/notification-service.js'
 
 const employeeStatuses = new Set(['active', 'inactive', 'resigned'])
 const holidayTypes = new Set(['public holiday', 'company holiday', 'special holiday'])
@@ -211,6 +212,27 @@ export async function createEmployee(request, response) {
       'UPDATE employees SET employee_code = ? WHERE employee_id = ?',
       [employeeCode, result.insertId],
     )
+    if (v.status === 'active') {
+      await ensureCurrentYearEntitlements(connection, {
+        employeeId: result.insertId,
+        updatedBy: request.user.userId || null,
+      })
+    }
+    const [adminUsers] = await connection.execute(
+      `SELECT u.user_id
+         FROM users u
+         JOIN roles r ON r.role_id = u.role_id
+        WHERE LOWER(r.role_name) = 'admin'
+          AND u.status = 'active'`,
+    )
+    for (const adminUser of adminUsers) {
+      await createNotification(connection, {
+        userId: adminUser.user_id,
+        type: 'employee-account-required',
+        title: 'มีพนักงานใหม่รอสร้างบัญชี',
+        message: `เพิ่มพนักงาน ${employeeCode} ${v.firstName} ${v.lastName} แล้ว กรุณาสร้างบัญชีผู้ใช้`,
+      })
+    }
     await connection.commit()
     const row = await employeeById(result.insertId)
     return response.status(201).json({ status: 'ok', message: 'Employee created successfully', data: { employee: employeeData(row) } })
@@ -239,6 +261,12 @@ export async function updateEmployee(request, response) {
       `UPDATE employees SET employee_code = ?, first_name = ?, last_name = ?, phone = ?, email = ?, department_id = ?, position_id = ?, supervisor_id = ?, hire_date = ?, status = ? WHERE employee_id = ?`,
       [v.employeeCode, v.firstName, v.lastName, v.phone, v.email, v.departmentId, v.positionId, v.supervisorId, v.hireDate, v.status, id],
     )
+    if (v.status === 'active') {
+      await ensureCurrentYearEntitlements(pool, {
+        employeeId: id,
+        updatedBy: request.user.userId || null,
+      })
+    }
     const row = await employeeById(id)
     return response.json({ status: 'ok', message: 'Employee updated successfully', data: { employee: employeeData(row) } })
   } catch (error) {
@@ -256,9 +284,48 @@ export async function updateEmployeeStatus(request, response) {
     const row = await employeeById(id)
     if (!row) return sendError(response, 404, 'Employee was not found.')
     await pool.execute('UPDATE employees SET status = ? WHERE employee_id = ?', [status, id])
+    if (status === 'active') {
+      await ensureCurrentYearEntitlements(pool, {
+        employeeId: id,
+        updatedBy: request.user.userId || null,
+      })
+    }
     return response.json({ status: 'ok', message: 'Employee status updated successfully', data: { employeeId: id, status } })
   } catch (error) {
     return internalError(response, 'Update employee status error:', error)
+  }
+}
+
+export async function deleteEmployee(request, response) {
+  let connection
+  try {
+    const id = positiveId(request.params.employeeId)
+    if (!id) return sendError(response, 400, 'รหัสพนักงานไม่ถูกต้อง')
+    const employee = await employeeById(id)
+    if (!employee) return sendError(response, 404, 'ไม่พบข้อมูลพนักงาน')
+    if (lower(employee.status) === 'active') return sendError(response, 409, 'ต้องปิดใช้งานหรือกำหนดสถานะลาออกก่อนจึงจะลบพนักงานได้')
+    const [references] = await pool.execute(
+      `SELECT
+         (SELECT COUNT(*) FROM users WHERE employee_id = ?) AS user_count,
+         (SELECT COUNT(*) FROM leave_requests WHERE employee_id = ? OR approver_employee_id = ?) AS request_count,
+         (SELECT COUNT(*) FROM employees WHERE supervisor_id = ?) AS subordinate_count`,
+      [id, id, id, id],
+    )
+    const usage = references[0] || {}
+    if (Number(usage.user_count) > 0) return sendError(response, 409, 'กรุณาปิดใช้งานและลบบัญชีผู้ใช้ก่อนลบพนักงาน')
+    if (Number(usage.request_count) > 0) return sendError(response, 409, 'ไม่สามารถลบพนักงานที่มีประวัติคำขอลาได้')
+    if (Number(usage.subordinate_count) > 0) return sendError(response, 409, 'กรุณาเปลี่ยนหัวหน้างานของพนักงานใต้บังคับบัญชาก่อนลบ')
+    connection = await pool.getConnection()
+    await connection.beginTransaction()
+    await connection.execute('DELETE FROM leave_entitlements WHERE employee_id = ?', [id])
+    await connection.execute('DELETE FROM employees WHERE employee_id = ?', [id])
+    await connection.commit()
+    return response.json({ status: 'ok', message: 'ลบพนักงานเรียบร้อยแล้ว', data: { employeeId: id } })
+  } catch (error) {
+    if (connection) await connection.rollback()
+    return internalError(response, 'Delete employee error:', error)
+  } finally {
+    if (connection) connection.release()
   }
 }
 
@@ -350,6 +417,19 @@ export async function updateDepartmentStatus(request, response) {
   } catch (error) { return internalError(response, 'Update department status error:', error) }
 }
 
+export async function deleteDepartment(request, response) {
+  try {
+    const id = positiveId(request.params.departmentId)
+    if (!id) return sendError(response, 400, 'รหัสแผนกไม่ถูกต้อง')
+    const department = await departmentById(id)
+    if (!department) return sendError(response, 404, 'ไม่พบข้อมูลแผนก')
+    if (Boolean(department.is_active)) return sendError(response, 409, 'ต้องปิดใช้งานแผนกก่อนจึงจะลบได้')
+    if (Number(department.employee_count || 0) > 0) return sendError(response, 409, 'ไม่สามารถลบแผนกที่ยังมีพนักงานสังกัดอยู่ กรุณาย้ายพนักงานก่อน')
+    await pool.execute('DELETE FROM departments WHERE department_id = ?', [id])
+    return response.json({ status: 'ok', message: 'ลบแผนกเรียบร้อยแล้ว', data: { departmentId: id } })
+  } catch (error) { return internalError(response, 'Delete department error:', error) }
+}
+
 function positionData(row) {
   return {
     positionId: row.position_id,
@@ -427,6 +507,19 @@ export async function updatePositionStatus(request, response) {
   } catch (error) { return internalError(response, 'Update position status error:', error) }
 }
 
+export async function deletePosition(request, response) {
+  try {
+    const id = positiveId(request.params.positionId)
+    if (!id) return sendError(response, 400, 'รหัสตำแหน่งไม่ถูกต้อง')
+    const position = await positionById(id)
+    if (!position) return sendError(response, 404, 'ไม่พบข้อมูลตำแหน่ง')
+    if (Boolean(position.is_active)) return sendError(response, 409, 'ต้องปิดใช้งานตำแหน่งก่อนจึงจะลบได้')
+    if (Number(position.employee_count || 0) > 0) return sendError(response, 409, 'ไม่สามารถลบตำแหน่งที่ยังมีพนักงานอยู่ กรุณาย้ายพนักงานก่อน')
+    await pool.execute('DELETE FROM positions WHERE position_id = ?', [id])
+    return response.json({ status: 'ok', message: 'ลบตำแหน่งเรียบร้อยแล้ว', data: { positionId: id } })
+  } catch (error) { return internalError(response, 'Delete position error:', error) }
+}
+
 function leaveTypeData(row) {
   return {
     leaveTypeId: row.leave_type_id,
@@ -482,8 +575,8 @@ async function validateLeaveType(body, currentId = null, currentCode = '') {
     : null
   const isActive = activeValue(body.isActive ?? body.status)
   if (!name || name.length > 100) return { error: 'Leave type name is required and must not exceed 100 characters.' }
-  if (description.length < 5 || description.length > 300) return { error: 'Description must contain 5-300 characters.' }
-  if (defaultDays === null) return { error: 'Default days must be between 0 and 365.' }
+  if (description.length > 300) return { error: 'Description must not exceed 300 characters.' }
+  if (defaultDays === null || defaultDays <= 0) return { error: 'Default days must be between 1 and 365.' }
   if (minimumDays === null || maximumDays === null || maximumDays < minimumDays) return { error: 'Minimum and maximum days are invalid.' }
   if (attachmentAfter === null && (attachmentRule === 'threshold' || trim(body.attachmentRequiredAfterDays))) return { error: 'Attachment threshold is invalid.' }
   if (attachmentAfter !== null && attachmentAfter > maximumDays) return { error: 'Attachment threshold cannot exceed maximum days.' }
@@ -517,10 +610,34 @@ async function saveLeaveType(request, response, id = null) {
   const v = validation.value
   const parameters = [v.code, v.name, v.description, v.defaultDays, v.minimumDays, v.maximumDays, v.attachmentRequired, v.attachmentAfter, v.isActive]
   if (id) {
+    const currentYear = new Date().getFullYear()
+    const [[usage]] = await pool.execute(
+      `SELECT COALESCE(MAX(employee_usage.approved_days), 0) AS maximum_approved_days
+         FROM (
+           SELECT employee_id, COALESCE(SUM(leave_days), 0) AS approved_days
+             FROM leave_requests
+            WHERE leave_type_id = ? AND status = 'approved' AND YEAR(start_date) = ?
+            GROUP BY employee_id
+         ) employee_usage`,
+      [id, currentYear],
+    )
+    if (v.defaultDays < Number(usage.maximum_approved_days || 0)) {
+      return sendError(
+        response,
+        409,
+        `ไม่สามารถกำหนดสิทธิ์ต่ำกว่า ${Number(usage.maximum_approved_days)} วันได้ เนื่องจากมีพนักงานใช้สิทธิ์ที่อนุมัติในปี ${currentYear} ไปแล้ว`,
+      )
+    }
     await pool.execute(
       `UPDATE leave_types SET leave_type_code = ?, leave_type_name = ?, description = ?, annual_quota_days = ?, minimum_days = ?, maximum_days_per_request = ?, requires_attachment = ?, attachment_required_after_days = ?, is_active = ? WHERE leave_type_id = ?`,
       [...parameters, id],
     )
+    if (v.isActive) {
+      await ensureCurrentYearEntitlements(pool, {
+        leaveTypeId: id,
+        updatedBy: request.user.userId || null,
+      })
+    }
     const row = await leaveTypeById(id)
     return response.status(200).json({ status: 'ok', message: 'Leave type updated successfully', data: { leaveType: leaveTypeData(row) } })
   }
@@ -529,7 +646,7 @@ async function saveLeaveType(request, response, id = null) {
   try {
     connection = await pool.getConnection()
     await connection.beginTransaction()
-    const temporaryCode = `TMP-LT-${Date.now().toString(36)}`.toUpperCase()
+    const temporaryCode = `TL${Date.now().toString(36).slice(-6)}${Math.random().toString(36).slice(2, 4)}`.toUpperCase()
     const [result] = await connection.execute(
       `INSERT INTO leave_types (leave_type_code, leave_type_name, description, annual_quota_days, minimum_days, maximum_days_per_request, requires_attachment, attachment_required_after_days, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [temporaryCode, ...parameters.slice(1)],
@@ -539,6 +656,12 @@ async function saveLeaveType(request, response, id = null) {
       'UPDATE leave_types SET leave_type_code = ? WHERE leave_type_id = ?',
       [code, result.insertId],
     )
+    if (v.isActive) {
+      await ensureCurrentYearEntitlements(connection, {
+        leaveTypeId: result.insertId,
+        updatedBy: request.user.userId || null,
+      })
+    }
     const row = await leaveTypeById(result.insertId, connection)
     await connection.commit()
     return response.status(201).json({ status: 'ok', message: 'Leave type created successfully', data: { leaveType: leaveTypeData(row) } })
@@ -573,8 +696,52 @@ export async function updateLeaveTypeStatus(request, response) {
     if (isActive === null) return sendError(response, 400, 'Status must be Active or Inactive.')
     if (!await leaveTypeById(id)) return sendError(response, 404, 'Leave type was not found.')
     await pool.execute('UPDATE leave_types SET is_active = ? WHERE leave_type_id = ?', [isActive, id])
+    if (isActive) {
+      await ensureCurrentYearEntitlements(pool, {
+        leaveTypeId: id,
+        updatedBy: request.user.userId || null,
+      })
+    }
     return response.json({ status: 'ok', message: 'Leave type status updated successfully', data: { leaveTypeId: id, status: isActive ? 'Active' : 'Inactive' } })
   } catch (error) { return internalError(response, 'Update leave type status error:', error) }
+}
+
+export async function deleteLeaveType(request, response) {
+  let connection
+  try {
+    const id = positiveId(request.params.leaveTypeId)
+    if (!id) return sendError(response, 400, 'รหัสประเภทการลาไม่ถูกต้อง')
+    const leaveType = await leaveTypeById(id)
+    if (!leaveType) return sendError(response, 404, 'ไม่พบข้อมูลประเภทการลา')
+    if (Boolean(leaveType.is_active)) {
+      return sendError(response, 409, 'ต้องปิดใช้งานประเภทการลาก่อนจึงจะลบได้')
+    }
+
+    const [[references]] = await pool.execute(
+      `SELECT
+         (SELECT COUNT(*) FROM leave_requests WHERE leave_type_id = ?) AS request_count,
+         (SELECT COUNT(*) FROM leave_entitlements WHERE leave_type_id = ? AND used_days > 0) AS used_entitlement_count`,
+      [id, id],
+    )
+    if (Number(references.request_count) > 0) {
+      return sendError(response, 409, 'ไม่สามารถลบประเภทการลาที่มีประวัติคำขอลาได้')
+    }
+    if (Number(references.used_entitlement_count) > 0) {
+      return sendError(response, 409, 'ไม่สามารถลบประเภทการลาที่มียอดใช้สิทธิ์ได้')
+    }
+
+    connection = await pool.getConnection()
+    await connection.beginTransaction()
+    await connection.execute('DELETE FROM leave_entitlements WHERE leave_type_id = ?', [id])
+    await connection.execute('DELETE FROM leave_types WHERE leave_type_id = ?', [id])
+    await connection.commit()
+    return response.json({ status: 'ok', message: 'ลบประเภทการลาเรียบร้อยแล้ว', data: { leaveTypeId: id } })
+  } catch (error) {
+    if (connection) await connection.rollback()
+    return internalError(response, 'Delete leave type error:', error)
+  } finally {
+    if (connection) connection.release()
+  }
 }
 
 function holidayData(row) {
@@ -629,19 +796,19 @@ export async function getHoliday(request, response) {
   } catch (error) { return internalError(response, 'Get holiday error:', error) }
 }
 async function saveHoliday(request, response, id = null) {
-  const name = trim(request.body.name)
-  const date = validDate(request.body.date)
-  const type = lower(request.body.type)
+  const name = trim(request.body.name ?? request.body.holidayName)
+  const date = validDate(request.body.date ?? request.body.holidayDate)
+  const type = lower(request.body.type || 'Public Holiday')
   const description = trim(request.body.description)
   const isActive = activeValue(request.body.isActive ?? request.body.status)
-  if (!name || name.length > 100) return sendError(response, 400, 'Holiday name is required and must not exceed 100 characters.')
-  if (!date) return sendError(response, 400, 'A valid holiday date is required.')
-  if (!holidayTypes.has(type)) return sendError(response, 400, 'Holiday type is invalid.')
-  if (description.length < 5 || description.length > 300) return sendError(response, 400, 'Description must contain 5-300 characters.')
-  if (isActive === null) return sendError(response, 400, 'Status must be Active or Inactive.')
-  if (id && !await holidayById(id)) return sendError(response, 404, 'Holiday was not found.')
+  if (!name || name.length > 100) return sendError(response, 400, 'กรุณากรอกชื่อวันหยุดไม่เกิน 100 ตัวอักษร')
+  if (!date) return sendError(response, 400, 'กรุณาเลือกวันที่ให้ถูกต้อง')
+  if (!holidayTypes.has(type)) return sendError(response, 400, 'ประเภทวันหยุดไม่ถูกต้อง')
+  if (description.length > 300) return sendError(response, 400, 'รายละเอียดต้องไม่เกิน 300 ตัวอักษร')
+  if (isActive === null) return sendError(response, 400, 'กรุณาเลือกสถานะวันหยุด')
+  if (id && !await holidayById(id)) return sendError(response, 404, 'ไม่พบข้อมูลวันหยุด')
   const [duplicates] = await pool.execute('SELECT holiday_id FROM holidays WHERE holiday_date = ? AND holiday_id <> ? LIMIT 1', [date, id || 0])
-  if (duplicates.length) return sendError(response, 409, 'A holiday already exists on this date.')
+  if (duplicates.length) return sendError(response, 409, 'มีวันหยุดในวันที่นี้อยู่แล้ว')
   const canonicalType = type.replace(/\b\w/g, (letter) => letter.toUpperCase())
   let savedId = id
   if (id) await pool.execute('UPDATE holidays SET holiday_date = ?, holiday_name = ?, holiday_type = ?, description = ?, year = ?, is_active = ? WHERE holiday_id = ?', [date, name, canonicalType, description, Number(date.slice(0, 4)), isActive, id])
@@ -654,17 +821,17 @@ async function saveHoliday(request, response, id = null) {
 }
 export async function createHoliday(request, response) {
   try { return await saveHoliday(request, response) } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'A holiday already exists on this date.')
+    if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'มีวันหยุดในวันที่นี้อยู่แล้ว')
     return internalError(response, 'Create holiday error:', error)
   }
 }
 export async function updateHoliday(request, response) {
   try {
     const id = positiveId(request.params.holidayId)
-    if (!id) return sendError(response, 400, 'A valid holidayId is required.')
+    if (!id) return sendError(response, 400, 'รหัสวันหยุดไม่ถูกต้อง')
     return await saveHoliday(request, response, id)
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'A holiday already exists on this date.')
+    if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'มีวันหยุดในวันที่นี้อยู่แล้ว')
     return internalError(response, 'Update holiday error:', error)
   }
 }
@@ -712,8 +879,97 @@ async function entitlementById(id) {
   const [rows] = await pool.execute(`${entitlementSelect} WHERE le.entitlement_id = ? LIMIT 1`, [id])
   return rows[0] || null
 }
+
+async function ensureCurrentYearEntitlements(
+  executor = pool,
+  { employeeId = null, leaveTypeId = null, updatedBy = null } = {},
+) {
+  const year = new Date().getFullYear()
+  const conditions = [
+    "e.status = 'active'",
+    'lt.is_active = 1',
+    'lt.annual_quota_days > 0',
+    `NOT EXISTS (
+      SELECT 1 FROM leave_entitlements existing
+      WHERE existing.employee_id = e.employee_id
+        AND existing.leave_type_id = lt.leave_type_id
+        AND existing.year = ?
+    )`,
+  ]
+  const parameters = [year, updatedBy, year, year]
+  if (employeeId) {
+    conditions.push('e.employee_id = ?')
+    parameters.push(employeeId)
+  }
+  if (leaveTypeId) {
+    conditions.push('lt.leave_type_id = ?')
+    parameters.push(leaveTypeId)
+  }
+
+  await executor.execute(
+    `INSERT INTO leave_entitlements
+      (employee_id, leave_type_id, year, total_days, used_days, updated_by)
+     SELECT e.employee_id,
+            lt.leave_type_id,
+            ?,
+            GREATEST(lt.annual_quota_days, COALESCE(SUM(lr.leave_days), 0)),
+            COALESCE(SUM(lr.leave_days), 0),
+            ?
+       FROM employees e
+       CROSS JOIN leave_types lt
+       LEFT JOIN leave_requests lr
+         ON lr.employee_id = e.employee_id
+        AND lr.leave_type_id = lt.leave_type_id
+        AND lr.status = 'approved'
+        AND YEAR(lr.start_date) = ?
+      WHERE ${conditions.join(' AND ')}
+      GROUP BY e.employee_id, lt.leave_type_id, lt.annual_quota_days`,
+    parameters,
+  )
+
+  const synchronizationConditions = [
+    'le.year = ?',
+    "e.status = 'active'",
+    'lt.is_active = 1',
+    'lt.annual_quota_days > 0',
+  ]
+  const synchronizationParameters = [updatedBy, year]
+  if (employeeId) {
+    synchronizationConditions.push('le.employee_id = ?')
+    synchronizationParameters.push(employeeId)
+  }
+  if (leaveTypeId) {
+    synchronizationConditions.push('le.leave_type_id = ?')
+    synchronizationParameters.push(leaveTypeId)
+  }
+
+  await executor.execute(
+    `UPDATE leave_entitlements le
+       JOIN employees e ON e.employee_id = le.employee_id
+       JOIN leave_types lt ON lt.leave_type_id = le.leave_type_id
+       LEFT JOIN (
+         SELECT employee_id, leave_type_id, YEAR(start_date) AS request_year,
+                COALESCE(SUM(leave_days), 0) AS approved_days
+           FROM leave_requests
+          WHERE status = 'approved' AND YEAR(start_date) = ?
+          GROUP BY employee_id, leave_type_id, YEAR(start_date)
+       ) usage_summary
+         ON usage_summary.employee_id = le.employee_id
+        AND usage_summary.leave_type_id = le.leave_type_id
+        AND usage_summary.request_year = le.year
+        SET le.total_days = GREATEST(lt.annual_quota_days, COALESCE(usage_summary.approved_days, 0)),
+            le.used_days = COALESCE(usage_summary.approved_days, 0),
+            le.updated_by = ?
+      WHERE ${synchronizationConditions.join(' AND ')}`,
+    [year, ...synchronizationParameters],
+  )
+}
+
 export async function listLeaveEntitlements(request, response) {
   try {
+    await ensureCurrentYearEntitlements(pool, {
+      updatedBy: request.user.userId || null,
+    })
     const conditions = []
     const parameters = []
     const employee = trim(request.query.employee)
@@ -748,45 +1004,9 @@ export async function getLeaveEntitlement(request, response) {
     return response.json({ status: 'ok', message: 'Leave entitlement retrieved successfully', data: { leaveEntitlement: entitlementData(row) } })
   } catch (error) { return internalError(response, 'Get leave entitlement error:', error) }
 }
-async function saveEntitlement(request, response, id = null) {
-  const employeeId = positiveId(request.body.employeeId)
-  const leaveTypeId = positiveId(request.body.leaveTypeId)
-  const year = Number(request.body.year)
-  const totalDays = decimal(request.body.totalDays)
-  const usedDays = decimal(request.body.usedDays)
-  if (!employeeId || !await referenceExists('employees', 'employee_id', employeeId)) return sendError(response, 400, 'The selected employee is invalid.')
-  if (!leaveTypeId || !await referenceExists('leave_types', 'leave_type_id', leaveTypeId)) return sendError(response, 400, 'The selected leave type is invalid.')
-  if (!Number.isInteger(year) || year < 2000 || year > 2100) return sendError(response, 400, 'Year must be between 2000 and 2100.')
-  if (totalDays === null || usedDays === null) return sendError(response, 400, 'Total days and used days must be between 0 and 365.')
-  if (usedDays > totalDays) return sendError(response, 400, 'Used days cannot exceed total days.')
-  if (id && !await entitlementById(id)) return sendError(response, 404, 'Leave entitlement was not found.')
-  const [duplicates] = await pool.execute(
-    'SELECT entitlement_id FROM leave_entitlements WHERE employee_id = ? AND leave_type_id = ? AND year = ? AND entitlement_id <> ? LIMIT 1',
-    [employeeId, leaveTypeId, year, id || 0],
-  )
-  if (duplicates.length) return sendError(response, 409, 'This employee already has this leave entitlement for the selected year.')
-  let savedId = id
-  if (id) await pool.execute('UPDATE leave_entitlements SET employee_id = ?, leave_type_id = ?, year = ?, total_days = ?, used_days = ?, updated_by = ? WHERE entitlement_id = ?', [employeeId, leaveTypeId, year, totalDays, usedDays, request.user.userId || null, id])
-  else {
-    const [result] = await pool.execute('INSERT INTO leave_entitlements (employee_id, leave_type_id, year, total_days, used_days, updated_by) VALUES (?, ?, ?, ?, ?, ?)', [employeeId, leaveTypeId, year, totalDays, usedDays, request.user.userId || null])
-    savedId = result.insertId
-  }
-  const row = await entitlementById(savedId)
-  return response.status(id ? 200 : 201).json({ status: 'ok', message: `Leave entitlement ${id ? 'updated' : 'created'} successfully`, data: { leaveEntitlement: entitlementData(row) } })
-}
 export async function createLeaveEntitlement(request, response) {
-  try { return await saveEntitlement(request, response) } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'This employee already has this leave entitlement for the selected year.')
-    return internalError(response, 'Create leave entitlement error:', error)
-  }
+  return sendError(response, 409, 'ระบบกำหนดสิทธิ์การลาให้อัตโนมัติจากจำนวนวันในประเภทการลา ไม่รองรับการเพิ่มสิทธิ์รายบุคคล')
 }
 export async function updateLeaveEntitlement(request, response) {
-  try {
-    const id = positiveId(request.params.entitlementId)
-    if (!id) return sendError(response, 400, 'A valid entitlementId is required.')
-    return await saveEntitlement(request, response, id)
-  } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'This employee already has this leave entitlement for the selected year.')
-    return internalError(response, 'Update leave entitlement error:', error)
-  }
+  return sendError(response, 409, 'ระบบกำหนดสิทธิ์การลาให้อัตโนมัติจากจำนวนวันในประเภทการลา ไม่รองรับการแก้ไขสิทธิ์รายบุคคล')
 }

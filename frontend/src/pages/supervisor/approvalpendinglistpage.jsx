@@ -32,7 +32,7 @@ import {
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
 import RequestNumberText from '../../components/requestnumbertext.jsx';
 import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
-import { HeaderlessPageTopOffset } from '../../components/sharedvisualfoundation.jsx';
+import { HeaderlessPageTopOffset, InlineListSummary } from '../../components/sharedvisualfoundation.jsx';
 import { roleAccentTokens } from '../../theme/tokens.js';
 
 import api from '../../api/axios.js';
@@ -473,54 +473,16 @@ function ApprovalPendingListPage({
       [requests],
     );
 
-  const totalPendingDays =
-    useMemo(
-      () =>
-        requests.reduce(
-          (
-            total,
-            request,
-          ) =>
-            total +
-            Number(
-              request.leaveDays ||
-                0,
-            ),
-          0,
-        ),
-      [requests],
-    );
-
   const summaryCards = [
     {
       title: 'รออนุมัติ',
       value: requests.length,
-      description: 'คำขอที่รอตรวจสอบ',
-      background:
-        'linear-gradient(135deg, #FFF6D8 0%, #FFFFFF 78%)',
-      borderColor: '#F6D66B',
-      glowColor: 'rgba(245, 158, 11, 0.11)',
-      valueColor: '#B45309',
+      color: '#B45309',
     },
     {
-      title: 'ส่งคำขอวันนี้',
+      title: 'คำขอใหม่วันนี้',
       value: submittedToday,
-      description: 'คำขอใหม่ที่ได้รับวันนี้',
-      background:
-        'linear-gradient(135deg, #EAF3FF 0%, #FFFFFF 78%)',
-      borderColor: '#C9DDFB',
-      glowColor: 'rgba(59, 130, 246, 0.10)',
-      valueColor: '#2563EB',
-    },
-    {
-      title: 'จำนวนวันลารวม',
-      value: totalPendingDays,
-      description: 'วันลาจากรายการที่รออนุมัติ',
-      background:
-        'linear-gradient(135deg, #F1F5F9 0%, #FFFFFF 78%)',
-      borderColor: '#DCE3EA',
-      glowColor: 'rgba(100, 116, 139, 0.10)',
-      valueColor: '#64748B',
+      color: '#2563EB',
     },
   ];
 
@@ -570,105 +532,7 @@ function ApprovalPendingListPage({
         </Alert>
       )}
 
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr',
-            sm: 'repeat(3, minmax(0, 1fr))',
-          },
-          gap: {
-            xs: '12px',
-            sm: '16px',
-          },
-          marginBottom: '16px',
-        }}
-      >
-        {summaryCards.map((card) => (
-          <Paper
-            key={card.title}
-            elevation={0}
-            sx={{
-              position: 'relative',
-              overflow: 'hidden',
-              display: 'flex',
-              alignItems: 'baseline',
-              justifyContent: 'space-between',
-              gap: '8px',
-              minHeight: '72px',
-              padding: '18px',
-              background: card.background,
-              border: '1px solid #E6EAF0',
-              borderRadius: '20px',
-              boxShadow:
-                '0 8px 24px rgba(15, 23, 42, 0.06)',
-              transition:
-                'transform 160ms ease, box-shadow 160ms ease',
-              '&::after': {
-                content: '""',
-                position: 'absolute',
-                width: '118px',
-                height: '118px',
-                top: '-47px',
-                right: '-38px',
-                borderRadius: '50%',
-                backgroundColor: card.glowColor,
-                filter: 'blur(3px)',
-                pointerEvents: 'none',
-              },
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow:
-                  '0 12px 28px rgba(15, 23, 42, 0.09)',
-              },
-            }}
-          >
-            <Typography
-              noWrap
-              sx={{
-                position: 'relative',
-                zIndex: 1,
-                color: '#374151',
-                fontSize: '15px',
-                fontWeight: 700,
-                lineHeight: 1.4,
-              }}
-            >
-              {card.title}
-            </Typography>
-
-            <Typography
-              sx={{
-                position: 'relative',
-                zIndex: 1,
-                color: card.valueColor,
-                fontSize: '18px',
-                fontWeight: 800,
-                lineHeight: 1,
-                letterSpacing: '-0.02em',
-                marginTop: 0,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {card.value}
-            </Typography>
-
-            <Typography
-              sx={{
-                display: 'none',
-                position: 'relative',
-                zIndex: 1,
-                color: '#64748B',
-                fontSize: '12px',
-                fontWeight: 500,
-                marginTop: '8px',
-              }}
-            >
-              {card.description}
-            </Typography>
-          </Paper>
-        ))}
-      </Box>
+      <InlineListSummary items={summaryCards} />
 
       <Paper
         elevation={0}

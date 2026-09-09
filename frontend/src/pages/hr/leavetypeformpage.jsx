@@ -17,7 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import HRLayout from '../../layouts/hrlayout.jsx';
-import { BackButton, PageHeader } from '../../components/sharedvisualfoundation.jsx';
+import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
 import { roleDashboardCardSurfaceSx } from '../../theme/rolecardsurface.js';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { createLeaveType, getLeaveType, updateLeaveType } from '../../api/leave-type-service.js';
@@ -50,6 +50,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [confirmationError, setConfirmationError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -82,14 +83,14 @@ function LeaveTypeFormPage({ mode = 'add' }) {
     }));
 
     setSuccessMessage('');
+    setErrorMessage('');
+    setConfirmationError('');
   };
 
   const validateForm = () => {
     const validationErrors = {};
 
     const name = formData.name.trim();
-    const description = formData.description.trim();
-
     const defaultDays = Number(formData.defaultDays);
     const minimumDays = Number(formData.minimumDays);
     const maximumDaysPerRequest = Number(
@@ -101,24 +102,16 @@ function LeaveTypeFormPage({ mode = 'add' }) {
         'กรุณากรอกชื่อประเภทการลา';
     }
 
-    if (!description) {
-      validationErrors.description =
-        'กรุณากรอกรายละเอียด';
-    } else if (description.length < 10) {
-      validationErrors.description =
-        'รายละเอียดต้องมีอย่างน้อย 10 ตัวอักษร';
-    }
-
     if (!formData.defaultDays) {
       validationErrors.defaultDays =
         'กรุณากรอกจำนวนวันลาเริ่มต้น';
     } else if (
       Number.isNaN(defaultDays) ||
-      defaultDays < 0 ||
+      defaultDays <= 0 ||
       defaultDays > 365
     ) {
       validationErrors.defaultDays =
-        'จำนวนวันต้องอยู่ระหว่าง 0-365 วัน';
+        'จำนวนวันต้องอยู่ระหว่าง 1-365 วัน';
     }
 
     if (!formData.minimumDays) {
@@ -198,13 +191,18 @@ function LeaveTypeFormPage({ mode = 'add' }) {
       status: formData.status,
     };
 
-    setSaving(true); setErrorMessage('');
+    setSaving(true); setErrorMessage(''); setConfirmationError('');
     try {
       const result = isEditMode ? await updateLeaveType(leaveTypeId, leaveTypeData) : await createLeaveType(leaveTypeData);
       setConfirmationOpen(false);
+      setConfirmationError('');
       setSuccessMessage(result.message || 'บันทึกประเภทการลาเรียบร้อยแล้ว');
       window.setTimeout(() => navigate(returnTo), 500);
-    } catch (error) { setErrorMessage(error.response?.data?.message || 'ไม่สามารถบันทึกประเภทการลาได้'); }
+    } catch (error) {
+      const message = error.response?.data?.message || 'ไม่สามารถบันทึกประเภทการลาได้';
+      setErrorMessage(message);
+      setConfirmationError(message);
+    }
     finally { setSaving(false); }
   };
 
@@ -221,7 +219,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
 
   return (
     <HRLayout activeMenu="Leave Type">
-      <PageHeader title={isEditMode ? 'แก้ไขประเภทการลา' : 'เพิ่มประเภทการลา'} actions={<BackButton onClick={() => navigate(returnTo)}>กลับ</BackButton>} sx={{ maxWidth: '920px', marginInline: 'auto' }} />
+      <PageHeader title={isEditMode ? 'แก้ไขประเภทการลา' : 'เพิ่มประเภทการลา'} actions={<Button type="button" variant="outlined" onClick={() => navigate(returnTo)}>ยกเลิก</Button>} sx={{ maxWidth: '920px', marginInline: 'auto' }} />
 
       {successMessage && (
         <Alert
@@ -385,47 +383,6 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               }}
             />
 
-            <TextField
-              fullWidth
-              required
-              multiline
-              minRows={4}
-              label="รายละเอียด"
-              placeholder="ระบุเงื่อนไขการใช้ประเภทการลานี้"
-              value={formData.description}
-              onChange={(event) =>
-                handleInputChange(
-                  'description',
-                  event.target.value,
-                )
-              }
-              error={Boolean(errors.description)}
-              helperText={
-                errors.description ||
-                `${formData.description.length}/500 ตัวอักษร`
-              }
-              slotProps={{
-                htmlInput: {
-                  maxLength: 500,
-                },
-              }}
-              sx={{
-                gridColumn: {
-                  xs: 'auto',
-                  sm: '1 / -1',
-                },
-
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-
-                '& .MuiFormHelperText-root': {
-                  textAlign: errors.description
-                    ? 'left'
-                    : 'right',
-                },
-              }}
-            />
           </Box>
         </Paper>
 
@@ -489,7 +446,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               helperText={errors.defaultDays}
               slotProps={{
                 htmlInput: {
-                  min: 0,
+                  min: 1,
                   max: 365,
                 },
               }}
@@ -752,7 +709,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
           </Box>
         </Box>
       </Box>
-      <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm"><DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกประเภทการลา</DialogTitle><DialogContent><Box sx={{ display: 'grid', gap: '10px' }}><Typography><strong>รหัส:</strong> {isEditMode ? formData.code : 'ระบบสร้างอัตโนมัติ'}</Typography><Typography><strong>ชื่อ:</strong> {formData.name}</Typography><Typography><strong>สิทธิ์เริ่มต้น:</strong> {formData.defaultDays} วัน</Typography><Typography><strong>ช่วงวันที่ขอ:</strong> {formData.minimumDays}-{formData.maximumDaysPerRequest} วัน</Typography><Typography><strong>เอกสารแนบ:</strong> {formData.attachmentRequired === 'Yes' ? 'จำเป็น' : 'ไม่จำเป็น'}</Typography></Box></DialogContent><DialogActions sx={{ padding: '14px 20px' }}><Button type="button" variant="outlined" color="secondary" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button><Button type="button" variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions></Dialog>
+      <Dialog open={confirmationOpen} onClose={() => { if (!saving) { setConfirmationOpen(false); setConfirmationError(''); } }} fullWidth maxWidth="sm"><DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกประเภทการลา</DialogTitle><DialogContent>{confirmationError ? <Alert severity="error" sx={{ marginBottom: '16px' }}>{confirmationError}</Alert> : null}<Box sx={{ display: 'grid', gap: '10px' }}><Typography><strong>รหัส:</strong> {isEditMode ? formData.code : 'ระบบสร้างอัตโนมัติ'}</Typography><Typography><strong>ชื่อ:</strong> {formData.name}</Typography><Typography><strong>สิทธิ์เริ่มต้น:</strong> {formData.defaultDays} วัน</Typography><Typography><strong>ช่วงวันที่ขอ:</strong> {formData.minimumDays}-{formData.maximumDaysPerRequest} วัน</Typography><Typography><strong>เอกสารแนบ:</strong> {formData.attachmentRequired === 'Yes' ? 'จำเป็น' : 'ไม่จำเป็น'}</Typography></Box></DialogContent><DialogActions sx={{ padding: '14px 20px' }}><Button type="button" variant="outlined" color="secondary" disabled={saving} onClick={() => { setConfirmationOpen(false); setConfirmationError(''); }}>กลับไปแก้ไข</Button><Button type="button" variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions></Dialog>
     </HRLayout>
   );
 }

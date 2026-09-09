@@ -84,6 +84,30 @@ const getYearFromDate = (
     : null;
 };
 
+const getBangkokToday = () => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
+
+const addCalendarDays = (dateValue, days) => {
+  const value = new Date(`${dateValue}T00:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+};
+
+const isSickLeaveType = (leaveType) => {
+  const name = String(leaveType?.name || leaveType?.leaveTypeName || '')
+    .trim()
+    .toLowerCase();
+  return name.includes('sick') || name.includes('ป่วย');
+};
+
 const formatDisplayDate = (
   dateValue,
 ) => {
@@ -263,6 +287,8 @@ function ThaiDateField({
   label,
   value,
   onChange,
+  minDate,
+  disabled = false,
   error = false,
   helperText = '',
 }) {
@@ -270,6 +296,7 @@ function ThaiDateField({
     useRef(null);
 
   const openDatePicker = () => {
+    if (disabled) return;
     const input =
       nativeDateInputRef.current;
 
@@ -297,6 +324,7 @@ function ThaiDateField({
       <TextField
         fullWidth
         required
+        disabled={disabled}
         label={label}
         value={
           formatDisplayDate(
@@ -330,6 +358,7 @@ function ThaiDateField({
               <InputAdornment position="end">
                 <IconButton
                   type="button"
+                  disabled={disabled}
                   edge="end"
                   aria-label="เลือกวันที่"
                   onClick={(
@@ -385,6 +414,8 @@ function ThaiDateField({
           nativeDateInputRef
         }
         type="date"
+        disabled={disabled}
+        min={minDate || undefined}
         value={
           value || ''
         }
@@ -682,8 +713,13 @@ function RoleCreateLeaveRequestPage({
 
             const availableDays =
               Math.max(
-                remainingDays -
-                  pendingDays,
+                leaveType.availableDays === undefined ||
+                  leaveType.availableDays === null
+                  ? remainingDays -
+                      pendingDays
+                  : Number(
+                      leaveType.availableDays,
+                    ),
                 0,
               );
 
@@ -739,6 +775,15 @@ function RoleCreateLeaveRequestPage({
         formData.leaveTypeId,
       ],
     );
+
+  const minimumStartDate = useMemo(
+    () => selectedLeaveType && !isSickLeaveType(selectedLeaveType)
+      ? addCalendarDays(getBangkokToday(), 3)
+      : '',
+    [selectedLeaveType],
+  );
+
+  const dateSelectionDisabled = !selectedLeaveType || !selectedLeaveType.isSelectable;
 
   const activeHolidayDates =
     useMemo(() => {
@@ -957,6 +1002,52 @@ function RoleCreateLeaveRequestPage({
       }),
     );
 
+    setMessage(null);
+  };
+
+  const handleLeaveTypeChange = (leaveTypeId) => {
+    const nextLeaveType = calculatedLeaveTypes.find(
+      (leaveType) => Number(leaveType.id) === Number(leaveTypeId),
+    );
+    const nextMinimumDate = nextLeaveType && !isSickLeaveType(nextLeaveType)
+      ? addCalendarDays(getBangkokToday(), 3)
+      : '';
+
+    setFormData((previousData) => {
+      const mustClearDates = Boolean(
+        nextMinimumDate &&
+        previousData.startDate &&
+        previousData.startDate < nextMinimumDate,
+      );
+      return {
+        ...previousData,
+        leaveTypeId,
+        startDate: mustClearDates ? '' : previousData.startDate,
+        endDate: mustClearDates ? '' : previousData.endDate,
+      };
+    });
+    setErrors({});
+    setMessage(null);
+  };
+
+  const handleStartDateChange = (startDate) => {
+    setFormData((previousData) => ({
+      ...previousData,
+      startDate,
+      endDate:
+        previousData.endDate && previousData.endDate < startDate
+          ? ''
+          : previousData.endDate,
+    }));
+    setErrors((previousErrors) => ({
+      ...previousErrors,
+      startDate: '',
+      endDate: '',
+      dateRange: '',
+      balance: '',
+      overlap: '',
+      policy: '',
+    }));
     setMessage(null);
   };
 
@@ -1244,6 +1335,15 @@ function RoleCreateLeaveRequestPage({
 
       if (
         formData.startDate &&
+        minimumStartDate &&
+        formData.startDate < minimumStartDate
+      ) {
+        validationErrors.startDate =
+          `การลาประเภทนี้ต้องยื่นล่วงหน้าอย่างน้อย 3 วัน กรุณาเลือกวันที่ตั้งแต่ ${formatDisplayDate(minimumStartDate)}`;
+      }
+
+      if (
+        formData.startDate &&
         formData.endDate &&
         formData.startDate >
           formData.endDate
@@ -1328,9 +1428,9 @@ function RoleCreateLeaveRequestPage({
             .availableDays
       ) {
         validationErrors.balance =
-          `สิทธิ์วันลาไม่เพียงพอ คงเหลือ ${formatDays(
+          `ไม่สามารถส่งคำขอได้ เนื่องจากสิทธิ์ที่ยื่นได้คงเหลือ ${formatDays(
             selectedLeaveType.availableDays,
-          )} วัน`;
+          )} วัน${selectedLeaveType.pendingDays > 0 ? ` และมีคำขอรออนุมัติ ${formatDays(selectedLeaveType.pendingDays)} วัน` : ''}`;
       }
 
       if (
@@ -1371,19 +1471,14 @@ function RoleCreateLeaveRequestPage({
           0
       ) {
         validationErrors.attachments =
-          'คำขอลานี้จำเป็นต้องแนบไฟล์';
+          'ไม่ได้แนบเอกสาร';
       }
 
       setErrors(
         validationErrors,
       );
 
-      return (
-        Object.keys(
-          validationErrors,
-        ).length ===
-        0
-      );
+      return validationErrors;
     };
 
   const createStorageData =
@@ -1448,23 +1543,16 @@ function RoleCreateLeaveRequestPage({
 
   const handleSaveDraft =
     async () => {
-      const hasEnteredData =
-        formData.leaveTypeId ||
-        formData.startDate ||
-        formData.endDate ||
-        formData.reason.trim() ||
-        attachments.length >
-          0;
-
       if (
-        !hasEnteredData
+        isEditMode &&
+        !loadedDraft
       ) {
         setMessage({
           severity:
-            'warning',
+            'error',
 
           text:
-            'กรุณากรอกข้อมูลอย่างน้อย 1 รายการก่อนบันทึกร่าง',
+            `ไม่สามารถอัปเดตร่างคำขอ #${editRequestId} ได้ เนื่องจากไม่พบข้อมูล`,
         });
 
         window.scrollTo({
@@ -1476,16 +1564,15 @@ function RoleCreateLeaveRequestPage({
         return;
       }
 
-      if (
-        isEditMode &&
-        !loadedDraft
-      ) {
+      const draftErrors = validateSubmit();
+
+      if (Object.keys(draftErrors).length > 0) {
         setMessage({
           severity:
             'error',
 
           text:
-            `ไม่สามารถอัปเดตร่างคำขอ #${editRequestId} ได้ เนื่องจากไม่พบข้อมูล`,
+            Object.values(draftErrors).filter(Boolean),
         });
 
         window.scrollTo({
@@ -1553,15 +1640,15 @@ function RoleCreateLeaveRequestPage({
       return;
     }
 
-    if (
-      !validateSubmit()
-    ) {
+    const submissionErrors = validateSubmit();
+
+    if (Object.keys(submissionErrors).length > 0) {
       setMessage({
         severity:
           'error',
 
         text:
-          'กรุณาตรวจสอบและแก้ไขข้อมูลที่ระบบแจ้งก่อนส่งคำขอ',
+          Object.values(submissionErrors).filter(Boolean),
       });
 
       window.scrollTo({
@@ -1732,7 +1819,7 @@ function RoleCreateLeaveRequestPage({
     ],
 
     [
-      'สิทธิ์คงเหลือ',
+      'ยื่นเพิ่มได้',
 
       selectedLeaveType
         ? `${formatDays(
@@ -1895,7 +1982,19 @@ function RoleCreateLeaveRequestPage({
               '10px',
           }}
         >
-          {message.text}
+          {Array.isArray(message.text) ? (
+            <Box component="ul" sx={{ margin: 0, paddingLeft: '20px' }}>
+              {message.text.map((item) => (
+                <Typography
+                  component="li"
+                  key={item}
+                  sx={{ fontSize: '14px', lineHeight: 1.7 }}
+                >
+                  {item}
+                </Typography>
+              ))}
+            </Box>
+          ) : message.text}
         </Alert>
       )}
 
@@ -2064,9 +2163,7 @@ function RoleCreateLeaveRequestPage({
                 onChange={(
                   event,
                 ) =>
-                  handleInputChange(
-                    'leaveTypeId',
-
+                  handleLeaveTypeChange(
                     event.target
                       .value,
                   )
@@ -2097,7 +2194,7 @@ function RoleCreateLeaveRequestPage({
                         {leaveType.name}{' '}
 
                         {leaveType.isSelectable
-                          ? `— คงเหลือ ${formatDays(
+                          ? `— ยื่นเพิ่มได้ ${formatDays(
                               leaveType.availableDays,
                             )} วัน`
                           : '— ปิดใช้งาน (กรุณาเลือกประเภทอื่น)'}
@@ -2119,7 +2216,7 @@ function RoleCreateLeaveRequestPage({
                   (
                     activeLeaveTypes.length >
                     0
-                      ? `สิทธิ์คงเหลือปี ${entitlementYear}`
+                      ? `สิทธิ์ที่ยื่นเพิ่มได้ ปี ${entitlementYear}`
                       : 'HR ยังไม่ได้เปิดใช้งานประเภทการลา'
                   )}
               </FormHelperText>
@@ -2127,14 +2224,15 @@ function RoleCreateLeaveRequestPage({
 
             <ThaiDateField
               label="วันที่เริ่มลา"
+              minDate={minimumStartDate}
+              disabled={dateSelectionDisabled}
               value={
                 formData.startDate
               }
               onChange={(
                 value,
               ) =>
-                handleInputChange(
-                  'startDate',
+                handleStartDateChange(
                   value,
                 )
               }
@@ -2144,12 +2242,14 @@ function RoleCreateLeaveRequestPage({
                 )
               }
               helperText={
-                errors.startDate
+                errors.startDate || (dateSelectionDisabled ? 'กรุณาเลือกประเภทการลาก่อน' : '')
               }
             />
 
             <ThaiDateField
               label="วันที่สิ้นสุด"
+              minDate={formData.startDate || minimumStartDate}
+              disabled={dateSelectionDisabled}
               value={
                 formData.endDate
               }
@@ -2167,7 +2267,7 @@ function RoleCreateLeaveRequestPage({
                 )
               }
               helperText={
-                errors.endDate
+                errors.endDate || (dateSelectionDisabled ? 'กรุณาเลือกประเภทการลาก่อน' : '')
               }
             />
 
@@ -2224,7 +2324,7 @@ function RoleCreateLeaveRequestPage({
                       fontWeight: 600,
                     }}
                   >
-                    คงเหลือหลังลา{' '}
+                    ยื่นเพิ่มได้หลังคำขอนี้{' '}
                     {formatDays(
                       Math.max(
                         0,
@@ -2935,7 +3035,7 @@ function RoleCreateLeaveRequestPage({
               ))}
               <Box sx={{ gridColumn: { sm: '1 / -1' } }}><Typography sx={{ color: '#94A3B8', fontSize: '11px', fontWeight: 700 }}>เหตุผล</Typography><Typography sx={{ color: '#0F172A', fontSize: '14px', marginTop: '3px', whiteSpace: 'pre-wrap' }}>{formData.reason.trim()}</Typography></Box>
               <Box sx={{ gridColumn: { sm: '1 / -1' } }}><Typography sx={{ color: '#94A3B8', fontSize: '11px', fontWeight: 700 }}>เอกสารแนบ</Typography><Typography sx={{ color: '#0F172A', fontSize: '14px', marginTop: '3px' }}>{attachments.length ? attachments.map((item) => item.name || item.fileName).join(', ') : 'ไม่มี'}</Typography></Box>
-              {selectedLeaveType && workingDaySummary.workingDays > 0 ? <Box sx={{ gridColumn: { sm: '1 / -1' }, padding: '12px 14px', backgroundColor: '#F8FAFC', borderRadius: '10px' }}><Typography sx={{ color: '#64748B', fontSize: '11px', fontWeight: 700 }}>คงเหลือหลังอนุมัติ</Typography><Typography sx={{ color: '#0F172A', fontSize: '18px', fontWeight: 800 }}>{formatDays(Math.max(0, selectedLeaveType.availableDays - workingDaySummary.workingDays))} วัน</Typography></Box> : null}
+              {selectedLeaveType && workingDaySummary.workingDays > 0 ? <Box sx={{ gridColumn: { sm: '1 / -1' }, padding: '12px 14px', backgroundColor: '#F8FAFC', borderRadius: '10px' }}><Typography sx={{ color: '#64748B', fontSize: '11px', fontWeight: 700 }}>ยื่นเพิ่มได้หลังส่งคำขอนี้</Typography><Typography sx={{ color: '#0F172A', fontSize: '18px', fontWeight: 800 }}>{formatDays(Math.max(0, selectedLeaveType.availableDays - workingDaySummary.workingDays))} วัน</Typography></Box> : null}
             </Box>
           </DialogContent>
           <DialogActions sx={{ padding: '14px 20px' }}><Button variant="outlined" color="secondary" onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button><Button variant="contained" onClick={confirmSubmit}>ยืนยันส่งคำขอ</Button></DialogActions>

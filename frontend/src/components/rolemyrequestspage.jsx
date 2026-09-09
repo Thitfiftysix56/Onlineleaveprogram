@@ -28,7 +28,7 @@ import {
 } from '@mui/material';
 import RequestNumberText from './requestnumbertext.jsx';
 import { DataListToolbar } from './shareduiprimitives.jsx';
-import { HeaderlessPageTopOffset } from './sharedvisualfoundation.jsx';
+import { HeaderlessPageTopOffset, InlineListSummary } from './sharedvisualfoundation.jsx';
 import { roleDashboardCardSurfaceSx } from '../theme/rolecardsurface.js';
 import { formatLeaveType } from '../utils/presentationformatter.js';
 
@@ -702,19 +702,8 @@ function RoleMyRequestsPage({
 
   const summaryCards = [
     {
-      title: 'คำขอทั้งหมด',
-      value: summary.total,
-      description: 'รวมทุกสถานะ',
-      background:
-        `linear-gradient(135deg, ${theme.soft} 0%, #FFFFFF 78%)`,
-      borderColor: '#E2E8F0',
-      glowColor: `${theme.primary}18`,
-      valueColor: theme.primary,
-    },
-    {
       title: 'แบบร่าง',
       value: summary.draft,
-      description: 'คำขอที่ยังไม่ได้ส่ง',
       background:
         'linear-gradient(135deg, #F1F5F9 0%, #FFFFFF 78%)',
       borderColor: '#DCE3EA',
@@ -724,7 +713,6 @@ function RoleMyRequestsPage({
     {
       title: 'รออนุมัติ',
       value: summary.pending,
-      description: 'กำลังรอการพิจารณา',
       background:
         'linear-gradient(135deg, #FFF6D8 0%, #FFFFFF 78%)',
       borderColor: '#F6D66B',
@@ -734,12 +722,19 @@ function RoleMyRequestsPage({
     {
       title: 'อนุมัติแล้ว',
       value: summary.approved,
-      description: 'คำขอที่ได้รับอนุมัติ',
       background:
         'linear-gradient(135deg, #E5F9EE 0%, #FFFFFF 78%)',
       borderColor: '#A7E8C3',
       glowColor: 'rgba(34, 197, 94, 0.10)',
       valueColor: '#15803D',
+    },
+    {
+      title: 'ไม่อนุมัติ',
+      value: summary.rejected,
+      background: 'linear-gradient(135deg, #FFF0F1 0%, #FFFFFF 78%)',
+      borderColor: '#FECACA',
+      glowColor: 'rgba(239, 68, 68, 0.10)',
+      valueColor: '#DC2626',
     },
   ];
 
@@ -768,7 +763,7 @@ function RoleMyRequestsPage({
       <HeaderlessPageTopOffset />
       <Box
         sx={{
-          display: 'grid',
+          display: 'none',
           gridTemplateColumns: {
             xs: '1fr',
             sm: 'repeat(2, minmax(0, 1fr))',
@@ -868,6 +863,13 @@ function RoleMyRequestsPage({
           </Paper>
         ))}
       </Box>
+
+      <InlineListSummary
+        items={summaryCards.map((card) => ({
+          ...card,
+          color: card.valueColor,
+        }))}
+      />
 
       <Paper
         elevation={0}

@@ -15,6 +15,8 @@ const data = (row) => ({
 })
 
 function notificationPath(type, leaveRequestId, ownerRole = 'Employee') {
+  if (type === 'employee-account-required') return '/admin/user-management'
+  if (type === 'user-account-deleted') return '/hr/employee-management'
   if (!leaveRequestId) return null
   if (type === 'leave-submitted') return `/supervisor/approval/${leaveRequestId}`
   if (['leave-approved', 'leave-rejected'].includes(type)) {
@@ -32,10 +34,23 @@ export async function listNotifications(request, response) {
      LEFT JOIN leave_requests lr ON lr.leave_request_id = n.leave_request_id
      LEFT JOIN users owner_user ON owner_user.employee_id = lr.employee_id
      LEFT JOIN roles owner_role ON owner_role.role_id = owner_user.role_id
-     WHERE n.user_id = ? ORDER BY n.created_at DESC`, [request.user.userId],
+     WHERE n.user_id = ?
+       AND (n.notification_type <> 'leave-cancelled'
+         OR owner_user.user_id IS NULL
+         OR n.user_id <> owner_user.user_id)
+     ORDER BY n.created_at DESC`, [request.user.userId],
   )
   const [[count]] = await pool.execute(
-    'SELECT COUNT(*) AS unread_count FROM notifications WHERE user_id = ? AND is_read = 0', [request.user.userId],
+    `SELECT COUNT(*) AS unread_count
+     FROM notifications n
+     LEFT JOIN leave_requests lr ON lr.leave_request_id = n.leave_request_id
+     LEFT JOIN users owner_user ON owner_user.employee_id = lr.employee_id
+     WHERE n.user_id = ?
+       AND n.is_read = 0
+       AND (n.notification_type <> 'leave-cancelled'
+         OR owner_user.user_id IS NULL
+         OR n.user_id <> owner_user.user_id)`,
+    [request.user.userId],
   )
   response.json({ status: 'ok', data: { notifications: rows.map(data), unreadCount: Number(count.unread_count) } })
 }

@@ -16,8 +16,6 @@ import {
 import {
   useNavigate,
 } from 'react-router-dom';
-import AddRounded from '@mui/icons-material/AddRounded';
-
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
 import RequestNumberText from '../../components/requestnumbertext.jsx';
 import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
@@ -585,11 +583,9 @@ function SupervisorDashboardPage() {
 
   const summaryCards = [
     {
-      title: 'รออนุมัติ',
+      title: 'คำขอรออนุมัติ',
       value:
         pendingRequests.length,
-      description:
-        'รายการที่รอตรวจสอบ',
       gradient:
         'linear-gradient(135deg, #FFFFFF 0%, #FFFBEB 45%, #FEF3C7 100%)',
       glowColor:
@@ -600,11 +596,9 @@ function SupervisorDashboardPage() {
 
     {
       title:
-        'อนุมัติแล้ว',
+        'คำขอที่อนุมัติ',
       value:
         approvedRequestCount,
-      description:
-        `รายการในปี ${currentYear}`,
       gradient:
         'linear-gradient(135deg, #FFFFFF 0%, #F6FEF9 45%, #DCFCE7 100%)',
       glowColor:
@@ -615,11 +609,9 @@ function SupervisorDashboardPage() {
 
     {
       title:
-        'ปฏิเสธแล้ว',
+        'คำขอที่ปฏิเสธ',
       value:
         rejectedRequestCount,
-      description:
-        `รายการในปี ${currentYear}`,
       gradient:
         'linear-gradient(135deg, #FFFFFF 0%, #FFF8F8 45%, #FEE2E2 100%)',
       glowColor:
@@ -633,8 +625,6 @@ function SupervisorDashboardPage() {
         'ยังไม่ได้อ่าน',
       value:
         unreadNotificationCount,
-      description:
-        'การแจ้งเตือนใหม่',
       gradient:
         'linear-gradient(135deg, #FFFFFF 0%, #FAF8FF 45%, #EDE9FE 100%)',
       glowColor:
@@ -687,10 +677,6 @@ function SupervisorDashboardPage() {
     <SupervisorLayout
       activeMenu="Dashboard"
     >
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
-        <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/supervisor/leave-request', { state: { returnTo: '/supervisor/dashboard' } })} sx={{ height: 40, borderRadius: '9px', backgroundColor: '#2563EB', boxShadow: 'none', fontSize: '13px', fontWeight: 800, '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' } }}>สร้างคำขอลา</Button>
-      </Box>
-
       {/* Summary Cards */}
       <Box
         sx={{

@@ -1,0 +1,5308 @@
+[
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "ระบบอนุมัติใบลาออนไลน์"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "Online Leave Approval System Final Workflow and Use Case"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "เอกสารก้อน 3B — Final Workflow + Use Case Documentation"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "จัดทำจาก Final Requirement ที่ผ่าน Final Gate และถูก Freeze แล้ว"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 1",
+    "text": "1. Workflow ภาพรวมของระบบ"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "ผู้ใช้งานเข้าสู่ระบบและได้รับ Dashboard ตาม Role จากนั้นเลือก Function ที่มีสิทธิ์ ระบบรับข้อมูลจาก UI เพื่อตรวจสอบ Authentication, Authorization, Ownership, Data Scope และ Business Rule ที่เกี่ยวข้อง ก่อนอ่านหรือบันทึกข้อมูลในฐานข้อมูล ผลลัพธ์จะถูกส่งกลับเพื่อแสดงบน UI และสร้าง Notification หรือ Audit Log เฉพาะ Event ที่ Current System รองรับ"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "Login และตรวจสถานะบัญชี"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "เข้าสู่ Dashboard ตาม Role"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "เลือก Function ภายใต้สิทธิ์ของ Role"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "ส่งข้อมูลให้ Backend ตรวจสอบ"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "Backend อ่านหรือบันทึกข้อมูลใน Database"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "ส่งผลลัพธ์กลับสู่ UI"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "สร้าง Notification หรือ Audit Log เฉพาะ Event ที่กำหนด"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "ผู้ใช้งานหนึ่งคนมีหนึ่ง Role ใน Current Scope แต่ทุก Role มี Own Leave Function ในฐานะพนักงาน การอนุมัติเป็น Supervisor Approval ขั้นเดียวเท่านั้น โดยใช้ employees.supervisor_id เป็น Source of Truth สำหรับ Direct Supervisor และ Direct Team"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 1",
+    "text": "2. Leave Request Workflow"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "ผู้ใช้งานทุก Role สามารถสร้าง Leave Request ของตนเอง เลือก Leave Type ระบุช่วงวันที่ Reason และ Attachment ตาม Policy แล้วเลือก Save Draft หรือ Submit"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "2.1 กรณี Save Draft"
+  },
+  {
+    "kind": "p",
+    "style": "List Bullet",
+    "text": "บันทึก status = draft"
+  },
+  {
+    "kind": "p",
+    "style": "List Bullet",
+    "text": "เจ้าของแก้ไขหรือลบ Draft ได้"
+  },
+  {
+    "kind": "p",
+    "style": "List Bullet",
+    "text": "เจ้าของจัดการ Attachment ได้"
+  },
+  {
+    "kind": "p",
+    "style": "List Bullet",
+    "text": "สามารถ Submit ภายหลังได้"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "2.2 กรณี Submit"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "ระบบตรวจ Required Field, วันที่และปี, Reason 5–500 ตัวอักษร, Leave Type Active, Working Day, Weekend, Active Holiday, Minimum/Maximum Days, Entitlement, available_days ที่รวม pending_days, Overlap, Attachment Policy/Threshold, Direct Supervisor และสถานะ User/Employee"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "เมื่อ Validation ผ่าน ระบบสร้าง request_no เปลี่ยน status เป็น pending ตรวจ Direct Supervisor จาก employees.supervisor_id และสร้าง Notification ให้ Supervisor โดยไม่บันทึก approver_employee_id ตอน Submit"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 1",
+    "text": "3. Approval Workflow"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "Supervisor อนุมัติได้เฉพาะคำขอ pending ของ Direct Team ตาม employees.supervisor_id และห้ามตัดสินคำขอของตนเอง ระบบตรวจสถานะ Permission Entitlement และ Balance ซ้ำภายใน Transaction เพื่อป้องกัน Double Decision หรือ Concurrent Approval"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "Lock Leave Request และตรวจ status = pending"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "ตรวจ Direct Team และป้องกัน Self Approval"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "Lock Entitlement และตรวจ Balance ซ้ำ"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "เพิ่ม used_days"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "เปลี่ยน status เป็น approved"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "บันทึก approver_employee_id และ approved_at"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "สร้าง Notification ให้เจ้าของคำขอ"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "บันทึก Audit Log action = leave_approved"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "Commit โดยไม่ INSERT leave_approval_logs"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 1",
+    "text": "4. Reject Workflow"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "Supervisor ปฏิเสธได้เฉพาะคำขอ pending ของ Direct Team และต้องระบุ Rejection Reason"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "Lock Leave Request และตรวจสถานะ"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "ตรวจ Direct Team และป้องกัน Self Decision"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "ตรวจ Rejection Reason"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "เปลี่ยน status เป็น rejected"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "บันทึก rejection_reason, approver_employee_id และ rejected_at"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "สร้าง Notification ให้เจ้าของคำขอ"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "บันทึก Audit Log action = leave_rejected"
+  },
+  {
+    "kind": "p",
+    "style": "List Number",
+    "text": "Commit โดยไม่ INSERT leave_approval_logs"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 1",
+    "text": "5. Cancel Workflow"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "เจ้าของคำขอสามารถ Cancel ได้เฉพาะ status = pending ระบบเปลี่ยนสถานะเป็น cancelled และบันทึก cancelled_at การ Cancel ไม่สร้าง Notification และไม่บันทึก Audit Log ใน Current Backend ส่วน Approved ไม่สามารถ Cancel ได้ และ Rejected/Cancelled ไม่กลับเข้าสู่ Workflow เดิม"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 1",
+    "text": "6. Status Transition Table"
+  },
+  {
+    "kind": "row",
+    "table": 0,
+    "row": 0,
+    "cells": [
+      "Current Status",
+      "Action",
+      "Next Status",
+      "Actor",
+      "เงื่อนไข"
+    ],
+    "text": "Current Status | Action | Next Status | Actor | เงื่อนไข"
+  },
+  {
+    "kind": "row",
+    "table": 0,
+    "row": 1,
+    "cells": [
+      "draft",
+      "edit",
+      "draft",
+      "เจ้าของคำขอ",
+      "เป็น Draft ของตนเอง"
+    ],
+    "text": "draft | edit | draft | เจ้าของคำขอ | เป็น Draft ของตนเอง"
+  },
+  {
+    "kind": "row",
+    "table": 0,
+    "row": 2,
+    "cells": [
+      "draft",
+      "delete",
+      "ไม่มี Record",
+      "เจ้าของคำขอ",
+      "เป็น Draft ของตนเอง"
+    ],
+    "text": "draft | delete | ไม่มี Record | เจ้าของคำขอ | เป็น Draft ของตนเอง"
+  },
+  {
+    "kind": "row",
+    "table": 0,
+    "row": 3,
+    "cells": [
+      "draft",
+      "submit",
+      "pending",
+      "เจ้าของคำขอ",
+      "ผ่าน Validation และมี Direct Supervisor ที่ถูกต้อง"
+    ],
+    "text": "draft | submit | pending | เจ้าของคำขอ | ผ่าน Validation และมี Direct Supervisor ที่ถูกต้อง"
+  },
+  {
+    "kind": "row",
+    "table": 0,
+    "row": 4,
+    "cells": [
+      "pending",
+      "approve",
+      "approved",
+      "Direct Supervisor",
+      "Direct Team, ไม่ใช่คำขอตนเอง และ Balance เพียงพอ"
+    ],
+    "text": "pending | approve | approved | Direct Supervisor | Direct Team, ไม่ใช่คำขอตนเอง และ Balance เพียงพอ"
+  },
+  {
+    "kind": "row",
+    "table": 0,
+    "row": 5,
+    "cells": [
+      "pending",
+      "reject",
+      "rejected",
+      "Direct Supervisor",
+      "Direct Team, ไม่ใช่คำขอตนเอง และมีเหตุผล"
+    ],
+    "text": "pending | reject | rejected | Direct Supervisor | Direct Team, ไม่ใช่คำขอตนเอง และมีเหตุผล"
+  },
+  {
+    "kind": "row",
+    "table": 0,
+    "row": 6,
+    "cells": [
+      "pending",
+      "cancel",
+      "cancelled",
+      "เจ้าของคำขอ",
+      "เป็นคำขอ pending ของตนเอง"
+    ],
+    "text": "pending | cancel | cancelled | เจ้าของคำขอ | เป็นคำขอ pending ของตนเอง"
+  },
+  {
+    "kind": "row",
+    "table": 0,
+    "row": 7,
+    "cells": [
+      "approved",
+      "–",
+      "approved",
+      "–",
+      "Final State ใน Current Scope"
+    ],
+    "text": "approved | – | approved | – | Final State ใน Current Scope"
+  },
+  {
+    "kind": "row",
+    "table": 0,
+    "row": 8,
+    "cells": [
+      "rejected",
+      "–",
+      "rejected",
+      "–",
+      "Final State ใน Current Scope"
+    ],
+    "text": "rejected | – | rejected | – | Final State ใน Current Scope"
+  },
+  {
+    "kind": "row",
+    "table": 0,
+    "row": 9,
+    "cells": [
+      "cancelled",
+      "–",
+      "cancelled",
+      "–",
+      "Final State ใน Current Scope"
+    ],
+    "text": "cancelled | – | cancelled | – | Final State ใน Current Scope"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 1",
+    "text": "7. Workflow แยกตาม Role"
+  },
+  {
+    "kind": "row",
+    "table": 1,
+    "row": 0,
+    "cells": [
+      "Role",
+      "Function ที่มีหน้า UI",
+      "ข้อกำหนด Workflow"
+    ],
+    "text": "Role | Function ที่มีหน้า UI | ข้อกำหนด Workflow"
+  },
+  {
+    "kind": "row",
+    "table": 1,
+    "row": 1,
+    "cells": [
+      "Employee",
+      "Dashboard; Create Leave Request; Draft/Submit; My Requests; Leave Request Detail; Cancel Pending; Leave Balance; Notification; Profile; Change Password",
+      "Own Leave Function"
+    ],
+    "text": "Employee | Dashboard; Create Leave Request; Draft/Submit; My Requests; Leave Request Detail; Cancel Pending; Leave Balance; Notification; Profile; Change Password | Own Leave Function"
+  },
+  {
+    "kind": "row",
+    "table": 1,
+    "row": 2,
+    "cells": [
+      "Supervisor",
+      "Own Leave Function; Approval; Pending Request Detail; Approve/Reject; Team Report; Notification; Profile; Change Password",
+      "อนุมัติเฉพาะ Direct Team"
+    ],
+    "text": "Supervisor | Own Leave Function; Approval; Pending Request Detail; Approve/Reject; Team Report; Notification; Profile; Change Password | อนุมัติเฉพาะ Direct Team"
+  },
+  {
+    "kind": "row",
+    "table": 1,
+    "row": 3,
+    "cells": [
+      "HR",
+      "Own Leave Function; Employee; Leave Type; Leave Entitlement; Holiday; HR Report; Notification; Profile; Change Password",
+      "ไม่ใช่ Approver ใน Current Workflow"
+    ],
+    "text": "HR | Own Leave Function; Employee; Leave Type; Leave Entitlement; Holiday; HR Report; Notification; Profile; Change Password | ไม่ใช่ Approver ใน Current Workflow"
+  },
+  {
+    "kind": "row",
+    "table": 1,
+    "row": 4,
+    "cells": [
+      "Admin",
+      "Own Leave Function; User; Department; Position; Audit Log; Notification; Profile; Change Password",
+      "ไม่ใช่ Approver; ไม่มี HR Management UI เพิ่มเติม"
+    ],
+    "text": "Admin | Own Leave Function; User; Department; Position; Audit Log; Notification; Profile; Change Password | ไม่ใช่ Approver; ไม่มี HR Management UI เพิ่มเติม"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "Backend API Permission: Endpoint กลุ่ม Employee, Department, Position, Leave Type, Leave Entitlement, Holiday และ HR Report อนุญาต HR/Admin ตาม Role Authorization แต่เอกสารนี้ไม่ตีความสิทธิ์ดังกล่าวว่า Admin มีหน้าจอ HR Management ที่ไม่มีอยู่จริง"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "Forgot Password / OTP เป็น Alternative Authentication Flow สำหรับทุก Role และใช้ Email Service เป็น Supporting Actor"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 1",
+    "text": "8. Actor Definition"
+  },
+  {
+    "kind": "row",
+    "table": 2,
+    "row": 0,
+    "cells": [
+      "Actor",
+      "รายละเอียด",
+      "หน้าที่หลัก"
+    ],
+    "text": "Actor | รายละเอียด | หน้าที่หลัก"
+  },
+  {
+    "kind": "row",
+    "table": 2,
+    "row": 1,
+    "cells": [
+      "Employee",
+      "ผู้ใช้งานบทบาทพนักงาน",
+      "จัดการ Leave Request, Balance, Notification และ Profile ของตนเอง"
+    ],
+    "text": "Employee | ผู้ใช้งานบทบาทพนักงาน | จัดการ Leave Request, Balance, Notification และ Profile ของตนเอง"
+  },
+  {
+    "kind": "row",
+    "table": 2,
+    "row": 2,
+    "cells": [
+      "Supervisor",
+      "พนักงานที่มี Role Supervisor และเป็นหัวหน้างานโดยตรง",
+      "Own Leave Function และตัดสินคำขอของ Direct Team"
+    ],
+    "text": "Supervisor | พนักงานที่มี Role Supervisor และเป็นหัวหน้างานโดยตรง | Own Leave Function และตัดสินคำขอของ Direct Team"
+  },
+  {
+    "kind": "row",
+    "table": 2,
+    "row": 3,
+    "cells": [
+      "HR",
+      "ผู้ดูแลข้อมูลบุคคลและข้อมูลการลา",
+      "จัดการ Employee, Leave Type, Entitlement, Holiday และ HR Report"
+    ],
+    "text": "HR | ผู้ดูแลข้อมูลบุคคลและข้อมูลการลา | จัดการ Employee, Leave Type, Entitlement, Holiday และ HR Report"
+  },
+  {
+    "kind": "row",
+    "table": 2,
+    "row": 4,
+    "cells": [
+      "Admin",
+      "ผู้ดูแลบัญชีและโครงสร้างระบบ",
+      "จัดการ User, Department, Position และดู Audit Log"
+    ],
+    "text": "Admin | ผู้ดูแลบัญชีและโครงสร้างระบบ | จัดการ User, Department, Position และดู Audit Log"
+  },
+  {
+    "kind": "row",
+    "table": 2,
+    "row": 5,
+    "cells": [
+      "Email Service",
+      "Supporting Actor ภายนอก",
+      "ส่ง OTP สำหรับ Forgot Password เท่านั้น"
+    ],
+    "text": "Email Service | Supporting Actor ภายนอก | ส่ง OTP สำหรับ Forgot Password เท่านั้น"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 1",
+    "text": "9. Use Case Inventory"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "Use Case Final มี 24 รายการ โดยเพิ่ม UC-24 เพื่อรองรับ FR-21 Role Dashboard ซึ่งเป็นการโต้ตอบโดยตรงของผู้ใช้ ไม่แยก Backend Validation เป็น Use Case เพราะเป็น Internal Behavior ภายใน UC-07"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 0,
+    "cells": [
+      "UC-ID",
+      "Use Case Name",
+      "Actor",
+      "Related FR"
+    ],
+    "text": "UC-ID | Use Case Name | Actor | Related FR"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 1,
+    "cells": [
+      "UC-01",
+      "เข้าสู่ระบบ",
+      "Employee, Supervisor, HR, Admin",
+      "FR-01, FR-17"
+    ],
+    "text": "UC-01 | เข้าสู่ระบบ | Employee, Supervisor, HR, Admin | FR-01, FR-17"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 2,
+    "cells": [
+      "UC-02",
+      "ออกจากระบบ",
+      "Employee, Supervisor, HR, Admin",
+      "FR-01"
+    ],
+    "text": "UC-02 | ออกจากระบบ | Employee, Supervisor, HR, Admin | FR-01"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 3,
+    "cells": [
+      "UC-03",
+      "เปลี่ยนรหัสผ่าน",
+      "Employee, Supervisor, HR, Admin",
+      "FR-01, FR-17"
+    ],
+    "text": "UC-03 | เปลี่ยนรหัสผ่าน | Employee, Supervisor, HR, Admin | FR-01, FR-17"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 4,
+    "cells": [
+      "UC-04",
+      "รีเซ็ตรหัสผ่านด้วย OTP",
+      "Employee, Supervisor, HR, Admin",
+      "FR-18, FR-17, FR-16"
+    ],
+    "text": "UC-04 | รีเซ็ตรหัสผ่านด้วย OTP | Employee, Supervisor, HR, Admin | FR-18, FR-17, FR-16"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 5,
+    "cells": [
+      "UC-05",
+      "จัดการข้อมูลส่วนตัว",
+      "Employee, Supervisor, HR, Admin",
+      "FR-19"
+    ],
+    "text": "UC-05 | จัดการข้อมูลส่วนตัว | Employee, Supervisor, HR, Admin | FR-19"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 6,
+    "cells": [
+      "UC-06",
+      "สร้างและจัดการ Draft คำขอลา",
+      "Employee, Supervisor, HR, Admin",
+      "FR-08, FR-12"
+    ],
+    "text": "UC-06 | สร้างและจัดการ Draft คำขอลา | Employee, Supervisor, HR, Admin | FR-08, FR-12"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 7,
+    "cells": [
+      "UC-07",
+      "ส่งคำขอลา",
+      "Employee, Supervisor, HR, Admin",
+      "FR-08, FR-09, FR-12, FR-13, FR-15"
+    ],
+    "text": "UC-07 | ส่งคำขอลา | Employee, Supervisor, HR, Admin | FR-08, FR-09, FR-12, FR-13, FR-15"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 8,
+    "cells": [
+      "UC-08",
+      "ดูคำขอลาและประวัติของตนเอง",
+      "Employee, Supervisor, HR, Admin",
+      "FR-08, FR-12, FR-21"
+    ],
+    "text": "UC-08 | ดูคำขอลาและประวัติของตนเอง | Employee, Supervisor, HR, Admin | FR-08, FR-12, FR-21"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 9,
+    "cells": [
+      "UC-09",
+      "ยกเลิกคำขอลา",
+      "Employee, Supervisor, HR, Admin",
+      "FR-11"
+    ],
+    "text": "UC-09 | ยกเลิกคำขอลา | Employee, Supervisor, HR, Admin | FR-11"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 10,
+    "cells": [
+      "UC-10",
+      "ตรวจสอบสิทธิ์การลา",
+      "Employee, Supervisor, HR, Admin",
+      "FR-07, FR-21"
+    ],
+    "text": "UC-10 | ตรวจสอบสิทธิ์การลา | Employee, Supervisor, HR, Admin | FR-07, FR-21"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 11,
+    "cells": [
+      "UC-11",
+      "จัดการการแจ้งเตือน",
+      "Employee, Supervisor, HR, Admin",
+      "FR-15, FR-20"
+    ],
+    "text": "UC-11 | จัดการการแจ้งเตือน | Employee, Supervisor, HR, Admin | FR-15, FR-20"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 12,
+    "cells": [
+      "UC-12",
+      "อนุมัติคำขอลา",
+      "Supervisor",
+      "FR-10, FR-15, FR-16"
+    ],
+    "text": "UC-12 | อนุมัติคำขอลา | Supervisor | FR-10, FR-15, FR-16"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 13,
+    "cells": [
+      "UC-13",
+      "ปฏิเสธคำขอลา",
+      "Supervisor",
+      "FR-10, FR-15, FR-16"
+    ],
+    "text": "UC-13 | ปฏิเสธคำขอลา | Supervisor | FR-10, FR-15, FR-16"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 14,
+    "cells": [
+      "UC-14",
+      "ดูรายงานลูกทีม",
+      "Supervisor",
+      "FR-14, FR-21"
+    ],
+    "text": "UC-14 | ดูรายงานลูกทีม | Supervisor | FR-14, FR-21"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 15,
+    "cells": [
+      "UC-15",
+      "จัดการข้อมูลพนักงาน",
+      "HR",
+      "FR-03"
+    ],
+    "text": "UC-15 | จัดการข้อมูลพนักงาน | HR | FR-03"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 16,
+    "cells": [
+      "UC-16",
+      "จัดการประเภทการลา",
+      "HR",
+      "FR-06"
+    ],
+    "text": "UC-16 | จัดการประเภทการลา | HR | FR-06"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 17,
+    "cells": [
+      "UC-17",
+      "จัดการสิทธิ์การลา",
+      "HR",
+      "FR-07"
+    ],
+    "text": "UC-17 | จัดการสิทธิ์การลา | HR | FR-07"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 18,
+    "cells": [
+      "UC-18",
+      "จัดการวันหยุดองค์กร",
+      "HR",
+      "FR-13"
+    ],
+    "text": "UC-18 | จัดการวันหยุดองค์กร | HR | FR-13"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 19,
+    "cells": [
+      "UC-19",
+      "ดูและส่งออกรายงาน HR",
+      "HR",
+      "FR-14, FR-21"
+    ],
+    "text": "UC-19 | ดูและส่งออกรายงาน HR | HR | FR-14, FR-21"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 20,
+    "cells": [
+      "UC-20",
+      "จัดการบัญชีผู้ใช้งาน",
+      "Admin",
+      "FR-02, FR-17, FR-16"
+    ],
+    "text": "UC-20 | จัดการบัญชีผู้ใช้งาน | Admin | FR-02, FR-17, FR-16"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 21,
+    "cells": [
+      "UC-21",
+      "จัดการข้อมูลแผนก",
+      "Admin",
+      "FR-04"
+    ],
+    "text": "UC-21 | จัดการข้อมูลแผนก | Admin | FR-04"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 22,
+    "cells": [
+      "UC-22",
+      "จัดการข้อมูลตำแหน่ง",
+      "Admin",
+      "FR-05"
+    ],
+    "text": "UC-22 | จัดการข้อมูลตำแหน่ง | Admin | FR-05"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 23,
+    "cells": [
+      "UC-23",
+      "ดู Audit Log",
+      "Admin",
+      "FR-16"
+    ],
+    "text": "UC-23 | ดู Audit Log | Admin | FR-16"
+  },
+  {
+    "kind": "row",
+    "table": 3,
+    "row": 24,
+    "cells": [
+      "UC-24",
+      "ดู Dashboard ตาม Role",
+      "Employee, Supervisor, HR, Admin",
+      "FR-21"
+    ],
+    "text": "UC-24 | ดู Dashboard ตาม Role | Employee, Supervisor, HR, Admin | FR-21"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 1",
+    "text": "10. Actor ↔ Use Case Mapping"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 0,
+    "cells": [
+      "Use Case",
+      "Employee",
+      "Supervisor",
+      "HR",
+      "Admin",
+      "Supporting Actor"
+    ],
+    "text": "Use Case | Employee | Supervisor | HR | Admin | Supporting Actor"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 1,
+    "cells": [
+      "UC-01 เข้าสู่ระบบ",
+      "✓",
+      "✓",
+      "✓",
+      "✓",
+      "–"
+    ],
+    "text": "UC-01 เข้าสู่ระบบ | ✓ | ✓ | ✓ | ✓ | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 2,
+    "cells": [
+      "UC-02 ออกจากระบบ",
+      "✓",
+      "✓",
+      "✓",
+      "✓",
+      "–"
+    ],
+    "text": "UC-02 ออกจากระบบ | ✓ | ✓ | ✓ | ✓ | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 3,
+    "cells": [
+      "UC-03 เปลี่ยนรหัสผ่าน",
+      "✓",
+      "✓",
+      "✓",
+      "✓",
+      "–"
+    ],
+    "text": "UC-03 เปลี่ยนรหัสผ่าน | ✓ | ✓ | ✓ | ✓ | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 4,
+    "cells": [
+      "UC-04 รีเซ็ตรหัสผ่านด้วย OTP",
+      "✓",
+      "✓",
+      "✓",
+      "✓",
+      "Email Service"
+    ],
+    "text": "UC-04 รีเซ็ตรหัสผ่านด้วย OTP | ✓ | ✓ | ✓ | ✓ | Email Service"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 5,
+    "cells": [
+      "UC-05 จัดการข้อมูลส่วนตัว",
+      "✓",
+      "✓",
+      "✓",
+      "✓",
+      "–"
+    ],
+    "text": "UC-05 จัดการข้อมูลส่วนตัว | ✓ | ✓ | ✓ | ✓ | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 6,
+    "cells": [
+      "UC-06 สร้างและจัดการ Draft คำขอลา",
+      "✓",
+      "✓",
+      "✓",
+      "✓",
+      "–"
+    ],
+    "text": "UC-06 สร้างและจัดการ Draft คำขอลา | ✓ | ✓ | ✓ | ✓ | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 7,
+    "cells": [
+      "UC-07 ส่งคำขอลา",
+      "✓",
+      "✓",
+      "✓",
+      "✓",
+      "–"
+    ],
+    "text": "UC-07 ส่งคำขอลา | ✓ | ✓ | ✓ | ✓ | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 8,
+    "cells": [
+      "UC-08 ดูคำขอลาและประวัติของตนเอง",
+      "✓",
+      "✓",
+      "✓",
+      "✓",
+      "–"
+    ],
+    "text": "UC-08 ดูคำขอลาและประวัติของตนเอง | ✓ | ✓ | ✓ | ✓ | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 9,
+    "cells": [
+      "UC-09 ยกเลิกคำขอลา",
+      "✓",
+      "✓",
+      "✓",
+      "✓",
+      "–"
+    ],
+    "text": "UC-09 ยกเลิกคำขอลา | ✓ | ✓ | ✓ | ✓ | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 10,
+    "cells": [
+      "UC-10 ตรวจสอบสิทธิ์การลา",
+      "✓",
+      "✓",
+      "✓",
+      "✓",
+      "–"
+    ],
+    "text": "UC-10 ตรวจสอบสิทธิ์การลา | ✓ | ✓ | ✓ | ✓ | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 11,
+    "cells": [
+      "UC-11 จัดการการแจ้งเตือน",
+      "✓",
+      "✓",
+      "✓",
+      "✓",
+      "–"
+    ],
+    "text": "UC-11 จัดการการแจ้งเตือน | ✓ | ✓ | ✓ | ✓ | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 12,
+    "cells": [
+      "UC-12 อนุมัติคำขอลา",
+      "–",
+      "✓",
+      "–",
+      "–",
+      "–"
+    ],
+    "text": "UC-12 อนุมัติคำขอลา | – | ✓ | – | – | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 13,
+    "cells": [
+      "UC-13 ปฏิเสธคำขอลา",
+      "–",
+      "✓",
+      "–",
+      "–",
+      "–"
+    ],
+    "text": "UC-13 ปฏิเสธคำขอลา | – | ✓ | – | – | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 14,
+    "cells": [
+      "UC-14 ดูรายงานลูกทีม",
+      "–",
+      "✓",
+      "–",
+      "–",
+      "–"
+    ],
+    "text": "UC-14 ดูรายงานลูกทีม | – | ✓ | – | – | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 15,
+    "cells": [
+      "UC-15 จัดการข้อมูลพนักงาน",
+      "–",
+      "–",
+      "✓",
+      "–",
+      "–"
+    ],
+    "text": "UC-15 จัดการข้อมูลพนักงาน | – | – | ✓ | – | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 16,
+    "cells": [
+      "UC-16 จัดการประเภทการลา",
+      "–",
+      "–",
+      "✓",
+      "–",
+      "–"
+    ],
+    "text": "UC-16 จัดการประเภทการลา | – | – | ✓ | – | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 17,
+    "cells": [
+      "UC-17 จัดการสิทธิ์การลา",
+      "–",
+      "–",
+      "✓",
+      "–",
+      "–"
+    ],
+    "text": "UC-17 จัดการสิทธิ์การลา | – | – | ✓ | – | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 18,
+    "cells": [
+      "UC-18 จัดการวันหยุดองค์กร",
+      "–",
+      "–",
+      "✓",
+      "–",
+      "–"
+    ],
+    "text": "UC-18 จัดการวันหยุดองค์กร | – | – | ✓ | – | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 19,
+    "cells": [
+      "UC-19 ดูและส่งออกรายงาน HR",
+      "–",
+      "–",
+      "✓",
+      "–",
+      "–"
+    ],
+    "text": "UC-19 ดูและส่งออกรายงาน HR | – | – | ✓ | – | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 20,
+    "cells": [
+      "UC-20 จัดการบัญชีผู้ใช้งาน",
+      "–",
+      "–",
+      "–",
+      "✓",
+      "–"
+    ],
+    "text": "UC-20 จัดการบัญชีผู้ใช้งาน | – | – | – | ✓ | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 21,
+    "cells": [
+      "UC-21 จัดการข้อมูลแผนก",
+      "–",
+      "–",
+      "–",
+      "✓",
+      "–"
+    ],
+    "text": "UC-21 จัดการข้อมูลแผนก | – | – | – | ✓ | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 22,
+    "cells": [
+      "UC-22 จัดการข้อมูลตำแหน่ง",
+      "–",
+      "–",
+      "–",
+      "✓",
+      "–"
+    ],
+    "text": "UC-22 จัดการข้อมูลตำแหน่ง | – | – | – | ✓ | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 23,
+    "cells": [
+      "UC-23 ดู Audit Log",
+      "–",
+      "–",
+      "–",
+      "✓",
+      "–"
+    ],
+    "text": "UC-23 ดู Audit Log | – | – | – | ✓ | –"
+  },
+  {
+    "kind": "row",
+    "table": 4,
+    "row": 24,
+    "cells": [
+      "UC-24 ดู Dashboard ตาม Role",
+      "✓",
+      "✓",
+      "✓",
+      "✓",
+      "–"
+    ],
+    "text": "UC-24 ดู Dashboard ตาม Role | ✓ | ✓ | ✓ | ✓ | –"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 1",
+    "text": "11. Use Case Diagram Specification"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "System Boundary ใช้ชื่อ Online Leave Approval System และประกอบด้วย Use Case UC-01 ถึง UC-24 ตาม Inventory"
+  },
+  {
+    "kind": "row",
+    "table": 5,
+    "row": 0,
+    "cells": [
+      "Actor",
+      "Association กับ Use Case"
+    ],
+    "text": "Actor | Association กับ Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 5,
+    "row": 1,
+    "cells": [
+      "Employee",
+      "UC-01 ถึง UC-11 และ UC-24"
+    ],
+    "text": "Employee | UC-01 ถึง UC-11 และ UC-24"
+  },
+  {
+    "kind": "row",
+    "table": 5,
+    "row": 2,
+    "cells": [
+      "Supervisor",
+      "UC-01 ถึง UC-14 และ UC-24"
+    ],
+    "text": "Supervisor | UC-01 ถึง UC-14 และ UC-24"
+  },
+  {
+    "kind": "row",
+    "table": 5,
+    "row": 3,
+    "cells": [
+      "HR",
+      "UC-01 ถึง UC-11, UC-15 ถึง UC-19 และ UC-24"
+    ],
+    "text": "HR | UC-01 ถึง UC-11, UC-15 ถึง UC-19 และ UC-24"
+  },
+  {
+    "kind": "row",
+    "table": 5,
+    "row": 4,
+    "cells": [
+      "Admin",
+      "UC-01 ถึง UC-11, UC-20 ถึง UC-24"
+    ],
+    "text": "Admin | UC-01 ถึง UC-11, UC-20 ถึง UC-24"
+  },
+  {
+    "kind": "row",
+    "table": 5,
+    "row": 5,
+    "cells": [
+      "Email Service",
+      "UC-04 เท่านั้น"
+    ],
+    "text": "Email Service | UC-04 เท่านั้น"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "<<include>>: ไม่กำหนด Use Case เพิ่มสำหรับ Validation เพราะเป็น Internal Behavior ที่เกิดทุกครั้งภายใน UC-07 ไม่ใช่เป้าหมายการใช้งานแยกของ Actor"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "<<extend>>: ไม่กำหนดความสัมพันธ์ใน Current Specification เนื่องจาก Draft, Submit, Approve, Reject และ Cancel เป็น Use Case ที่ Actor เริ่มดำเนินการโดยตรงและมีเงื่อนไขของตนเอง"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 1",
+    "text": "12. Use Case Specification"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-01 เข้าสู่ระบบ"
+  },
+  {
+    "kind": "row",
+    "table": 6,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 6,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-01"
+    ],
+    "text": "Use Case ID | UC-01"
+  },
+  {
+    "kind": "row",
+    "table": 6,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "เข้าสู่ระบบ"
+    ],
+    "text": "Use Case Name | เข้าสู่ระบบ"
+  },
+  {
+    "kind": "row",
+    "table": 6,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Employee, Supervisor, HR, Admin"
+    ],
+    "text": "Primary Actor | Employee, Supervisor, HR, Admin"
+  },
+  {
+    "kind": "row",
+    "table": 6,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 6,
+    "row": 5,
+    "cells": [
+      "Description",
+      "ยืนยันตัวตนและเข้าสู่ Dashboard ตาม Role"
+    ],
+    "text": "Description | ยืนยันตัวตนและเข้าสู่ Dashboard ตาม Role"
+  },
+  {
+    "kind": "row",
+    "table": 6,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "มีบัญชีผู้ใช้และข้อมูลพนักงานในระบบ"
+    ],
+    "text": "Preconditions | มีบัญชีผู้ใช้และข้อมูลพนักงานในระบบ"
+  },
+  {
+    "kind": "row",
+    "table": 6,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "ผู้ใช้ส่งข้อมูล Login"
+    ],
+    "text": "Trigger | ผู้ใช้ส่งข้อมูล Login"
+  },
+  {
+    "kind": "row",
+    "table": 6,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "เปิดหน้า Login กรอก Username หรือ Email และ Password ระบบตรวจสอบข้อมูลรับรองและสถานะบัญชี ระบบกำหนดสิทธิ์จาก Role ระบบนำผู้ใช้เข้าสู่ Dashboard ตาม Role"
+    ],
+    "text": "Main Flow | เปิดหน้า Login กรอก Username หรือ Email และ Password ระบบตรวจสอบข้อมูลรับรองและสถานะบัญชี ระบบกำหนดสิทธิ์จาก Role ระบบนำผู้ใช้เข้าสู่ Dashboard ตาม Role"
+  },
+  {
+    "kind": "row",
+    "table": 6,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "หากต้องเปลี่ยน Temporary Password ระบบนำไปหน้า Change Password ก่อนใช้ฟังก์ชันธุรกิจ"
+    ],
+    "text": "Alternative Flow | หากต้องเปลี่ยน Temporary Password ระบบนำไปหน้า Change Password ก่อนใช้ฟังก์ชันธุรกิจ"
+  },
+  {
+    "kind": "row",
+    "table": 6,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "ข้อมูลรับรองไม่ถูกต้อง บัญชี inactive หรือ locked"
+    ],
+    "text": "Exception Flow | ข้อมูลรับรองไม่ถูกต้อง บัญชี inactive หรือ locked"
+  },
+  {
+    "kind": "row",
+    "table": 6,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "เกิด Session ที่ผ่านการยืนยันตัวตน"
+    ],
+    "text": "Postconditions | เกิด Session ที่ผ่านการยืนยันตัวตน"
+  },
+  {
+    "kind": "row",
+    "table": 6,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-36"
+    ],
+    "text": "Business Rules | BR-36"
+  },
+  {
+    "kind": "row",
+    "table": 6,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-01, FR-17"
+    ],
+    "text": "Related Functional Requirement | FR-01, FR-17"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-02 ออกจากระบบ"
+  },
+  {
+    "kind": "row",
+    "table": 7,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 7,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-02"
+    ],
+    "text": "Use Case ID | UC-02"
+  },
+  {
+    "kind": "row",
+    "table": 7,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "ออกจากระบบ"
+    ],
+    "text": "Use Case Name | ออกจากระบบ"
+  },
+  {
+    "kind": "row",
+    "table": 7,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Employee, Supervisor, HR, Admin"
+    ],
+    "text": "Primary Actor | Employee, Supervisor, HR, Admin"
+  },
+  {
+    "kind": "row",
+    "table": 7,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 7,
+    "row": 5,
+    "cells": [
+      "Description",
+      "สิ้นสุด Session ของผู้ใช้"
+    ],
+    "text": "Description | สิ้นสุด Session ของผู้ใช้"
+  },
+  {
+    "kind": "row",
+    "table": 7,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login แล้ว"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login แล้ว"
+  },
+  {
+    "kind": "row",
+    "table": 7,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "ผู้ใช้เลือก Logout"
+    ],
+    "text": "Trigger | ผู้ใช้เลือก Logout"
+  },
+  {
+    "kind": "row",
+    "table": 7,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "ผู้ใช้เลือก Logout ระบบยกเลิก Session และ Cookie ที่เกี่ยวข้อง ระบบกลับสู่หน้า Login"
+    ],
+    "text": "Main Flow | ผู้ใช้เลือก Logout ระบบยกเลิก Session และ Cookie ที่เกี่ยวข้อง ระบบกลับสู่หน้า Login"
+  },
+  {
+    "kind": "row",
+    "table": 7,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 7,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "Session หมดอายุก่อนดำเนินการ ระบบให้ Login ใหม่"
+    ],
+    "text": "Exception Flow | Session หมดอายุก่อนดำเนินการ ระบบให้ Login ใหม่"
+  },
+  {
+    "kind": "row",
+    "table": 7,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "ไม่สามารถใช้ Session เดิมเข้าถึงหน้าที่ต้องยืนยันตัวตน"
+    ],
+    "text": "Postconditions | ไม่สามารถใช้ Session เดิมเข้าถึงหน้าที่ต้องยืนยันตัวตน"
+  },
+  {
+    "kind": "row",
+    "table": 7,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "–"
+    ],
+    "text": "Business Rules | –"
+  },
+  {
+    "kind": "row",
+    "table": 7,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-01"
+    ],
+    "text": "Related Functional Requirement | FR-01"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-03 เปลี่ยนรหัสผ่าน"
+  },
+  {
+    "kind": "row",
+    "table": 8,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 8,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-03"
+    ],
+    "text": "Use Case ID | UC-03"
+  },
+  {
+    "kind": "row",
+    "table": 8,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "เปลี่ยนรหัสผ่าน"
+    ],
+    "text": "Use Case Name | เปลี่ยนรหัสผ่าน"
+  },
+  {
+    "kind": "row",
+    "table": 8,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Employee, Supervisor, HR, Admin"
+    ],
+    "text": "Primary Actor | Employee, Supervisor, HR, Admin"
+  },
+  {
+    "kind": "row",
+    "table": 8,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 8,
+    "row": 5,
+    "cells": [
+      "Description",
+      "เปลี่ยนรหัสผ่านของตนเองตาม Password Policy"
+    ],
+    "text": "Description | เปลี่ยนรหัสผ่านของตนเองตาม Password Policy"
+  },
+  {
+    "kind": "row",
+    "table": 8,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้มี Session หรืออยู่ในขั้นบังคับเปลี่ยน Temporary Password"
+    ],
+    "text": "Preconditions | ผู้ใช้มี Session หรืออยู่ในขั้นบังคับเปลี่ยน Temporary Password"
+  },
+  {
+    "kind": "row",
+    "table": 8,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "ผู้ใช้ส่งรหัสผ่านปัจจุบันและรหัสผ่านใหม่"
+    ],
+    "text": "Trigger | ผู้ใช้ส่งรหัสผ่านปัจจุบันและรหัสผ่านใหม่"
+  },
+  {
+    "kind": "row",
+    "table": 8,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "เปิดหน้า Change Password กรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่ ระบบตรวจรหัสผ่านปัจจุบันและ Password Policy ระบบบันทึก Password Hash ใหม่ ระบบล้าง must_change_password และเพิ่ม token_version ระบบบันทึก Audit Log action = change_password"
+    ],
+    "text": "Main Flow | เปิดหน้า Change Password กรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่ ระบบตรวจรหัสผ่านปัจจุบันและ Password Policy ระบบบันทึก Password Hash ใหม่ ระบบล้าง must_change_password และเพิ่ม token_version ระบบบันทึก Audit Log action = change_password"
+  },
+  {
+    "kind": "row",
+    "table": 8,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 8,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "รหัสผ่านปัจจุบันผิด รหัสผ่านใหม่ไม่ผ่าน Policy หรือซ้ำกับข้อมูลต้องห้าม"
+    ],
+    "text": "Exception Flow | รหัสผ่านปัจจุบันผิด รหัสผ่านใหม่ไม่ผ่าน Policy หรือซ้ำกับข้อมูลต้องห้าม"
+  },
+  {
+    "kind": "row",
+    "table": 8,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "รหัสผ่านใหม่มีผลและ Session เดิมถูกยกเลิกตาม token_version"
+    ],
+    "text": "Postconditions | รหัสผ่านใหม่มีผลและ Session เดิมถูกยกเลิกตาม token_version"
+  },
+  {
+    "kind": "row",
+    "table": 8,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-36"
+    ],
+    "text": "Business Rules | BR-36"
+  },
+  {
+    "kind": "row",
+    "table": 8,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-01, FR-17"
+    ],
+    "text": "Related Functional Requirement | FR-01, FR-17"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-04 รีเซ็ตรหัสผ่านด้วย OTP"
+  },
+  {
+    "kind": "row",
+    "table": 9,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 9,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-04"
+    ],
+    "text": "Use Case ID | UC-04"
+  },
+  {
+    "kind": "row",
+    "table": 9,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "รีเซ็ตรหัสผ่านด้วย OTP"
+    ],
+    "text": "Use Case Name | รีเซ็ตรหัสผ่านด้วย OTP"
+  },
+  {
+    "kind": "row",
+    "table": 9,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Employee, Supervisor, HR, Admin"
+    ],
+    "text": "Primary Actor | Employee, Supervisor, HR, Admin"
+  },
+  {
+    "kind": "row",
+    "table": 9,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "Email Service"
+    ],
+    "text": "Supporting Actor | Email Service"
+  },
+  {
+    "kind": "row",
+    "table": 9,
+    "row": 5,
+    "cells": [
+      "Description",
+      "กู้คืนการเข้าถึงด้วย OTP ที่ส่งไปยัง Email ที่ลงทะเบียนไว้ และ Reset Token แบบใช้ครั้งเดียว"
+    ],
+    "text": "Description | กู้คืนการเข้าถึงด้วย OTP ที่ส่งไปยัง Email ที่ลงทะเบียนไว้ และ Reset Token แบบใช้ครั้งเดียว"
+  },
+  {
+    "kind": "row",
+    "table": 9,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้มีบัญชี Active และมี Email ที่ลงทะเบียนไว้กับบัญชี"
+    ],
+    "text": "Preconditions | ผู้ใช้มีบัญชี Active และมี Email ที่ลงทะเบียนไว้กับบัญชี"
+  },
+  {
+    "kind": "row",
+    "table": 9,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "ผู้ใช้เลือก Forgot Password"
+    ],
+    "text": "Trigger | ผู้ใช้เลือก Forgot Password"
+  },
+  {
+    "kind": "row",
+    "table": 9,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "1. ผู้ใช้กรอก Email ที่ลงทะเบียนไว้กับบัญชี 2. ระบบตรวจสอบรูปแบบ Email และบัญชี Active ที่ผูกกับ Email 3. ระบบควบคุม Rate Limit และสร้าง OTP แบบ Hash 4. Email Service ส่ง OTP 6 หลักไปยัง Email ที่ลงทะเบียน 5. ผู้ใช้กรอก OTP 6. ระบบตรวจ OTP และออก Reset Token 7. ผู้ใช้กำหนดรหัสผ่านใหม่ 8. ระบบตรวจ Password Policy และบันทึก Password Hash 9. ระบบทำเครื่องหมาย OTP/Reset Token ว่าใช้แล้ว และบันทึก Event ที่รองรับ"
+    ],
+    "text": "Main Flow | 1. ผู้ใช้กรอก Email ที่ลงทะเบียนไว้กับบัญชี 2. ระบบตรวจสอบรูปแบบ Email และบัญชี Active ที่ผูกกับ Email 3. ระบบควบคุม Rate Limit และสร้าง OTP แบบ Hash 4. Email Service ส่ง OTP 6 หลักไปยัง Email ที่ลงทะเบียน 5. ผู้ใช้กรอก OTP 6. ระบบตรวจ OTP และออก Reset Token 7. ผู้ใช้กำหนดรหัสผ่านใหม่ 8. ระบบตรวจ Password Policy และบันทึก Password Hash 9. ระบบทำเครื่องหมาย OTP/Reset Token ว่าใช้แล้ว และบันทึก Event ที่รองรับ"
+  },
+  {
+    "kind": "row",
+    "table": 9,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ผู้ใช้ขอ OTP ใหม่ได้เมื่อพ้นช่วงจำกัด โดย OTP ใหม่ทำให้ OTP เดิมใช้ไม่ได้"
+    ],
+    "text": "Alternative Flow | ผู้ใช้ขอ OTP ใหม่ได้เมื่อพ้นช่วงจำกัด โดย OTP ใหม่ทำให้ OTP เดิมใช้ไม่ได้"
+  },
+  {
+    "kind": "row",
+    "table": 9,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "รูปแบบ Email ไม่ถูกต้อง → ไม่ส่ง OTP ไม่พบ Email ที่ลงทะเบียนกับบัญชี Active → ไม่สร้าง/ไม่ส่ง OTP และแจ้ง \"ไม่พบบัญชีที่ลงทะเบียนไว้\" OTP หมดอายุ OTP ผิดเกินจำนวนครั้งที่กำหนด ถูก Rate Limit Reset Token หมดอายุหรือถูกใช้แล้ว Password ใหม่ไม่ผ่าน Policy"
+    ],
+    "text": "Exception Flow | รูปแบบ Email ไม่ถูกต้อง → ไม่ส่ง OTP ไม่พบ Email ที่ลงทะเบียนกับบัญชี Active → ไม่สร้าง/ไม่ส่ง OTP และแจ้ง \"ไม่พบบัญชีที่ลงทะเบียนไว้\" OTP หมดอายุ OTP ผิดเกินจำนวนครั้งที่กำหนด ถูก Rate Limit Reset Token หมดอายุหรือถูกใช้แล้ว Password ใหม่ไม่ผ่าน Policy"
+  },
+  {
+    "kind": "row",
+    "table": 9,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "ผู้ใช้ใช้รหัสผ่านใหม่ Login ได้ และ OTP/Token เดิมใช้ซ้ำไม่ได้"
+    ],
+    "text": "Postconditions | ผู้ใช้ใช้รหัสผ่านใหม่ Login ได้ และ OTP/Token เดิมใช้ซ้ำไม่ได้"
+  },
+  {
+    "kind": "row",
+    "table": 9,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-37"
+    ],
+    "text": "Business Rules | BR-37"
+  },
+  {
+    "kind": "row",
+    "table": 9,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-18, FR-17, FR-16"
+    ],
+    "text": "Related Functional Requirement | FR-18, FR-17, FR-16"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-05 จัดการข้อมูลส่วนตัว"
+  },
+  {
+    "kind": "row",
+    "table": 10,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 10,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-05"
+    ],
+    "text": "Use Case ID | UC-05"
+  },
+  {
+    "kind": "row",
+    "table": 10,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "จัดการข้อมูลส่วนตัว"
+    ],
+    "text": "Use Case Name | จัดการข้อมูลส่วนตัว"
+  },
+  {
+    "kind": "row",
+    "table": 10,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Employee, Supervisor, HR, Admin"
+    ],
+    "text": "Primary Actor | Employee, Supervisor, HR, Admin"
+  },
+  {
+    "kind": "row",
+    "table": 10,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 10,
+    "row": 5,
+    "cells": [
+      "Description",
+      "ดูและแก้ไข Profile ที่ระบบอนุญาต"
+    ],
+    "text": "Description | ดูและแก้ไข Profile ที่ระบบอนุญาต"
+  },
+  {
+    "kind": "row",
+    "table": 10,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login แล้ว"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login แล้ว"
+  },
+  {
+    "kind": "row",
+    "table": 10,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "ผู้ใช้เปิดหน้า Profile"
+    ],
+    "text": "Trigger | ผู้ใช้เปิดหน้า Profile"
+  },
+  {
+    "kind": "row",
+    "table": 10,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "ระบบแสดงข้อมูล Profile ผู้ใช้แก้ไขชื่อ นามสกุล Email หรือเบอร์โทรศัพท์ ผู้ใช้อัปโหลดหรือลบรูปโปรไฟล์ได้ ระบบตรวจรูป JPEG, PNG หรือ WebP ขนาดไม่เกิน 2 MB ระบบบันทึกและแสดงผลล่าสุด"
+    ],
+    "text": "Main Flow | ระบบแสดงข้อมูล Profile ผู้ใช้แก้ไขชื่อ นามสกุล Email หรือเบอร์โทรศัพท์ ผู้ใช้อัปโหลดหรือลบรูปโปรไฟล์ได้ ระบบตรวจรูป JPEG, PNG หรือ WebP ขนาดไม่เกิน 2 MB ระบบบันทึกและแสดงผลล่าสุด"
+  },
+  {
+    "kind": "row",
+    "table": 10,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 10,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "ไฟล์รูปไม่ตรงชนิดหรือเกินขนาด พยายามแก้ Employee ID, Role, Department หรือ Position"
+    ],
+    "text": "Exception Flow | ไฟล์รูปไม่ตรงชนิดหรือเกินขนาด พยายามแก้ Employee ID, Role, Department หรือ Position"
+  },
+  {
+    "kind": "row",
+    "table": 10,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "Profile เปลี่ยนเฉพาะฟิลด์ที่อนุญาต"
+    ],
+    "text": "Postconditions | Profile เปลี่ยนเฉพาะฟิลด์ที่อนุญาต"
+  },
+  {
+    "kind": "row",
+    "table": 10,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "–"
+    ],
+    "text": "Business Rules | –"
+  },
+  {
+    "kind": "row",
+    "table": 10,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-19"
+    ],
+    "text": "Related Functional Requirement | FR-19"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-06 สร้างและจัดการ Draft คำขอลา"
+  },
+  {
+    "kind": "row",
+    "table": 11,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 11,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-06"
+    ],
+    "text": "Use Case ID | UC-06"
+  },
+  {
+    "kind": "row",
+    "table": 11,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "สร้างและจัดการ Draft คำขอลา"
+    ],
+    "text": "Use Case Name | สร้างและจัดการ Draft คำขอลา"
+  },
+  {
+    "kind": "row",
+    "table": 11,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Employee, Supervisor, HR, Admin"
+    ],
+    "text": "Primary Actor | Employee, Supervisor, HR, Admin"
+  },
+  {
+    "kind": "row",
+    "table": 11,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 11,
+    "row": 5,
+    "cells": [
+      "Description",
+      "สร้าง แก้ไข ลบ Draft และจัดการ Attachment ก่อน Submit"
+    ],
+    "text": "Description | สร้าง แก้ไข ลบ Draft และจัดการ Attachment ก่อน Submit"
+  },
+  {
+    "kind": "row",
+    "table": 11,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login แล้วและผ่านการเปลี่ยน Temporary Password"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login แล้วและผ่านการเปลี่ยน Temporary Password"
+  },
+  {
+    "kind": "row",
+    "table": 11,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "ผู้ใช้เปิด Create Leave Request หรือ Draft เดิม"
+    ],
+    "text": "Trigger | ผู้ใช้เปิด Create Leave Request หรือ Draft เดิม"
+  },
+  {
+    "kind": "row",
+    "table": 11,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "เลือก Leave Type ระบุ Start Date, End Date และ Reason แนบเอกสารหากต้องการ เลือก Save Draft ระบบบันทึก status = draft เจ้าของกลับมาแก้ไข ลบ Draft หรือจัดการ Attachment ได้"
+    ],
+    "text": "Main Flow | เลือก Leave Type ระบุ Start Date, End Date และ Reason แนบเอกสารหากต้องการ เลือก Save Draft ระบบบันทึก status = draft เจ้าของกลับมาแก้ไข ลบ Draft หรือจัดการ Attachment ได้"
+  },
+  {
+    "kind": "row",
+    "table": 11,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ผู้ใช้เลือก Submit แทน Save Draft และเข้าสู่ UC-07"
+    ],
+    "text": "Alternative Flow | ผู้ใช้เลือก Submit แทน Save Draft และเข้าสู่ UC-07"
+  },
+  {
+    "kind": "row",
+    "table": 11,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "ผู้ใช้ไม่ใช่เจ้าของ Draft รายการไม่อยู่ในสถานะ draft"
+    ],
+    "text": "Exception Flow | ผู้ใช้ไม่ใช่เจ้าของ Draft รายการไม่อยู่ในสถานะ draft"
+  },
+  {
+    "kind": "row",
+    "table": 11,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "Draft ถูกบันทึกหรือถูกลบตามการกระทำของเจ้าของ"
+    ],
+    "text": "Postconditions | Draft ถูกบันทึกหรือถูกลบตามการกระทำของเจ้าของ"
+  },
+  {
+    "kind": "row",
+    "table": 11,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-10, BR-20, BR-21, BR-34"
+    ],
+    "text": "Business Rules | BR-10, BR-20, BR-21, BR-34"
+  },
+  {
+    "kind": "row",
+    "table": 11,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-08, FR-12"
+    ],
+    "text": "Related Functional Requirement | FR-08, FR-12"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-07 ส่งคำขอลา"
+  },
+  {
+    "kind": "row",
+    "table": 12,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 12,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-07"
+    ],
+    "text": "Use Case ID | UC-07"
+  },
+  {
+    "kind": "row",
+    "table": 12,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "ส่งคำขอลา"
+    ],
+    "text": "Use Case Name | ส่งคำขอลา"
+  },
+  {
+    "kind": "row",
+    "table": 12,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Employee, Supervisor, HR, Admin"
+    ],
+    "text": "Primary Actor | Employee, Supervisor, HR, Admin"
+  },
+  {
+    "kind": "row",
+    "table": 12,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 12,
+    "row": 5,
+    "cells": [
+      "Description",
+      "ตรวจสอบข้อมูลและส่ง Leave Request เข้าสู่ Workflow"
+    ],
+    "text": "Description | ตรวจสอบข้อมูลและส่ง Leave Request เข้าสู่ Workflow"
+  },
+  {
+    "kind": "row",
+    "table": 12,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login แล้ว มีคำขอใหม่หรือ Draft ของตนเอง"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login แล้ว มีคำขอใหม่หรือ Draft ของตนเอง"
+  },
+  {
+    "kind": "row",
+    "table": 12,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "ผู้ใช้เลือก Submit"
+    ],
+    "text": "Trigger | ผู้ใช้เลือก Submit"
+  },
+  {
+    "kind": "row",
+    "table": 12,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "ระบบตรวจ Required Field และ Reason 5–500 ตัวอักษร ตรวจ end_date >= start_date และอยู่ปีเดียวกัน คำนวณ Working Day โดยไม่นับ Weekend และ Active Holiday ตรวจ Leave Type Active และ Minimum/Maximum Days ตรวจ Leave Entitlement, pending_days และ available_days ตรวจ Overlap กับ Pending/Approved ตรวจ Attachment Policy และ Threshold ตรวจ User/Employee Active และ Direct Supervisor จาก employees.supervisor_id เมื่อผ่านทั้งหมด ระบบสร้าง request_no และเปลี่ยน status = pending ระบบไม่บันทึก approver_employee_id ตอน Submit ระบบสร้าง Notification ให้ Direct Supervisor และ Commit Transaction"
+    ],
+    "text": "Main Flow | ระบบตรวจ Required Field และ Reason 5–500 ตัวอักษร ตรวจ end_date >= start_date และอยู่ปีเดียวกัน คำนวณ Working Day โดยไม่นับ Weekend และ Active Holiday ตรวจ Leave Type Active และ Minimum/Maximum Days ตรวจ Leave Entitlement, pending_days และ available_days ตรวจ Overlap กับ Pending/Approved ตรวจ Attachment Policy และ Threshold ตรวจ User/Employee Active และ Direct Supervisor จาก employees.supervisor_id เมื่อผ่านทั้งหมด ระบบสร้าง request_no และเปลี่ยน status = pending ระบบไม่บันทึก approver_employee_id ตอน Submit ระบบสร้าง Notification ให้ Direct Supervisor และ Commit Transaction"
+  },
+  {
+    "kind": "row",
+    "table": 12,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ผู้ใช้บันทึกเป็น Draft เพื่อแก้ไขภายหลัง"
+    ],
+    "text": "Alternative Flow | ผู้ใช้บันทึกเป็น Draft เพื่อแก้ไขภายหลัง"
+  },
+  {
+    "kind": "row",
+    "table": 12,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "Required Field ไม่ครบ วันที่ไม่ถูกต้องหรือข้ามปี Leave Type inactive ไม่มี Working Day ต่ำกว่า Minimum หรือเกิน Maximum ไม่มี Entitlement หรือ Balance ไม่พอ ช่วงวันลาซ้ำ Attachment ไม่ผ่าน Policy ไม่มี Direct Supervisor ที่ถูกต้อง User หรือ Employee ไม่ Active"
+    ],
+    "text": "Exception Flow | Required Field ไม่ครบ วันที่ไม่ถูกต้องหรือข้ามปี Leave Type inactive ไม่มี Working Day ต่ำกว่า Minimum หรือเกิน Maximum ไม่มี Entitlement หรือ Balance ไม่พอ ช่วงวันลาซ้ำ Attachment ไม่ผ่าน Policy ไม่มี Direct Supervisor ที่ถูกต้อง User หรือ Employee ไม่ Active"
+  },
+  {
+    "kind": "row",
+    "table": 12,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "คำขอเป็น pending มี request_no และ Supervisor ได้รับ Notification"
+    ],
+    "text": "Postconditions | คำขอเป็น pending มี request_no และ Supervisor ได้รับ Notification"
+  },
+  {
+    "kind": "row",
+    "table": 12,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-01, BR-05, BR-06, BR-07, BR-08, BR-14, BR-15, BR-16, BR-17, BR-26, BR-27, BR-28, BR-30, BR-32, BR-33, BR-34"
+    ],
+    "text": "Business Rules | BR-01, BR-05, BR-06, BR-07, BR-08, BR-14, BR-15, BR-16, BR-17, BR-26, BR-27, BR-28, BR-30, BR-32, BR-33, BR-34"
+  },
+  {
+    "kind": "row",
+    "table": 12,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-08, FR-09, FR-12, FR-13, FR-15"
+    ],
+    "text": "Related Functional Requirement | FR-08, FR-09, FR-12, FR-13, FR-15"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-08 ดูคำขอลาและประวัติของตนเอง"
+  },
+  {
+    "kind": "row",
+    "table": 13,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 13,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-08"
+    ],
+    "text": "Use Case ID | UC-08"
+  },
+  {
+    "kind": "row",
+    "table": 13,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "ดูคำขอลาและประวัติของตนเอง"
+    ],
+    "text": "Use Case Name | ดูคำขอลาและประวัติของตนเอง"
+  },
+  {
+    "kind": "row",
+    "table": 13,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Employee, Supervisor, HR, Admin"
+    ],
+    "text": "Primary Actor | Employee, Supervisor, HR, Admin"
+  },
+  {
+    "kind": "row",
+    "table": 13,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 13,
+    "row": 5,
+    "cells": [
+      "Description",
+      "ดูรายการและรายละเอียด Leave Request ที่เป็นของตนเอง"
+    ],
+    "text": "Description | ดูรายการและรายละเอียด Leave Request ที่เป็นของตนเอง"
+  },
+  {
+    "kind": "row",
+    "table": 13,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login แล้ว"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login แล้ว"
+  },
+  {
+    "kind": "row",
+    "table": 13,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "ผู้ใช้เปิด My Requests หรือรายละเอียดคำขอ"
+    ],
+    "text": "Trigger | ผู้ใช้เปิด My Requests หรือรายละเอียดคำขอ"
+  },
+  {
+    "kind": "row",
+    "table": 13,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "ระบบดึงคำขอตาม employee_id ของผู้ใช้ แสดงรายการตามสถานะและข้อมูลสำคัญ ผู้ใช้เปิดรายละเอียดคำขอ ระบบแสดงข้อมูล วันที่ เหตุผล สถานะ และ Attachment ตามสิทธิ์"
+    ],
+    "text": "Main Flow | ระบบดึงคำขอตาม employee_id ของผู้ใช้ แสดงรายการตามสถานะและข้อมูลสำคัญ ผู้ใช้เปิดรายละเอียดคำขอ ระบบแสดงข้อมูล วันที่ เหตุผล สถานะ และ Attachment ตามสิทธิ์"
+  },
+  {
+    "kind": "row",
+    "table": 13,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 13,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "ไม่พบคำขอหรือคำขอไม่ใช่ของผู้ใช้"
+    ],
+    "text": "Exception Flow | ไม่พบคำขอหรือคำขอไม่ใช่ของผู้ใช้"
+  },
+  {
+    "kind": "row",
+    "table": 13,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "ผู้ใช้เห็นเฉพาะคำขอของตนเอง"
+    ],
+    "text": "Postconditions | ผู้ใช้เห็นเฉพาะคำขอของตนเอง"
+  },
+  {
+    "kind": "row",
+    "table": 13,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "–"
+    ],
+    "text": "Business Rules | –"
+  },
+  {
+    "kind": "row",
+    "table": 13,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-08, FR-12, FR-21"
+    ],
+    "text": "Related Functional Requirement | FR-08, FR-12, FR-21"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-09 ยกเลิกคำขอลา"
+  },
+  {
+    "kind": "row",
+    "table": 14,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 14,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-09"
+    ],
+    "text": "Use Case ID | UC-09"
+  },
+  {
+    "kind": "row",
+    "table": 14,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "ยกเลิกคำขอลา"
+    ],
+    "text": "Use Case Name | ยกเลิกคำขอลา"
+  },
+  {
+    "kind": "row",
+    "table": 14,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Employee, Supervisor, HR, Admin"
+    ],
+    "text": "Primary Actor | Employee, Supervisor, HR, Admin"
+  },
+  {
+    "kind": "row",
+    "table": 14,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 14,
+    "row": 5,
+    "cells": [
+      "Description",
+      "เจ้าของยกเลิกคำขอที่ยัง Pending"
+    ],
+    "text": "Description | เจ้าของยกเลิกคำขอที่ยัง Pending"
+  },
+  {
+    "kind": "row",
+    "table": 14,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้เป็นเจ้าของคำขอ คำขอ status = pending"
+    ],
+    "text": "Preconditions | ผู้ใช้เป็นเจ้าของคำขอ คำขอ status = pending"
+  },
+  {
+    "kind": "row",
+    "table": 14,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "ผู้ใช้เลือก Cancel"
+    ],
+    "text": "Trigger | ผู้ใช้เลือก Cancel"
+  },
+  {
+    "kind": "row",
+    "table": 14,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "ระบบตรวจ Ownership และสถานะ ระบบเปลี่ยน status = cancelled และบันทึก cancelled_at ระบบแสดงผลการยกเลิก"
+    ],
+    "text": "Main Flow | ระบบตรวจ Ownership และสถานะ ระบบเปลี่ยน status = cancelled และบันทึก cancelled_at ระบบแสดงผลการยกเลิก"
+  },
+  {
+    "kind": "row",
+    "table": 14,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 14,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "คำขอไม่ใช่ pending ผู้ใช้ไม่ใช่เจ้าของคำขอ"
+    ],
+    "text": "Exception Flow | คำขอไม่ใช่ pending ผู้ใช้ไม่ใช่เจ้าของคำขอ"
+  },
+  {
+    "kind": "row",
+    "table": 14,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "คำขอเป็น cancelled; ไม่สร้าง Notification และไม่บันทึก Audit Log"
+    ],
+    "text": "Postconditions | คำขอเป็น cancelled; ไม่สร้าง Notification และไม่บันทึก Audit Log"
+  },
+  {
+    "kind": "row",
+    "table": 14,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-04, BR-11, BR-12"
+    ],
+    "text": "Business Rules | BR-04, BR-11, BR-12"
+  },
+  {
+    "kind": "row",
+    "table": 14,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-11"
+    ],
+    "text": "Related Functional Requirement | FR-11"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-10 ตรวจสอบสิทธิ์การลา"
+  },
+  {
+    "kind": "row",
+    "table": 15,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 15,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-10"
+    ],
+    "text": "Use Case ID | UC-10"
+  },
+  {
+    "kind": "row",
+    "table": 15,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "ตรวจสอบสิทธิ์การลา"
+    ],
+    "text": "Use Case Name | ตรวจสอบสิทธิ์การลา"
+  },
+  {
+    "kind": "row",
+    "table": 15,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Employee, Supervisor, HR, Admin"
+    ],
+    "text": "Primary Actor | Employee, Supervisor, HR, Admin"
+  },
+  {
+    "kind": "row",
+    "table": 15,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 15,
+    "row": 5,
+    "cells": [
+      "Description",
+      "ดู total, used, pending และ available ของตนเองตามปีและประเภทลา"
+    ],
+    "text": "Description | ดู total, used, pending และ available ของตนเองตามปีและประเภทลา"
+  },
+  {
+    "kind": "row",
+    "table": 15,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login แล้ว"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login แล้ว"
+  },
+  {
+    "kind": "row",
+    "table": 15,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "ผู้ใช้เปิด Leave Balance"
+    ],
+    "text": "Trigger | ผู้ใช้เปิด Leave Balance"
+  },
+  {
+    "kind": "row",
+    "table": 15,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "ระบบอ่าน Entitlement ของพนักงานและปี คำนวณ pending_days จากคำขอ pending คำนวณ remaining_days และ available_days แสดงผลแยกตาม Leave Type"
+    ],
+    "text": "Main Flow | ระบบอ่าน Entitlement ของพนักงานและปี คำนวณ pending_days จากคำขอ pending คำนวณ remaining_days และ available_days แสดงผลแยกตาม Leave Type"
+  },
+  {
+    "kind": "row",
+    "table": 15,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 15,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "ไม่มี Entitlement สำหรับปีที่เลือก"
+    ],
+    "text": "Exception Flow | ไม่มี Entitlement สำหรับปีที่เลือก"
+  },
+  {
+    "kind": "row",
+    "table": 15,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "ผู้ใช้เห็น Balance ที่คำนวณจากข้อมูลจริง"
+    ],
+    "text": "Postconditions | ผู้ใช้เห็น Balance ที่คำนวณจากข้อมูลจริง"
+  },
+  {
+    "kind": "row",
+    "table": 15,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-01, BR-02, BR-30, BR-31"
+    ],
+    "text": "Business Rules | BR-01, BR-02, BR-30, BR-31"
+  },
+  {
+    "kind": "row",
+    "table": 15,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-07, FR-21"
+    ],
+    "text": "Related Functional Requirement | FR-07, FR-21"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-11 จัดการการแจ้งเตือน"
+  },
+  {
+    "kind": "row",
+    "table": 16,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 16,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-11"
+    ],
+    "text": "Use Case ID | UC-11"
+  },
+  {
+    "kind": "row",
+    "table": 16,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "จัดการการแจ้งเตือน"
+    ],
+    "text": "Use Case Name | จัดการการแจ้งเตือน"
+  },
+  {
+    "kind": "row",
+    "table": 16,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Employee, Supervisor, HR, Admin"
+    ],
+    "text": "Primary Actor | Employee, Supervisor, HR, Admin"
+  },
+  {
+    "kind": "row",
+    "table": 16,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 16,
+    "row": 5,
+    "cells": [
+      "Description",
+      "ดู อ่าน อ่านทั้งหมด ลบ และเปิด Deep Link ของ Notification ตนเอง"
+    ],
+    "text": "Description | ดู อ่าน อ่านทั้งหมด ลบ และเปิด Deep Link ของ Notification ตนเอง"
+  },
+  {
+    "kind": "row",
+    "table": 16,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login แล้ว"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login แล้ว"
+  },
+  {
+    "kind": "row",
+    "table": 16,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "ผู้ใช้เปิดหน้า Notification"
+    ],
+    "text": "Trigger | ผู้ใช้เปิดหน้า Notification"
+  },
+  {
+    "kind": "row",
+    "table": 16,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "ระบบแสดง Notification ล่าสุดและจำนวน Unread ผู้ใช้ Mark Read หรือ Mark All Read ผู้ใช้ลบ Notification ของตนเองได้ ผู้ใช้เปิด Deep Link หากมีสิทธิ์เข้าถึงข้อมูลปลายทาง"
+    ],
+    "text": "Main Flow | ระบบแสดง Notification ล่าสุดและจำนวน Unread ผู้ใช้ Mark Read หรือ Mark All Read ผู้ใช้ลบ Notification ของตนเองได้ ผู้ใช้เปิด Deep Link หากมีสิทธิ์เข้าถึงข้อมูลปลายทาง"
+  },
+  {
+    "kind": "row",
+    "table": 16,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 16,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "Notification ไม่ใช่ของผู้ใช้ ไม่มีสิทธิ์เข้าถึง Deep Link"
+    ],
+    "text": "Exception Flow | Notification ไม่ใช่ของผู้ใช้ ไม่มีสิทธิ์เข้าถึง Deep Link"
+  },
+  {
+    "kind": "row",
+    "table": 16,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "สถานะหรือตัว Notification เปลี่ยนตามการกระทำ"
+    ],
+    "text": "Postconditions | สถานะหรือตัว Notification เปลี่ยนตามการกระทำ"
+  },
+  {
+    "kind": "row",
+    "table": 16,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-35"
+    ],
+    "text": "Business Rules | BR-35"
+  },
+  {
+    "kind": "row",
+    "table": 16,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-15, FR-20"
+    ],
+    "text": "Related Functional Requirement | FR-15, FR-20"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-12 อนุมัติคำขอลา"
+  },
+  {
+    "kind": "row",
+    "table": 17,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 17,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-12"
+    ],
+    "text": "Use Case ID | UC-12"
+  },
+  {
+    "kind": "row",
+    "table": 17,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "อนุมัติคำขอลา"
+    ],
+    "text": "Use Case Name | อนุมัติคำขอลา"
+  },
+  {
+    "kind": "row",
+    "table": 17,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Supervisor"
+    ],
+    "text": "Primary Actor | Supervisor"
+  },
+  {
+    "kind": "row",
+    "table": 17,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 17,
+    "row": 5,
+    "cells": [
+      "Description",
+      "Direct Supervisor อนุมัติคำขอ Pending ของ Direct Team"
+    ],
+    "text": "Description | Direct Supervisor อนุมัติคำขอ Pending ของ Direct Team"
+  },
+  {
+    "kind": "row",
+    "table": 17,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "Login และ Role = Supervisor คำขอ pending ผู้ยื่นอยู่ใน Direct Team ตาม employees.supervisor_id ไม่ใช่คำขอของตนเอง"
+    ],
+    "text": "Preconditions | Login และ Role = Supervisor คำขอ pending ผู้ยื่นอยู่ใน Direct Team ตาม employees.supervisor_id ไม่ใช่คำขอของตนเอง"
+  },
+  {
+    "kind": "row",
+    "table": 17,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "Supervisor เลือก Approve"
+    ],
+    "text": "Trigger | Supervisor เลือก Approve"
+  },
+  {
+    "kind": "row",
+    "table": 17,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "ระบบ Lock คำขอและตรวจ status ซ้ำ ตรวจ Direct Team จาก employees.supervisor_id และป้องกัน Self Approval Lock Entitlement และตรวจ Balance ซ้ำ ณ เวลาตัดสิน เพิ่ม used_days เปลี่ยน status = approved บันทึก approver_employee_id และ approved_at สร้าง Notification ให้เจ้าของคำขอ บันทึก Audit Log action = leave_approved Commit Transaction โดยไม่ INSERT leave_approval_logs"
+    ],
+    "text": "Main Flow | ระบบ Lock คำขอและตรวจ status ซ้ำ ตรวจ Direct Team จาก employees.supervisor_id และป้องกัน Self Approval Lock Entitlement และตรวจ Balance ซ้ำ ณ เวลาตัดสิน เพิ่ม used_days เปลี่ยน status = approved บันทึก approver_employee_id และ approved_at สร้าง Notification ให้เจ้าของคำขอ บันทึก Audit Log action = leave_approved Commit Transaction โดยไม่ INSERT leave_approval_logs"
+  },
+  {
+    "kind": "row",
+    "table": 17,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 17,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "ไม่ใช่ Direct Supervisor คำขอไม่ใช่ pending Self Approval Balance ไม่พอ มีการตัดสินซ้ำหรือพร้อมกัน Transaction ล้มเหลวและต้อง Rollback"
+    ],
+    "text": "Exception Flow | ไม่ใช่ Direct Supervisor คำขอไม่ใช่ pending Self Approval Balance ไม่พอ มีการตัดสินซ้ำหรือพร้อมกัน Transaction ล้มเหลวและต้อง Rollback"
+  },
+  {
+    "kind": "row",
+    "table": 17,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "คำขอเป็น approved, used_days เพิ่ม และเจ้าของได้รับ Notification"
+    ],
+    "text": "Postconditions | คำขอเป็น approved, used_days เพิ่ม และเจ้าของได้รับ Notification"
+  },
+  {
+    "kind": "row",
+    "table": 17,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-03, BR-09, BR-18, BR-23, BR-25, BR-40"
+    ],
+    "text": "Business Rules | BR-03, BR-09, BR-18, BR-23, BR-25, BR-40"
+  },
+  {
+    "kind": "row",
+    "table": 17,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-10, FR-15, FR-16"
+    ],
+    "text": "Related Functional Requirement | FR-10, FR-15, FR-16"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-13 ปฏิเสธคำขอลา"
+  },
+  {
+    "kind": "row",
+    "table": 18,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 18,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-13"
+    ],
+    "text": "Use Case ID | UC-13"
+  },
+  {
+    "kind": "row",
+    "table": 18,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "ปฏิเสธคำขอลา"
+    ],
+    "text": "Use Case Name | ปฏิเสธคำขอลา"
+  },
+  {
+    "kind": "row",
+    "table": 18,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Supervisor"
+    ],
+    "text": "Primary Actor | Supervisor"
+  },
+  {
+    "kind": "row",
+    "table": 18,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 18,
+    "row": 5,
+    "cells": [
+      "Description",
+      "Direct Supervisor ปฏิเสธคำขอ Pending พร้อมเหตุผล"
+    ],
+    "text": "Description | Direct Supervisor ปฏิเสธคำขอ Pending พร้อมเหตุผล"
+  },
+  {
+    "kind": "row",
+    "table": 18,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "Login และ Role = Supervisor คำขอ pending ผู้ยื่นอยู่ใน Direct Team ไม่ใช่คำขอของตนเอง"
+    ],
+    "text": "Preconditions | Login และ Role = Supervisor คำขอ pending ผู้ยื่นอยู่ใน Direct Team ไม่ใช่คำขอของตนเอง"
+  },
+  {
+    "kind": "row",
+    "table": 18,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "Supervisor เลือก Reject และกรอกเหตุผล"
+    ],
+    "text": "Trigger | Supervisor เลือก Reject และกรอกเหตุผล"
+  },
+  {
+    "kind": "row",
+    "table": 18,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "ระบบ Lock คำขอและตรวจ status ซ้ำ ตรวจ Direct Team จาก employees.supervisor_id และป้องกัน Self Decision ตรวจ Rejection Reason เปลี่ยน status = rejected บันทึก rejection_reason, approver_employee_id และ rejected_at สร้าง Notification ให้เจ้าของคำขอ บันทึก Audit Log action = leave_rejected Commit Transaction โดยไม่ INSERT leave_approval_logs"
+    ],
+    "text": "Main Flow | ระบบ Lock คำขอและตรวจ status ซ้ำ ตรวจ Direct Team จาก employees.supervisor_id และป้องกัน Self Decision ตรวจ Rejection Reason เปลี่ยน status = rejected บันทึก rejection_reason, approver_employee_id และ rejected_at สร้าง Notification ให้เจ้าของคำขอ บันทึก Audit Log action = leave_rejected Commit Transaction โดยไม่ INSERT leave_approval_logs"
+  },
+  {
+    "kind": "row",
+    "table": 18,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 18,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "ไม่ใช่ Direct Supervisor คำขอไม่ใช่ pending Self Decision Rejection Reason ว่าง มีการตัดสินซ้ำหรือพร้อมกัน"
+    ],
+    "text": "Exception Flow | ไม่ใช่ Direct Supervisor คำขอไม่ใช่ pending Self Decision Rejection Reason ว่าง มีการตัดสินซ้ำหรือพร้อมกัน"
+  },
+  {
+    "kind": "row",
+    "table": 18,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "คำขอเป็น rejected พร้อมเหตุผลและเจ้าของได้รับ Notification"
+    ],
+    "text": "Postconditions | คำขอเป็น rejected พร้อมเหตุผลและเจ้าของได้รับ Notification"
+  },
+  {
+    "kind": "row",
+    "table": 18,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-09, BR-19, BR-23, BR-25, BR-40"
+    ],
+    "text": "Business Rules | BR-09, BR-19, BR-23, BR-25, BR-40"
+  },
+  {
+    "kind": "row",
+    "table": 18,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-10, FR-15, FR-16"
+    ],
+    "text": "Related Functional Requirement | FR-10, FR-15, FR-16"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-14 ดูรายงานลูกทีม"
+  },
+  {
+    "kind": "row",
+    "table": 19,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 19,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-14"
+    ],
+    "text": "Use Case ID | UC-14"
+  },
+  {
+    "kind": "row",
+    "table": 19,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "ดูรายงานลูกทีม"
+    ],
+    "text": "Use Case Name | ดูรายงานลูกทีม"
+  },
+  {
+    "kind": "row",
+    "table": 19,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Supervisor"
+    ],
+    "text": "Primary Actor | Supervisor"
+  },
+  {
+    "kind": "row",
+    "table": 19,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 19,
+    "row": 5,
+    "cells": [
+      "Description",
+      "ดูรายงาน Leave Request เฉพาะ Direct Team"
+    ],
+    "text": "Description | ดูรายงาน Leave Request เฉพาะ Direct Team"
+  },
+  {
+    "kind": "row",
+    "table": 19,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login และ Role = Supervisor"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login และ Role = Supervisor"
+  },
+  {
+    "kind": "row",
+    "table": 19,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "Supervisor เปิด Team Report"
+    ],
+    "text": "Trigger | Supervisor เปิด Team Report"
+  },
+  {
+    "kind": "row",
+    "table": 19,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "ระบบจำกัดข้อมูลด้วย employees.supervisor_id Supervisor เลือกตัวกรองสถานะ ประเภทลา แผนก หรือช่วงวันที่ ระบบแสดงรายการและ Summary ของ Direct Team"
+    ],
+    "text": "Main Flow | ระบบจำกัดข้อมูลด้วย employees.supervisor_id Supervisor เลือกตัวกรองสถานะ ประเภทลา แผนก หรือช่วงวันที่ ระบบแสดงรายการและ Summary ของ Direct Team"
+  },
+  {
+    "kind": "row",
+    "table": 19,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 19,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "ไม่มีข้อมูลตามตัวกรอง"
+    ],
+    "text": "Exception Flow | ไม่มีข้อมูลตามตัวกรอง"
+  },
+  {
+    "kind": "row",
+    "table": 19,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "รายงานไม่เปิดเผยข้อมูลพนักงานนอก Direct Team"
+    ],
+    "text": "Postconditions | รายงานไม่เปิดเผยข้อมูลพนักงานนอก Direct Team"
+  },
+  {
+    "kind": "row",
+    "table": 19,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-23"
+    ],
+    "text": "Business Rules | BR-23"
+  },
+  {
+    "kind": "row",
+    "table": 19,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-14, FR-21"
+    ],
+    "text": "Related Functional Requirement | FR-14, FR-21"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-15 จัดการข้อมูลพนักงาน"
+  },
+  {
+    "kind": "row",
+    "table": 20,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 20,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-15"
+    ],
+    "text": "Use Case ID | UC-15"
+  },
+  {
+    "kind": "row",
+    "table": 20,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "จัดการข้อมูลพนักงาน"
+    ],
+    "text": "Use Case Name | จัดการข้อมูลพนักงาน"
+  },
+  {
+    "kind": "row",
+    "table": 20,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "HR"
+    ],
+    "text": "Primary Actor | HR"
+  },
+  {
+    "kind": "row",
+    "table": 20,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 20,
+    "row": 5,
+    "cells": [
+      "Description",
+      "เพิ่ม แก้ไข ค้นหา เปลี่ยนสถานะ และกำหนดโครงสร้างพนักงาน"
+    ],
+    "text": "Description | เพิ่ม แก้ไข ค้นหา เปลี่ยนสถานะ และกำหนดโครงสร้างพนักงาน"
+  },
+  {
+    "kind": "row",
+    "table": 20,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login และมี HR UI Permission"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login และมี HR UI Permission"
+  },
+  {
+    "kind": "row",
+    "table": 20,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "HR เปิด Employee Management"
+    ],
+    "text": "Trigger | HR เปิด Employee Management"
+  },
+  {
+    "kind": "row",
+    "table": 20,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "ค้นหาหรือเลือกเพิ่ม/แก้ไขพนักงาน ระบุข้อมูลพนักงาน แผนก ตำแหน่ง และ Supervisor ระบบตรวจ Employee Code/Email และความสัมพันธ์ ระบบตรวจ Supervisor มีบัญชี Active Role Supervisor และไม่ใช่ตนเอง ระบบบันทึกและแสดงผล"
+    ],
+    "text": "Main Flow | ค้นหาหรือเลือกเพิ่ม/แก้ไขพนักงาน ระบุข้อมูลพนักงาน แผนก ตำแหน่ง และ Supervisor ระบบตรวจ Employee Code/Email และความสัมพันธ์ ระบบตรวจ Supervisor มีบัญชี Active Role Supervisor และไม่ใช่ตนเอง ระบบบันทึกและแสดงผล"
+  },
+  {
+    "kind": "row",
+    "table": 20,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 20,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "ข้อมูลซ้ำหรือไม่ครบ Supervisor ไม่ถูกต้องหรือเป็นพนักงานคนเดียวกัน"
+    ],
+    "text": "Exception Flow | ข้อมูลซ้ำหรือไม่ครบ Supervisor ไม่ถูกต้องหรือเป็นพนักงานคนเดียวกัน"
+  },
+  {
+    "kind": "row",
+    "table": 20,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "ข้อมูลพนักงานและ Direct Supervisor เป็นปัจจุบัน"
+    ],
+    "text": "Postconditions | ข้อมูลพนักงานและ Direct Supervisor เป็นปัจจุบัน"
+  },
+  {
+    "kind": "row",
+    "table": 20,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-28, BR-29, BR-39"
+    ],
+    "text": "Business Rules | BR-28, BR-29, BR-39"
+  },
+  {
+    "kind": "row",
+    "table": 20,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-03"
+    ],
+    "text": "Related Functional Requirement | FR-03"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-16 จัดการประเภทการลา"
+  },
+  {
+    "kind": "row",
+    "table": 21,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 21,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-16"
+    ],
+    "text": "Use Case ID | UC-16"
+  },
+  {
+    "kind": "row",
+    "table": 21,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "จัดการประเภทการลา"
+    ],
+    "text": "Use Case Name | จัดการประเภทการลา"
+  },
+  {
+    "kind": "row",
+    "table": 21,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "HR"
+    ],
+    "text": "Primary Actor | HR"
+  },
+  {
+    "kind": "row",
+    "table": 21,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 21,
+    "row": 5,
+    "cells": [
+      "Description",
+      "เพิ่ม แก้ไข และปิดใช้งาน Leave Type พร้อม Policy"
+    ],
+    "text": "Description | เพิ่ม แก้ไข และปิดใช้งาน Leave Type พร้อม Policy"
+  },
+  {
+    "kind": "row",
+    "table": 21,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login และมี HR UI Permission"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login และมี HR UI Permission"
+  },
+  {
+    "kind": "row",
+    "table": 21,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "HR เปิด Leave Type Management"
+    ],
+    "text": "Trigger | HR เปิด Leave Type Management"
+  },
+  {
+    "kind": "row",
+    "table": 21,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "เพิ่มหรือเลือก Leave Type กำหนดชื่อ Code Quota เริ่มต้น Minimum/Maximum และ Attachment Policy ระบบตรวจความซ้ำและความถูกต้อง ระบบบันทึกหรือปิดใช้งาน"
+    ],
+    "text": "Main Flow | เพิ่มหรือเลือก Leave Type กำหนดชื่อ Code Quota เริ่มต้น Minimum/Maximum และ Attachment Policy ระบบตรวจความซ้ำและความถูกต้อง ระบบบันทึกหรือปิดใช้งาน"
+  },
+  {
+    "kind": "row",
+    "table": 21,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 21,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "ข้อมูลซ้ำ พยายามลบ Leave Type ที่เคยถูกใช้งาน"
+    ],
+    "text": "Exception Flow | ข้อมูลซ้ำ พยายามลบ Leave Type ที่เคยถูกใช้งาน"
+  },
+  {
+    "kind": "row",
+    "table": 21,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "Leave Type และ Policy พร้อมใช้กับคำขอใหม่ตามสถานะ Active"
+    ],
+    "text": "Postconditions | Leave Type และ Policy พร้อมใช้กับคำขอใหม่ตามสถานะ Active"
+  },
+  {
+    "kind": "row",
+    "table": 21,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-08, BR-13, BR-33, BR-39"
+    ],
+    "text": "Business Rules | BR-08, BR-13, BR-33, BR-39"
+  },
+  {
+    "kind": "row",
+    "table": 21,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-06"
+    ],
+    "text": "Related Functional Requirement | FR-06"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-17 จัดการสิทธิ์การลา"
+  },
+  {
+    "kind": "row",
+    "table": 22,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 22,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-17"
+    ],
+    "text": "Use Case ID | UC-17"
+  },
+  {
+    "kind": "row",
+    "table": 22,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "จัดการสิทธิ์การลา"
+    ],
+    "text": "Use Case Name | จัดการสิทธิ์การลา"
+  },
+  {
+    "kind": "row",
+    "table": 22,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "HR"
+    ],
+    "text": "Primary Actor | HR"
+  },
+  {
+    "kind": "row",
+    "table": 22,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 22,
+    "row": 5,
+    "cells": [
+      "Description",
+      "กำหนดและปรับ Entitlement รายพนักงาน ประเภทลา และปี"
+    ],
+    "text": "Description | กำหนดและปรับ Entitlement รายพนักงาน ประเภทลา และปี"
+  },
+  {
+    "kind": "row",
+    "table": 22,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login และมี HR UI Permission"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login และมี HR UI Permission"
+  },
+  {
+    "kind": "row",
+    "table": 22,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "HR เปิด Leave Entitlement Management"
+    ],
+    "text": "Trigger | HR เปิด Leave Entitlement Management"
+  },
+  {
+    "kind": "row",
+    "table": 22,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "เลือกพนักงาน ประเภทลา และปี ระบุ total_days และ used_days ตามขอบเขตที่อนุญาต ระบบตรวจค่าต้องไม่ติดลบและ used_days ไม่เกิน total_days ระบบบันทึกและคำนวณค่าที่แสดง"
+    ],
+    "text": "Main Flow | เลือกพนักงาน ประเภทลา และปี ระบุ total_days และ used_days ตามขอบเขตที่อนุญาต ระบบตรวจค่าต้องไม่ติดลบและ used_days ไม่เกิน total_days ระบบบันทึกและคำนวณค่าที่แสดง"
+  },
+  {
+    "kind": "row",
+    "table": 22,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 22,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "Entitlement ซ้ำต่อพนักงาน/ประเภท/ปี ค่าติดลบหรือ used_days เกิน total_days"
+    ],
+    "text": "Exception Flow | Entitlement ซ้ำต่อพนักงาน/ประเภท/ปี ค่าติดลบหรือ used_days เกิน total_days"
+  },
+  {
+    "kind": "row",
+    "table": 22,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "Entitlement ถูกบันทึก; Backend ปัจจุบันไม่สร้าง Audit Log สำหรับการปรับรายการนี้"
+    ],
+    "text": "Postconditions | Entitlement ถูกบันทึก; Backend ปัจจุบันไม่สร้าง Audit Log สำหรับการปรับรายการนี้"
+  },
+  {
+    "kind": "row",
+    "table": 22,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-02, BR-31, BR-39"
+    ],
+    "text": "Business Rules | BR-02, BR-31, BR-39"
+  },
+  {
+    "kind": "row",
+    "table": 22,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-07"
+    ],
+    "text": "Related Functional Requirement | FR-07"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-18 จัดการวันหยุดองค์กร"
+  },
+  {
+    "kind": "row",
+    "table": 23,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 23,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-18"
+    ],
+    "text": "Use Case ID | UC-18"
+  },
+  {
+    "kind": "row",
+    "table": 23,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "จัดการวันหยุดองค์กร"
+    ],
+    "text": "Use Case Name | จัดการวันหยุดองค์กร"
+  },
+  {
+    "kind": "row",
+    "table": 23,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "HR"
+    ],
+    "text": "Primary Actor | HR"
+  },
+  {
+    "kind": "row",
+    "table": 23,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 23,
+    "row": 5,
+    "cells": [
+      "Description",
+      "เพิ่ม แก้ไข และปิดใช้งานวันหยุดที่ใช้คำนวณ Working Day"
+    ],
+    "text": "Description | เพิ่ม แก้ไข และปิดใช้งานวันหยุดที่ใช้คำนวณ Working Day"
+  },
+  {
+    "kind": "row",
+    "table": 23,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login และมี HR UI Permission"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login และมี HR UI Permission"
+  },
+  {
+    "kind": "row",
+    "table": 23,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "HR เปิด Holiday Management"
+    ],
+    "text": "Trigger | HR เปิด Holiday Management"
+  },
+  {
+    "kind": "row",
+    "table": 23,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "เลือกปีและเพิ่มหรือแก้ไขวันหยุด ระบุวันที่ ชื่อ และสถานะ ระบบตรวจข้อมูล ระบบบันทึก; เฉพาะวันหยุด Active ถูกนำไปคำนวณวันลา"
+    ],
+    "text": "Main Flow | เลือกปีและเพิ่มหรือแก้ไขวันหยุด ระบุวันที่ ชื่อ และสถานะ ระบบตรวจข้อมูล ระบบบันทึก; เฉพาะวันหยุด Active ถูกนำไปคำนวณวันลา"
+  },
+  {
+    "kind": "row",
+    "table": 23,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 23,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "วันที่หรือข้อมูลไม่ถูกต้อง"
+    ],
+    "text": "Exception Flow | วันที่หรือข้อมูลไม่ถูกต้อง"
+  },
+  {
+    "kind": "row",
+    "table": 23,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "ข้อมูลวันหยุดพร้อมใช้ในการคำนวณ Leave Request"
+    ],
+    "text": "Postconditions | ข้อมูลวันหยุดพร้อมใช้ในการคำนวณ Leave Request"
+  },
+  {
+    "kind": "row",
+    "table": 23,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-14, BR-39"
+    ],
+    "text": "Business Rules | BR-14, BR-39"
+  },
+  {
+    "kind": "row",
+    "table": 23,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-13"
+    ],
+    "text": "Related Functional Requirement | FR-13"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-19 ดูและส่งออกรายงาน HR"
+  },
+  {
+    "kind": "row",
+    "table": 24,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 24,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-19"
+    ],
+    "text": "Use Case ID | UC-19"
+  },
+  {
+    "kind": "row",
+    "table": 24,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "ดูและส่งออกรายงาน HR"
+    ],
+    "text": "Use Case Name | ดูและส่งออกรายงาน HR"
+  },
+  {
+    "kind": "row",
+    "table": 24,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "HR"
+    ],
+    "text": "Primary Actor | HR"
+  },
+  {
+    "kind": "row",
+    "table": 24,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 24,
+    "row": 5,
+    "cells": [
+      "Description",
+      "ดูรายงานระดับองค์กรและ Export Excel"
+    ],
+    "text": "Description | ดูรายงานระดับองค์กรและ Export Excel"
+  },
+  {
+    "kind": "row",
+    "table": 24,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login และมี HR UI Permission"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login และมี HR UI Permission"
+  },
+  {
+    "kind": "row",
+    "table": 24,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "HR เปิด HR Report"
+    ],
+    "text": "Trigger | HR เปิด HR Report"
+  },
+  {
+    "kind": "row",
+    "table": 24,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "เลือกรายงานและตัวกรองช่วงวันที่ แผนก พนักงาน ประเภทลา สถานะ หรือปี ระบบดึงข้อมูลตาม Data Scope แสดงผลรายงาน ผู้ใช้ Export เป็น Excel ได้"
+    ],
+    "text": "Main Flow | เลือกรายงานและตัวกรองช่วงวันที่ แผนก พนักงาน ประเภทลา สถานะ หรือปี ระบบดึงข้อมูลตาม Data Scope แสดงผลรายงาน ผู้ใช้ Export เป็น Excel ได้"
+  },
+  {
+    "kind": "row",
+    "table": 24,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 24,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "ไม่มีข้อมูลตามตัวกรอง"
+    ],
+    "text": "Exception Flow | ไม่มีข้อมูลตามตัวกรอง"
+  },
+  {
+    "kind": "row",
+    "table": 24,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "ได้รายงานบนหน้าจอหรือไฟล์ Excel; PDF ไม่อยู่ใน Current Scope"
+    ],
+    "text": "Postconditions | ได้รายงานบนหน้าจอหรือไฟล์ Excel; PDF ไม่อยู่ใน Current Scope"
+  },
+  {
+    "kind": "row",
+    "table": 24,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "–"
+    ],
+    "text": "Business Rules | –"
+  },
+  {
+    "kind": "row",
+    "table": 24,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-14, FR-21"
+    ],
+    "text": "Related Functional Requirement | FR-14, FR-21"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-20 จัดการบัญชีผู้ใช้งาน"
+  },
+  {
+    "kind": "row",
+    "table": 25,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 25,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-20"
+    ],
+    "text": "Use Case ID | UC-20"
+  },
+  {
+    "kind": "row",
+    "table": 25,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "จัดการบัญชีผู้ใช้งาน"
+    ],
+    "text": "Use Case Name | จัดการบัญชีผู้ใช้งาน"
+  },
+  {
+    "kind": "row",
+    "table": 25,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Admin"
+    ],
+    "text": "Primary Actor | Admin"
+  },
+  {
+    "kind": "row",
+    "table": 25,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 25,
+    "row": 5,
+    "cells": [
+      "Description",
+      "เพิ่ม แก้ไข ปิดบัญชี กำหนด Role และ Reset Password"
+    ],
+    "text": "Description | เพิ่ม แก้ไข ปิดบัญชี กำหนด Role และ Reset Password"
+  },
+  {
+    "kind": "row",
+    "table": 25,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login และ Role = Admin"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login และ Role = Admin"
+  },
+  {
+    "kind": "row",
+    "table": 25,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "Admin เปิด User Management"
+    ],
+    "text": "Trigger | Admin เปิด User Management"
+  },
+  {
+    "kind": "row",
+    "table": 25,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "ค้นหาหรือเลือกเพิ่ม/แก้ไขบัญชี ผูกบัญชีกับพนักงานและกำหนด Role/Status ระบบตรวจ Username และความสัมพันธ์ไม่ซ้ำ ระบบสร้าง Temporary Password สำหรับบัญชีใหม่หรือ Reset Password ระบบบันทึก Audit Log action ที่รองรับ"
+    ],
+    "text": "Main Flow | ค้นหาหรือเลือกเพิ่ม/แก้ไขบัญชี ผูกบัญชีกับพนักงานและกำหนด Role/Status ระบบตรวจ Username และความสัมพันธ์ไม่ซ้ำ ระบบสร้าง Temporary Password สำหรับบัญชีใหม่หรือ Reset Password ระบบบันทึก Audit Log action ที่รองรับ"
+  },
+  {
+    "kind": "row",
+    "table": 25,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 25,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "Username ซ้ำ พนักงานมีบัญชีแล้ว ข้อมูลหรือ Role ไม่ถูกต้อง"
+    ],
+    "text": "Exception Flow | Username ซ้ำ พนักงานมีบัญชีแล้ว ข้อมูลหรือ Role ไม่ถูกต้อง"
+  },
+  {
+    "kind": "row",
+    "table": 25,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "บัญชีเปลี่ยนตามคำสั่งและ Temporary Password บังคับเปลี่ยนก่อนใช้ฟังก์ชันธุรกิจ"
+    ],
+    "text": "Postconditions | บัญชีเปลี่ยนตามคำสั่งและ Temporary Password บังคับเปลี่ยนก่อนใช้ฟังก์ชันธุรกิจ"
+  },
+  {
+    "kind": "row",
+    "table": 25,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-36, BR-38, BR-40"
+    ],
+    "text": "Business Rules | BR-36, BR-38, BR-40"
+  },
+  {
+    "kind": "row",
+    "table": 25,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-02, FR-17, FR-16"
+    ],
+    "text": "Related Functional Requirement | FR-02, FR-17, FR-16"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-21 จัดการข้อมูลแผนก"
+  },
+  {
+    "kind": "row",
+    "table": 26,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 26,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-21"
+    ],
+    "text": "Use Case ID | UC-21"
+  },
+  {
+    "kind": "row",
+    "table": 26,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "จัดการข้อมูลแผนก"
+    ],
+    "text": "Use Case Name | จัดการข้อมูลแผนก"
+  },
+  {
+    "kind": "row",
+    "table": 26,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Admin"
+    ],
+    "text": "Primary Actor | Admin"
+  },
+  {
+    "kind": "row",
+    "table": 26,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 26,
+    "row": 5,
+    "cells": [
+      "Description",
+      "เพิ่ม แก้ไข และปิดใช้งาน Department"
+    ],
+    "text": "Description | เพิ่ม แก้ไข และปิดใช้งาน Department"
+  },
+  {
+    "kind": "row",
+    "table": 26,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login และมี Admin UI Permission"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login และมี Admin UI Permission"
+  },
+  {
+    "kind": "row",
+    "table": 26,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "Admin เปิด Department Management"
+    ],
+    "text": "Trigger | Admin เปิด Department Management"
+  },
+  {
+    "kind": "row",
+    "table": 26,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "เพิ่มหรือเลือกแผนก ระบุชื่อและรายละเอียด ระบบตรวจชื่อไม่ซ้ำ ระบบบันทึกหรือปิดใช้งาน"
+    ],
+    "text": "Main Flow | เพิ่มหรือเลือกแผนก ระบุชื่อและรายละเอียด ระบบตรวจชื่อไม่ซ้ำ ระบบบันทึกหรือปิดใช้งาน"
+  },
+  {
+    "kind": "row",
+    "table": 26,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 26,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "ชื่อซ้ำ พยายามลบข้อมูลที่เคยถูกใช้งาน"
+    ],
+    "text": "Exception Flow | ชื่อซ้ำ พยายามลบข้อมูลที่เคยถูกใช้งาน"
+  },
+  {
+    "kind": "row",
+    "table": 26,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "Department พร้อมใช้ตามสถานะ"
+    ],
+    "text": "Postconditions | Department พร้อมใช้ตามสถานะ"
+  },
+  {
+    "kind": "row",
+    "table": 26,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-39"
+    ],
+    "text": "Business Rules | BR-39"
+  },
+  {
+    "kind": "row",
+    "table": 26,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-04"
+    ],
+    "text": "Related Functional Requirement | FR-04"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-22 จัดการข้อมูลตำแหน่ง"
+  },
+  {
+    "kind": "row",
+    "table": 27,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 27,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-22"
+    ],
+    "text": "Use Case ID | UC-22"
+  },
+  {
+    "kind": "row",
+    "table": 27,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "จัดการข้อมูลตำแหน่ง"
+    ],
+    "text": "Use Case Name | จัดการข้อมูลตำแหน่ง"
+  },
+  {
+    "kind": "row",
+    "table": 27,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Admin"
+    ],
+    "text": "Primary Actor | Admin"
+  },
+  {
+    "kind": "row",
+    "table": 27,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 27,
+    "row": 5,
+    "cells": [
+      "Description",
+      "เพิ่ม แก้ไข และปิดใช้งาน Position"
+    ],
+    "text": "Description | เพิ่ม แก้ไข และปิดใช้งาน Position"
+  },
+  {
+    "kind": "row",
+    "table": 27,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login และมี Admin UI Permission"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login และมี Admin UI Permission"
+  },
+  {
+    "kind": "row",
+    "table": 27,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "Admin เปิด Position Management"
+    ],
+    "text": "Trigger | Admin เปิด Position Management"
+  },
+  {
+    "kind": "row",
+    "table": 27,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "เพิ่มหรือเลือกตำแหน่ง ระบุชื่อตำแหน่ง ระบบตรวจชื่อไม่ซ้ำ ระบบบันทึกหรือปิดใช้งาน"
+    ],
+    "text": "Main Flow | เพิ่มหรือเลือกตำแหน่ง ระบุชื่อตำแหน่ง ระบบตรวจชื่อไม่ซ้ำ ระบบบันทึกหรือปิดใช้งาน"
+  },
+  {
+    "kind": "row",
+    "table": 27,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 27,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "ชื่อซ้ำ พยายามลบข้อมูลที่เคยถูกใช้งาน"
+    ],
+    "text": "Exception Flow | ชื่อซ้ำ พยายามลบข้อมูลที่เคยถูกใช้งาน"
+  },
+  {
+    "kind": "row",
+    "table": 27,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "Position พร้อมใช้ตามสถานะ โดยแผนกของพนักงานยังอ้าง employees.department_id"
+    ],
+    "text": "Postconditions | Position พร้อมใช้ตามสถานะ โดยแผนกของพนักงานยังอ้าง employees.department_id"
+  },
+  {
+    "kind": "row",
+    "table": 27,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-39"
+    ],
+    "text": "Business Rules | BR-39"
+  },
+  {
+    "kind": "row",
+    "table": 27,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-05"
+    ],
+    "text": "Related Functional Requirement | FR-05"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-23 ดู Audit Log"
+  },
+  {
+    "kind": "row",
+    "table": 28,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 28,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-23"
+    ],
+    "text": "Use Case ID | UC-23"
+  },
+  {
+    "kind": "row",
+    "table": 28,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "ดู Audit Log"
+    ],
+    "text": "Use Case Name | ดู Audit Log"
+  },
+  {
+    "kind": "row",
+    "table": 28,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Admin"
+    ],
+    "text": "Primary Actor | Admin"
+  },
+  {
+    "kind": "row",
+    "table": 28,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 28,
+    "row": 5,
+    "cells": [
+      "Description",
+      "ตรวจสอบ Event สำคัญที่ Backend บันทึกจริง"
+    ],
+    "text": "Description | ตรวจสอบ Event สำคัญที่ Backend บันทึกจริง"
+  },
+  {
+    "kind": "row",
+    "table": 28,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login และ Role = Admin"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login และ Role = Admin"
+  },
+  {
+    "kind": "row",
+    "table": 28,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "Admin เปิด Audit Log"
+    ],
+    "text": "Trigger | Admin เปิด Audit Log"
+  },
+  {
+    "kind": "row",
+    "table": 28,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "ระบบอ่าน Audit Log แบบ Read-only Admin ใช้ตัวกรองที่หน้าจอรองรับ ระบบแสดง user_id, action, table_name, record_id, detail, ip_address และ created_at"
+    ],
+    "text": "Main Flow | ระบบอ่าน Audit Log แบบ Read-only Admin ใช้ตัวกรองที่หน้าจอรองรับ ระบบแสดง user_id, action, table_name, record_id, detail, ip_address และ created_at"
+  },
+  {
+    "kind": "row",
+    "table": 28,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 28,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "ไม่มีข้อมูลตามตัวกรอง ผู้ใช้ไม่มีสิทธิ์ Admin"
+    ],
+    "text": "Exception Flow | ไม่มีข้อมูลตามตัวกรอง ผู้ใช้ไม่มีสิทธิ์ Admin"
+  },
+  {
+    "kind": "row",
+    "table": 28,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "Audit Log ถูกแสดงโดยไม่มีการแก้ไขหรือลบ"
+    ],
+    "text": "Postconditions | Audit Log ถูกแสดงโดยไม่มีการแก้ไขหรือลบ"
+  },
+  {
+    "kind": "row",
+    "table": 28,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "BR-22, BR-40"
+    ],
+    "text": "Business Rules | BR-22, BR-40"
+  },
+  {
+    "kind": "row",
+    "table": 28,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-16"
+    ],
+    "text": "Related Functional Requirement | FR-16"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 2",
+    "text": "UC-24 ดู Dashboard ตาม Role"
+  },
+  {
+    "kind": "row",
+    "table": 29,
+    "row": 0,
+    "cells": [
+      "หัวข้อ",
+      "รายละเอียด Use Case"
+    ],
+    "text": "หัวข้อ | รายละเอียด Use Case"
+  },
+  {
+    "kind": "row",
+    "table": 29,
+    "row": 1,
+    "cells": [
+      "Use Case ID",
+      "UC-24"
+    ],
+    "text": "Use Case ID | UC-24"
+  },
+  {
+    "kind": "row",
+    "table": 29,
+    "row": 2,
+    "cells": [
+      "Use Case Name",
+      "ดู Dashboard ตาม Role"
+    ],
+    "text": "Use Case Name | ดู Dashboard ตาม Role"
+  },
+  {
+    "kind": "row",
+    "table": 29,
+    "row": 3,
+    "cells": [
+      "Primary Actor",
+      "Employee, Supervisor, HR, Admin"
+    ],
+    "text": "Primary Actor | Employee, Supervisor, HR, Admin"
+  },
+  {
+    "kind": "row",
+    "table": 29,
+    "row": 4,
+    "cells": [
+      "Supporting Actor",
+      "–"
+    ],
+    "text": "Supporting Actor | –"
+  },
+  {
+    "kind": "row",
+    "table": 29,
+    "row": 5,
+    "cells": [
+      "Description",
+      "ดูข้อมูลสรุปและทางลัดตาม Ownership หรือ Data Scope"
+    ],
+    "text": "Description | ดูข้อมูลสรุปและทางลัดตาม Ownership หรือ Data Scope"
+  },
+  {
+    "kind": "row",
+    "table": 29,
+    "row": 6,
+    "cells": [
+      "Preconditions",
+      "ผู้ใช้ Login แล้ว"
+    ],
+    "text": "Preconditions | ผู้ใช้ Login แล้ว"
+  },
+  {
+    "kind": "row",
+    "table": 29,
+    "row": 7,
+    "cells": [
+      "Trigger",
+      "ระบบนำผู้ใช้เข้าสู่ Dashboard หรือผู้ใช้เลือก Dashboard"
+    ],
+    "text": "Trigger | ระบบนำผู้ใช้เข้าสู่ Dashboard หรือผู้ใช้เลือก Dashboard"
+  },
+  {
+    "kind": "row",
+    "table": 29,
+    "row": 8,
+    "cells": [
+      "Main Flow",
+      "ระบบระบุ Role ดึงข้อมูลจริงตาม Ownership/Data Scope แสดง Own Leave และ Leave Balance สำหรับทุก Role แสดงส่วนเพิ่มเติมตาม Role: Direct Team, HR Summary หรือ Admin Summary ผู้ใช้เลือกทางลัดไป Function ที่มีสิทธิ์"
+    ],
+    "text": "Main Flow | ระบบระบุ Role ดึงข้อมูลจริงตาม Ownership/Data Scope แสดง Own Leave และ Leave Balance สำหรับทุก Role แสดงส่วนเพิ่มเติมตาม Role: Direct Team, HR Summary หรือ Admin Summary ผู้ใช้เลือกทางลัดไป Function ที่มีสิทธิ์"
+  },
+  {
+    "kind": "row",
+    "table": 29,
+    "row": 9,
+    "cells": [
+      "Alternative Flow",
+      "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+    ],
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 29,
+    "row": 10,
+    "cells": [
+      "Exception Flow",
+      "โหลดข้อมูลไม่สำเร็จหรือ Session หมดอายุ"
+    ],
+    "text": "Exception Flow | โหลดข้อมูลไม่สำเร็จหรือ Session หมดอายุ"
+  },
+  {
+    "kind": "row",
+    "table": 29,
+    "row": 11,
+    "cells": [
+      "Postconditions",
+      "Dashboard แสดงเฉพาะข้อมูลที่ Role มีสิทธิ์"
+    ],
+    "text": "Postconditions | Dashboard แสดงเฉพาะข้อมูลที่ Role มีสิทธิ์"
+  },
+  {
+    "kind": "row",
+    "table": 29,
+    "row": 12,
+    "cells": [
+      "Business Rules",
+      "–"
+    ],
+    "text": "Business Rules | –"
+  },
+  {
+    "kind": "row",
+    "table": 29,
+    "row": 13,
+    "cells": [
+      "Related Functional Requirement",
+      "FR-21"
+    ],
+    "text": "Related Functional Requirement | FR-21"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 1",
+    "text": "13. Requirement ↔ Use Case Mapping"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 0,
+    "cells": [
+      "FR-ID",
+      "Functional Requirement",
+      "UC-ID",
+      "Use Case",
+      "Actor",
+      "หมายเหตุ"
+    ],
+    "text": "FR-ID | Functional Requirement | UC-ID | Use Case | Actor | หมายเหตุ"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 1,
+    "cells": [
+      "FR-01",
+      "Authentication",
+      "UC-01, UC-02, UC-03",
+      "เข้าสู่ระบบ, ออกจากระบบ, เปลี่ยนรหัสผ่าน",
+      "ทุก Role",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-01 | Authentication | UC-01, UC-02, UC-03 | เข้าสู่ระบบ, ออกจากระบบ, เปลี่ยนรหัสผ่าน | ทุก Role | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 2,
+    "cells": [
+      "FR-02",
+      "User Management",
+      "UC-20",
+      "จัดการบัญชีผู้ใช้งาน",
+      "Admin",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-02 | User Management | UC-20 | จัดการบัญชีผู้ใช้งาน | Admin | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 3,
+    "cells": [
+      "FR-03",
+      "Employee Management",
+      "UC-15",
+      "จัดการข้อมูลพนักงาน",
+      "HR",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-03 | Employee Management | UC-15 | จัดการข้อมูลพนักงาน | HR | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 4,
+    "cells": [
+      "FR-04",
+      "Department Management",
+      "UC-21",
+      "จัดการข้อมูลแผนก",
+      "Admin",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-04 | Department Management | UC-21 | จัดการข้อมูลแผนก | Admin | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 5,
+    "cells": [
+      "FR-05",
+      "Position Management",
+      "UC-22",
+      "จัดการข้อมูลตำแหน่ง",
+      "Admin",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-05 | Position Management | UC-22 | จัดการข้อมูลตำแหน่ง | Admin | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 6,
+    "cells": [
+      "FR-06",
+      "Leave Type Management",
+      "UC-16",
+      "จัดการประเภทการลา",
+      "HR",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-06 | Leave Type Management | UC-16 | จัดการประเภทการลา | HR | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 7,
+    "cells": [
+      "FR-07",
+      "Leave Entitlement Management",
+      "UC-10, UC-17",
+      "ตรวจสอบสิทธิ์การลา, จัดการสิทธิ์การลา",
+      "ทุก Role / HR",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-07 | Leave Entitlement Management | UC-10, UC-17 | ตรวจสอบสิทธิ์การลา, จัดการสิทธิ์การลา | ทุก Role / HR | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 8,
+    "cells": [
+      "FR-08",
+      "Leave Request Creation",
+      "UC-06, UC-07, UC-08",
+      "สร้างและจัดการ Draft คำขอลา, ส่งคำขอลา, ดูคำขอลาและประวัติของตนเอง",
+      "ทุก Role",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-08 | Leave Request Creation | UC-06, UC-07, UC-08 | สร้างและจัดการ Draft คำขอลา, ส่งคำขอลา, ดูคำขอลาและประวัติของตนเอง | ทุก Role | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 9,
+    "cells": [
+      "FR-09",
+      "Leave Validation",
+      "UC-07",
+      "ส่งคำขอลา",
+      "System Internal Behavior",
+      "Validation อยู่ภายใน UC-07 ไม่สร้าง Use Case ปลอม"
+    ],
+    "text": "FR-09 | Leave Validation | UC-07 | ส่งคำขอลา | System Internal Behavior | Validation อยู่ภายใน UC-07 ไม่สร้าง Use Case ปลอม"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 10,
+    "cells": [
+      "FR-10",
+      "Leave Approval",
+      "UC-12, UC-13",
+      "อนุมัติคำขอลา, ปฏิเสธคำขอลา",
+      "Supervisor",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-10 | Leave Approval | UC-12, UC-13 | อนุมัติคำขอลา, ปฏิเสธคำขอลา | Supervisor | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 11,
+    "cells": [
+      "FR-11",
+      "Leave Cancellation",
+      "UC-09",
+      "ยกเลิกคำขอลา",
+      "ทุก Role ในฐานะเจ้าของ",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-11 | Leave Cancellation | UC-09 | ยกเลิกคำขอลา | ทุก Role ในฐานะเจ้าของ | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 12,
+    "cells": [
+      "FR-12",
+      "Attachment Management",
+      "UC-06, UC-07, UC-08",
+      "สร้างและจัดการ Draft คำขอลา, ส่งคำขอลา, ดูคำขอลาและประวัติของตนเอง",
+      "ทุก Role ตาม Data Scope",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-12 | Attachment Management | UC-06, UC-07, UC-08 | สร้างและจัดการ Draft คำขอลา, ส่งคำขอลา, ดูคำขอลาและประวัติของตนเอง | ทุก Role ตาม Data Scope | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 13,
+    "cells": [
+      "FR-13",
+      "Holiday Management",
+      "UC-07, UC-18",
+      "ส่งคำขอลา, จัดการวันหยุดองค์กร",
+      "HR / System Internal Behavior",
+      "HR จัดการวันหยุด; การคำนวณเป็น Internal Behavior ของ UC-07"
+    ],
+    "text": "FR-13 | Holiday Management | UC-07, UC-18 | ส่งคำขอลา, จัดการวันหยุดองค์กร | HR / System Internal Behavior | HR จัดการวันหยุด; การคำนวณเป็น Internal Behavior ของ UC-07"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 14,
+    "cells": [
+      "FR-14",
+      "Reporting",
+      "UC-14, UC-19",
+      "ดูรายงานลูกทีม, ดูและส่งออกรายงาน HR",
+      "Supervisor / HR",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-14 | Reporting | UC-14, UC-19 | ดูรายงานลูกทีม, ดูและส่งออกรายงาน HR | Supervisor / HR | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 15,
+    "cells": [
+      "FR-15",
+      "In-App Notification",
+      "UC-07, UC-11, UC-12, UC-13",
+      "ส่งคำขอลา, จัดการการแจ้งเตือน, อนุมัติคำขอลา, ปฏิเสธคำขอลา",
+      "System Internal Behavior / ผู้รับแจ้งเตือน",
+      "สร้าง Notification ภายใน Submit/Approve/Reject; ผู้ใช้จัดการผ่าน UC-11"
+    ],
+    "text": "FR-15 | In-App Notification | UC-07, UC-11, UC-12, UC-13 | ส่งคำขอลา, จัดการการแจ้งเตือน, อนุมัติคำขอลา, ปฏิเสธคำขอลา | System Internal Behavior / ผู้รับแจ้งเตือน | สร้าง Notification ภายใน Submit/Approve/Reject; ผู้ใช้จัดการผ่าน UC-11"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 16,
+    "cells": [
+      "FR-16",
+      "Audit Log",
+      "UC-04, UC-12, UC-13, UC-20, UC-23",
+      "รีเซ็ตรหัสผ่านด้วย OTP, อนุมัติคำขอลา, ปฏิเสธคำขอลา, จัดการบัญชีผู้ใช้งาน, ดู Audit Log",
+      "Admin / System Internal Behavior",
+      "Backend บันทึกเฉพาะ Event ที่กำหนด; Admin ดูผ่าน UC-23"
+    ],
+    "text": "FR-16 | Audit Log | UC-04, UC-12, UC-13, UC-20, UC-23 | รีเซ็ตรหัสผ่านด้วย OTP, อนุมัติคำขอลา, ปฏิเสธคำขอลา, จัดการบัญชีผู้ใช้งาน, ดู Audit Log | Admin / System Internal Behavior | Backend บันทึกเฉพาะ Event ที่กำหนด; Admin ดูผ่าน UC-23"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 17,
+    "cells": [
+      "FR-17",
+      "Temporary Password และ Password Policy",
+      "UC-01, UC-03, UC-04, UC-20",
+      "เข้าสู่ระบบ, เปลี่ยนรหัสผ่าน, รีเซ็ตรหัสผ่านด้วย OTP, จัดการบัญชีผู้ใช้งาน",
+      "ทุก Role / Admin",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-17 | Temporary Password และ Password Policy | UC-01, UC-03, UC-04, UC-20 | เข้าสู่ระบบ, เปลี่ยนรหัสผ่าน, รีเซ็ตรหัสผ่านด้วย OTP, จัดการบัญชีผู้ใช้งาน | ทุก Role / Admin | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 18,
+    "cells": [
+      "FR-18",
+      "Forgot Password, OTP และ Reset Token",
+      "UC-04",
+      "รีเซ็ตรหัสผ่านด้วย OTP",
+      "ทุก Role / Email Service",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-18 | Forgot Password, OTP และ Reset Token | UC-04 | รีเซ็ตรหัสผ่านด้วย OTP | ทุก Role / Email Service | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 19,
+    "cells": [
+      "FR-19",
+      "Profile Management",
+      "UC-05",
+      "จัดการข้อมูลส่วนตัว",
+      "ทุก Role",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-19 | Profile Management | UC-05 | จัดการข้อมูลส่วนตัว | ทุก Role | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 20,
+    "cells": [
+      "FR-20",
+      "Notification Management",
+      "UC-11",
+      "จัดการการแจ้งเตือน",
+      "ทุก Role",
+      "Use Case รองรับการโต้ตอบตาม Functional Requirement"
+    ],
+    "text": "FR-20 | Notification Management | UC-11 | จัดการการแจ้งเตือน | ทุก Role | Use Case รองรับการโต้ตอบตาม Functional Requirement"
+  },
+  {
+    "kind": "row",
+    "table": 30,
+    "row": 21,
+    "cells": [
+      "FR-21",
+      "Role Dashboard",
+      "UC-08, UC-10, UC-14, UC-19, UC-24",
+      "ดูคำขอลาและประวัติของตนเอง, ตรวจสอบสิทธิ์การลา, ดูรายงานลูกทีม, ดูและส่งออกรายงาน HR, ดู Dashboard ตาม Role",
+      "ทุก Role",
+      "UC-24 รองรับ Dashboard โดยตรง และเชื่อมกับข้อมูลเฉพาะ Role"
+    ],
+    "text": "FR-21 | Role Dashboard | UC-08, UC-10, UC-14, UC-19, UC-24 | ดูคำขอลาและประวัติของตนเอง, ตรวจสอบสิทธิ์การลา, ดูรายงานลูกทีม, ดูและส่งออกรายงาน HR, ดู Dashboard ตาม Role | ทุก Role | UC-24 รองรับ Dashboard โดยตรง และเชื่อมกับข้อมูลเฉพาะ Role"
+  },
+  {
+    "kind": "p",
+    "style": "Heading 1",
+    "text": "14. Final Consistency Check"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 0,
+    "cells": [
+      "หัวข้อตรวจสอบ",
+      "ผลการตรวจ",
+      "สถานะ"
+    ],
+    "text": "หัวข้อตรวจสอบ | ผลการตรวจ | สถานะ"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 1,
+    "cells": [
+      "Role",
+      "มีเพียง Employee, Supervisor, HR และ Admin",
+      "PASS"
+    ],
+    "text": "Role | มีเพียง Employee, Supervisor, HR และ Admin | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 2,
+    "cells": [
+      "Single Role",
+      "ผู้ใช้งานหนึ่งคนมีหนึ่ง Role ใน Current Scope",
+      "PASS"
+    ],
+    "text": "Single Role | ผู้ใช้งานหนึ่งคนมีหนึ่ง Role ใน Current Scope | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 3,
+    "cells": [
+      "Own Leave",
+      "ทุก Role มี Own Leave Function",
+      "PASS"
+    ],
+    "text": "Own Leave | ทุก Role มี Own Leave Function | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 4,
+    "cells": [
+      "Approver",
+      "Supervisor เป็น Approver Role เดียว",
+      "PASS"
+    ],
+    "text": "Approver | Supervisor เป็น Approver Role เดียว | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 5,
+    "cells": [
+      "Approval Level",
+      "Supervisor Approval ขั้นเดียว",
+      "PASS"
+    ],
+    "text": "Approval Level | Supervisor Approval ขั้นเดียว | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 6,
+    "cells": [
+      "Direct Team",
+      "ใช้ employees.supervisor_id เป็น Source of Truth",
+      "PASS"
+    ],
+    "text": "Direct Team | ใช้ employees.supervisor_id เป็น Source of Truth | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 7,
+    "cells": [
+      "approver_employee_id",
+      "ไม่ใช้ตรวจ Permission และไม่บันทึกตอน Submit",
+      "PASS"
+    ],
+    "text": "approver_employee_id | ไม่ใช้ตรวจ Permission และไม่บันทึกตอน Submit | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 8,
+    "cells": [
+      "Decision Actor",
+      "บันทึก approver_employee_id ตอน Approve/Reject",
+      "PASS"
+    ],
+    "text": "Decision Actor | บันทึก approver_employee_id ตอน Approve/Reject | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 9,
+    "cells": [
+      "Approval History",
+      "Current Flow ไม่ INSERT leave_approval_logs",
+      "PASS"
+    ],
+    "text": "Approval History | Current Flow ไม่ INSERT leave_approval_logs | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 10,
+    "cells": [
+      "Attachment",
+      "ใช้ Leave Type Policy และ Threshold",
+      "PASS"
+    ],
+    "text": "Attachment | ใช้ Leave Type Policy และ Threshold | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 11,
+    "cells": [
+      "Cancel",
+      "เจ้าของ Cancel ได้เฉพาะ Pending",
+      "PASS"
+    ],
+    "text": "Cancel | เจ้าของ Cancel ได้เฉพาะ Pending | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 12,
+    "cells": [
+      "Cancel Notification",
+      "Cancel ไม่สร้าง Notification",
+      "PASS"
+    ],
+    "text": "Cancel Notification | Cancel ไม่สร้าง Notification | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 13,
+    "cells": [
+      "Cancel Audit",
+      "Cancel ไม่บันทึก Audit Log",
+      "PASS"
+    ],
+    "text": "Cancel Audit | Cancel ไม่บันทึก Audit Log | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 14,
+    "cells": [
+      "Approved",
+      "Approved ไม่สามารถ Cancel",
+      "PASS"
+    ],
+    "text": "Approved | Approved ไม่สามารถ Cancel | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 15,
+    "cells": [
+      "HR Approval",
+      "ไม่มีใน Current Scope",
+      "PASS"
+    ],
+    "text": "HR Approval | ไม่มีใน Current Scope | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 16,
+    "cells": [
+      "Admin Approval",
+      "ไม่มีใน Current Scope",
+      "PASS"
+    ],
+    "text": "Admin Approval | ไม่มีใน Current Scope | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 17,
+    "cells": [
+      "HR/Admin Notification",
+      "ไม่มี Workflow Event เฉพาะใน Current System",
+      "PASS"
+    ],
+    "text": "HR/Admin Notification | ไม่มี Workflow Event เฉพาะใน Current System | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 18,
+    "cells": [
+      "Push Notification",
+      "Future Scope",
+      "PASS"
+    ],
+    "text": "Push Notification | Future Scope | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 19,
+    "cells": [
+      "Multi-step Approval",
+      "Future Scope",
+      "PASS"
+    ],
+    "text": "Multi-step Approval | Future Scope | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 20,
+    "cells": [
+      "Half-day / Cross-year",
+      "Future Scope",
+      "PASS"
+    ],
+    "text": "Half-day / Cross-year | Future Scope | PASS"
+  },
+  {
+    "kind": "row",
+    "table": 31,
+    "row": 21,
+    "cells": [
+      "FR Coverage",
+      "FR-01 ถึง FR-21 มี Use Case หรือ Internal Behavior รองรับ",
+      "PASS"
+    ],
+    "text": "FR Coverage | FR-01 ถึง FR-21 มี Use Case หรือ Internal Behavior รองรับ | PASS"
+  },
+  {
+    "kind": "p",
+    "style": "Normal",
+    "text": "สรุป: เอกสาร Workflow และ Use Case ก้อน 3B สอดคล้องกับ Final Requirement ที่ Freeze แล้ว และไม่เพิ่ม Actor, Status, Permission, Workflow หรือ Business Rule ใหม่"
+  }
+]

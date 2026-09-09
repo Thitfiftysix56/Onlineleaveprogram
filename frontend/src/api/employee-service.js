@@ -10,3 +10,6 @@ export const updateEmployee = async (id, data) =>
   (await api.put(`/hr/employees/${id}`, data)).data;
 export const updateEmployeeStatus = async (id, status) =>
   (await api.patch(`/hr/employees/${id}/status`, { status })).data;
+
+export const deleteEmployee = async (id) =>
+  (await api.delete(`/hr/employees/${id}`)).data;

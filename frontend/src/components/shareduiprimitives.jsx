@@ -213,7 +213,7 @@ export function DashboardTablePagination({ count, page, onPageChange }) {
 
 export const SummaryCard = StatCard;
 
-export function ConfirmationDialog({ open, title, description, confirmLabel = 'ยืนยัน', loading = false, tone = 'error', onCancel, onConfirm }) {
+export function ConfirmationDialog({ open, title, description, confirmLabel = 'ยืนยัน', loadingLabel = 'กำลังบันทึก...', loading = false, tone = 'error', onCancel, onConfirm }) {
   return (
     <DialogShell
       open={open}
@@ -225,7 +225,7 @@ export function ConfirmationDialog({ open, title, description, confirmLabel = '�
         <>
         <Button type="button" variant="outlined" color="secondary" disabled={loading} onClick={onCancel}>ยกเลิก</Button>
         <Button type="button" variant="contained" color={tone} disabled={loading} onClick={onConfirm}>
-          {loading ? 'กำลังบันทึก...' : confirmLabel}
+          {loading ? loadingLabel : confirmLabel}
         </Button>
         </>
       )}

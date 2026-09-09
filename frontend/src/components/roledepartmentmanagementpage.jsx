@@ -27,10 +27,11 @@ import {
 } from '@mui/material';
 
 import { ConfirmationDialog, DataListToolbar } from './shareduiprimitives.jsx';
-import { CompactSummaryCard } from './sharedvisualfoundation.jsx';
+import { InlineListSummary } from './sharedvisualfoundation.jsx';
 import RoleDepartmentFormPage from './roledepartmentformpage.jsx';
 
 import {
+  deleteDepartment,
   getDepartments,
   updateDepartmentStatus,
 } from '../api/department-service.js';
@@ -128,6 +129,7 @@ function RoleDepartmentManagementPage({
   const [page, setPage] = useState(0);
   const rowsPerPage = 5;
   const [disableTarget, setDisableTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [formDialog, setFormDialog] = useState({
     open: Boolean(initialFormMode),
     mode: initialFormMode || 'add',
@@ -287,9 +289,6 @@ function RoleDepartmentManagementPage({
       value:
         departmentSummary.total,
 
-      helper:
-        'แผนกในระบบทั้งหมด',
-
       color:
         '#2563EB',
     },
@@ -300,9 +299,6 @@ function RoleDepartmentManagementPage({
 
       value:
         departmentSummary.active,
-
-      helper:
-        'แผนกที่เปิดใช้งาน',
 
       color:
         '#059669',
@@ -315,9 +311,6 @@ function RoleDepartmentManagementPage({
       value:
         departmentSummary.inactive,
 
-      helper:
-        'แผนกที่ปิดใช้งาน',
-
       color:
         '#64748B',
     },
@@ -328,9 +321,6 @@ function RoleDepartmentManagementPage({
 
       value:
         departmentSummary.employees,
-
-      helper:
-        'พนักงานในทุกแผนก',
 
       color:
         '#2563EB',
@@ -407,6 +397,23 @@ function RoleDepartmentManagementPage({
         setUpdatingId(null);
       }
     };
+
+  const handleDeleteDepartment = async () => {
+    if (!deleteTarget) return;
+    setUpdatingId(deleteTarget.id);
+    setLoadError('');
+    setActionMessage('');
+    try {
+      await deleteDepartment(deleteTarget.id);
+      setDeleteTarget(null);
+      await loadDepartments();
+      setActionMessage(`ลบแผนก ${deleteTarget.departmentName} เรียบร้อยแล้ว`);
+    } catch (error) {
+      setLoadError(error.response?.data?.message || 'ไม่สามารถลบแผนกได้');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   /* =========================
      Action Menu
@@ -647,14 +654,7 @@ function RoleDepartmentManagementPage({
             '16px',
         }}
       >
-        {summaryCards.map((card) => (
-          <CompactSummaryCard
-            key={card.title}
-            title={card.title}
-            value={card.value}
-            color={card.color}
-          />
-        ))}
+        <InlineListSummary items={summaryCards} sx={{ gridColumn: '1 / -1', marginBottom: 0 }} />
       </Box>
 
       {/* List */}
@@ -1283,6 +1283,7 @@ function RoleDepartmentManagementPage({
                               '1px solid #E5E7EB',
                           }}
                         >
+                          <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
                           <Button
                             type="button"
                             size="small"
@@ -1311,6 +1312,20 @@ function RoleDepartmentManagementPage({
                           >
                             {isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
                           </Button>
+                          {!isActive ? (
+                            <Button
+                              type="button"
+                              size="small"
+                              variant="contained"
+                              color="error"
+                              disabled={Number(updatingId) === Number(department.id)}
+                              onClick={(event) => { event.stopPropagation(); setDeleteTarget(department); }}
+                              sx={{ minWidth: '64px', height: '34px', boxShadow: 'none' }}
+                            >
+                              ลบ
+                            </Button>
+                          ) : null}
+                          </Box>
                         </TableCell>
                       </TableRow>
                     );
@@ -1446,6 +1461,15 @@ function RoleDepartmentManagementPage({
         loading={Number(updatingId) === Number(disableTarget?.id)}
         onCancel={() => setDisableTarget(null)}
         onConfirm={async () => { const target = disableTarget; if (!target) return; await handleStatusChange(target); setDisableTarget(null); }}
+      />
+
+      <ConfirmationDialog
+        open={Boolean(deleteTarget)}
+        title="ยืนยันการลบแผนก"
+        description={`ต้องการลบแผนก ${deleteTarget?.departmentName || ''} ใช่หรือไม่ ระบบจะลบได้เฉพาะแผนกที่ไม่มีพนักงานสังกัดอยู่`}
+        loading={Number(updatingId) === Number(deleteTarget?.id)}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleDeleteDepartment}
       />
 
       <Menu

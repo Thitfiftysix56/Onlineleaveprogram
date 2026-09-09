@@ -846,13 +846,13 @@ function RoleLeaveRequestDetailPage({
           } day(s)`,
         },
         {
-          label: 'Start Date',
+          label: 'วันที่เริ่มลา',
           value: formatDate(
             request.startDate,
           ),
         },
         {
-          label: 'End Date',
+          label: 'วันที่สิ้นสุด',
           value: formatDate(
             request.endDate,
           ),

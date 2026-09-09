@@ -799,15 +799,26 @@ function AdminDashboardPage() {
     };
   }, [loadDashboardData]);
 
-  const activeUsers = useMemo(
+  const lockedUsers = useMemo(
     () =>
       users.filter(
         (user) =>
           user.status ===
-          'Active',
+          'Locked',
       ),
     [users],
   );
+
+  const todayActivityCount = useMemo(() => {
+    const today = new Date();
+    return auditLogs.filter((log) => {
+      const occurredAt = new Date(getAuditDateValue(log));
+      return !Number.isNaN(occurredAt.getTime()) &&
+        occurredAt.getFullYear() === today.getFullYear() &&
+        occurredAt.getMonth() === today.getMonth() &&
+        occurredAt.getDate() === today.getDate();
+    }).length;
+  }, [auditLogs]);
 
   const activeDepartments =
     useMemo(
@@ -843,35 +854,31 @@ function AdminDashboardPage() {
   const summaryCards = [
     {
       title:
-        'บัญชีผู้ใช้ทั้งหมด',
+        'บัญชีที่ถูกล็อก',
 
       value:
-        users.length,
+        lockedUsers.length,
 
-      helper:
-        'บัญชีในระบบทั้งหมด',
 
       color:
-        '#EA580C',
+        '#DC2626',
 
-      accent: 'info',
+      accent: 'error',
       unit: 'บัญชี',
     },
     {
       title:
-        'บัญชีที่ใช้งานอยู่',
+        'กิจกรรมวันนี้',
 
       value:
-        activeUsers.length,
+        todayActivityCount,
 
-      helper:
-        'บัญชีที่พร้อมใช้งาน',
 
       color:
-        '#059669',
+        '#0891B2',
 
-      accent: 'success',
-      unit: 'บัญชี',
+      accent: 'info',
+      unit: 'รายการ',
     },
     {
       title:
@@ -880,8 +887,6 @@ function AdminDashboardPage() {
       value:
         activeDepartments.length,
 
-      helper:
-        'แผนกที่เปิดใช้งาน',
 
       color:
         '#2563EB',
@@ -896,8 +901,6 @@ function AdminDashboardPage() {
       value:
         activePositions.length,
 
-      helper:
-        'ตำแหน่งที่เปิดใช้งาน',
 
       color:
         '#7C3AED',
@@ -1030,9 +1033,6 @@ function AdminDashboardPage() {
     <AdminLayout
       activeMenu="Dashboard"
     >
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
-        <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/admin/leave-request', { state: { returnTo: '/admin/dashboard' } })} sx={{ height: 40, borderRadius: '9px', backgroundColor: '#2563EB', boxShadow: 'none', fontSize: '13px', fontWeight: 800, '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' } }}>สร้างคำขอลา</Button>
-      </Box>
       {/* Header */}
 
       <Box

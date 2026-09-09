@@ -119,6 +119,9 @@ test('GET /api/admin/users returns sanitized users for an admin', async () => {
     roleId: 4,
     roleName: 'Admin',
     status: 'active',
+    failedLoginAttempts: 0,
+    lastFailedLoginAt: null,
+    lockedUntil: null,
     lastLoginAt: '2026-08-03T01:00:00.000Z',
     mustChangePassword: false,
     createdAt: '2026-01-01T00:00:00.000Z',
@@ -395,6 +398,40 @@ test('PUT /api/admin/users/:userId updates only username, role and status', asyn
   pool.getConnection = originalPoolGetConnection
 })
 
+test('DELETE /api/admin/users/:userId requires an inactive account and removes only account data', async () => {
+  let results = [[[{ user_id: 7, username: 'employee007', status: 'active' }]]]
+  pool.execute = async () => results.shift()
+  let response = await fetch(`${baseUrl}/api/admin/users/7`, {
+    method: 'DELETE',
+    headers: authorizationHeader('Admin'),
+  })
+  assert.equal(response.status, 409)
+
+  results = [
+    [[{ user_id: 7, username: 'employee007', status: 'inactive' }]],
+    [[{ approval_count: 0, attachment_count: 0 }]],
+  ]
+  pool.execute = async () => results.shift()
+  const deleteQueries = []
+  pool.getConnection = async () => ({
+    beginTransaction: async () => {},
+    commit: async () => {},
+    rollback: async () => {},
+    release: () => {},
+    execute: async (sql, parameters) => {
+      deleteQueries.push({ sql, parameters })
+      return [{ affectedRows: 1 }]
+    },
+  })
+  response = await fetch(`${baseUrl}/api/admin/users/7`, {
+    method: 'DELETE',
+    headers: authorizationHeader('Admin'),
+  })
+  assert.equal(response.status, 200)
+  assert.match(deleteQueries.at(-1).sql, /DELETE FROM users/)
+  assert.equal(deleteQueries.every(({ parameters }) => parameters[0] === 7), true)
+})
+
 test('PATCH /api/admin/users/:userId/status returns 401 when unauthenticated', async () => {
   const response = await fetch(`${baseUrl}/api/admin/users/7/status`, {
     method: 'PATCH',
@@ -463,6 +500,46 @@ for (const requestedStatus of ['Active', 'Locked', 'Inactive']) {
     ])
   })
 }
+
+test('DELETE /api/admin/users/:userId requires an inactive unused account', async () => {
+  let results = [[[{ user_id: 7, username: 'employee001', status: 'active' }]]]
+  pool.execute = async () => results.shift()
+  let response = await fetch(`${baseUrl}/api/admin/users/7`, {
+    method: 'DELETE',
+    headers: authorizationHeader('Admin'),
+  })
+  assert.equal(response.status, 409)
+
+  results = [
+    [[{ user_id: 7, username: 'employee007', status: 'inactive' }]],
+    [[{ approval_count: 0, attachment_count: 0 }]],
+  ]
+  pool.execute = async () => results.shift()
+  const deleteQueries = []
+  pool.getConnection = async () => ({
+    beginTransaction: async () => {},
+    commit: async () => {},
+    rollback: async () => {},
+    release: () => {},
+    execute: async (sql, parameters) => {
+      deleteQueries.push({ sql, parameters })
+      if (sql.includes("LOWER(r.role_name) = 'hr'")) return [[{ user_id: 3 }]]
+      return [{ affectedRows: 1 }]
+    },
+  })
+
+  response = await fetch(`${baseUrl}/api/admin/users/7`, {
+    method: 'DELETE',
+    headers: authorizationHeader('Admin'),
+  })
+  assert.equal(response.status, 200)
+  const deleteUserQuery = deleteQueries.find(({ sql }) => /DELETE FROM users/.test(sql))
+  const notificationQuery = deleteQueries.find(({ sql }) => /INSERT INTO notifications/.test(sql))
+  assert.deepEqual(deleteUserQuery.parameters, [7])
+  assert.equal(notificationQuery.parameters[0], 3)
+  assert.equal(notificationQuery.parameters[4], 'user-account-deleted')
+  pool.getConnection = originalPoolGetConnection
+})
 
 test('POST /api/admin/users/:userId/reset-password returns 401 when unauthenticated', async () => {
   const response = await fetch(`${baseUrl}/api/admin/users/7/reset-password`, {

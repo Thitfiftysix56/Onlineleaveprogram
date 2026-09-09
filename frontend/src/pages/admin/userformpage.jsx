@@ -204,6 +204,7 @@ function UserFormPage({
   ] = useState(false);
 
   const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [confirmationError, setConfirmationError] = useState('');
 
   const [
     temporaryPasswordResult,
@@ -629,6 +630,7 @@ function UserFormPage({
   const confirmSave = async (
   ) => {
     setMessage(null);
+    setConfirmationError('');
 
     setIsSubmitting(true);
 
@@ -732,14 +734,12 @@ function UserFormPage({
         });
       }
     } catch (error) {
-      setMessage({
-        severity: 'error',
-        text:
-          error.response?.data
-            ?.message ||
-          error.message ||
-          'ไม่สามารถบันทึกบัญชีผู้ใช้ได้',
-      });
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        'ไม่สามารถบันทึกบัญชีผู้ใช้ได้';
+      setConfirmationError(errorMessage);
+      setMessage({ severity: 'error', text: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
@@ -753,6 +753,7 @@ function UserFormPage({
       setMessage({ severity: 'error', text: 'ไม่พบข้อมูลพนักงานที่เลือก' });
       return;
     }
+    setConfirmationError('');
     setConfirmationOpen(true);
   };
 
@@ -828,7 +829,7 @@ function UserFormPage({
   const FormContainer = dialogOnly ? Dialog : AdminLayout;
   const containerProps = dialogOnly
     ? {
-        open: open && !confirmationOpen,
+        open: open && !temporaryPasswordResult,
         onClose: () => !isSubmitting && handleBack(),
         fullWidth: true,
         maxWidth: 'md',
@@ -846,10 +847,11 @@ function UserFormPage({
     : { activeMenu: 'User Management' };
 
   return (
+    <>
     <FormContainer {...containerProps}>
       {dialogOnly ? (
         <DialogTitle sx={{ padding: '18px 24px', borderBottom: 0, background: 'transparent', color: 'var(--role-text, #9A3412)', fontSize: '20px', fontWeight: 700 }}>
-          {pageTitle}
+          {confirmationOpen ? 'ยืนยันการบันทึกบัญชีผู้ใช้' : pageTitle}
         </DialogTitle>
       ) : (
         <PageHeader
@@ -1021,7 +1023,7 @@ function UserFormPage({
         noValidate
         sx={{
           display:
-            'grid',
+            dialogOnly && confirmationOpen ? 'none' : 'grid',
 
           gridTemplateColumns: {
             xs:
@@ -1363,11 +1365,11 @@ function UserFormPage({
                 )}
               </Select>
 
-              {errors.status && (
-                <FormHelperText>
-                  {errors.status}
-                </FormHelperText>
-              )}
+              <FormHelperText>
+                {errors.status || (formData.status === 'Locked'
+                  ? 'บัญชีนี้จะเข้าสู่ระบบไม่ได้จนกว่าจะครบเวลาล็อก หรือผู้ดูแลเปลี่ยนสถานะเป็นใช้งาน'
+                  : 'ระบบล็อกชั่วคราว 30 นาทีเมื่อกรอกรหัสผิด 5 ครั้งใน 15 นาที และผู้ดูแลสามารถล็อกเองได้')}
+              </FormHelperText>
             </FormControl>
 
           </Box>
@@ -1844,10 +1846,29 @@ function UserFormPage({
         </Box>
       </Box>
 
-      <Dialog open={confirmationOpen} onClose={() => !isSubmitting && setConfirmationOpen(false)} fullWidth maxWidth="sm">
+      {dialogOnly && confirmationOpen ? (
+        <>
+          <DialogContent sx={{ padding: '12px 24px 20px' }}>
+            <Box sx={{ display: 'grid', gap: '10px' }}>
+              {confirmationError ? <Alert severity="error" sx={{ marginBottom: '4px' }}>{confirmationError}</Alert> : null}
+              <Typography><strong>พนักงาน:</strong> {selectedEmployee?.employeeName || '-'}</Typography>
+              <Typography><strong>ชื่อผู้ใช้:</strong> {formData.username.trim() || '-'}</Typography>
+              <Typography><strong>บทบาท:</strong> {roleDisplayLabels[formData.role] || formData.role}</Typography>
+              <Typography><strong>สถานะ:</strong> {statusDisplayLabels[formData.status] || formData.status}</Typography>
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ padding: '14px 24px 20px' }}>
+            <Button variant="outlined" color="secondary" disabled={isSubmitting} onClick={() => { setConfirmationError(''); setConfirmationOpen(false); }}>กลับไปแก้ไข</Button>
+            <Button variant="contained" color="success" disabled={isSubmitting} onClick={confirmSave}>{isSubmitting ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>
+          </DialogActions>
+        </>
+      ) : null}
+
+      {!dialogOnly ? <Dialog open={confirmationOpen} onClose={() => { if (!isSubmitting) { setConfirmationError(''); setConfirmationOpen(false); } }} fullWidth maxWidth="sm">
         <DialogTitle>ยืนยันการบันทึกบัญชีผู้ใช้</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'grid', gap: '8px' }}>
+            {confirmationError ? <Alert severity="error" sx={{ marginBottom: '4px' }}>{confirmationError}</Alert> : null}
             <Typography><strong>พนักงาน:</strong> {selectedEmployee?.employeeName || '-'}</Typography>
             <Typography><strong>ชื่อผู้ใช้:</strong> {formData.username.trim() || '-'}</Typography>
             <Typography><strong>บทบาท:</strong> {roleDisplayLabels[formData.role] || formData.role}</Typography>
@@ -1855,20 +1876,21 @@ function UserFormPage({
           </Box>
         </DialogContent>
         <DialogActions sx={{ padding: '14px 20px' }}>
-          <Button variant="outlined" color="secondary" disabled={isSubmitting} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button>
+          <Button variant="outlined" color="secondary" disabled={isSubmitting} onClick={() => { setConfirmationError(''); setConfirmationOpen(false); }}>กลับไปแก้ไข</Button>
           <Button variant="contained" color="success" disabled={isSubmitting} onClick={confirmSave}>{isSubmitting ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>
         </DialogActions>
-      </Dialog>
+      </Dialog> : null}
 
-      <TemporaryPasswordDialog
-        open={Boolean(temporaryPasswordResult)}
-        title="สร้างบัญชีผู้ใช้เรียบร้อยแล้ว"
-        username={temporaryPasswordResult?.username || ''}
-        temporaryPassword={temporaryPasswordResult?.temporaryPassword || ''}
-        onClose={handleCloseTemporaryPassword}
-      />
       </Box>
     </FormContainer>
+    <TemporaryPasswordDialog
+      open={Boolean(temporaryPasswordResult)}
+      title="สร้างบัญชีผู้ใช้เรียบร้อยแล้ว"
+      username={temporaryPasswordResult?.username || ''}
+      temporaryPassword={temporaryPasswordResult?.temporaryPassword || ''}
+      onClose={handleCloseTemporaryPassword}
+    />
+    </>
   );
 }
 

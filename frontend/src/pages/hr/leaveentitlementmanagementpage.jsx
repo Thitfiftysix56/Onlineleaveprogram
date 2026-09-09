@@ -1,9 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -14,7 +9,6 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
-  InputLabel,
   MenuItem,
   Paper,
   Select,
@@ -24,2267 +18,384 @@ import {
   TableHead,
   TablePagination,
   TableRow,
-  TextField,
   Typography,
 } from '@mui/material';
 
-import HRLayout from '../../layouts/hrlayout.jsx';
-import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
-import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
+import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
+import HRLayout from '../../layouts/hrlayout.jsx';
 
-const theme = {
-  primary: '#059669',
-  dark: '#047857',
-  soft: '#ECFDF5',
-  border: '#A7F3D0',
+const currentYear = new Date().getFullYear();
+
+const translateLeaveType = (value) => ({
+  'Annual Leave': 'ลาพักร้อน',
+  'Sick Leave': 'ลาป่วย',
+  'Personal Leave': 'ลากิจ',
+  'Paternity Leave': 'ลาเพื่อดูแลบุตร',
+  'Ordination Leave': 'ลาอุปสมบท',
+  'Military Leave': 'ลาเพื่อรับราชการทหาร',
+  'Other Leave': 'ลาอื่น ๆ',
+}[value] || value || '-');
+
+const getResponseArray = (response, key) => {
+  const data = response?.data?.data;
+  if (Array.isArray(data?.[key])) return data[key];
+  return Array.isArray(data) ? data : [];
 };
 
-const currentYear =
-  new Date().getFullYear();
-
-/* =========================
-   Helpers
-========================= */
-
-const translateLeaveType = (value) => {
-  const labels = {
-    'Annual Leave': 'ลาพักร้อน',
-    'Sick Leave': 'ลาป่วย',
-    'Personal Leave': 'ลากิจ',
-    'Paternity Leave': 'ลาเพื่อดูแลบุตร',
-    'Ordination Leave': 'ลาอุปสมบท',
-    'Military Leave':
-      'ลาเพื่อรับราชการทหาร',
-    'Other Leave': 'ลาอื่น ๆ',
-  };
-
-  return labels[value] || value || '-';
-};
-
-const getResponseArray = (
-  response,
-  key,
-) => {
-  const data =
-    response?.data?.data;
-
-  if (Array.isArray(data?.[key])) {
-    return data[key];
-  }
-
-  if (Array.isArray(data)) {
-    return data;
-  }
-
-  return [];
-};
-
-const normalizeEntitlement = (
-  item,
-) => {
-  const totalDays = Number(
-    item.totalDays ??
-      item.total_days ??
-      item.entitlement ??
-      0,
-  );
-
-  const usedDays = Number(
-    item.usedDays ??
-      item.used_days ??
-      item.used ??
-      0,
-  );
-
-  const remainingDays =
-    item.remainingDays ??
-    item.remaining_days ??
-    Math.max(
-      totalDays - usedDays,
-      0,
-    );
-
+const normalizeEntitlement = (item) => {
+  const totalDays = Number(item.totalDays ?? item.total_days ?? 0);
+  const usedDays = Number(item.usedDays ?? item.used_days ?? item.used ?? 0);
   return {
-    id:
-      item.id ??
-      item.entitlementId ??
-      item.entitlement_id,
-
-    employeeId:
-      item.employeeId ??
-      item.employee_id,
-
-    employeeCode:
-      item.employeeCode ||
-      item.employee_code ||
-      '-',
-
-    employeeName:
-      item.employeeName ||
-      item.employee_name ||
-      item.fullName ||
-      [
-        item.firstName ||
-          item.first_name,
-        item.lastName ||
-          item.last_name,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .trim() ||
-      '-',
-
-    department:
-      item.departmentName ||
-      item.department_name ||
-      item.department ||
-      '-',
-
-    departmentId:
-      item.departmentId ??
-      item.department_id ??
-      null,
-
-    leaveTypeId:
-      item.leaveTypeId ??
-      item.leave_type_id,
-
-    leaveType:
-      item.leaveType ||
-      item.leaveTypeName ||
-      item.leave_type_name ||
-      '-',
-
-    year:
-      Number(
-        item.year ||
-          currentYear,
-      ),
-
-    totalDays:
-      Number.isFinite(
-        totalDays,
-      )
-        ? totalDays
-        : 0,
-
-    usedDays:
-      Number.isFinite(
-        usedDays,
-      )
-        ? usedDays
-        : 0,
-
-    remainingDays:
-      Number(
-        remainingDays,
-      ) || 0,
+    id: item.id ?? item.entitlementId ?? item.entitlement_id,
+    employeeCode: item.employeeCode || item.employee_code || '-',
+    employeeName: item.employeeName || item.employee_name || '-',
+    department: item.department || item.departmentName || item.department_name || '-',
+    leaveTypeId: item.leaveTypeId ?? item.leave_type_id,
+    leaveType: item.leaveType || item.leaveTypeName || item.leave_type_name || '-',
+    year: Number(item.year || currentYear),
+    totalDays: Number.isFinite(totalDays) ? totalDays : 0,
+    usedDays: Number.isFinite(usedDays) ? usedDays : 0,
+    remainingDays: Math.max(totalDays - usedDays, 0),
   };
 };
 
-const normalizeEmployee = (
-  employee,
-) => ({
-  id:
-    employee.employeeId ??
-    employee.employee_id ??
-    employee.id,
-
-  code:
-    employee.employeeCode ||
-    employee.employee_code ||
-    employee.code ||
-    '-',
-
-  name:
-    employee.fullName ||
-    employee.employeeName ||
-    employee.employee_name ||
-    [
-      employee.firstName ||
-        employee.first_name,
-      employee.lastName ||
-        employee.last_name,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .trim() ||
-    '-',
-
-  department:
-    employee.departmentName ||
-    employee.department_name ||
-    employee.department ||
-    '-',
-
-  status:
-    String(
-      employee.status ||
-        'active',
-    ).toLowerCase(),
+const normalizeLeaveType = (item) => ({
+  id: item.leaveTypeId ?? item.leave_type_id ?? item.id,
+  name: item.name || item.leaveTypeName || item.leave_type_name || '-',
+  isActive: item.isActive ?? item.is_active ?? String(item.status).toLowerCase() === 'active',
 });
-
-const normalizeLeaveType = (
-  leaveType,
-) => ({
-  id:
-    leaveType.leaveTypeId ??
-    leaveType.leave_type_id ??
-    leaveType.id,
-
-  name:
-    leaveType.leaveType ||
-    leaveType.leaveTypeName ||
-    leaveType.leave_type_name ||
-    leaveType.name ||
-    '-',
-
-  status:
-    String(
-      leaveType.status ||
-        (
-          leaveType.isActive ??
-          leaveType.is_active
-        )
-          ? 'active'
-          : 'inactive',
-    ).toLowerCase(),
-});
-
-/* =========================
-   Empty Form
-========================= */
-
-const createEmptyForm = () => ({
-  employeeId: '',
-  leaveTypeId: '',
-  year: String(currentYear),
-  totalDays: '',
-  usedDays: '0',
-});
-
-/* =========================
-   Component
-========================= */
 
 function LeaveEntitlementManagementPage() {
-  const [
-    entitlements,
-    setEntitlements,
-  ] = useState([]);
-
-  const [
-    employees,
-    setEmployees,
-  ] = useState([]);
-
-  const [
-    leaveTypes,
-    setLeaveTypes,
-  ] = useState([]);
-
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
-
-  const [
-    error,
-    setError,
-  ] = useState('');
-
-  const [
-    actionMessage,
-    setActionMessage,
-  ] = useState('');
-
-  const [
-    searchText,
-    setSearchText,
-  ] = useState('');
-
-  const [
-    departmentFilter,
-    setDepartmentFilter,
-  ] = useState('all');
-
-  const [
-    leaveTypeFilter,
-    setLeaveTypeFilter,
-  ] = useState('all');
-
-  const [
-    yearFilter,
-    setYearFilter,
-  ] = useState(
-    String(currentYear),
-  );
+  const [entitlements, setEntitlements] = useState([]);
+  const [leaveTypes, setLeaveTypes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [leaveTypeFilter, setLeaveTypeFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState(String(currentYear));
   const [page, setPage] = useState(0);
+  const [selectedEntitlement, setSelectedEntitlement] = useState(null);
   const rowsPerPage = 5;
-  const [confirmationOpen, setConfirmationOpen] = useState(false);
-
-  const [
-    dialogOpen,
-    setDialogOpen,
-  ] = useState(false);
-
-  const [
-    dialogMode,
-    setDialogMode,
-  ] = useState('add');
-
-  const [
-    selectedEntitlement,
-    setSelectedEntitlement,
-  ] = useState(null);
-
-  const [
-    formData,
-    setFormData,
-  ] = useState(
-    createEmptyForm(),
-  );
-
-  const [
-    formError,
-    setFormError,
-  ] = useState('');
-
-  const [
-    saving,
-    setSaving,
-  ] = useState(false);
-
-  /* =========================
-     Load
-  ========================= */
-
-  const loadData = async () => {
-    setLoading(true);
-    setError('');
-
-    try {
-      const [
-        entitlementResponse,
-        employeeResponse,
-        leaveTypeResponse,
-      ] = await Promise.all([
-        api.get(
-          '/hr/leave-entitlements',
-        ),
-
-        api.get(
-          '/hr/employees',
-        ),
-
-        api.get(
-          '/hr/leave-types',
-        ),
-      ]);
-
-      setEntitlements(
-        getResponseArray(
-          entitlementResponse,
-          'leaveEntitlements',
-        ).map(
-          normalizeEntitlement,
-        ),
-      );
-
-      setEmployees(
-        getResponseArray(
-          employeeResponse,
-          'employees',
-        ).map(
-          normalizeEmployee,
-        ),
-      );
-
-      setLeaveTypes(
-        getResponseArray(
-          leaveTypeResponse,
-          'leaveTypes',
-        ).map(
-          normalizeLeaveType,
-        ),
-      );
-    } catch (loadError) {
-      setError(
-        loadError.response?.data
-          ?.message ||
-          'ไม่สามารถโหลดข้อมูลสิทธิ์การลาได้',
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    loadData();
+    let active = true;
+    setLoading(true);
+    Promise.all([
+      api.get('/hr/leave-entitlements'),
+      api.get('/hr/leave-types'),
+    ])
+      .then(([entitlementResponse, leaveTypeResponse]) => {
+        if (!active) return;
+        setEntitlements(
+          getResponseArray(entitlementResponse, 'leaveEntitlements').map(normalizeEntitlement),
+        );
+        const nextLeaveTypes = getResponseArray(leaveTypeResponse, 'leaveTypes')
+          .map(normalizeLeaveType)
+          .filter((item) => item.isActive);
+        setLeaveTypes(nextLeaveTypes);
+        setLeaveTypeFilter((current) => current !== 'all'
+          ? current
+          : String(nextLeaveTypes[0]?.id || 'all'));
+      })
+      .catch((loadError) => {
+        if (active) {
+          setError(loadError.response?.data?.message || 'ไม่สามารถโหลดข้อมูลสิทธิ์การลาได้');
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
   }, []);
 
-  /* =========================
-     Filter Options
-  ========================= */
+  const departments = useMemo(
+    () => [...new Set(entitlements.map((item) => item.department).filter((item) => item !== '-'))].sort(),
+    [entitlements],
+  );
+  const years = useMemo(
+    () => [...new Set([currentYear, ...entitlements.map((item) => item.year)])].sort((a, b) => b - a),
+    [entitlements],
+  );
 
-  const departments =
-    useMemo(() => {
-      return [
-        ...new Set(
-          entitlements
-            .map(
-              (item) =>
-                item.department,
-            )
-            .filter(
-              (item) =>
-                item &&
-                item !== '-',
-            ),
-        ),
-      ].sort();
-    }, [entitlements]);
-
-  const years =
-    useMemo(() => {
-      const availableYears =
-        entitlements
-          .map(
-            (item) =>
-              Number(item.year),
-          )
-          .filter(
-            (year) =>
-              Number.isFinite(
-                year,
-              ),
-          );
-
-      return [
-        ...new Set([
-          currentYear,
-          ...availableYears,
-        ]),
-      ].sort(
-        (a, b) => b - a,
-      );
-    }, [entitlements]);
-
-  /* =========================
-     Filter
-  ========================= */
-
-  const filteredEntitlements =
-    useMemo(() => {
-      const keyword =
-        searchText
-          .trim()
-          .toLowerCase();
-
-      return entitlements.filter(
-        (item) => {
-          const matchesSearch =
-            !keyword ||
-            [
-              item.employeeCode,
-              item.employeeName,
-              item.department,
-              item.leaveType,
-              translateLeaveType(
-                item.leaveType,
-              ),
-              item.year,
-            ]
-              .map((value) =>
-                String(value || '')
-                  .toLowerCase(),
-              )
-              .some((value) =>
-                value.includes(keyword),
-              );
-
-          const matchesDepartment =
-            departmentFilter ===
-              'all' ||
-            item.department ===
-              departmentFilter;
-
-          const matchesLeaveType =
-            leaveTypeFilter ===
-              'all' ||
-            String(
-              item.leaveTypeId,
-            ) ===
-              String(
-                leaveTypeFilter,
-              );
-
-          const matchesYear =
-            yearFilter ===
-              'all' ||
-            String(item.year) ===
-              String(yearFilter);
-
-          return (
-            matchesSearch &&
-            matchesDepartment &&
-            matchesLeaveType &&
-            matchesYear
-          );
-        },
-      );
-    }, [
-      entitlements,
-      searchText,
-      departmentFilter,
-      leaveTypeFilter,
-      yearFilter,
-    ]);
-  const paginatedEntitlements = useMemo(() => filteredEntitlements.slice(page * rowsPerPage, (page + 1) * rowsPerPage), [filteredEntitlements, page]);
-  useEffect(() => { setPage(0); }, [searchText, departmentFilter, leaveTypeFilter, yearFilter]);
-
-  /* =========================
-     Summary
-  ========================= */
-
-  const summaryData =
-    useMemo(() => {
-      const records =
-        filteredEntitlements;
-
-      return {
-        totalRecords:
-          records.length,
-
-        totalDays:
-          records.reduce(
-            (total, item) =>
-              total +
-              Number(
-                item.totalDays ||
-                  0,
-              ),
-            0,
-          ),
-
-        usedDays:
-          records.reduce(
-            (total, item) =>
-              total +
-              Number(
-                item.usedDays ||
-                  0,
-              ),
-            0,
-          ),
-
-        remainingDays:
-          records.reduce(
-            (total, item) =>
-              total +
-              Math.max(
-                Number(
-                  item.totalDays ||
-                    0,
-                ) -
-                  Number(
-                    item.usedDays ||
-                      0,
-                  ),
-                0,
-              ),
-            0,
-          ),
-      };
-    }, [
-      filteredEntitlements,
-    ]);
-
-  const summaryCards = [
-    {
-      title:
-        'รายการสิทธิ์ทั้งหมด',
-
-      value:
-        summaryData.totalRecords,
-
-      backgroundColor:
-        theme.soft,
-
-      color:
-        '#2563EB',
-    },
-
-    {
-      title:
-        'วันลาที่กำหนด',
-
-      value:
-        summaryData.totalDays,
-
-      backgroundColor:
-        '#DBEAFE',
-
-      color:
-        '#7C3AED',
-    },
-
-    {
-      title:
-        'ใช้ไปแล้ว',
-
-      value:
-        summaryData.usedDays,
-
-      backgroundColor:
-        '#FEE2E2',
-
-      color:
-        '#B45309',
-    },
-
-    {
-      title:
-        'คงเหลือ',
-
-      value:
-        summaryData.remainingDays,
-
-      backgroundColor:
-        '#DCFCE7',
-
-      color:
-        '#15803D',
-    },
-  ];
-
-  /* =========================
-     Dialog
-  ========================= */
-
-  const handleOpenAdd = () => {
-    setDialogMode('add');
-
-    setSelectedEntitlement(
-      null,
-    );
-
-    setFormData(
-      createEmptyForm(),
-    );
-
-    setFormError('');
-    setDialogOpen(true);
-  };
-
-  const handleOpenEdit = (
-    item,
-  ) => {
-    setDialogMode('edit');
-
-    setSelectedEntitlement(
-      item,
-    );
-
-    setFormData({
-      employeeId:
-        String(
-          item.employeeId ||
-            '',
-        ),
-
-      leaveTypeId:
-        String(
-          item.leaveTypeId ||
-            '',
-        ),
-
-      year:
-        String(
-          item.year ||
-            currentYear,
-        ),
-
-      totalDays:
-        String(
-          item.totalDays ??
-            '',
-        ),
-
-      usedDays:
-        String(
-          item.usedDays ??
-            0,
-        ),
+  const filteredEntitlements = useMemo(() => {
+    const keyword = searchText.trim().toLowerCase();
+    return entitlements.filter((item) => {
+      const searchable = [
+        item.employeeCode,
+        item.employeeName,
+        item.department,
+        item.leaveType,
+        translateLeaveType(item.leaveType),
+      ].join(' ').toLowerCase();
+      return (!keyword || searchable.includes(keyword))
+        && (departmentFilter === 'all' || item.department === departmentFilter)
+        && (leaveTypeFilter === 'all' || String(item.leaveTypeId) === leaveTypeFilter)
+        && (yearFilter === 'all' || String(item.year) === yearFilter);
     });
+  }, [departmentFilter, entitlements, leaveTypeFilter, searchText, yearFilter]);
 
-    setFormError('');
-    setDialogOpen(true);
-  };
+  useEffect(() => { setPage(0); }, [departmentFilter, leaveTypeFilter, searchText, yearFilter]);
 
-  const handleCloseDialog = () => {
-    if (saving) {
-      return;
-    }
+  const paginatedEntitlements = useMemo(
+    () => filteredEntitlements.slice(page * rowsPerPage, (page + 1) * rowsPerPage),
+    [filteredEntitlements, page],
+  );
 
-    setDialogOpen(false);
+  const selectedEmployeeEntitlements = useMemo(
+    () => selectedEntitlement
+      ? entitlements.filter((item) =>
+        item.employeeCode === selectedEntitlement.employeeCode &&
+        item.year === selectedEntitlement.year)
+      : [],
+    [entitlements, selectedEntitlement],
+  );
 
-    setSelectedEntitlement(
-      null,
-    );
-
-    setFormData(
-      createEmptyForm(),
-    );
-
-    setFormError('');
-  };
-
-  const handleFormChange = (
-    field,
-    value,
-  ) => {
-    setFormData(
-      (previous) => ({
-        ...previous,
-        [field]: value,
-      }),
-    );
-
-    setFormError('');
-  };
-
-  /* =========================
-     Save
-  ========================= */
-
-  const confirmSave = async () => {
-    setFormError('');
-
-    const employeeId =
-      Number(
-        formData.employeeId,
-      );
-
-    const leaveTypeId =
-      Number(
-        formData.leaveTypeId,
-      );
-
-    const year =
-      Number(
-        formData.year,
-      );
-
-    const totalDays =
-      Number(
-        formData.totalDays,
-      );
-
-    const usedDays =
-      Number(
-        formData.usedDays,
-      );
-
-    if (!employeeId) {
-      setFormError(
-        'กรุณาเลือกพนักงาน',
-      );
-
-      return;
-    }
-
-    if (!leaveTypeId) {
-      setFormError(
-        'กรุณาเลือกประเภทการลา',
-      );
-
-      return;
-    }
-
-    if (
-      !Number.isInteger(year) ||
-      year < 2000 ||
-      year > 2100
-    ) {
-      setFormError(
-        'กรุณาระบุปีให้ถูกต้อง',
-      );
-
-      return;
-    }
-
-    if (
-      Number.isNaN(
-        totalDays,
-      ) ||
-      totalDays < 0 ||
-      totalDays > 365
-    ) {
-      setFormError(
-        'จำนวนวันลาต้องอยู่ระหว่าง 0 - 365 วัน',
-      );
-
-      return;
-    }
-
-    if (
-      Number.isNaN(
-        usedDays,
-      ) ||
-      usedDays < 0
-    ) {
-      setFormError(
-        'จำนวนวันที่ใช้ไปต้องไม่ติดลบ',
-      );
-
-      return;
-    }
-
-    if (
-      usedDays >
-      totalDays
-    ) {
-      setFormError(
-        'จำนวนวันที่ใช้ไปต้องไม่มากกว่าสิทธิ์ทั้งหมด',
-      );
-
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      const payload = {
-        employeeId,
-        leaveTypeId,
-        year,
-        totalDays,
-        usedDays,
-      };
-
-      if (
-        dialogMode ===
-          'edit' &&
-        selectedEntitlement
-          ?.id
-      ) {
-        await api.put(
-          `/hr/leave-entitlements/${selectedEntitlement.id}`,
-          payload,
-        );
-
-        setActionMessage(
-          'แก้ไขสิทธิ์การลาเรียบร้อยแล้ว',
-        );
-      } else {
-        await api.post(
-          '/hr/leave-entitlements',
-          payload,
-        );
-
-        setActionMessage(
-          'เพิ่มสิทธิ์การลาเรียบร้อยแล้ว',
-        );
-      }
-
-      setDialogOpen(false);
-      setConfirmationOpen(false);
-
-      setSelectedEntitlement(
-        null,
-      );
-
-      setFormData(
-        createEmptyForm(),
-      );
-
-      await loadData();
-    } catch (saveError) {
-      setFormError(
-        saveError.response?.data
-          ?.message ||
-          'ไม่สามารถบันทึกสิทธิ์การลาได้',
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSave = () => {
-    setFormError('');
-    const employeeId = Number(formData.employeeId);
-    const leaveTypeId = Number(formData.leaveTypeId);
-    const year = Number(formData.year);
-    const totalDays = Number(formData.totalDays);
-    const usedDays = Number(formData.usedDays);
-    if (!employeeId || !leaveTypeId || !Number.isInteger(year) || year < 2000 || year > 2100 || Number.isNaN(totalDays) || totalDays < 0 || totalDays > 365 || Number.isNaN(usedDays) || usedDays < 0 || usedDays > totalDays) {
-      void confirmSave();
-      return;
-    }
-    setConfirmationOpen(true);
-  };
-
-  /* =========================
-     Clear Filter
-  ========================= */
-
-  const handleClearFilters = () => {
-    setSearchText('');
-
-    setDepartmentFilter(
-      'all',
-    );
-
-    setLeaveTypeFilter(
-      'all',
-    );
-
-    setYearFilter(
-      String(currentYear),
-    );
-  };
-
-  const activeEmployees =
-    employees.filter(
-      (employee) =>
-        employee.status ===
-          'active',
-    );
-
-  const activeLeaveTypes =
-    leaveTypes.filter(
-      (leaveType) =>
-        leaveType.status ===
-          'active',
-    );
-
-  /* =========================
-     UI
-  ========================= */
+  const activeFilters = [
+    ...(departmentFilter !== 'all' ? [{
+      key: 'department',
+      label: `แผนก: ${departmentFilter}`,
+      onDelete: () => setDepartmentFilter('all'),
+    }] : []),
+    ...(yearFilter !== String(currentYear) ? [{
+      key: 'year',
+      label: `ปี: ${yearFilter}`,
+      onDelete: () => setYearFilter(String(currentYear)),
+    }] : []),
+  ];
 
   return (
     <HRLayout activeMenu="Leave Entitlement">
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
-        <Button type="button" variant="contained" onClick={handleOpenAdd}>+ เพิ่มสิทธิ์การลา</Button>
-      </Box>
-      {/* Header */}
-
-      <Box
-        sx={{
-          display: 'none',
-
-          alignItems: {
-            xs: 'flex-start',
-            sm: 'center',
-          },
-
-          justifyContent:
-            'space-between',
-
-          flexDirection: {
-            xs: 'column',
-            sm: 'row',
-          },
-
-          gap: '16px',
-
-          marginBottom:
-            '16px',
-        }}
-      >
-        <Typography
-          component="h1"
-          sx={{
-            color: '#111827',
-
-            fontSize: {
-              xs: '26px',
-              sm: '30px',
-            },
-
-            fontWeight: 800,
-          }}
-        >
-          จัดการสิทธิ์การลา
-        </Typography>
-
-        <Button
-          type="button"
-          variant="contained"
-          onClick={
-            handleOpenAdd
-          }
-          sx={{
-            minWidth:
-              '150px',
-
-            height:
-              '40px',
-
-            padding:
-              '0 18px',
-
-            backgroundColor:
-              '#2563EB',
-
-            color:
-              '#FFFFFF',
-
-            borderRadius:
-              '9px',
-
-            fontSize:
-              '13px',
-
-            fontWeight:
-              700,
-
-            textTransform:
-              'none',
-
-            boxShadow:
-              'none',
-
-            '&:hover': {
-              backgroundColor:
-                '#1D4ED8',
-
-              boxShadow:
-                'none',
-            },
-          }}
-        >
-          + เพิ่มสิทธิ์การลา
-        </Button>
-      </Box>
-
-      {/* Messages */}
-
-      {error && (
-        <Alert
-          severity="error"
-          onClose={() =>
-            setError('')
-          }
-          sx={{
-            marginBottom:
-              '20px',
-
-            borderRadius:
-              '10px',
-          }}
-        >
+      {error ? (
+        <Alert severity="error" onClose={() => setError('')} sx={{ marginBottom: '20px' }}>
           {error}
         </Alert>
-      )}
-
-      {actionMessage && (
-        <Alert
-          severity="success"
-          onClose={() =>
-            setActionMessage('')
-          }
-          sx={{
-            marginBottom:
-              '20px',
-
-            borderRadius:
-              '10px',
-          }}
-        >
-          {actionMessage}
-        </Alert>
-      )}
-
-      {/* Summary Cards */}
-
-      <Box
-        sx={{
-          display: 'grid',
-
-          gridTemplateColumns: {
-            xs: '1fr',
-
-            sm:
-              'repeat(2, minmax(0, 1fr))',
-
-            md:
-              'repeat(4, minmax(0, 1fr))',
-          },
-
-          gap: '16px',
-
-          marginBottom:
-            '16px',
-        }}
-      >
-        {summaryCards.map((card) => (
-          <CompactSummaryCard
-            key={card.title}
-            title={card.title}
-            value={card.value}
-            color={card.color}
-          />
-        ))}
-      </Box>
-
-      {/* Main Card */}
+      ) : null}
 
       <Paper
         elevation={0}
         sx={{
-          backgroundColor:
-            '#FFFFFF',
-
-          border:
-            '1px solid #E5E7EB',
-
-          borderRadius:
-            '20px',
-
-          boxShadow:
-            '0 4px 16px rgba(15, 23, 42, 0.04)',
-
-          overflow:
-            'hidden',
+          marginTop: { xs: '24px', md: '40px' },
+          border: '1px solid #E5E7EB',
+          borderRadius: '20px',
+          overflow: 'hidden',
+          boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
         }}
       >
-        {/* Filters */}
-
-        <Box
-          sx={{
-            padding:
-              '20px 24px',
-          }}
-        >
-          <Typography
-            sx={{
-              color:
-                '#111827',
-
-              fontSize:
-                '18px',
-
-              fontWeight:
-                600,
-            }}
-          >
+        <Box sx={{ padding: { xs: '18px', md: '22px 24px' } }}>
+          <Typography sx={{ color: '#111827', fontSize: '18px', fontWeight: 600 }}>
             รายการสิทธิ์การลา
           </Typography>
-
           <DataListToolbar
             searchValue={searchText}
             onSearchChange={setSearchText}
-            searchPlaceholder="ค้นหาพนักงานหรือประเภทลา"
-            resultLabel=""
-            activeFilters={[
-              ...(departmentFilter !== 'all' ? [{ key: 'department', label: `แผนก: ${departmentFilter}`, onDelete: () => setDepartmentFilter('all') }] : []),
-              ...(leaveTypeFilter !== 'all' ? [{ key: 'type', label: `ประเภท: ${translateLeaveType(leaveTypes.find((item) => String(item.id) === String(leaveTypeFilter))?.name || leaveTypeFilter)}`, onDelete: () => setLeaveTypeFilter('all') }] : []),
-              ...(yearFilter !== String(currentYear) ? [{ key: 'year', label: `ปี: ${yearFilter}`, onDelete: () => setYearFilter(String(currentYear)) }] : []),
-            ]}
-            onClearFilters={handleClearFilters}
-            filters={<><FormControl size="small"><Select value={departmentFilter === 'all' ? '' : departmentFilter} displayEmpty renderValue={(value) => value || 'แผนก'} inputProps={{ 'aria-label': 'แผนก' }} onChange={(event) => setDepartmentFilter(event.target.value || 'all')}>{departments.map((department) => <MenuItem key={department} value={department}>{department}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={leaveTypeFilter === 'all' ? '' : leaveTypeFilter} displayEmpty renderValue={(value) => value ? translateLeaveType(leaveTypes.find((item) => String(item.id) === String(value))?.name || value) : 'ประเภทลา'} inputProps={{ 'aria-label': 'ประเภทลา' }} onChange={(event) => setLeaveTypeFilter(event.target.value || 'all')}>{leaveTypes.map((leaveType) => <MenuItem key={leaveType.id} value={String(leaveType.id)}>{translateLeaveType(leaveType.name)}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={yearFilter === 'all' ? '' : yearFilter} displayEmpty renderValue={(value) => value || 'ปี'} inputProps={{ 'aria-label': 'ปี' }} onChange={(event) => setYearFilter(event.target.value || 'all')}>{years.map((year) => <MenuItem key={year} value={String(year)}>{year}</MenuItem>)}</Select></FormControl></>}
-            sx={{ marginTop: '16px' }}
+            searchPlaceholder="ค้นหารหัส ชื่อพนักงาน หรือแผนก"
+            activeFilters={activeFilters}
+            filters={(
+              <>
+                <FormControl size="small">
+                  <Select
+                    value={departmentFilter === 'all' ? '' : departmentFilter}
+                    displayEmpty
+                    renderValue={(value) => value || 'ทุกแผนก'}
+                    inputProps={{ 'aria-label': 'แผนก' }}
+                    onChange={(event) => setDepartmentFilter(event.target.value || 'all')}
+                  >
+                    <MenuItem value="">ทุกแผนก</MenuItem>
+                    {departments.map((department) => (
+                      <MenuItem key={department} value={department}>{department}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl size="small">
+                  <Select
+                    value={leaveTypeFilter === 'all' ? '' : leaveTypeFilter}
+                    displayEmpty
+                    renderValue={(value) => value
+                      ? translateLeaveType(leaveTypes.find((item) => String(item.id) === value)?.name || value)
+                      : 'ประเภทการลา'}
+                    inputProps={{ 'aria-label': 'ประเภทการลา' }}
+                    onChange={(event) => setLeaveTypeFilter(event.target.value || 'all')}
+                  >
+                    {leaveTypes.map((leaveType) => (
+                      <MenuItem key={leaveType.id} value={String(leaveType.id)}>
+                        {translateLeaveType(leaveType.name)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl size="small">
+                  <Select
+                    value={yearFilter === 'all' ? '' : yearFilter}
+                    displayEmpty
+                    renderValue={(value) => value || 'ปี'}
+                    inputProps={{ 'aria-label': 'ปี' }}
+                    onChange={(event) => setYearFilter(event.target.value || 'all')}
+                  >
+                    {years.map((year) => (
+                      <MenuItem key={year} value={String(year)}>{year}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </>
+            )}
+            sx={{ marginTop: '18px' }}
           />
-
-          <Box
-            sx={{
-              display:
-                'none',
-
-              gridTemplateColumns: {
-                xs:
-                  '1fr',
-
-                xl:
-                  'minmax(230px, 1.3fr) repeat(3, minmax(150px, 0.75fr)) auto',
-              },
-
-              gap:
-                '14px',
-
-              marginTop:
-                '20px',
-            }}
-          >
-            <TextField
-              fullWidth
-              label="ค้นหาพนักงาน"
-              placeholder="ชื่อหรือรหัสพนักงาน"
-              value={
-                searchText
-              }
-              onChange={(
-                event,
-              ) =>
-                setSearchText(
-                  event.target
-                    .value,
-                )
-              }
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    height:
-                      '48px',
-
-                    borderRadius:
-                      '9px',
-                  },
-              }}
-            />
-
-            {/* Department */}
-
-            <FormControl
-              fullWidth
-            >
-              <InputLabel>
-                แผนก
-              </InputLabel>
-
-              <Select
-                value={
-                  departmentFilter
-                }
-                label="แผนก"
-                onChange={(
-                  event,
-                ) =>
-                  setDepartmentFilter(
-                    event.target
-                      .value,
-                  )
-                }
-                sx={{
-                  height:
-                    '48px',
-
-                  borderRadius:
-                    '9px',
-                }}
-              >
-                <MenuItem value="all">
-                  ทุกแผนก
-                </MenuItem>
-
-                {departments.map(
-                  (
-                    department,
-                  ) => (
-                    <MenuItem
-                      key={
-                        department
-                      }
-                      value={
-                        department
-                      }
-                    >
-                      {
-                        department
-                      }
-                    </MenuItem>
-                  ),
-                )}
-              </Select>
-            </FormControl>
-
-            {/* Leave Type */}
-
-            <FormControl
-              fullWidth
-            >
-              <InputLabel>
-                ประเภทการลา
-              </InputLabel>
-
-              <Select
-                value={
-                  leaveTypeFilter
-                }
-                label="ประเภทการลา"
-                onChange={(
-                  event,
-                ) =>
-                  setLeaveTypeFilter(
-                    event.target
-                      .value,
-                  )
-                }
-                sx={{
-                  height:
-                    '48px',
-
-                  borderRadius:
-                    '9px',
-                }}
-              >
-                <MenuItem value="all">
-                  ทุกประเภท
-                </MenuItem>
-
-                {leaveTypes.map(
-                  (
-                    leaveType,
-                  ) => (
-                    <MenuItem
-                      key={
-                        leaveType.id
-                      }
-                      value={
-                        String(
-                          leaveType.id,
-                        )
-                      }
-                    >
-                      {translateLeaveType(
-                        leaveType.name,
-                      )}
-                    </MenuItem>
-                  ),
-                )}
-              </Select>
-            </FormControl>
-
-            {/* Year */}
-
-            <FormControl
-              fullWidth
-            >
-              <InputLabel>
-                ปี
-              </InputLabel>
-
-              <Select
-                value={
-                  yearFilter
-                }
-                label="ปี"
-                onChange={(
-                  event,
-                ) =>
-                  setYearFilter(
-                    event.target
-                      .value,
-                  )
-                }
-                sx={{
-                  height:
-                    '48px',
-
-                  borderRadius:
-                    '9px',
-                }}
-              >
-                <MenuItem value="all">
-                  ทุกปี
-                </MenuItem>
-
-                {years.map(
-                  (year) => (
-                    <MenuItem
-                      key={year}
-                      value={String(
-                        year,
-                      )}
-                    >
-                      {year}
-                    </MenuItem>
-                  ),
-                )}
-              </Select>
-            </FormControl>
-
-            {/* Clear */}
-
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={
-                handleClearFilters
-              }
-              sx={{
-                height:
-                  '48px',
-
-                padding:
-                  '0 18px',
-
-                color:
-                  '#475569',
-
-                borderColor:
-                  '#CBD5E1',
-
-                borderRadius:
-                  '9px',
-
-                fontSize:
-                  '12px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
-
-                '&:hover':
-                  {
-                    backgroundColor:
-                      '#F8FAFC',
-
-                    borderColor:
-                      '#94A3B8',
-                  },
-              }}
-            >
-              ล้างตัวกรอง
-            </Button>
-          </Box>
         </Box>
 
-        {/* Loading */}
-
         {loading ? (
-          <Box
-            sx={{
-              minHeight:
-                '300px',
-
-              display:
-                'flex',
-
-              alignItems:
-                'center',
-
-              justifyContent:
-                'center',
-            }}
-          >
-            <CircularProgress
-              sx={{
-                color:
-                  theme.primary,
-              }}
-            />
+          <Box sx={{ minHeight: 280, display: 'grid', placeItems: 'center' }}>
+            <CircularProgress sx={{ color: '#059669' }} />
           </Box>
-        ) : filteredEntitlements.length >
-          0 ? (
-          /* Table */
-
-          <Box
-            sx={{
-              overflowX:
-                'auto',
-            }}
-          >
-            <Table
-              sx={{
-                minWidth:
-                  '1050px',
-              }}
-            >
+        ) : paginatedEntitlements.length ? (
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: 920 }}>
               <TableHead>
-                <TableRow
-                  sx={{
-                    backgroundColor:
-                      '#F8FAFC',
-                  }}
-                >
-                  {[
-                    'รหัสพนักงาน',
-                    'ชื่อพนักงาน',
-                    'แผนก',
-                    'ประเภทการลา',
-                    'ปี',
-                    'สิทธิ์ทั้งหมด',
-                    'ใช้ไปแล้ว',
-                    'คงเหลือ',
-                  ].map(
-                    (
-                      heading,
-                    ) => (
-                      <TableCell
-                        key={
-                          heading
-                        }
-                        sx={{
-                          color:
-                            '#64748B',
-
-                          fontSize:
-                            '11px',
-
-                          fontWeight:
-                            700,
-
-                          whiteSpace:
-                            'nowrap',
-
-                          borderBottom:
-                            '1px solid #E5E7EB',
-                        }}
-                      >
-                        {
-                          heading
-                        }
-                      </TableCell>
-                    ),
-                  )}
+                <TableRow sx={{ backgroundColor: '#F8FAFC' }}>
+                  {['รหัสพนักงาน', 'ชื่อพนักงาน', 'แผนก', 'ประเภทการลา', 'ปี', 'สิทธิ์ที่กำหนด', 'อนุมัติแล้ว', 'คงเหลือ'].map((heading) => (
+                    <TableCell key={heading} sx={{ color: '#64748B', fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      {heading}
+                    </TableCell>
+                  ))}
                 </TableRow>
               </TableHead>
-
               <TableBody>
-                {paginatedEntitlements.map(
-                  (item) => {
-                    const remaining =
-                      Math.max(
-                        Number(
-                          item.totalDays ||
-                            0,
-                        ) -
-                          Number(
-                            item.usedDays ||
-                              0,
-                          ),
-                        0,
-                      );
-
-                    return (
-                      <TableRow
-                        key={
-                          item.id
-                        }
-                        hover
-                        tabIndex={0}
-                        onClick={() => handleOpenEdit(item)}
-                        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleOpenEdit(item); } }}
-                        sx={{ cursor: 'pointer', '&:focus-visible': { outline: '2px solid #2563EB', outlineOffset: -2 } }}
-                      >
-                        <TableCell>
-                          <Typography
-                            sx={{
-                              color:
-                                theme.primary,
-
-                              fontSize:
-                                '12px',
-
-                              fontWeight:
-                                800,
-
-                              whiteSpace:
-                                'nowrap',
-                            }}
-                          >
-                            {
-                              item.employeeCode
-                            }
-                          </Typography>
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            color:
-                              '#111827',
-
-                            fontSize:
-                              '12px',
-
-                            fontWeight:
-                              700,
-
-                            whiteSpace:
-                              'nowrap',
-                          }}
-                        >
-                          {
-                            item.employeeName
-                          }
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            color:
-                              '#475569',
-
-                            fontSize:
-                              '12px',
-
-                            whiteSpace:
-                              'nowrap',
-                          }}
-                        >
-                          {
-                            item.department
-                          }
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            color:
-                              '#475569',
-
-                            fontSize:
-                              '12px',
-
-                            whiteSpace:
-                              'nowrap',
-                          }}
-                        >
-                          {translateLeaveType(
-                            item.leaveType,
-                          )}
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            fontSize:
-                              '12px',
-
-                            whiteSpace:
-                              'nowrap',
-                          }}
-                        >
-                          {
-                            item.year
-                          }
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            fontSize:
-                              '12px',
-
-                            fontWeight:
-                              700,
-                          }}
-                        >
-                          {
-                            item.totalDays
-                          }{' '}
-                          วัน
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            color:
-                              '#DC2626',
-
-                            fontSize:
-                              '12px',
-
-                            fontWeight:
-                              700,
-                          }}
-                        >
-                          {
-                            item.usedDays
-                          }{' '}
-                          วัน
-                        </TableCell>
-
-                        <TableCell>
-                          <Box
-                            component="span"
-                            sx={{
-                              display:
-                                'inline-flex',
-
-                              minWidth:
-                                '64px',
-
-                              justifyContent:
-                                'center',
-
-                              padding:
-                                '5px 10px',
-
-                              backgroundColor:
-                                '#DCFCE7',
-
-                              color:
-                                '#15803D',
-
-                              borderRadius:
-                                '999px',
-
-                              fontSize:
-                                '10px',
-
-                              fontWeight:
-                                700,
-
-                              whiteSpace:
-                                'nowrap',
-                            }}
-                          >
-                            {
-                              remaining
-                            }{' '}
-                            วัน
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  },
-                )}
+                {paginatedEntitlements.map((item) => (
+                  <TableRow
+                    key={item.id}
+                    hover
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`ดูรายละเอียดสิทธิ์การลาของ ${item.employeeName}`}
+                    onClick={() => setSelectedEntitlement(item)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedEntitlement(item);
+                      }
+                    }}
+                    sx={{ cursor: 'pointer' }}
+                  >
+                    <TableCell sx={{ color: '#059669', fontSize: '12px', fontWeight: 800, whiteSpace: 'nowrap' }}>{item.employeeCode}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap' }}>{item.employeeName}</TableCell>
+                    <TableCell sx={{ color: '#475569', fontSize: '12px', whiteSpace: 'nowrap' }}>{item.department}</TableCell>
+                    <TableCell sx={{ color: '#475569', fontSize: '12px', whiteSpace: 'nowrap' }}>{translateLeaveType(item.leaveType)}</TableCell>
+                    <TableCell sx={{ fontSize: '12px' }}>{item.year}</TableCell>
+                    <TableCell sx={{ fontSize: '12px', fontWeight: 700 }}>{item.totalDays} วัน</TableCell>
+                    <TableCell sx={{ color: '#475569', fontSize: '12px', fontWeight: 700 }}>{item.usedDays} วัน</TableCell>
+                    <TableCell>
+                      <Box component="span" sx={{ display: 'inline-flex', minWidth: 64, justifyContent: 'center', padding: '5px 10px', backgroundColor: '#DCFCE7', color: '#15803D', borderRadius: '999px', fontSize: '10px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        {item.remainingDays} วัน
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
-            {filteredEntitlements.length > rowsPerPage ? <TablePagination component="div" count={filteredEntitlements.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredEntitlements.length / rowsPerPage)}`} /> : null}
+            <TablePagination
+              component="div"
+              count={filteredEntitlements.length}
+              page={page}
+              onPageChange={(_, nextPage) => setPage(nextPage)}
+              rowsPerPage={rowsPerPage}
+              rowsPerPageOptions={[rowsPerPage]}
+              labelRowsPerPage=""
+              labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.max(1, Math.ceil(filteredEntitlements.length / rowsPerPage))}`}
+            />
           </Box>
         ) : (
-          /* Empty */
-
-          <Box
-            sx={{
-              minHeight:
-                '280px',
-
-              display:
-                'flex',
-
-              flexDirection:
-                'column',
-
-              alignItems:
-                'center',
-
-              justifyContent:
-                'center',
-
-              textAlign:
-                'center',
-            }}
-          >
-            <Box
-              sx={{
-                width:
-                  '58px',
-
-                height:
-                  '58px',
-
-                display:
-                  'flex',
-
-                alignItems:
-                  'center',
-
-                justifyContent:
-                  'center',
-
-                backgroundColor:
-                  theme.soft,
-
-                color:
-                  theme.primary,
-
-                borderRadius:
-                  '50%',
-
-                fontSize:
-                  '20px',
-
-                fontWeight:
-                  800,
-              }}
-            >
-              0
+          <Box sx={{ minHeight: 260, display: 'grid', placeItems: 'center', textAlign: 'center', padding: '24px' }}>
+            <Box>
+              <Typography sx={{ fontSize: '18px', fontWeight: 700 }}>ไม่พบรายการสิทธิ์การลา</Typography>
+              <Typography sx={{ color: '#64748B', fontSize: '12px', marginTop: '6px' }}>
+                ลองเปลี่ยนคำค้นหาหรือตัวกรองแล้วตรวจสอบอีกครั้ง
+              </Typography>
             </Box>
-
-            <Typography
-              sx={{
-                color:
-                  '#111827',
-
-                fontSize:
-                  '16px',
-
-                fontWeight:
-                  800,
-
-                marginTop:
-                  '14px',
-              }}
-            >
-              ไม่พบข้อมูลสิทธิ์การลา
-            </Typography>
-
-            <Typography
-              sx={{
-                color:
-                  '#64748B',
-
-                fontSize:
-                  '12px',
-
-                marginTop:
-                  '5px',
-              }}
-            >
-              ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่า
-            </Typography>
           </Box>
         )}
       </Paper>
-
-      {/* =====================
-          Add / Edit Dialog
-      ====================== */}
-
       <Dialog
-        open={dialogOpen && !confirmationOpen}
-        onClose={
-          handleCloseDialog
-        }
+        open={Boolean(selectedEntitlement)}
+        onClose={() => setSelectedEntitlement(null)}
         fullWidth
         maxWidth="sm"
-        PaperProps={{
-          sx: {
-            borderRadius:
-              '14px',
-          },
-        }}
+        PaperProps={{ sx: { borderRadius: '20px', overflow: 'hidden' } }}
       >
-        <DialogTitle
-          sx={{
-            padding:
-              '20px 24px',
-
-            color:
-              '#111827',
-
-            fontSize:
-              '20px',
-
-            fontWeight:
-              800,
-
-            borderBottom:
-              '1px solid #E5E7EB',
-          }}
-        >
-          {dialogMode ===
-          'add'
-            ? 'เพิ่มสิทธิ์การลา'
-            : 'แก้ไขสิทธิ์การลา'}
+        <DialogTitle sx={{ padding: '24px 24px 8px', fontSize: '22px', fontWeight: 700 }}>
+          รายละเอียดสิทธิ์การลา
         </DialogTitle>
-
-        <DialogContent
-          sx={{
-            padding:
-              '24px !important',
-          }}
-        >
-          {formError && (
-            <Alert
-              severity="error"
-              sx={{
-                marginBottom:
-                  '18px',
-
-                borderRadius:
-                  '9px',
-              }}
-            >
-              {formError}
-            </Alert>
-          )}
-
+        <DialogContent sx={{ padding: '16px 24px 8px' }}>
           <Box
             sx={{
-              display:
-                'grid',
-
-              gridTemplateColumns: {
-                xs:
-                  '1fr',
-
-                sm:
-                  'repeat(2, 1fr)',
-              },
-
-              gap:
-                '16px',
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+              gap: '12px',
             }}
           >
-            {/* Employee */}
-
-            <FormControl
-              fullWidth
-              disabled={
-                dialogMode ===
-                'edit'
-              }
-              sx={{
-                gridColumn: {
-                  xs: 'auto',
-                  sm: '1 / -1',
-                },
-              }}
-            >
-              <InputLabel>
-                พนักงาน
-              </InputLabel>
-
-              <Select
-                value={
-                  formData.employeeId
-                }
-                label="พนักงาน"
-                onChange={(
-                  event,
-                ) =>
-                  handleFormChange(
-                    'employeeId',
-                    event.target
-                      .value,
-                  )
-                }
-              >
-                {activeEmployees.map(
-                  (
-                    employee,
-                  ) => (
-                    <MenuItem
-                      key={
-                        employee.id
-                      }
-                      value={String(
-                        employee.id,
-                      )}
-                    >
-                      {
-                        employee.code
-                      }{' '}
-                      -{' '}
-                      {
-                        employee.name
-                      }
-                    </MenuItem>
-                  ),
-                )}
-              </Select>
-            </FormControl>
-
-            {/* Leave Type */}
-
-            <FormControl
-              fullWidth
-              disabled={
-                dialogMode ===
-                'edit'
-              }
-            >
-              <InputLabel>
-                ประเภทการลา
-              </InputLabel>
-
-              <Select
-                value={
-                  formData.leaveTypeId
-                }
-                label="ประเภทการลา"
-                onChange={(
-                  event,
-                ) =>
-                  handleFormChange(
-                    'leaveTypeId',
-                    event.target
-                      .value,
-                  )
-                }
-              >
-                {activeLeaveTypes.map(
-                  (
-                    leaveType,
-                  ) => (
-                    <MenuItem
-                      key={
-                        leaveType.id
-                      }
-                      value={String(
-                        leaveType.id,
-                      )}
-                    >
-                      {translateLeaveType(
-                        leaveType.name,
-                      )}
-                    </MenuItem>
-                  ),
-                )}
-              </Select>
-            </FormControl>
-
-            {/* Year */}
-
-            <TextField
-              fullWidth
-              type="number"
-              label="ปี"
-              value={
-                formData.year
-              }
-              disabled={
-                dialogMode ===
-                'edit'
-              }
-              onChange={(
-                event,
-              ) =>
-                handleFormChange(
-                  'year',
-                  event.target
-                    .value,
-                )
-              }
-              slotProps={{
-                htmlInput: {
-                  min: 2000,
-                  max: 2100,
-                },
-              }}
-            />
-
-            {/* Total */}
-
-            <TextField
-              fullWidth
-              type="number"
-              label="สิทธิ์ทั้งหมด (วัน)"
-              value={
-                formData.totalDays
-              }
-              onChange={(
-                event,
-              ) =>
-                handleFormChange(
-                  'totalDays',
-                  event.target
-                    .value,
-                )
-              }
-              slotProps={{
-                htmlInput: {
-                  min: 0,
-                  max: 365,
-                },
-              }}
-            />
-
-            {/* Used */}
-
-            <TextField
-              fullWidth
-              type="number"
-              label="ใช้ไปแล้ว (วัน)"
-              value={
-                formData.usedDays
-              }
-              onChange={(
-                event,
-              ) =>
-                handleFormChange(
-                  'usedDays',
-                  event.target
-                    .value,
-                )
-              }
-              slotProps={{
-                htmlInput: {
-                  min: 0,
-                  max: 365,
-                },
-              }}
-            />
-          </Box>
-
-          {dialogMode ===
-            'edit' &&
-            selectedEntitlement && (
+            {[
+              ['รหัสพนักงาน', selectedEntitlement?.employeeCode],
+              ['ชื่อพนักงาน', selectedEntitlement?.employeeName],
+              ['แผนก', selectedEntitlement?.department],
+              ['ปีสิทธิ์', selectedEntitlement?.year],
+            ].map(([label, value]) => (
               <Box
+                key={label}
                 sx={{
-                  marginTop:
-                    '18px',
-
-                  padding:
-                    '14px 16px',
-
-                  backgroundColor:
-                    '#F8FAFC',
-
-                  border:
-                    '1px solid #E5E7EB',
-
-                  borderRadius:
-                    '10px',
+                  padding: '14px 16px',
+                  borderRadius: '14px',
+                  backgroundColor: '#F8FAFC',
                 }}
               >
-                <Typography
-                  sx={{
-                    color:
-                      '#64748B',
-
-                    fontSize:
-                      '11px',
-                  }}
-                >
-                  กำลังแก้ไข
+                <Typography sx={{ color: '#64748B', fontSize: '11px', fontWeight: 600 }}>
+                  {label}
                 </Typography>
-
-                <Typography
-                  sx={{
-                    color:
-                      '#111827',
-
-                    fontSize:
-                      '13px',
-
-                    fontWeight:
-                      800,
-
-                    marginTop:
-                      '3px',
-                  }}
-                >
-                  {
-                    selectedEntitlement.employeeCode
-                  }{' '}
-                  -{' '}
-                  {
-                    selectedEntitlement.employeeName
-                  }
-                </Typography>
-
-                <Typography
-                  sx={{
-                    color:
-                      theme.primary,
-
-                    fontSize:
-                      '12px',
-
-                    fontWeight:
-                      700,
-
-                    marginTop:
-                      '4px',
-                  }}
-                >
-                  {translateLeaveType(
-                    selectedEntitlement.leaveType,
-                  )}{' '}
-                  · ปี{' '}
-                  {
-                    selectedEntitlement.year
-                  }
+                <Typography sx={{ color: '#111827', fontSize: '14px', fontWeight: 700, marginTop: '4px' }}>
+                  {value || '-'}
                 </Typography>
               </Box>
-            )}
+            ))}
+          </Box>
+          <Typography sx={{ fontSize: '16px', fontWeight: 600, marginTop: '20px', marginBottom: '10px' }}>
+            สิทธิ์แต่ละประเภท
+          </Typography>
+          <Box sx={{ display: 'grid', gap: '10px' }}>
+            {selectedEmployeeEntitlements.map((item) => (
+              <Box
+                key={item.id}
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'minmax(130px, 1.4fr) repeat(3, minmax(76px, 1fr))' },
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '14px 16px',
+                  borderRadius: '14px',
+                  backgroundColor: '#F8FAFC',
+                }}
+              >
+                <Typography sx={{ fontSize: '13px', fontWeight: 700 }}>
+                  {translateLeaveType(item.leaveType)}
+                </Typography>
+                {[
+                  ['สิทธิ์', item.totalDays],
+                  ['ใช้แล้ว', item.usedDays],
+                  ['คงเหลือ', item.remainingDays],
+                ].map(([label, value]) => (
+                  <Box key={label}>
+                    <Typography sx={{ color: '#64748B', fontSize: '10px', fontWeight: 600 }}>{label}</Typography>
+                    <Typography sx={{ color: label === 'คงเหลือ' ? '#047857' : '#111827', fontSize: '13px', fontWeight: 700 }}>{value} วัน</Typography>
+                  </Box>
+                ))}
+              </Box>
+            ))}
+          </Box>
         </DialogContent>
-
-        <DialogActions
-          sx={{
-            padding:
-              '16px 24px 22px',
-
-            borderTop:
-              0,
-
-            gap:
-              '10px',
-          }}
-        >
-          <Button
-            type="button"
-            variant="outlined"
-            disabled={saving}
-            onClick={
-              handleCloseDialog
-            }
-            sx={{
-              minWidth:
-                '100px',
-
-              height:
-                '42px',
-
-              color:
-                '#475569',
-
-              borderColor:
-                '#CBD5E1',
-
-              borderRadius:
-                '8px',
-
-              fontSize:
-                '12px',
-
-              fontWeight:
-                700,
-
-              textTransform:
-                'none',
-            }}
-          >
-            ยกเลิก
-          </Button>
-
-          <Button
-            type="button"
-            variant="contained"
-            disabled={saving}
-            onClick={
-              handleSave
-            }
-            sx={{
-              minWidth:
-                '120px',
-
-              height:
-                '42px',
-
-              backgroundColor:
-                '#2563EB',
-
-              color:
-                '#FFFFFF',
-
-              borderRadius:
-                '8px',
-
-              fontSize:
-                '12px',
-
-              fontWeight:
-                700,
-
-              textTransform:
-                'none',
-
-              boxShadow:
-                'none',
-
-              '&:hover': {
-                backgroundColor:
-                  '#1D4ED8',
-
-                boxShadow:
-                  'none',
-              },
-            }}
-          >
-            {saving
-              ? 'กำลังบันทึก...'
-              : 'บันทึก'}
+        <DialogActions sx={{ padding: '16px 24px 24px' }}>
+          <Button type="button" variant="contained" onClick={() => setSelectedEntitlement(null)}>
+            ปิด
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm"><DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกสิทธิ์การลา</DialogTitle><DialogContent><Typography>พนักงาน: {employees.find((item) => Number(item.id) === Number(formData.employeeId))?.fullName || '-'}</Typography><Typography sx={{ marginTop: '8px' }}>ประเภทการลา: {translateLeaveType(leaveTypes.find((item) => Number(item.id) === Number(formData.leaveTypeId))?.name || '-')}</Typography><Typography sx={{ marginTop: '8px' }}>ปี: {formData.year} · สิทธิ์ {formData.totalDays} วัน · ใช้แล้ว {formData.usedDays} วัน</Typography></DialogContent><DialogActions sx={{ padding: '14px 20px' }}><Button variant="outlined" color="secondary" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button><Button variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions></Dialog>
     </HRLayout>
   );
 }

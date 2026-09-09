@@ -219,31 +219,15 @@ try {
   })
 
   await step('HR Leave Entitlement management', async () => {
-    const employeeEntitlement = await api(hr, 'POST', '/hr/leave-entitlements', {
-      employeeId: employee.employee_id,
-      leaveTypeId: created.leaveTypeId,
-      year: 2026,
-      totalDays: 30,
-      usedDays: 0,
-    }, [201])
-    created.employeeEntitlementId = employeeEntitlement.data.leaveEntitlement.entitlementId
-    const supervisorEntitlement = await api(hr, 'POST', '/hr/leave-entitlements', {
-      employeeId: supervisor.employee_id,
-      leaveTypeId: created.leaveTypeId,
-      year: 2026,
-      totalDays: 30,
-      usedDays: 0,
-    }, [201])
-    created.supervisorEntitlementId = supervisorEntitlement.data.leaveEntitlement.entitlementId
-    await api(hr, 'PUT', `/hr/leave-entitlements/${created.employeeEntitlementId}`, {
-      employeeId: employee.employee_id,
-      leaveTypeId: created.leaveTypeId,
-      year: 2026,
-      totalDays: 35,
-      usedDays: 0,
-    })
     const list = await api(hr, 'GET', `/hr/leave-entitlements?leaveType=${created.leaveTypeId}&year=2026`)
-    assert(list.data.leaveEntitlements.length === 2, 'Expected TEST entitlements for employee and supervisor.')
+    const employeeEntitlement = list.data.leaveEntitlements.find((item) => item.employeeId === employee.employee_id)
+    const supervisorEntitlement = list.data.leaveEntitlements.find((item) => item.employeeId === supervisor.employee_id)
+    assert(employeeEntitlement, 'Expected an automatic TEST entitlement for employee001.')
+    assert(supervisorEntitlement, 'Expected an automatic TEST entitlement for supervisor001.')
+    assert(Number(employeeEntitlement.totalDays) === 30, 'Automatic entitlement must use the leave-type quota.')
+    assert(Number(supervisorEntitlement.totalDays) === 30, 'All active employees must receive the same leave-type quota.')
+    created.employeeEntitlementId = employeeEntitlement.entitlementId
+    created.supervisorEntitlementId = supervisorEntitlement.entitlementId
   })
 
   await step('Admin User management without creating an account', async () => {
@@ -374,7 +358,7 @@ try {
       'create_position', 'update_position', 'update_position_status',
       'create_leave_type', 'update_leave_type', 'update_leave_type_status',
       'create_holiday', 'update_holiday', 'delete_holiday',
-      'update_employee', 'create_leave_entitlement', 'update_leave_entitlement',
+      'update_employee',
       'update_user', 'update_user_status', 'save_leave_draft', 'submit_leave',
       'cancel_leave', 'leave_approved', 'leave_rejected', 'login_failed',
     ]

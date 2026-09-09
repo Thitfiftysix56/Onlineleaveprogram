@@ -38,7 +38,7 @@ import {
 
 import HRLayout from '../../layouts/hrlayout.jsx';
 import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
-import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
+import { InlineListSummary } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -722,7 +722,7 @@ function HolidayManagementPage() {
 
     {
       title:
-        'กำลังจะมาถึง',
+        'วันหยุดที่เหลือในปี',
 
       value:
         upcomingCount,
@@ -950,23 +950,22 @@ function HolidayManagementPage() {
 
       try {
         const payload = {
-          holidayName:
+          name:
             formData.name.trim(),
 
-          holidayDate:
+          date:
             formData.date,
 
-          year:
-            Number(
-              formData.date.slice(
-                0,
-                4,
-              ),
-            ),
+          type:
+            selectedHoliday?.type ||
+            'Public Holiday',
 
-          isActive:
-            formData.status ===
-            'active',
+          description:
+            selectedHoliday?.description ||
+            '',
+
+          status:
+            formData.status,
         };
 
         if (
@@ -1275,14 +1274,7 @@ function HolidayManagementPage() {
             '16px',
         }}
       >
-        {summaryCards.map((card) => (
-          <CompactSummaryCard
-            key={card.title}
-            title={card.title}
-            value={card.value}
-            color={card.color}
-          />
-        ))}
+        <InlineListSummary items={summaryCards} sx={{ gridColumn: '1 / -1', marginBottom: 0 }} />
       </Box>
 
       {/* Main Card */}

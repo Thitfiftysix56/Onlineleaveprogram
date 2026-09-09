@@ -349,11 +349,11 @@ function ApprovedStatePage() {
                     value: `${leaveRequest.submittedDate} at ${leaveRequest.submittedTime}`,
                   },
                   {
-                    label: 'Start Date',
+                    label: 'วันที่เริ่มลา',
                     value: leaveRequest.startDate,
                   },
                   {
-                    label: 'End Date',
+                    label: 'วันที่สิ้นสุด',
                     value: leaveRequest.endDate,
                   },
                   {

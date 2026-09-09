@@ -31,7 +31,7 @@ import {
 
 import HRLayout from '../../layouts/hrlayout.jsx';
 import { ConfirmationDialog, DataListToolbar } from '../../components/shareduiprimitives.jsx';
-import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
+import { InlineListSummary } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -243,6 +243,8 @@ function LeaveTypeManagementPage() {
   const [page, setPage] = useState(0);
   const rowsPerPage = 5;
   const [disableTarget, setDisableTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteDialogError, setDeleteDialogError] = useState('');
 
   /* =========================
      Load Data
@@ -538,6 +540,28 @@ function LeaveTypeManagementPage() {
       }
     };
 
+  const handleDeleteLeaveType = async () => {
+    if (!deleteTarget?.id) return;
+    const target = deleteTarget;
+    setUpdatingId(target.id);
+    setError('');
+    setActionMessage('');
+    setDeleteDialogError('');
+    try {
+      await api.delete(`/hr/leave-types/${target.id}`);
+      setDeleteTarget(null);
+      await loadLeaveTypes();
+      setActionMessage(`ลบ ${translateLeaveType(target.name)} เรียบร้อยแล้ว`);
+    } catch (deleteError) {
+      setDeleteDialogError(
+        deleteError.response?.data?.message ||
+        'ไม่สามารถลบประเภทการลาได้',
+      );
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   /* =========================
      UI
   ========================= */
@@ -708,14 +732,7 @@ function LeaveTypeManagementPage() {
             '16px',
         }}
       >
-        {summaryCards.map((card) => (
-          <CompactSummaryCard
-            key={card.title}
-            title={card.title}
-            value={card.value}
-            color={card.color}
-          />
-        ))}
+        <InlineListSummary items={summaryCards} sx={{ gridColumn: '1 / -1', marginBottom: 0 }} />
       </Box>
 
       {/* Main Card */}
@@ -1082,36 +1099,6 @@ function LeaveTypeManagementPage() {
                           )}
                         </Typography>
 
-                        {leaveType.description && (
-                          <Typography
-                            sx={{
-                              maxWidth:
-                                '260px',
-
-                              color:
-                                '#94A3B8',
-
-                              fontSize:
-                                '10px',
-
-                              marginTop:
-                                '3px',
-
-                              overflow:
-                                'hidden',
-
-                              textOverflow:
-                                'ellipsis',
-
-                              whiteSpace:
-                                'nowrap',
-                            }}
-                          >
-                            {
-                              leaveType.description
-                            }
-                          </Typography>
-                        )}
                       </TableCell>
 
                       {/* Default Days */}
@@ -1276,6 +1263,23 @@ function LeaveTypeManagementPage() {
                           }}
                         >
                           <Button type="button" size="small" variant="outlined" disabled={updatingId === leaveType.id} onClick={(event) => { event.stopPropagation(); if (leaveType.status === 'Active') setDisableTarget(leaveType); else handleToggleStatus(leaveType); }} sx={{ color: leaveType.status === 'Active' ? '#DC2626' : '#15803D', borderColor: leaveType.status === 'Active' ? '#FECACA' : '#BBF7D0' }}>{updatingId === leaveType.id ? 'กำลังบันทึก...' : leaveType.status === 'Active' ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}</Button>
+                          {leaveType.status === 'Inactive' ? (
+                            <Button
+                              type="button"
+                              size="small"
+                              variant="contained"
+                              color="error"
+                              disabled={updatingId === leaveType.id}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setDeleteDialogError('');
+                                setDeleteTarget(leaveType);
+                              }}
+                              sx={{ boxShadow: 'none' }}
+                            >
+                              ลบ
+                            </Button>
+                          ) : null}
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1393,6 +1397,18 @@ function LeaveTypeManagementPage() {
         )}
       </Paper>
       <ConfirmationDialog open={Boolean(disableTarget)} title="ยืนยันการปิดใช้งานประเภทการลา" description={`ต้องการปิดใช้งาน ${disableTarget?.name || ''} ใช่หรือไม่`} loading={updatingId === disableTarget?.id} onCancel={() => setDisableTarget(null)} onConfirm={async () => { const target = disableTarget; if (!target) return; await handleToggleStatus(target); setDisableTarget(null); }} />
+      <ConfirmationDialog
+        open={Boolean(deleteTarget)}
+        title="ยืนยันการลบประเภทการลา"
+        description={deleteDialogError
+          ? `ลบไม่สำเร็จ: ${deleteDialogError}`
+          : `ต้องการลบ ${translateLeaveType(deleteTarget?.name)} ใช่หรือไม่ ระบบจะลบได้เมื่อไม่มีประวัติคำขอลาหรือยอดใช้สิทธิ์อ้างอิงอยู่`}
+        confirmLabel="ลบประเภทการลา"
+        loadingLabel="กำลังลบ..."
+        loading={updatingId === deleteTarget?.id}
+        onCancel={() => { setDeleteTarget(null); setDeleteDialogError(''); }}
+        onConfirm={handleDeleteLeaveType}
+      />
     </HRLayout>
   );
 }

@@ -47,7 +47,7 @@ import {
 import HRLayout from '../../layouts/hrlayout.jsx';
 import RequestNumberText from '../../components/requestnumbertext.jsx';
 import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
-import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
+import { InlineListSummary } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 
 import {
@@ -957,7 +957,7 @@ function HRReportsPage() {
   const summaryCards = [
     {
       title:
-        'คำขอทั้งหมด',
+        'คำขอตามตัวกรอง',
 
       value:
         summary.total,
@@ -971,35 +971,7 @@ function HRReportsPage() {
 
     {
       title:
-        'อนุมัติแล้ว',
-
-      value:
-        summary.approved,
-
-      backgroundColor:
-        '#DCFCE7',
-
-      color:
-        '#15803D',
-    },
-
-    {
-      title:
-        'ปฏิเสธแล้ว',
-
-      value:
-        summary.rejected,
-
-      backgroundColor:
-        '#FEE2E2',
-
-      color:
-        '#DC2626',
-    },
-
-    {
-      title:
-        'วันลาที่อนุมัติ',
+        'จำนวนวันลาที่อนุมัติ',
 
       value:
         summary.approvedDays,
@@ -1338,7 +1310,7 @@ function HRReportsPage() {
               'repeat(2, minmax(0, 1fr))',
 
             md:
-              'repeat(4, minmax(0, 1fr))',
+              'repeat(2, minmax(0, 1fr))',
           },
 
           gap:
@@ -1348,14 +1320,7 @@ function HRReportsPage() {
             '16px',
         }}
       >
-        {summaryCards.map((card) => (
-          <CompactSummaryCard
-            key={card.title}
-            title={card.title}
-            value={card.value}
-            color={card.color}
-          />
-        ))}
+        <InlineListSummary items={summaryCards} sx={{ gridColumn: '1 / -1', marginBottom: 0 }} />
       </Box>
 
       {/* Main Card */}

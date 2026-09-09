@@ -28,10 +28,11 @@ import {
 } from '@mui/material';
 
 import { ConfirmationDialog, DataListToolbar } from './shareduiprimitives.jsx';
-import { CompactSummaryCard } from './sharedvisualfoundation.jsx';
+import { InlineListSummary } from './sharedvisualfoundation.jsx';
 import RolePositionFormPage from './rolepositionformpage.jsx';
 
 import {
+  deletePosition,
   getPositions,
   updatePositionStatus,
 } from '../api/position-service.js';
@@ -153,6 +154,7 @@ function RolePositionManagementPage({
   const [page, setPage] = useState(0);
   const rowsPerPage = 5;
   const [disableTarget, setDisableTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [formDialog, setFormDialog] = useState({
     open: Boolean(initialFormMode),
     mode: initialFormMode || 'add',
@@ -334,9 +336,6 @@ function RolePositionManagementPage({
       value:
         positionSummary.total,
 
-      helper:
-        'ตำแหน่งในระบบทั้งหมด',
-
       color:
         '#2563EB',
     },
@@ -347,9 +346,6 @@ function RolePositionManagementPage({
 
       value:
         positionSummary.active,
-
-      helper:
-        'ตำแหน่งที่เปิดใช้งาน',
 
       color:
         '#059669',
@@ -362,9 +358,6 @@ function RolePositionManagementPage({
       value:
         positionSummary.inactive,
 
-      helper:
-        'ตำแหน่งที่ปิดใช้งาน',
-
       color:
         '#64748B',
     },
@@ -375,9 +368,6 @@ function RolePositionManagementPage({
 
       value:
         positionSummary.employees,
-
-      helper:
-        'จำนวนพนักงานที่ถูกกำหนดตำแหน่ง',
 
       color:
         '#2563EB',
@@ -454,6 +444,23 @@ function RolePositionManagementPage({
         setUpdatingId(null);
       }
     };
+
+  const handleDeletePosition = async () => {
+    if (!deleteTarget) return;
+    setUpdatingId(deleteTarget.id);
+    setLoadError('');
+    setActionMessage('');
+    try {
+      await deletePosition(deleteTarget.id);
+      setDeleteTarget(null);
+      await loadPositions();
+      setActionMessage(`ลบตำแหน่ง ${deleteTarget.positionName} เรียบร้อยแล้ว`);
+    } catch (error) {
+      setLoadError(error.response?.data?.message || 'ไม่สามารถลบตำแหน่งได้');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   /* =========================
      Action Menu
@@ -690,14 +697,7 @@ function RolePositionManagementPage({
             '16px',
         }}
       >
-        {summaryCards.map((card) => (
-          <CompactSummaryCard
-            key={card.title}
-            title={card.title}
-            value={card.value}
-            color={card.color}
-          />
-        ))}
+        <InlineListSummary items={summaryCards} sx={{ gridColumn: '1 / -1', marginBottom: 0 }} />
       </Box>
 
       {/* Main Card */}
@@ -1311,6 +1311,7 @@ function RolePositionManagementPage({
                               '1px solid #E5E7EB',
                           }}
                         >
+                          <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
                           <Button
                             type="button"
                             size="small"
@@ -1339,6 +1340,20 @@ function RolePositionManagementPage({
                           >
                             {isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}
                           </Button>
+                          {!isActive ? (
+                            <Button
+                              type="button"
+                              size="small"
+                              variant="contained"
+                              color="error"
+                              disabled={Number(updatingId) === Number(position.id)}
+                              onClick={(event) => { event.stopPropagation(); setDeleteTarget(position); }}
+                              sx={{ minWidth: '64px', height: '34px', boxShadow: 'none' }}
+                            >
+                              ลบ
+                            </Button>
+                          ) : null}
+                          </Box>
                         </TableCell>
                       </TableRow>
                     );
@@ -1474,6 +1489,15 @@ function RolePositionManagementPage({
         loading={Number(updatingId) === Number(disableTarget?.id)}
         onCancel={() => setDisableTarget(null)}
         onConfirm={async () => { const target = disableTarget; if (!target) return; await handleStatusChange(target); setDisableTarget(null); }}
+      />
+
+      <ConfirmationDialog
+        open={Boolean(deleteTarget)}
+        title="ยืนยันการลบตำแหน่ง"
+        description={`ต้องการลบตำแหน่ง ${deleteTarget?.positionName || ''} ใช่หรือไม่ ระบบจะลบได้เฉพาะตำแหน่งที่ไม่มีพนักงานอยู่`}
+        loading={Number(updatingId) === Number(deleteTarget?.id)}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleDeletePosition}
       />
 
       <Menu

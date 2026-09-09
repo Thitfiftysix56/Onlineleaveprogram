@@ -27,7 +27,7 @@ import { useNavigate } from 'react-router-dom';
 
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
 import RequestNumberText from '../../components/requestnumbertext.jsx';
-import { CompactSummaryCard, HeaderlessPageTopOffset } from '../../components/sharedvisualfoundation.jsx';
+import { HeaderlessPageTopOffset, InlineListSummary } from '../../components/sharedvisualfoundation.jsx';
 import { roleAccentTokens } from '../../theme/tokens.js';
 import api from '../../api/axios.js';
 
@@ -309,6 +309,7 @@ function SupervisorReportsPage() {
       pending: count('pending'),
       approved: count('approved'),
       rejected: count('rejected'),
+      cancelled: count('cancelled'),
     };
   }, [filteredRequests]);
 
@@ -325,41 +326,30 @@ function SupervisorReportsPage() {
     {
       title: 'คำขอทั้งหมด',
       value: summary.total,
-      backgroundColor: '#EFF6FF',
-      borderColor: '#BFDBFE',
-      gradient: 'linear-gradient(135deg, #EAF3FF 0%, #F7FAFF 68%, #FFFFFF 100%)',
-      glowColor: 'rgba(96, 165, 250, 0.18)',
-      accent: 'info',
+      color: '#2563EB',
     },
 
     {
       title: 'รออนุมัติ',
       value: summary.pending,
-      backgroundColor: '#FEF3C7',
-      borderColor: '#FCD34D',
-      gradient: 'linear-gradient(135deg, #FFFFFF 0%, #FFFBEB 45%, #FEF3C7 100%)',
-      glowColor: 'rgba(245, 158, 11, 0.16)',
-      accent: 'warning',
+      color: '#B45309',
     },
 
     {
       title: 'อนุมัติแล้ว',
       value: summary.approved,
-      backgroundColor: '#DCFCE7',
-      borderColor: '#86EFAC',
-      gradient: 'linear-gradient(135deg, #FFFFFF 0%, #F6FEF9 45%, #DCFCE7 100%)',
-      glowColor: 'rgba(34, 197, 94, 0.14)',
-      accent: 'success',
+      color: '#15803D',
     },
 
     {
       title: 'ปฏิเสธแล้ว',
       value: summary.rejected,
-      backgroundColor: '#FEE2E2',
-      borderColor: '#FCA5A5',
-      gradient: 'linear-gradient(135deg, #FFFFFF 0%, #FFF8F8 45%, #FEE2E2 100%)',
-      glowColor: 'rgba(239, 68, 68, 0.13)',
-      accent: 'error',
+      color: '#DC2626',
+    },
+    {
+      title: 'ยกเลิกแล้ว',
+      value: summary.cancelled,
+      color: '#64748B',
     },
   ];
 
@@ -385,32 +375,7 @@ function SupervisorReportsPage() {
         </Alert>
       )}
 
-      {/* Summary Cards */}
-      <Box
-        sx={{
-          display: 'grid',
-
-          gridTemplateColumns: {
-            xs: '1fr',
-            sm: 'repeat(2, 1fr)',
-            md: 'repeat(4, minmax(0, 1fr))',
-          },
-
-          gap: '16px',
-          marginBottom: '16px',
-        }}
-      >
-        {summaryCards.map((card) => (
-          <CompactSummaryCard
-            key={card.title}
-            title={card.title}
-            value={card.value}
-            color={card.accent === 'warning' ? '#B45309' : card.accent === 'success' ? '#15803D' : card.accent === 'error' ? '#DC2626' : '#2563EB'}
-            background={card.gradient}
-            glowColor={card.glowColor}
-          />
-        ))}
-      </Box>
+      <InlineListSummary items={summaryCards} />
 
       {/* รายงาน */}
       <Paper

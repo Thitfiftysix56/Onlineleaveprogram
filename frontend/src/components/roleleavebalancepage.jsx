@@ -446,9 +446,12 @@ function RoleLeaveBalancePage({
                 totalDays -
                 usedDays;
 
-              const availableDays =
-                remainingDays -
-                pendingDays;
+              const availableDays = Math.max(
+                balance.available === undefined || balance.available === null
+                  ? remainingDays - pendingDays
+                  : Number(balance.available),
+                0,
+              );
 
               return {
                 ...balance,
@@ -530,9 +533,6 @@ function RoleLeaveBalancePage({
       value:
         summary.totalDays,
 
-      description:
-        'จำนวนวันลาที่ได้รับ',
-
       backgroundColor:
         theme?.soft ||
         '#EFF6FF',
@@ -553,9 +553,6 @@ function RoleLeaveBalancePage({
       value:
         summary.usedDays,
 
-      description:
-        'จากคำขอที่อนุมัติแล้ว',
-
       backgroundColor:
         '#FFF1F2',
 
@@ -573,9 +570,6 @@ function RoleLeaveBalancePage({
       value:
         summary.pendingDays,
 
-      description:
-        'อยู่ระหว่างการพิจารณา',
-
       backgroundColor:
         '#FFFBEB',
 
@@ -592,9 +586,6 @@ function RoleLeaveBalancePage({
 
       value:
         summary.availableDays,
-
-      description:
-        'สามารถใช้ยื่นคำขอได้',
 
       backgroundColor:
         '#ECFDF5',
@@ -917,22 +908,6 @@ function RoleLeaveBalancePage({
                   วัน
                 </Typography>
 
-                <Typography
-                  sx={{
-                    color:
-                      '#9CA3AF',
-
-                    fontSize:
-                      '10px',
-
-                    marginTop:
-                      '2px',
-                  }}
-                >
-                  {
-                    card.description
-                  }
-                </Typography>
               </Box>
             </Paper>
           ),

@@ -54,6 +54,10 @@ test('audit action resolver maps important mutations and excludes controller-own
     action: 'update_user',
     recordId: 7,
   })
+  assert.deepEqual(resolveAuditAction('DELETE', '/api/admin/users/7'), {
+    action: 'delete_user',
+    recordId: 7,
+  })
   assert.deepEqual(resolveAuditAction('POST', '/api/leave/requests/12/submit'), {
     action: 'submit_leave',
     recordId: 12,
@@ -66,6 +70,18 @@ test('audit action resolver maps important mutations and excludes controller-own
   assert.deepEqual(resolveAuditAction('POST', '/api/admin/users'), {
     action: null,
     recordId: null,
+  })
+  assert.deepEqual(resolveAuditAction('DELETE', '/api/hr/employees/8'), {
+    action: 'delete_employee',
+    recordId: 8,
+  })
+  assert.deepEqual(resolveAuditAction('DELETE', '/api/hr/departments/4'), {
+    action: 'delete_department',
+    recordId: 4,
+  })
+  assert.deepEqual(resolveAuditAction('DELETE', '/api/hr/positions/6'), {
+    action: 'delete_position',
+    recordId: 6,
   })
 })
 

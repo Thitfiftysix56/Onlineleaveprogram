@@ -35,7 +35,7 @@ import api from '../../api/axios.js';
 import TemporaryPasswordDialog from '../../components/temporarypassworddialog.jsx';
 import UserFormPage from './userformpage.jsx';
 import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
-import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
+import { InlineListSummary } from '../../components/sharedvisualfoundation.jsx';
 
 /* =========================
    Options
@@ -289,6 +289,16 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
   const [
     resetConfirmationUser,
     setResetConfirmationUser,
+  ] = useState(null);
+
+  const [
+    deletingUserId,
+    setDeletingUserId,
+  ] = useState(null);
+
+  const [
+    deleteConfirmationUser,
+    setDeleteConfirmationUser,
   ] = useState(null);
 
   const [
@@ -588,9 +598,6 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
       value:
         userSummary.total,
 
-      helper:
-        'บัญชีในระบบทั้งหมด',
-
       color:
         '#2563EB',
     },
@@ -601,9 +608,6 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
 
       value:
         userSummary.active,
-
-      helper:
-        'บัญชีที่พร้อมใช้งาน',
 
       color:
         '#059669',
@@ -616,9 +620,6 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
       value:
         userSummary.inactive,
 
-      helper:
-        'บัญชีที่ปิดการใช้งาน',
-
       color:
         '#64748B',
     },
@@ -629,9 +630,6 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
 
       value:
         userSummary.locked,
-
-      helper:
-        'บัญชีที่ถูกล็อก',
 
       color:
         '#DC2626',
@@ -788,6 +786,29 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
         null,
       );
     };
+
+  const handleDeleteUser = async () => {
+    const selectedUser = deleteConfirmationUser;
+    if (!selectedUser || deletingUserId !== null) return;
+
+    setDeletingUserId(selectedUser.id);
+    try {
+      const response = await api.delete(`/admin/users/${selectedUser.id}`);
+      if (response.data?.status !== 'ok') {
+        throw new Error(response.data?.message || 'ไม่สามารถลบบัญชีผู้ใช้ได้');
+      }
+      setDeleteConfirmationUser(null);
+      showMessage('ลบบัญชีผู้ใช้เรียบร้อยแล้ว', 'success');
+      await loadUsers();
+    } catch (error) {
+      showMessage(
+        error.response?.data?.message || error.message || 'ไม่สามารถลบบัญชีผู้ใช้ได้',
+        'error',
+      );
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
 
   /* =========================
      UI
@@ -979,14 +1000,7 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
             '16px',
         }}
       >
-        {summaryCards.map((card) => (
-          <CompactSummaryCard
-            key={card.title}
-            title={card.title}
-            value={card.value}
-            color={card.color}
-          />
-        ))}
+        <InlineListSummary items={summaryCards} sx={{ gridColumn: '1 / -1', marginBottom: 0 }} />
       </Box>
 
       {/* User List */}
@@ -1657,30 +1671,45 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
                               '1px solid #E5E7EB',
                           }}
                         >
-                          <Button
-                            type="button"
-                            size="small"
-                            variant="outlined"
-                            onClick={(event) => { event.stopPropagation(); handleOpenResetConfirmation(user); }}
-                            disabled={
-                              resettingPasswordUserId !==
-                              null
-                            }
-                            sx={{
-                              minWidth: '118px',
-                              height: '34px',
-                              color: '#1D4ED8',
-                              borderColor: '#BFDBFE',
-                              borderRadius: '8px',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              whiteSpace: 'nowrap',
-                              textTransform: 'none',
-                              '&:hover': { backgroundColor: '#EFF6FF', borderColor: '#93C5FD' },
-                            }}
-                          >
-                            รีเซ็ตรหัสผ่าน
-                          </Button>
+                          <Box sx={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                            <Button
+                              type="button"
+                              size="small"
+                              variant="outlined"
+                              onClick={(event) => { event.stopPropagation(); handleOpenResetConfirmation(user); }}
+                              disabled={resettingPasswordUserId !== null || user.status === 'Inactive'}
+                              sx={{
+                                minWidth: '118px',
+                                height: '34px',
+                                color: '#1D4ED8',
+                                borderColor: '#BFDBFE',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                whiteSpace: 'nowrap',
+                                textTransform: 'none',
+                                '&:hover': { backgroundColor: '#EFF6FF', borderColor: '#93C5FD' },
+                              }}
+                            >
+                              รีเซ็ตรหัสผ่าน
+                            </Button>
+                            {user.status === 'Inactive' ? (
+                              <Button
+                                type="button"
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setDeleteConfirmationUser(user);
+                                }}
+                                disabled={deletingUserId !== null}
+                                sx={{ minWidth: '64px', height: '34px', borderRadius: '8px', fontWeight: 700 }}
+                              >
+                                ลบ
+                              </Button>
+                            ) : null}
+                          </Box>
                         </TableCell>
                       </TableRow>
                     );
@@ -1920,6 +1949,45 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
           }}
         />
       ) : null}
+
+      <Dialog
+        open={Boolean(deleteConfirmationUser)}
+        fullWidth
+        maxWidth="xs"
+        onClose={() => {
+          if (deletingUserId === null) setDeleteConfirmationUser(null);
+        }}
+        PaperProps={{ sx: { borderRadius: '14px' } }}
+      >
+        <DialogTitle sx={{ color: '#B91C1C', fontSize: '20px', fontWeight: 800 }}>
+          ยืนยันการลบบัญชีผู้ใช้
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: '#475569', fontSize: '14px', lineHeight: 1.7 }}>
+            ต้องการลบบัญชี <strong>{deleteConfirmationUser?.username}</strong> ใช่หรือไม่
+            หลังลบแล้วพนักงานจะไม่สามารถเข้าสู่ระบบด้วยบัญชีนี้ได้
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ padding: '16px 24px', gap: '8px' }}>
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={() => setDeleteConfirmationUser(null)}
+            disabled={deletingUserId !== null}
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            type="button"
+            variant="contained"
+            color="error"
+            onClick={handleDeleteUser}
+            disabled={deletingUserId !== null}
+          >
+            {deletingUserId !== null ? 'กำลังลบ...' : 'ยืนยันการลบ'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Reset Password Confirmation */}
 

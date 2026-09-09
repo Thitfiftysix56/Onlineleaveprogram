@@ -394,27 +394,24 @@ function HRDashboardPage() {
       title: 'พนักงานทั้งหมด',
       value: employees.length,
       unit: 'คน',
-      description: 'พนักงานทั้งหมดในระบบ',
       color: '#2563EB',
       background: 'linear-gradient(135deg, #EAF3FF 0%, #FFFFFF 78%)',
       borderColor: '#C9DDFB',
       glowColor: 'rgba(59, 130, 246, 0.10)',
     },
     {
-      title: 'พนักงานที่ใช้งานอยู่',
+      title: 'พนักงานสถานะปฏิบัติงาน',
       value: activeEmployees.length,
       unit: 'คน',
-      description: 'พนักงานที่มีสถานะใช้งาน',
       color: '#15803D',
       background: 'linear-gradient(135deg, #E5F9EE 0%, #FFFFFF 78%)',
       borderColor: '#A7E8C3',
       glowColor: 'rgba(34, 197, 94, 0.10)',
     },
     {
-      title: 'ประเภทการลาที่ใช้งาน',
+      title: 'ประเภทการลา',
       value: activeLeaveTypes.length,
       unit: 'ประเภท',
-      description: 'ประเภทลาที่เปิดใช้งาน',
       color: '#7C3AED',
       background: 'linear-gradient(135deg, #F3E8FF 0%, #FFFFFF 78%)',
       borderColor: '#DDD6FE',
@@ -424,7 +421,6 @@ function HRDashboardPage() {
       title: 'วันหยุดปีนี้',
       value: currentYearHolidays.length,
       unit: 'วัน',
-      description: `วันหยุดองค์กรปี ${currentYear}`,
       color: '#D97706',
       background: 'linear-gradient(135deg, #FFF6D8 0%, #FFFFFF 78%)',
       borderColor: '#F6D66B',
@@ -438,30 +434,6 @@ function HRDashboardPage() {
 
   return (
     <HRLayout activeMenu="Dashboard">
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
-          <Button
-            type="button"
-            variant="contained"
-            startIcon={<AddRounded />}
-            onClick={() => navigate('/hr/leave-request', { state: { returnTo: '/hr/dashboard' } })}
-            sx={{
-              height: '40px',
-              padding: '0 16px',
-              borderRadius: '9px',
-              backgroundColor: '#2563EB',
-              boxShadow: 'none',
-              fontSize: '13px',
-              fontWeight: 800,
-              textTransform: 'none',
-              '&:hover': {
-                backgroundColor: '#1D4ED8',
-                boxShadow: 'none',
-              },
-            }}
-          >
-            สร้างคำขอลา
-          </Button>
-      </Box>
       {/* Header */}
       <Typography
         component="h1"

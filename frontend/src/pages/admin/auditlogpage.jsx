@@ -33,7 +33,7 @@ import {
 import CloseRounded from '@mui/icons-material/CloseRounded';
 
 import AdminLayout from '../../layouts/adminlayout.jsx';
-import { CompactSummaryCard, HeaderlessPageTopOffset } from '../../components/sharedvisualfoundation.jsx';
+import { HeaderlessPageTopOffset, InlineListSummary } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 import {
   formatAuditActivity,
@@ -391,6 +391,9 @@ const _translateAction = (
     UPDATE_EMPLOYEE:
       'แก้ไขข้อมูลพนักงาน',
 
+    DELETE_EMPLOYEE:
+      'ลบพนักงาน',
+
     UPDATE_ENTITLEMENT:
       'อัปเดตสิทธิ์การลา',
 
@@ -400,11 +403,17 @@ const _translateAction = (
     UPDATE_DEPARTMENT:
       'แก้ไขข้อมูลแผนก',
 
+    DELETE_DEPARTMENT:
+      'ลบแผนก',
+
     CREATE_POSITION:
       'เพิ่มตำแหน่ง',
 
     UPDATE_POSITION:
       'แก้ไขข้อมูลตำแหน่ง',
+
+    DELETE_POSITION:
+      'ลบตำแหน่ง',
 
     UPLOAD_ATTACHMENT:
       'อัปโหลดเอกสาร',
@@ -949,7 +958,7 @@ function AuditLogPage() {
         'Authentication',
 
       label:
-        'การเข้าสู่ระบบ',
+        'บัญชีและการเข้าสู่ระบบ',
 
       actions: [
         'LOGIN',
@@ -985,7 +994,7 @@ function AuditLogPage() {
         'Leave Request',
 
       label:
-        'คำขอลา',
+        'คำขอลาและการอนุมัติ',
 
       actions: [
           'CREATE_LEAVE',
@@ -1012,6 +1021,7 @@ function AuditLogPage() {
           'CREATE_EMPLOYEE',
           'UPDATE_EMPLOYEE',
           'UPDATE_EMPLOYEE_STATUS',
+          'DELETE_EMPLOYEE',
           'UPDATE_ENTITLEMENT',
           'CREATE_LEAVE_ENTITLEMENT',
           'UPDATE_LEAVE_ENTITLEMENT',
@@ -1032,9 +1042,11 @@ function AuditLogPage() {
           'CREATE_DEPARTMENT',
           'UPDATE_DEPARTMENT',
           'UPDATE_DEPARTMENT_STATUS',
+          'DELETE_DEPARTMENT',
           'CREATE_POSITION',
           'UPDATE_POSITION',
           'UPDATE_POSITION_STATUS',
+          'DELETE_POSITION',
           'CREATE_HOLIDAY',
           'UPDATE_HOLIDAY',
           'DELETE_HOLIDAY',
@@ -1219,9 +1231,6 @@ function AuditLogPage() {
       value:
         summary.total,
 
-      helper:
-        'กิจกรรมที่บันทึกในระบบ',
-
       color:
         '#0891B2',
     },
@@ -1233,40 +1242,10 @@ function AuditLogPage() {
       value:
         summary.today,
 
-      helper:
-        'รายการที่เกิดขึ้นวันนี้',
-
       color:
         '#2563EB',
     },
 
-    {
-      title:
-        'การเข้าสู่ระบบ',
-
-      value:
-        summary.authentication,
-
-      helper:
-        'การเข้าสู่ระบบและออกจากระบบ',
-
-      color:
-        '#7C3AED',
-    },
-
-    {
-      title:
-        'กิจกรรมผู้ดูแล',
-
-      value:
-        summary.admin,
-
-      helper:
-        'รายการที่ดำเนินการโดย Admin',
-
-      color:
-        '#059669',
-    },
   ];
 
   /* =========================
@@ -1342,7 +1321,7 @@ function AuditLogPage() {
               'repeat(2, minmax(0, 1fr))',
 
             md:
-              'repeat(4, minmax(0, 1fr))',
+              'repeat(2, minmax(0, 1fr))',
           },
 
           gap:
@@ -1350,16 +1329,11 @@ function AuditLogPage() {
 
           marginBottom:
             '16px',
+          maxWidth: '760px',
+          marginRight: 'auto',
         }}
       >
-        {summaryCards.map((card) => (
-          <CompactSummaryCard
-            key={card.title}
-            title={card.title}
-            value={card.value}
-            color={card.color}
-          />
-        ))}
+        <InlineListSummary items={summaryCards} sx={{ gridColumn: '1 / -1', marginBottom: 0 }} />
       </Box>
 
       {loadError ? (
@@ -1689,54 +1663,27 @@ function AuditLogPage() {
                         >
                           <Typography
                             sx={{
-                              color:
-                                '#111827',
-
-                              fontSize:
-                                '11px',
-
-                              fontWeight:
-                                600,
-
-                              lineHeight:
-                                1.4,
-
-                              wordBreak:
-                                'break-word',
-
-                              textAlign:
-                                'left',
+                              color: '#111827',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              lineHeight: 1.4,
+                              wordBreak: 'break-word',
+                              textAlign: 'left',
                             }}
                           >
-                            {
-                              log.username
-                            }
+                            {log.username}
                           </Typography>
-
                           <Typography
                             sx={{
-                              color:
-                                '#94A3B8',
-
-                              fontSize:
-                                '9.5px',
-
-                              lineHeight:
-                                1.35,
-
-                              marginTop:
-                                '3px',
-
-                              wordBreak:
-                                'break-word',
-
-                              textAlign:
-                                'left',
+                              color: '#94A3B8',
+                              fontSize: '9.5px',
+                              lineHeight: 1.35,
+                              marginTop: '3px',
+                              wordBreak: 'break-word',
+                              textAlign: 'left',
                             }}
                           >
-                            {
-                              log.employeeName
-                            }
+                            {log.employeeName}
                           </Typography>
                         </TableCell>
 
@@ -1758,35 +1705,17 @@ function AuditLogPage() {
                             )}
                             size="small"
                             sx={{
-                              maxWidth:
-                                '100%',
-
-                              height:
-                                '26px',
-
-                              backgroundColor:
-                                roleStyle.backgroundColor,
-
-                              color:
-                                roleStyle.color,
-
-                              borderRadius:
-                                '999px',
-
-                              fontSize:
-                                '8.5px',
-
-                              fontWeight:
-                                700,
-
-                              '& .MuiChip-label':
-                                {
-                                  paddingLeft:
-                                    '7px',
-
-                                  paddingRight:
-                                    '7px',
-                                },
+                              maxWidth: '100%',
+                              height: '26px',
+                              backgroundColor: roleStyle.backgroundColor,
+                              color: roleStyle.color,
+                              borderRadius: '999px',
+                              fontSize: '8.5px',
+                              fontWeight: 700,
+                              '& .MuiChip-label': {
+                                paddingLeft: '7px',
+                                paddingRight: '7px',
+                              },
                             }}
                           />
                         </TableCell>
@@ -1809,47 +1738,21 @@ function AuditLogPage() {
                             )}
                             size="small"
                             sx={{
-                              maxWidth:
-                                '100%',
-
-                              height:
-                                '26px',
-
-                              backgroundColor:
-                                actionStyle.backgroundColor,
-
-                              color:
-                                actionStyle.color,
-
-                              borderRadius:
-                                '999px',
-
-                              fontSize:
-                                '8.5px',
-
-                              fontWeight:
-                                700,
-
-                              '& .MuiChip-label':
-                                {
-                                  display:
-                                    'block',
-
-                                  overflow:
-                                    'hidden',
-
-                                  textOverflow:
-                                    'ellipsis',
-
-                                  paddingLeft:
-                                    '7px',
-
-                                  paddingRight:
-                                    '7px',
-                                },
-
-                              marginInline:
-                                0,
+                              maxWidth: '100%',
+                              height: '26px',
+                              backgroundColor: actionStyle.backgroundColor,
+                              color: actionStyle.color,
+                              borderRadius: '999px',
+                              fontSize: '8.5px',
+                              fontWeight: 700,
+                              '& .MuiChip-label': {
+                                display: 'block',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                paddingLeft: '7px',
+                                paddingRight: '7px',
+                              },
+                              marginInline: 0,
                             }}
                           />
                         </TableCell>

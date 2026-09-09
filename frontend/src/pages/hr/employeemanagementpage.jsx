@@ -31,7 +31,6 @@ import {
 
 import HRLayout from '../../layouts/hrlayout.jsx';
 import { ConfirmationDialog, DataListToolbar } from '../../components/shareduiprimitives.jsx';
-import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 
 const theme = {
@@ -215,6 +214,8 @@ function EmployeeManagementPage() {
   const [page, setPage] = useState(0);
   const rowsPerPage = 5;
   const [disableTarget, setDisableTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteDialogError, setDeleteDialogError] = useState('');
 
   const [
     statusFilter,
@@ -365,68 +366,6 @@ function EmployeeManagementPage() {
   useEffect(() => { setPage(0); }, [searchText, departmentFilter, statusFilter]);
 
   /* =========================
-     Summary
-  ========================= */
-
-  const activeCount =
-    employees.filter(
-      (employee) =>
-        employee.status ===
-        'active',
-    ).length;
-
-  const inactiveCount =
-    employees.filter(
-      (employee) =>
-        employee.status ===
-        'inactive',
-    ).length;
-
-  const summaryCards = [
-    {
-      title:
-        'พนักงานทั้งหมด',
-
-      value:
-        employees.length,
-
-      backgroundColor:
-        theme.soft,
-
-      color:
-        '#2563EB',
-    },
-
-    {
-      title:
-        'ใช้งานอยู่',
-
-      value:
-        activeCount,
-
-      backgroundColor:
-        '#DCFCE7',
-
-      color:
-        '#15803D',
-    },
-
-    {
-      title:
-        'ไม่ใช้งาน',
-
-      value:
-        inactiveCount,
-
-      backgroundColor:
-        '#FEE2E2',
-
-      color:
-        '#BE123C',
-    },
-  ];
-
-  /* =========================
      Actions
   ========================= */
 
@@ -513,6 +452,31 @@ function EmployeeManagementPage() {
         setUpdatingId(null);
       }
     };
+
+  const handleDeleteEmployee = async () => {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setUpdatingId(target.id);
+    setError('');
+    setActionMessage('');
+    setDeleteDialogError('');
+    try {
+      await api.delete(`/hr/employees/${target.id}`);
+      setDeleteTarget(null);
+      await loadEmployees();
+      setActionMessage(`ลบพนักงาน ${target.fullName} เรียบร้อยแล้ว`);
+    } catch (deleteError) {
+      const reason = deleteError.response?.data?.message || 'ไม่สามารถลบพนักงานได้';
+      const actionableMessage = reason.includes('บัญชีผู้ใช้')
+        ? 'ลบพนักงานไม่ได้ เนื่องจากยังมีบัญชีผู้ใช้เชื่อมอยู่ กรุณาให้ผู้ดูแลระบบปิดใช้งานและลบบัญชีผู้ใช้ก่อน แล้วจึงลองลบพนักงานอีกครั้ง'
+        : `ลบพนักงานไม่ได้: ${reason}`;
+      setDeleteTarget(null);
+      setDeleteDialogError('');
+      setError(actionableMessage);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   /* =========================
      UI
@@ -651,35 +615,6 @@ function EmployeeManagementPage() {
           {actionMessage}
         </Alert>
       )}
-
-      {/* Summary Cards */}
-
-      <Box
-        sx={{
-          display: 'grid',
-
-          gridTemplateColumns: {
-            xs: '1fr',
-
-            sm:
-              'repeat(3, minmax(0, 1fr))',
-          },
-
-          gap: '16px',
-
-          marginBottom:
-            '16px',
-        }}
-      >
-        {summaryCards.map((card) => (
-          <CompactSummaryCard
-            key={card.title}
-            title={card.title}
-            value={card.value}
-            color={card.color}
-          />
-        ))}
-      </Box>
 
       {/* Main Card */}
 
@@ -1219,6 +1154,19 @@ function EmployeeManagementPage() {
                             {employee.status !== 'resigned' ? (
                               <Button type="button" size="small" variant="outlined" disabled={updatingId === employee.id} onClick={(event) => { event.stopPropagation(); if (employee.status === 'active') setDisableTarget(employee); else handleToggleStatus(employee); }} sx={{ color: employee.status === 'active' ? '#DC2626' : '#15803D', borderColor: employee.status === 'active' ? '#FECACA' : '#BBF7D0', '&:hover': { backgroundColor: employee.status === 'active' ? '#FEF2F2' : '#F0FDF4' } }}>{updatingId === employee.id ? 'กำลังบันทึก...' : employee.status === 'active' ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}</Button>
                             ) : null}
+                            {employee.status !== 'active' ? (
+                              <Button
+                                type="button"
+                                size="small"
+                                variant="contained"
+                                color="error"
+                                disabled={updatingId === employee.id}
+                                onClick={(event) => { event.stopPropagation(); setDeleteDialogError(''); setDeleteTarget(employee); }}
+                                sx={{ boxShadow: 'none' }}
+                              >
+                                ลบ
+                              </Button>
+                            ) : null}
                           </Box>
                         </TableCell>
                       </TableRow>
@@ -1328,6 +1276,18 @@ function EmployeeManagementPage() {
         )}
       </Paper>
       <ConfirmationDialog open={Boolean(disableTarget)} title="ยืนยันการปิดใช้งานพนักงาน" description={`ต้องการปิดใช้งาน ${disableTarget?.fullName || disableTarget?.name || ''} ใช่หรือไม่`} loading={updatingId === disableTarget?.id} onCancel={() => setDisableTarget(null)} onConfirm={async () => { const target = disableTarget; if (!target) return; await handleToggleStatus(target); setDisableTarget(null); }} />
+      <ConfirmationDialog
+        open={Boolean(deleteTarget)}
+        title="ยืนยันการลบพนักงาน"
+        description={deleteDialogError
+          ? `ลบไม่สำเร็จ: ${deleteDialogError}`
+          : `ต้องการลบ ${deleteTarget?.fullName || ''} ใช่หรือไม่ ระบบจะลบได้เมื่อปิดใช้งานแล้ว และไม่มีบัญชี ประวัติคำขอลา หรือพนักงานใต้บังคับบัญชาอ้างอิงอยู่`}
+        confirmLabel="ลบพนักงาน"
+        loadingLabel="กำลังลบ..."
+        loading={updatingId === deleteTarget?.id}
+        onCancel={() => { setDeleteTarget(null); setDeleteDialogError(''); }}
+        onConfirm={handleDeleteEmployee}
+      />
     </HRLayout>
   );
 }

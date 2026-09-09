@@ -108,6 +108,9 @@ const getCategoryFromType = (type) => {
     'employee-created':
       'Employee',
 
+    'employee-account-required':
+      'Account',
+
     'employee-updated':
       'Employee',
 
@@ -127,6 +130,9 @@ const getCategoryFromType = (type) => {
       'Account',
 
     'account-updated':
+      'Account',
+
+    'user-account-deleted':
       'Account',
 
     'password-reset':
@@ -954,7 +960,6 @@ function RoleNotificationPage({
 
   theme,
   visualCalibration = true,
-  summaryTotalColor,
 }) {
   const navigate = useNavigate();
   const [
@@ -1251,12 +1256,6 @@ function RoleNotificationPage({
         !notification.isRead,
     ).length;
 
-  const readCount =
-    notifications.filter(
-      (notification) =>
-        notification.isRead,
-    ).length;
-
   const todayCount =
     useMemo(() => {
       const today =
@@ -1543,21 +1542,6 @@ function RoleNotificationPage({
   const summaryCards = [
     {
       title:
-        'การแจ้งเตือนทั้งหมด',
-
-      value:
-        notifications.length,
-
-      color:
-        summaryTotalColor ||
-        theme?.primary ||
-        '#2563EB',
-      backgroundColor: '#F2F6FC',
-      borderColor: '#CCDDF3',
-    },
-
-    {
-      title:
         'ยังไม่ได้อ่าน',
 
       value:
@@ -1567,19 +1551,6 @@ function RoleNotificationPage({
         '#DC2626',
       backgroundColor: '#FCF4F3',
       borderColor: '#EFCFCB',
-    },
-
-    {
-      title:
-        'อ่านแล้ว',
-
-      value:
-        readCount,
-
-      color:
-        '#059669',
-      backgroundColor: '#F2FAF5',
-      borderColor: '#CDEBD7',
     },
 
     {
@@ -1710,13 +1681,6 @@ function RoleNotificationPage({
           }}
         >
           {[
-            {
-              label: 'ทั้งหมด',
-              value: notifications.length,
-              color:
-                theme?.primary ||
-                '#2563EB',
-            },
             {
               label: 'ยังไม่ได้อ่าน',
               value: unreadCount,

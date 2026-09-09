@@ -16,7 +16,7 @@ function TemporaryPasswordDialog({
   username,
   temporaryPassword,
   onClose,
-  title = 'Temporary Password Generated',
+  title = 'สร้างรหัสผ่านชั่วคราวเรียบร้อยแล้ว',
 }) {
   const [copied, setCopied] =
     useState(false);
@@ -33,14 +33,14 @@ function TemporaryPasswordDialog({
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(
-        temporaryPassword,
+        `ชื่อผู้ใช้: ${username}\nรหัสผ่านชั่วคราว: ${temporaryPassword}`,
       );
       setCopied(true);
       setCopyError('');
     } catch {
       setCopied(false);
       setCopyError(
-        'Unable to copy automatically. Please select and copy the password manually.',
+        'ไม่สามารถคัดลอกอัตโนมัติได้ กรุณาเลือกและคัดลอกข้อมูลด้วยตนเอง',
       );
     }
   };
@@ -66,7 +66,7 @@ function TemporaryPasswordDialog({
           severity="warning"
           sx={{ marginBottom: '20px' }}
         >
-          This password is shown only once. Copy it now and send it to the user through a secure channel.
+          รหัสผ่านชั่วคราวจะแสดงเพียงครั้งเดียว กรุณาคัดลอกและส่งให้พนักงานผ่านช่องทางที่ปลอดภัยก่อนปิดหน้าต่างนี้
         </Alert>
 
         {copyError && (
@@ -86,7 +86,7 @@ function TemporaryPasswordDialog({
             textTransform: 'uppercase',
           }}
         >
-          Username
+          ชื่อผู้ใช้
         </Typography>
         <Typography
           sx={{
@@ -102,7 +102,7 @@ function TemporaryPasswordDialog({
 
         <TextField
           fullWidth
-          label="Temporary Password"
+          label="รหัสผ่านชั่วคราว"
           value={temporaryPassword}
           slotProps={{
             htmlInput: {
@@ -137,7 +137,7 @@ function TemporaryPasswordDialog({
               fontWeight: 700,
             }}
           >
-            Copy Password
+            คัดลอกข้อมูลเข้าสู่ระบบ
           </Button>
 
           {copied && (
@@ -149,7 +149,7 @@ function TemporaryPasswordDialog({
                 fontWeight: 800,
               }}
             >
-              Copied
+              คัดลอกแล้ว
             </Typography>
           )}
         </Box>
@@ -162,7 +162,7 @@ function TemporaryPasswordDialog({
             marginTop: '20px',
           }}
         >
-          The user must change this temporary password immediately after signing in. Closing this dialog permanently clears it from this page.
+          พนักงานต้องเปลี่ยนรหัสผ่านชั่วคราวทันทีเมื่อเข้าสู่ระบบครั้งแรก เมื่อปิดหน้าต่างนี้ ระบบจะไม่แสดงรหัสผ่านดังกล่าวอีก
         </Typography>
       </DialogContent>
 
@@ -182,7 +182,7 @@ function TemporaryPasswordDialog({
             },
           }}
         >
-          Close
+          ปิด
         </Button>
       </DialogActions>
     </Dialog>

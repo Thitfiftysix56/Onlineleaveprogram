@@ -369,11 +369,11 @@ function RejectModalPage() {
                     value: leaveRequest.totalDays,
                   },
                   {
-                    label: 'Start Date',
+                    label: 'วันที่เริ่มลา',
                     value: leaveRequest.startDate,
                   },
                   {
-                    label: 'End Date',
+                    label: 'วันที่สิ้นสุด',
                     value: leaveRequest.endDate,
                   },
                 ].map((item) => (
@@ -710,7 +710,7 @@ function RejectModalPage() {
             multiline
             minRows={5}
             label="Rejection Reason"
-            placeholder="Explain why this leave request is being rejected"
+            placeholder="ระบุเหตุผลที่ไม่อนุมัติคำขอนี้"
             value={rejectionReason}
             onChange={handleRejectionReasonChange}
             error={Boolean(rejectionReasonError)}
