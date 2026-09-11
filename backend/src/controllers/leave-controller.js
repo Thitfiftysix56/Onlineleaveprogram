@@ -182,6 +182,26 @@ export async function calculateWorkingDays(connection, startDate, endDate) {
   return total
 }
 
+export async function validateLeaveBoundaryDates(connection, startDate, endDate) {
+  for (const [label, dateValue] of [['วันเริ่มลา', startDate], ['วันสิ้นสุดการลา', endDate]]) {
+    const dayOfWeek = new Date(`${dateValue}T00:00:00Z`).getUTCDay()
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      return `${label}ต้องไม่เป็นวันหยุดสุดสัปดาห์`
+    }
+  }
+
+  const [holidays] = await connection.execute(
+    `SELECT holiday_date, holiday_name
+     FROM holidays
+     WHERE is_active = 1 AND holiday_date IN (?, ?)`,
+    [startDate, endDate],
+  )
+  const holidayByDate = new Map(holidays.map((holiday) => [dateOnly(holiday.holiday_date), holiday.holiday_name]))
+  if (holidayByDate.has(startDate)) return `วันเริ่มลาเป็นวันหยุด: ${holidayByDate.get(startDate)}`
+  if (holidayByDate.has(endDate)) return `วันสิ้นสุดการลาเป็นวันหยุด: ${holidayByDate.get(endDate)}`
+  return null
+}
+
 async function validate(connection, employeeId, body, currentId = 0, submitting = false) {
   const leaveTypeId = positiveId(body.leaveTypeId)
   const startDate = date(body.startDate); const endDate = date(body.endDate)
@@ -199,6 +219,8 @@ async function validate(connection, employeeId, body, currentId = 0, submitting 
   if (!types.length) return { error: 'ประเภทการลาที่เลือกไม่ถูกต้องหรือถูกปิดใช้งาน' }
   const startDatePolicyError = validateLeaveStartDatePolicy(startDate, types[0])
   if (startDatePolicyError) return { error: startDatePolicyError }
+  const boundaryDateError = await validateLeaveBoundaryDates(connection, startDate, endDate)
+  if (boundaryDateError) return { error: boundaryDateError }
   const days = await calculateWorkingDays(connection, startDate, endDate)
   if (!days) return { error: 'ช่วงวันที่เลือกไม่มีวันทำงานที่สามารถใช้สิทธิ์ลาได้' }
   const type = types[0]
@@ -246,8 +268,8 @@ export async function options(request, response) {
     le.total_days, le.used_days, COALESCE(SUM(CASE WHEN lr.status='pending' THEN lr.leave_days ELSE 0 END),0) pending_days
     FROM leave_types lt LEFT JOIN leave_entitlements le ON le.leave_type_id=lt.leave_type_id AND le.employee_id=? AND le.year=?
     LEFT JOIN leave_requests lr ON lr.employee_id=? AND lr.leave_type_id=lt.leave_type_id AND YEAR(lr.start_date)=? WHERE lt.is_active=1 GROUP BY lt.leave_type_id, le.entitlement_id ORDER BY lt.leave_type_name`, [employeeId, year, employeeId, year])
-  const [holidays] = await pool.execute('SELECT holiday_id, holiday_date, holiday_name FROM holidays WHERE is_active=1 AND year=? ORDER BY holiday_date', [year])
-  response.json({ status: 'ok', data: { leaveTypes: types.map((x) => ({ id:x.leave_type_id, leaveTypeId:x.leave_type_id, code:x.leave_type_code, name:x.leave_type_name, status:'Active', minimumDays:Number(x.minimum_days), maximumDaysPerRequest:Number(x.maximum_days_per_request), requiresAttachment:Boolean(x.requires_attachment), attachmentRequiredAfterDays:Number(x.attachment_required_after_days), totalDays:Number(x.total_days||0), usedDays:Number(x.used_days||0), pendingDays:Number(x.pending_days||0), remainingDays:calculateDisplayedRemaining(x), availableDays:calculateRequestAvailability(x), hasEntitlement:Boolean(x.total_days!==null) })), holidays: holidays.map((x)=>({ id:x.holiday_id, date:String(x.holiday_date).slice(0,10), name:x.holiday_name })) } })
+  const [holidays] = await pool.execute('SELECT holiday_id, holiday_date, holiday_name FROM holidays WHERE is_active=1 AND YEAR(holiday_date)=? ORDER BY holiday_date', [year])
+  response.json({ status: 'ok', data: { leaveTypes: types.map((x) => ({ id:x.leave_type_id, leaveTypeId:x.leave_type_id, code:x.leave_type_code, name:x.leave_type_name, status:'Active', minimumDays:Number(x.minimum_days), maximumDaysPerRequest:Number(x.maximum_days_per_request), requiresAttachment:Boolean(x.requires_attachment), attachmentRequiredAfterDays:Number(x.attachment_required_after_days), totalDays:Number(x.total_days||0), usedDays:Number(x.used_days||0), pendingDays:Number(x.pending_days||0), remainingDays:calculateDisplayedRemaining(x), availableDays:calculateRequestAvailability(x), hasEntitlement:Boolean(x.total_days!==null) })), holidays: holidays.map((x)=>({ id:x.holiday_id, date:dateOnly(x.holiday_date), name:x.holiday_name })) } })
 }
 
 export async function listOwn(request, response) {
@@ -282,7 +304,82 @@ async function save(request,response,submitting) {
   } catch(e){await connection.rollback(); console.error(e); error(response,500,'ไม่สามารถบันทึกคำขอลาได้ กรุณาลองใหม่อีกครั้ง')} finally {connection.release()} }
 
 export async function deleteDraft(request,response){const employeeId=await identity(pool,request);const [result]=await pool.execute(`DELETE FROM leave_requests WHERE leave_request_id=? AND employee_id=? AND status='draft'`,[positiveId(request.params.requestId),employeeId]);if(!result.affectedRows)return error(response,409,'ลบได้เฉพาะแบบร่างของตนเองเท่านั้น');response.json({status:'ok',message:'ลบแบบร่างเรียบร้อยแล้ว'})}
-export async function cancelOwn(request,response){const employeeId=await identity(pool,request);const [result]=await pool.execute(`UPDATE leave_requests SET status='cancelled',cancelled_at=NOW() WHERE leave_request_id=? AND employee_id=? AND status='pending'`,[positiveId(request.params.requestId),employeeId]);if(!result.affectedRows)return error(response,409,'ยกเลิกได้เฉพาะคำขอของตนเองที่กำลังรออนุมัติเท่านั้น');response.json({status:'ok',message:'ยกเลิกคำขอลาเรียบร้อยแล้ว'})}
+export async function cancelOwn(request, response) {
+  const connection = await pool.getConnection()
+  try {
+    await connection.beginTransaction()
+    const employeeId = await identity(connection, request)
+    const requestId = positiveId(request.params.requestId)
+    const [rows] = await connection.execute(
+      `SELECT lr.leave_request_id, lr.request_no, lr.status, e.supervisor_id,
+              LOWER(owner_role.role_name) AS owner_role_name
+       FROM leave_requests lr
+       JOIN employees e ON e.employee_id = lr.employee_id
+       JOIN users owner_user ON owner_user.employee_id = e.employee_id
+       JOIN roles owner_role ON owner_role.role_id = owner_user.role_id
+       WHERE lr.leave_request_id = ? AND lr.employee_id = ?
+       LIMIT 1 FOR UPDATE`,
+      [requestId, employeeId],
+    )
+    const leaveRequest = rows[0]
+    if (!leaveRequest || leaveRequest.status !== 'pending') {
+      return rollbackError(connection, response, 409, 'ยกเลิกได้เฉพาะคำขอของตนเองที่กำลังรออนุมัติเท่านั้น')
+    }
+
+    let approverUsers = []
+    if (leaveRequest.owner_role_name === 'supervisor') {
+      const [users] = await connection.execute(
+        `SELECT u.user_id
+         FROM users u
+         JOIN roles r ON r.role_id = u.role_id
+         JOIN employees e ON e.employee_id = u.employee_id
+         WHERE LOWER(r.role_name) = 'hr'
+           AND LOWER(u.status) = 'active'
+           AND LOWER(e.status) = 'active'`,
+      )
+      approverUsers = users
+    } else {
+      const [users] = await connection.execute(
+        `SELECT u.user_id
+         FROM users u
+         JOIN roles r ON r.role_id = u.role_id
+         JOIN employees e ON e.employee_id = u.employee_id
+         WHERE e.employee_id = ?
+           AND LOWER(r.role_name) = 'supervisor'
+           AND LOWER(u.status) = 'active'
+           AND LOWER(e.status) = 'active'`,
+        [leaveRequest.supervisor_id],
+      )
+      approverUsers = users
+    }
+
+    await connection.execute(
+      `UPDATE leave_requests
+       SET status = 'cancelled', cancelled_at = NOW()
+       WHERE leave_request_id = ?`,
+      [requestId],
+    )
+
+    for (const approver of approverUsers) {
+      await createNotification(connection, {
+        userId: approver.user_id,
+        type: 'leave-cancelled',
+        title: 'Leave request cancelled',
+        message: `Leave request ${leaveRequest.request_no || `#${requestId}`} was cancelled by the requester.`,
+        leaveRequestId: requestId,
+      })
+    }
+
+    await connection.commit()
+    response.json({ status: 'ok', message: 'ยกเลิกคำขอลาเรียบร้อยแล้ว' })
+  } catch (cause) {
+    await connection.rollback()
+    console.error('Cancel leave request error:', cause)
+    error(response, 500, 'ไม่สามารถยกเลิกคำขอลาได้ กรุณาลองใหม่อีกครั้ง')
+  } finally {
+    connection.release()
+  }
+}
 
 export async function balance(request,response){const employeeId=await identity(pool,request);const year=Number(request.query.year||new Date().getFullYear());const [rows]=await pool.execute(`SELECT le.entitlement_id,lt.leave_type_id,lt.leave_type_name,le.total_days,le.used_days,COALESCE(SUM(CASE WHEN lr.status='pending' THEN lr.leave_days ELSE 0 END),0) pending_days FROM leave_entitlements le JOIN leave_types lt ON lt.leave_type_id=le.leave_type_id LEFT JOIN leave_requests lr ON lr.employee_id=le.employee_id AND lr.leave_type_id=le.leave_type_id AND YEAR(lr.start_date)=le.year WHERE le.employee_id=? AND le.year=? GROUP BY le.entitlement_id ORDER BY lt.leave_type_name`,[employeeId,year]);response.json({status:'ok',data:{year,balances:rows.map(x=>({id:x.entitlement_id,leaveTypeId:x.leave_type_id,leaveType:x.leave_type_name,total:Number(x.total_days),used:Number(x.used_days),pending:Number(x.pending_days),remaining:calculateDisplayedRemaining(x),available:calculateRequestAvailability(x)}))}})}
 

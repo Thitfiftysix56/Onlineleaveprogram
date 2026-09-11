@@ -1,7 +1,6 @@
 import {
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 
@@ -291,28 +290,42 @@ function ThaiDateField({
   disabled = false,
   error = false,
   helperText = '',
+  holidaysByDate = new Map(),
 }) {
-  const nativeDateInputRef =
-    useRef(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [visibleMonth, setVisibleMonth] = useState(() => {
+    const initialDate = value || minDate || getBangkokToday();
+    return new Date(`${initialDate}T00:00:00Z`);
+  });
 
   const openDatePicker = () => {
     if (disabled) return;
-    const input =
-      nativeDateInputRef.current;
+    const initialDate = value || minDate || getBangkokToday();
+    setVisibleMonth(new Date(`${initialDate}T00:00:00Z`));
+    setPickerOpen(true);
+  };
 
-    if (!input) {
-      return;
-    }
+  const year = visibleMonth.getUTCFullYear();
+  const month = visibleMonth.getUTCMonth();
+  const firstWeekday = new Date(Date.UTC(year, month, 1)).getUTCDay();
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const calendarDays = Array.from({ length: 42 }, (_, index) => {
+    const day = index - firstWeekday + 1;
+    return day >= 1 && day <= daysInMonth ? day : null;
+  });
+  const visibleMonthPrefix = `${year}-${String(month + 1).padStart(2, '0')}-`;
+  const visibleHolidays = Array.from(holidaysByDate.values())
+    .filter((holiday) => holiday.date.startsWith(visibleMonthPrefix))
+    .sort((first, second) => first.date.localeCompare(second.date));
 
-    if (
-      typeof input.showPicker ===
-      'function'
-    ) {
-      input.showPicker();
-      return;
-    }
+  const moveMonth = (offset) => {
+    setVisibleMonth(new Date(Date.UTC(year, month + offset, 1)));
+  };
 
-    input.click();
+  const selectDate = (day) => {
+    const dateValue = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    onChange(dateValue);
+    setPickerOpen(false);
   };
 
   return (
@@ -409,46 +422,56 @@ function ThaiDateField({
         }}
       />
 
-      <input
-        ref={
-          nativeDateInputRef
-        }
-        type="date"
-        disabled={disabled}
-        min={minDate || undefined}
-        value={
-          value || ''
-        }
-        onChange={(event) =>
-          onChange(
-            event.target.value,
-          )
-        }
-        tabIndex={-1}
-        aria-hidden="true"
-        style={{
-          position:
-            'absolute',
-
-          width:
-            '1px',
-
-          height:
-            '1px',
-
-          opacity:
-            0,
-
-          pointerEvents:
-            'none',
-
-          left:
-            0,
-
-          bottom:
-            0,
-        }}
-      />
+      <Dialog open={pickerOpen} onClose={() => setPickerOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <IconButton aria-label="เดือนก่อนหน้า" onClick={() => moveMonth(-1)}>‹</IconButton>
+          <Typography sx={{ fontWeight: 800 }}>
+            {visibleMonth.toLocaleDateString('th-TH', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
+          </Typography>
+          <IconButton aria-label="เดือนถัดไป" onClick={() => moveMonth(1)}>›</IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ paddingBottom: '20px !important' }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', textAlign: 'center' }}>
+            {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map((dayName) => (
+              <Typography key={dayName} sx={{ color: '#64748B', fontSize: '12px', fontWeight: 700, padding: '6px 0' }}>{dayName}</Typography>
+            ))}
+            {calendarDays.map((day, index) => {
+              if (!day) return <Box key={`empty-${index}`} />;
+              const dateValue = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const dayOfWeek = new Date(`${dateValue}T00:00:00Z`).getUTCDay();
+              const holiday = holidaysByDate.get(dateValue);
+              const isBlocked = dayOfWeek === 0 || dayOfWeek === 6 || Boolean(holiday) || Boolean(minDate && dateValue < minDate);
+              return (
+                <Button
+                  key={dateValue}
+                  type="button"
+                  disabled={isBlocked}
+                  title={holiday?.name || (dayOfWeek === 0 || dayOfWeek === 6 ? 'วันหยุดสุดสัปดาห์' : '')}
+                  aria-label={holiday ? `${dateValue} ${holiday.name}` : dateValue}
+                  onClick={() => selectDate(day)}
+                  sx={{ minWidth: 0, height: '38px', padding: 0, borderRadius: '9px', fontWeight: value === dateValue ? 800 : 500, backgroundColor: value === dateValue ? '#DBEAFE' : 'transparent' }}
+                >
+                  {day}
+                </Button>
+              );
+            })}
+          </Box>
+          {visibleHolidays.length > 0 ? (
+            <Box sx={{ display: 'grid', gap: '6px', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #E2E8F0' }}>
+              {visibleHolidays.map((holiday) => (
+                <Box key={holiday.date} sx={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <Typography sx={{ minWidth: '48px', color: '#DC2626', fontSize: '12px', fontWeight: 800 }}>
+                    {new Date(`${holiday.date}T00:00:00Z`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', timeZone: 'UTC' })}
+                  </Typography>
+                  <Typography sx={{ color: '#475569', fontSize: '12px', fontWeight: 600 }}>
+                    {holiday.name}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
@@ -785,27 +808,25 @@ function RoleCreateLeaveRequestPage({
 
   const dateSelectionDisabled = !selectedLeaveType || !selectedLeaveType.isSelectable;
 
-  const activeHolidayDates =
+  const activeHolidayByDate =
     useMemo(() => {
       void storageRevision;
 
-      const storedHolidayDates = (leaveOptions.holidays || [])
-        .map(normalizeHolidayDate)
-        .filter(Boolean);
-
-      const propHolidayDates =
-        organizationHolidays
-          .map(
-            normalizeHolidayDate,
-          )
-          .filter(Boolean);
-
-      return Array.from(
-        new Set([
-          ...storedHolidayDates,
-          ...propHolidayDates,
-        ]),
-      );
+      const holidaysByDate = new Map();
+      for (const holiday of [
+        ...(leaveOptions.holidays || []),
+        ...organizationHolidays,
+      ]) {
+        const holidayDate = normalizeHolidayDate(holiday);
+        if (!holidayDate) continue;
+        holidaysByDate.set(holidayDate, {
+          date: holidayDate,
+          name: typeof holiday === 'string'
+            ? 'วันหยุดองค์กร'
+            : holiday?.name || holiday?.holidayName || 'วันหยุดองค์กร',
+        });
+      }
+      return holidaysByDate;
     }, [
       organizationHolidays,
       leaveOptions.holidays,
@@ -816,12 +837,35 @@ function RoleCreateLeaveRequestPage({
     useMemo(
       () =>
         new Set(
-          activeHolidayDates,
+          activeHolidayByDate.keys(),
         ),
       [
-        activeHolidayDates,
+        activeHolidayByDate,
       ],
     );
+
+  useEffect(() => {
+    const blockedReason = (dateValue) => {
+      if (!dateValue) return '';
+      const dayOfWeek = new Date(`${dateValue}T00:00:00Z`).getUTCDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) return 'วันที่เลือกเป็นวันหยุดสุดสัปดาห์';
+      const holiday = activeHolidayByDate.get(dateValue);
+      return holiday ? `วันที่เลือกเป็นวันหยุด: ${holiday.name}` : '';
+    };
+
+    const startDateError = blockedReason(formData.startDate);
+    if (startDateError) {
+      setFormData((current) => ({ ...current, startDate: '', endDate: '' }));
+      setErrors((current) => ({ ...current, startDate: startDateError }));
+      return;
+    }
+
+    const endDateError = blockedReason(formData.endDate);
+    if (endDateError) {
+      setFormData((current) => ({ ...current, endDate: '' }));
+      setErrors((current) => ({ ...current, endDate: endDateError }));
+    }
+  }, [activeHolidayByDate, formData.endDate, formData.startDate]);
 
   const workingDaySummary =
     useMemo(() => {
@@ -911,7 +955,7 @@ function RoleCreateLeaveRequestPage({
           excludedDates.push({
             date,
             reason:
-              'วันหยุดองค์กร',
+              activeHolidayByDate.get(date)?.name || 'วันหยุดองค์กร',
           });
         } else {
           workingDays += 1;
@@ -931,6 +975,7 @@ function RoleCreateLeaveRequestPage({
       };
     }, [
       activeHolidayDateSet,
+      activeHolidayByDate,
       formData.endDate,
       formData.startDate,
     ]);
@@ -1009,6 +1054,7 @@ function RoleCreateLeaveRequestPage({
     const nextLeaveType = calculatedLeaveTypes.find(
       (leaveType) => Number(leaveType.id) === Number(leaveTypeId),
     );
+
     const nextMinimumDate = nextLeaveType && !isSickLeaveType(nextLeaveType)
       ? addCalendarDays(getBangkokToday(), 3)
       : '';
@@ -2225,6 +2271,7 @@ function RoleCreateLeaveRequestPage({
             <ThaiDateField
               label="วันที่เริ่มลา"
               minDate={minimumStartDate}
+              holidaysByDate={activeHolidayByDate}
               disabled={dateSelectionDisabled}
               value={
                 formData.startDate
@@ -2249,6 +2296,7 @@ function RoleCreateLeaveRequestPage({
             <ThaiDateField
               label="วันที่สิ้นสุด"
               minDate={formData.startDate || minimumStartDate}
+              holidaysByDate={activeHolidayByDate}
               disabled={dateSelectionDisabled}
               value={
                 formData.endDate
@@ -2381,8 +2429,7 @@ function RoleCreateLeaveRequestPage({
 
             {workingDaySummary
               .excludedDates
-              .length >
-              0 && (
+              .some((item) => item.reason !== 'วันหยุดสุดสัปดาห์') && (
               <Alert
                 severity="info"
                 sx={{
@@ -2407,7 +2454,7 @@ function RoleCreateLeaveRequestPage({
                       700,
                   }}
                 >
-                  วันที่ไม่นับเป็นวันลา
+                  วันหยุดในช่วงที่เลือก
                 </Typography>
 
                 <Typography
@@ -2424,11 +2471,12 @@ function RoleCreateLeaveRequestPage({
                 >
                   {workingDaySummary
                     .excludedDates
+                    .filter((item) => item.reason !== 'วันหยุดสุดสัปดาห์')
                     .map(
                       (
                         item,
                       ) =>
-                        `${item.date} (${item.reason})`,
+                        `${formatDisplayDate(item.date)} (${item.reason})`,
                     )
                     .join(
                       ', ',
@@ -2760,7 +2808,7 @@ function RoleCreateLeaveRequestPage({
             <Button
               type="button"
               variant="outlined"
-              onClick={handleReset}
+              onClick={isEditMode ? handleReset : () => navigate(backPath)}
               sx={{
                 minWidth: '100px',
                 height: '44px',
@@ -2772,7 +2820,7 @@ function RoleCreateLeaveRequestPage({
                 textTransform: 'none',
               }}
             >
-              {isEditMode ? 'คืนค่าร่าง' : 'ล้างข้อมูล'}
+              {isEditMode ? 'คืนค่าร่าง' : 'ยกเลิก'}
             </Button>
 
             <Button

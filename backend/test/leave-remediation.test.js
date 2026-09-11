@@ -9,7 +9,7 @@ process.env.DB_USER = 'test_user'
 process.env.JWT_SECRET = 'leave-remediation-test-secret-with-at-least-32-bytes'
 
 const [
-  { calculateApprovalAvailability, calculateDisplayedRemaining, calculateRequestAvailability, calculateWorkingDays, isSickLeaveType, isValidLeaveReason, recheckApprovalBalance, validateLeaveStartDatePolicy, validateSubmissionParticipants },
+  { calculateApprovalAvailability, calculateDisplayedRemaining, calculateRequestAvailability, calculateWorkingDays, isSickLeaveType, isValidLeaveReason, recheckApprovalBalance, validateLeaveBoundaryDates, validateLeaveStartDatePolicy, validateSubmissionParticipants },
   { isAllowedLeaveAttachment },
 ] = await Promise.all([
   import('../src/controllers/leave-controller.js'),
@@ -92,6 +92,16 @@ test('leave day calculation counts the complete selected working-day range', asy
 test('leave day calculation excludes weekends and active holidays represented as Date values', async () => {
   const connection = { execute: async () => [[{ holiday_date: new Date('2026-08-26T00:00:00Z') }]] }
   assert.equal(await calculateWorkingDays(connection, '2026-08-24', '2026-08-30'), 4)
+})
+
+test('leave boundary dates reject weekends and official holidays', async () => {
+  const noHolidays = { execute: async () => [[]] }
+  assert.match(await validateLeaveBoundaryDates(noHolidays, '2026-09-12', '2026-09-14'), /วันหยุดสุดสัปดาห์/)
+
+  const officialHoliday = {
+    execute: async () => [[{ holiday_date: new Date('2026-12-10T00:00:00Z'), holiday_name: 'วันรัฐธรรมนูญ' }]],
+  }
+  assert.match(await validateLeaveBoundaryDates(officialHoliday, '2026-12-10', '2026-12-11'), /วันรัฐธรรมนูญ/)
 })
 
 for (const file of [
