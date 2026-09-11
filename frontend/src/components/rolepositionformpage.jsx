@@ -1,9 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, MenuItem, Select, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField, Typography } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createPosition, getPosition, getPositions, updatePosition } from '../api/position-service.js';
+import { getDepartments } from '../api/department-service.js';
+import { divisionLabelFor, organizationCatalog } from '../constants/organizationcatalog.js';
 
-const emptyData = { positionName: '', status: 'Active' };
+const emptyData = { departmentName: '', departmentId: '', divisionName: '', positionGroup: '', positionName: '', status: 'Active' };
+const positionChoices = Object.entries(organizationCatalog).flatMap(([departmentName, divisions]) =>
+  Object.entries(divisions).flatMap(([divisionName, groups]) =>
+    Object.entries(groups).flatMap(([positionGroup, names]) =>
+      names.map((positionName) => ({ departmentName, divisionName, positionGroup, positionName })),
+    ),
+  ),
+);
 
 function RolePositionFormPage({
   LayoutComponent,
@@ -25,34 +34,50 @@ function RolePositionFormPage({
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
-  const [positionOptions, setPositionOptions] = useState([]);
+  const [departmentOptions, setDepartmentOptions] = useState([]);
+  const [existingPositionNames, setExistingPositionNames] = useState([]);
+  const [customPositionMode, setCustomPositionMode] = useState(false);
 
   useEffect(() => {
     setSelectedPositionId(positionIdProp || routePositionId || '');
   }, [positionIdProp, routePositionId]);
 
   useEffect(() => {
-    if (!isEditMode) return undefined;
     let active = true;
-    getPositions()
-      .then((rows) => { if (active) setPositionOptions(Array.isArray(rows) ? rows : []); })
-      .catch(() => { if (active) setPositionOptions([]); });
+    Promise.all([getDepartments(), getPositions()])
+      .then(([departmentRows, positionRows]) => {
+        if (!active) return;
+        setDepartmentOptions((Array.isArray(departmentRows) ? departmentRows : []).filter((row) => row.isActive));
+        setExistingPositionNames((Array.isArray(positionRows) ? positionRows : []).map((row) => row.positionName));
+      })
+      .catch(() => { if (active) { setDepartmentOptions([]); setExistingPositionNames([]); } });
     return () => { active = false; };
-  }, [isEditMode]);
+  }, [open]);
 
   useEffect(() => {
     let active = true;
     const load = async () => {
       if (!isEditMode) {
         setFormData(emptyData);
+        setCustomPositionMode(false);
         setLoading(false);
         return;
       }
       if (!selectedPositionId) return;
       setLoading(true);
+      setCustomPositionMode(false);
+      setErrors({});
+      setMessage({ type: '', text: '' });
       try {
         const position = await getPosition(selectedPositionId);
-        const nextData = { positionName: position.positionName || '', status: position.status || 'Active' };
+        const nextData = {
+          departmentName: position.departmentName || '',
+          departmentId: position.departmentId || '',
+          divisionName: position.divisionName || '',
+          positionGroup: position.positionGroup || '',
+          positionName: position.positionName || '',
+          status: position.status || 'Active',
+        };
         if (active) {
           setFormData(nextData);
         }
@@ -66,15 +91,54 @@ function RolePositionFormPage({
     return () => { active = false; };
   }, [isEditMode, selectedPositionId]);
 
-  const updateName = (value) => {
-    setFormData((current) => ({ ...current, positionName: value }));
+  const selectPositionName = (positionName) => {
+    const choice = positionChoices.find((item) => item.positionName === positionName);
+    const department = departmentOptions.find((item) =>
+      item.departmentName === choice?.departmentName && item.divisionName === choice?.divisionName,
+    );
+    setFormData((current) => ({
+      ...current,
+      departmentName: choice?.departmentName || '',
+      departmentId: department?.departmentId || '',
+      divisionName: choice?.divisionName || '',
+      positionGroup: choice?.positionGroup || '',
+      positionName,
+    }));
     setErrors({});
     setMessage({ type: '', text: '' });
   };
 
+  const selectPositionOption = (value) => {
+    if (value === '__new__') {
+      setCustomPositionMode(true);
+      setFormData((current) => ({ ...current, departmentName: '', departmentId: '', divisionName: '', positionGroup: 'อื่นๆ', positionName: '' }));
+      setErrors({});
+      return;
+    }
+    setCustomPositionMode(false);
+    selectPositionName(value);
+  };
+
+  const catalogChoices = positionChoices.filter((item) =>
+    !existingPositionNames.includes(item.positionName) || (isEditMode && item.positionName === formData.positionName),
+  );
+  const availablePositionChoices = isEditMode && formData.positionName
+    && !catalogChoices.some((item) => item.positionName === formData.positionName)
+    ? [{
+        departmentName: formData.departmentName,
+        departmentId: formData.departmentId,
+        divisionName: formData.divisionName,
+        positionGroup: formData.positionGroup,
+        positionName: formData.positionName,
+      }, ...catalogChoices]
+    : catalogChoices;
+
   const validate = () => {
     const name = formData.positionName.trim();
     const nextErrors = {};
+    if (!formData.departmentName) nextErrors.departmentName = 'กรุณาเลือกแผนก';
+    if (!formData.departmentId) nextErrors.departmentId = 'กรุณาเลือกฝ่าย';
+    if (!formData.positionGroup) nextErrors.positionGroup = 'กรุณาเลือกกลุ่มตำแหน่ง';
     if (!name) nextErrors.positionName = 'กรุณากรอกชื่อตำแหน่ง';
     else if (name.length < 2) nextErrors.positionName = 'ชื่อตำแหน่งต้องมีอย่างน้อย 2 ตัวอักษร';
     else if (name.length > 100) nextErrors.positionName = 'ชื่อตำแหน่งต้องไม่เกิน 100 ตัวอักษร';
@@ -88,7 +152,7 @@ function RolePositionFormPage({
   };
 
   const confirmSave = async () => {
-    const payload = { positionName: formData.positionName.trim(), status: formData.status };
+    const payload = { departmentId: formData.departmentId, positionGroup: formData.positionGroup, positionName: formData.positionName.trim(), status: formData.status };
     setSaving(true);
     try {
       const result = isEditMode ? await updatePosition(selectedPositionId, payload) : await createPosition(payload);
@@ -112,11 +176,6 @@ function RolePositionFormPage({
     else navigate('/admin/position-management');
   };
 
-  const selectPosition = (value) => {
-    if (dialogOnly) setSelectedPositionId(value);
-    else navigate(`/admin/position-management/${value}/edit`);
-  };
-
   const formDialogs = (
     <>
       <Dialog open={open && !confirmationOpen} onClose={closeForm} fullWidth maxWidth="sm" slotProps={{ paper: { component: 'form', onSubmit: requestConfirmation, noValidate: true, sx: { width: 'calc(100% - 32px)', maxWidth: '480px', margin: 'auto', borderRadius: '18px', overflow: 'hidden' } } }}>
@@ -127,35 +186,31 @@ function RolePositionFormPage({
           {message.text ? <Alert severity={message.type} onClose={() => setMessage({ type: '', text: '' })} sx={{ marginBottom: '24px' }}>{message.text}</Alert> : null}
           {loading ? <Alert severity="info" sx={{ marginBottom: '24px' }}>กำลังโหลดข้อมูลตำแหน่ง...</Alert> : null}
           <Box>
-            {isEditMode ? (
-              <FormControl fullWidth>
-                <Select
-                  value={String(selectedPositionId || '')}
-                  displayEmpty
-                  renderValue={(value) => positionOptions.find((position) => String(position.positionId ?? position.id) === String(value))?.positionName || 'เลือกตำแหน่ง'}
-                  inputProps={{ 'aria-label': 'เลือกตำแหน่ง' }}
-                  onChange={(event) => selectPosition(event.target.value)}
-                  sx={{ height: '48px', borderRadius: '10px' }}
-                >
-                  {positionOptions.map((position) => {
-                    const id = position.positionId ?? position.id;
-                    return <MenuItem key={id} value={String(id)}>{position.positionName}</MenuItem>;
-                  })}
-                </Select>
-              </FormControl>
+            <TextField select fullWidth required disabled={customPositionMode} label="ชื่อตำแหน่ง" value={customPositionMode ? '__new__' : formData.positionName}
+              onChange={(event) => selectPositionOption(event.target.value)} error={!customPositionMode && Boolean(errors.positionName)}
+              helperText={!customPositionMode ? errors.positionName : ''} sx={{ display: customPositionMode ? 'none' : undefined }}>
+              {availablePositionChoices.length ? availablePositionChoices.map((item) => <MenuItem key={`${item.departmentName}-${item.divisionName}-${item.positionName}`} value={item.positionName}>{item.positionName}</MenuItem>) : (
+                <MenuItem disabled value="">ไม่มีชื่อตำแหน่งที่สามารถเพิ่มได้</MenuItem>
+              )}
+              {!isEditMode ? <MenuItem value="__new__">เพิ่มตำแหน่งใหม่</MenuItem> : null}
+            </TextField>
+            {customPositionMode ? (
+              <Box sx={{ display: 'grid', gap: '18px', marginTop: '18px' }}>
+                <TextField fullWidth required label="ชื่อตำแหน่งใหม่" value={formData.positionName}
+                  onChange={(event) => setFormData((current) => ({ ...current, positionName: event.target.value }))}
+                  error={Boolean(errors.positionName)} helperText={errors.positionName} />
+                <TextField select fullWidth required label="สังกัด" value={formData.departmentId}
+                  onChange={(event) => {
+                    const department = departmentOptions.find((item) => String(item.departmentId) === String(event.target.value));
+                    setFormData((current) => ({ ...current, departmentId: event.target.value, departmentName: department?.departmentName || '', divisionName: department?.divisionName || '' }));
+                    setErrors((current) => ({ ...current, departmentName: '', departmentId: '' }));
+                  }} error={Boolean(errors.departmentId || errors.departmentName)} helperText={errors.departmentId || errors.departmentName}>
+                  {departmentOptions.map((item) => (
+                    <MenuItem key={item.departmentId} value={item.departmentId}>{item.departmentName} — {divisionLabelFor(item.divisionName)}</MenuItem>
+                  ))}
+                </TextField>
+              </Box>
             ) : null}
-            <TextField
-              fullWidth
-              required
-              label="ชื่อตำแหน่ง"
-              placeholder="เช่น นักพัฒนาซอฟต์แวร์"
-              value={formData.positionName}
-              onChange={(event) => updateName(event.target.value)}
-              error={Boolean(errors.positionName)}
-              helperText={errors.positionName || `${formData.positionName.length}/100 ตัวอักษร`}
-              slotProps={{ htmlInput: { maxLength: 100 } }}
-              sx={{ marginTop: isEditMode ? '22px' : 0 }}
-            />
           </Box>
         </DialogContent>
         <DialogActions sx={{ width: '100%', justifyContent: 'flex-end', columnGap: '12px', rowGap: '10px', flexWrap: 'wrap', padding: '16px 22px 20px', borderTop: 0, backgroundColor: 'transparent' }}>
@@ -166,7 +221,10 @@ function RolePositionFormPage({
 
       <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>ยืนยันการบันทึกข้อมูลตำแหน่ง</DialogTitle>
-        <DialogContent><Typography><strong>ชื่อตำแหน่ง:</strong> {formData.positionName.trim()}</Typography></DialogContent>
+        <DialogContent><Box sx={{ display: 'grid', gap: '8px' }}>
+          <Typography><strong>ชื่อตำแหน่ง:</strong> {formData.positionName}</Typography>
+          {customPositionMode ? <Typography><strong>สังกัด:</strong> {formData.departmentName} — {divisionLabelFor(formData.divisionName)}</Typography> : null}
+        </Box></DialogContent>
         <DialogActions sx={{ padding: '14px 20px' }}>
           <Button variant="outlined" color="secondary" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button>
           <Button variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button>

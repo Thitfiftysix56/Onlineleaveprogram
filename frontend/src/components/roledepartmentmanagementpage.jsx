@@ -17,7 +17,6 @@ import {
   Paper,
   Select,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TablePagination,
@@ -25,10 +24,12 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import FixedTableBody from './fixedtablebody.jsx';
 
 import { ConfirmationDialog, DataListToolbar } from './shareduiprimitives.jsx';
 import { InlineListSummary } from './sharedvisualfoundation.jsx';
 import RoleDepartmentFormPage from './roledepartmentformpage.jsx';
+import { divisionLabelFor } from '../constants/organizationcatalog.js';
 
 import {
   deleteDepartment,
@@ -209,11 +210,9 @@ function RoleDepartmentManagementPage({
             ).includes(
               keyword,
             ) ||
-            normalizeValue(
-              department.description,
-            ).includes(
-              keyword,
-            ) ||
+            normalizeValue(department.divisionName).includes(keyword) ||
+            normalizeValue(divisionLabelFor(department.divisionName)).includes(keyword) ||
+            normalizeValue(department.description).includes(keyword) ||
             normalizeValue(
               translateStatus(
                 department.status,
@@ -751,7 +750,7 @@ function RoleDepartmentManagementPage({
             <TextField
               fullWidth
               label="ค้นหาแผนก"
-              placeholder="ชื่อแผนกหรือรายละเอียด"
+              placeholder="ชื่อแผนกหรือฝ่าย"
               value={
                 searchText
               }
@@ -1022,7 +1021,7 @@ function RoleDepartmentManagementPage({
                   <TableCell
                     sx={headerCellStyle}
                   >
-                    รายละเอียด
+                    ฝ่าย
                   </TableCell>
 
                   <TableCell
@@ -1060,7 +1059,7 @@ function RoleDepartmentManagementPage({
                 </TableRow>
               </TableHead>
 
-              <TableBody>
+              <FixedTableBody>
                 {paginatedDepartments.map(
                   (department) => {
                     const isActive =
@@ -1109,12 +1108,10 @@ function RoleDepartmentManagementPage({
                               '1px solid #E5E7EB',
                           }}
                         >
-                          {
-                            department.departmentName
-                          }
+                          {department.departmentName}
                         </TableCell>
 
-                        {/* Description */}
+                        {/* Division */}
 
                         <TableCell
                           sx={{
@@ -1140,8 +1137,7 @@ function RoleDepartmentManagementPage({
                               '1px solid #E5E7EB',
                           }}
                         >
-                          {department.description ||
-                            '-'}
+                          {divisionLabelFor(department.divisionName)}
                         </TableCell>
 
                         {/* Employees */}
@@ -1331,7 +1327,7 @@ function RoleDepartmentManagementPage({
                     );
                   },
                 )}
-              </TableBody>
+              </FixedTableBody>
             </Table>
             {filteredDepartments.length > rowsPerPage ? <TablePagination component="div" count={filteredDepartments.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredDepartments.length / rowsPerPage)}`} /> : null}
           </Box>

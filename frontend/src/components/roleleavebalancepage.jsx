@@ -500,6 +500,12 @@ function RoleLeaveBalancePage({
                 balance.pendingDays,
               ),
 
+            remainingDays:
+              result.remainingDays +
+              Number(
+                balance.remainingDays,
+              ),
+
             availableDays:
               result.availableDays +
               Number(
@@ -514,6 +520,9 @@ function RoleLeaveBalancePage({
               0,
 
             pendingDays:
+              0,
+
+            remainingDays:
               0,
 
             availableDays:
@@ -582,10 +591,10 @@ function RoleLeaveBalancePage({
 
     {
       title:
-        'คงเหลือใช้ได้',
+        'คงเหลือ',
 
       value:
-        summary.availableDays,
+        summary.remainingDays,
 
       backgroundColor:
         '#ECFDF5',
@@ -1235,7 +1244,7 @@ function RoleLeaveBalancePage({
                         }}
                       >
                         {formatDays(
-                          balance.availableDays,
+                          balance.remainingDays,
                         )}
                       </Typography>
 
@@ -1254,7 +1263,7 @@ function RoleLeaveBalancePage({
                             '7px',
                         }}
                       >
-                        วันคงเหลือใช้ได้
+                        วันคงเหลือ
                       </Typography>
                     </Box>
 
@@ -1577,7 +1586,7 @@ function RoleLeaveBalancePage({
                                 '10px',
                             }}
                           >
-                            ใช้ได้{' '}
+                            ยื่นเพิ่มได้{' '}
                             {formatDays(
                               balance.availableDays,
                             )}{' '}

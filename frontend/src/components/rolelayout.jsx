@@ -144,6 +144,12 @@ const roleRoutes = {
     'Employee Management':
       '/hr/employee-management',
 
+    'Department Management':
+      '/hr/department-management',
+
+    'Position Management':
+      '/hr/position-management',
+
     'Leave Entitlement':
       '/hr/leave-entitlement',
 

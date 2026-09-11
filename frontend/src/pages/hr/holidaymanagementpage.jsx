@@ -1,7 +1,6 @@
 import {
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 
@@ -17,13 +16,11 @@ import {
   DialogTitle,
   FormControl,
   FormHelperText,
-  InputAdornment,
   InputLabel,
   MenuItem,
   Paper,
   Select,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TablePagination,
@@ -31,10 +28,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
 
-import {
-  CalendarMonthRounded,
-} from '@mui/icons-material';
+import ThaiCalendarField from '../../components/thaicalendarfield.jsx';
 
 import HRLayout from '../../layouts/hrlayout.jsx';
 import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
@@ -240,119 +236,7 @@ function ThaiDateField({
   error = false,
   helperText = '',
 }) {
-  const nativeInputRef = useRef(null);
-  const openPicker = () => {
-    const input = nativeInputRef.current;
-    if (!input) return;
-    input.focus({ preventScroll: true });
-    if (typeof input.showPicker === 'function') input.showPicker();
-    else input.click();
-  };
-
-  return (
-    <Box
-      role="button"
-      tabIndex={0}
-      onClick={openPicker}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          openPicker();
-        }
-      }}
-      sx={{
-        position: 'relative',
-        cursor: 'pointer',
-      }}
-    >
-      <TextField
-        fullWidth
-        label={label}
-        value={
-          value
-            ? formatDate(value)
-            : ''
-        }
-        placeholder="วว/ดด/ปปปป"
-        error={error}
-        helperText={helperText}
-        slotProps={{
-          input: {
-            readOnly: true,
-
-            endAdornment: (
-              <InputAdornment position="end">
-                <CalendarMonthRounded
-                  sx={{
-                    color:
-                      '#64748B',
-
-                    fontSize:
-                      '20px',
-                  }}
-                />
-              </InputAdornment>
-            ),
-          },
-
-          inputLabel: {
-            shrink: true,
-          },
-        }}
-        sx={{
-          '& .MuiOutlinedInput-root':
-            {
-              borderRadius:
-                '9px',
-
-              '&.Mui-focused fieldset':
-                {
-                  borderColor:
-                    theme.primary,
-                },
-            },
-
-          '& .MuiInputLabel-root.Mui-focused':
-            {
-              color:
-                theme.primary,
-            },
-        }}
-      />
-
-      <input
-        ref={nativeInputRef}
-        type="date"
-        value={value}
-        onChange={(event) =>
-          onChange(
-            event.target.value,
-          )
-        }
-        style={{
-          position:
-            'absolute',
-
-          inset:
-            0,
-
-          width:
-            '100%',
-
-          height:
-            helperText
-              ? '56px'
-              : '100%',
-
-          opacity:
-            0,
-
-          pointerEvents:
-            'none',
-        }}
-      />
-    </Box>
-  );
+  return <ThaiCalendarField label={label} value={value} onChange={onChange} error={error} helperText={helperText} primaryColor={theme.primary} />;
 }
 
 /* =========================
@@ -1628,7 +1512,7 @@ function HolidayManagementPage() {
                 </TableRow>
               </TableHead>
 
-              <TableBody>
+              <FixedTableBody>
                 {paginatedHolidays.map(
                   (
                     holiday,
@@ -1789,7 +1673,7 @@ function HolidayManagementPage() {
                     </TableRow>
                   ),
                 )}
-              </TableBody>
+              </FixedTableBody>
             </Table>
             {filteredHolidays.length > rowsPerPage ? <TablePagination component="div" count={filteredHolidays.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredHolidays.length / rowsPerPage)}`} /> : null}
           </Box>

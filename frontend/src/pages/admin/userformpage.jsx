@@ -133,6 +133,7 @@ const mapEmployee = (employee) => ({
   position:
     employee.position ||
     'ไม่ระบุ',
+  role: formatRole(employee.roleName),
 });
 
 const mapUserAccount = (user) => ({
@@ -520,6 +521,7 @@ function UserFormPage({
           normalizeValue(
             employee?.employeeCode,
           ),
+        role: employee?.role || 'Employee',
       }),
     );
 
@@ -1289,6 +1291,7 @@ function UserFormPage({
                   formData.role
                 }
                 label="บทบาท"
+                disabled={!isEditMode}
                 onChange={(
                   event,
                 ) =>

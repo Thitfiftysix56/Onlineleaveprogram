@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Box,
@@ -9,8 +9,6 @@ import {
   DialogTitle,
   FormControl,
   FormHelperText,
-  IconButton,
-  InputAdornment,
   InputLabel,
   MenuItem,
   Paper,
@@ -18,13 +16,14 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import CalendarMonthRounded from '@mui/icons-material/CalendarMonthRounded';
 import HRLayout from '../../layouts/hrlayout.jsx';
 import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
 import { roleDashboardCardSurfaceSx } from '../../theme/rolecardsurface.js';
+import ThaiCalendarField from '../../components/thaicalendarfield.jsx';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getDepartments } from '../../api/department-service.js';
 import { getPositions } from '../../api/position-service.js';
+import { divisionLabelFor } from '../../constants/organizationcatalog.js';
 import {
   createEmployee,
   getEmployee,
@@ -32,52 +31,8 @@ import {
   updateEmployee,
 } from '../../api/employee-service.js';
 
-function formatThaiDate(value) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return '';
-  const [year, month, day] = value.split('-');
-  return `${day}/${month}/${year}`;
-}
-
 function ThaiDateField({ label, value, onChange, error, helperText }) {
-  const pickerRef = useRef(null);
-  const openPicker = () => {
-    const picker = pickerRef.current;
-    if (!picker) return;
-    try {
-      if (typeof picker.showPicker === 'function') picker.showPicker();
-      else picker.click();
-    } catch {
-      picker.click();
-    }
-  };
-
-  return (
-    <Box sx={{ position: 'relative' }}>
-      <TextField
-        fullWidth
-        required
-        label={label}
-        value={formatThaiDate(value)}
-        placeholder="วว/ดด/ปปปป"
-        error={error}
-        helperText={helperText}
-        onClick={openPicker}
-        slotProps={{
-          input: {
-            readOnly: true,
-            endAdornment: <InputAdornment position="end"><IconButton type="button" aria-label={`เลือก${label}`} onClick={openPicker} edge="end"><CalendarMonthRounded fontSize="small" /></IconButton></InputAdornment>,
-          },
-          inputLabel: { shrink: true },
-        }}
-        sx={{
-          '& .MuiOutlinedInput-root': { borderRadius: '8px', '&.Mui-focused fieldset': { borderColor: '#059669' } },
-          '& .MuiInputBase-input::placeholder': { opacity: 1, color: '#64748B' },
-          '& .MuiInputLabel-root.Mui-focused': { color: '#059669' },
-        }}
-      />
-      <input ref={pickerRef} type="date" value={value} onChange={(event) => onChange(event.target.value)} style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none', insetInlineStart: 0, bottom: 0 }} />
-    </Box>
-  );
+  return <ThaiCalendarField label={label} value={value} onChange={onChange} required error={error} helperText={helperText} primaryColor="#059669" />;
 }
 
 function EmployeeFormPage({ mode = 'add' }) {
@@ -96,12 +51,13 @@ function EmployeeFormPage({ mode = 'add' }) {
     lastName: '',
     email: '',
     phone: '',
+    departmentName: '',
     department: '',
+    positionGroup: '',
     position: '',
     supervisor: '',
     role: 'Employee',
     employmentDate: '',
-    status: 'Active',
   });
 
   const [errors, setErrors] = useState({});
@@ -138,7 +94,10 @@ function EmployeeFormPage({ mode = 'add' }) {
         if (!active) return;
         setDepartments(departmentRows.filter((item) => item.isActive));
         setPositions(positionRows.filter((item) => item.isActive));
-        setSupervisors(employeeRows.filter((item) => Number(item.employeeId) !== Number(employeeId)));
+        setSupervisors(employeeRows.filter((item) =>
+          Number(item.employeeId) !== Number(employeeId)
+          && String(item.roleName || '').toLowerCase() === 'supervisor',
+        ));
         if (employee) {
           setFormData({
             employeeId: employee.employeeCode,
@@ -146,12 +105,13 @@ function EmployeeFormPage({ mode = 'add' }) {
             lastName: employee.lastName,
             email: employee.email,
             phone: employee.phone || '',
+            departmentName: employee.department || '',
             department: employee.departmentId,
+            positionGroup: employee.positionGroup || '',
             position: employee.positionId,
-            supervisor: employee.supervisorId || '',
+            supervisor: employee.roleName === 'Supervisor' ? '' : (employee.supervisorId || ''),
             role: employee.roleName || 'Employee',
             employmentDate: String(employee.hireDate).slice(0, 10),
-            status: employee.status.charAt(0).toUpperCase() + employee.status.slice(1),
           });
         }
       } catch (error) {
@@ -207,18 +167,21 @@ function EmployeeFormPage({ mode = 'add' }) {
       validationErrors.phone =
         'กรุณากรอกเบอร์โทรศัพท์';
     } else {
-      const phonePattern = /^[0-9+\-\s()]{8,20}$/;
+      const phonePattern = /^\d{10}$/;
 
       if (!phonePattern.test(formData.phone.trim())) {
         validationErrors.phone =
-          'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง';
+          'กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 10 หลัก';
       }
     }
 
     if (!formData.department) {
       validationErrors.department =
-        'กรุณาเลือกแผนก';
+        'กรุณาเลือกฝ่าย';
     }
+
+    if (!formData.departmentName) validationErrors.departmentName = 'กรุณาเลือกแผนก';
+    if (!formData.positionGroup) validationErrors.positionGroup = 'กรุณาเลือกกลุ่มตำแหน่ง';
 
     if (!formData.position) {
       validationErrors.position =
@@ -230,14 +193,18 @@ function EmployeeFormPage({ mode = 'add' }) {
         'กรุณาเลือกบทบาท';
     }
 
+    if (formData.role === 'Supervisor' && formData.supervisor) {
+      validationErrors.supervisor = 'หัวหน้างานไม่สามารถมีผู้บังคับบัญชาในขั้นอนุมัตินี้ได้';
+      validationErrors.role = 'ไม่สามารถเลือกบทบาทหัวหน้างานเมื่อกำหนดผู้บังคับบัญชาแล้ว';
+    }
+
+    if (formData.role !== 'Supervisor' && !formData.supervisor) {
+      validationErrors.supervisor = 'กรุณาเลือกผู้บังคับบัญชา';
+    }
+
     if (!formData.employmentDate) {
       validationErrors.employmentDate =
         'กรุณาเลือกวันที่เริ่มงาน';
-    }
-
-    if (!formData.status) {
-      validationErrors.status =
-        'กรุณาเลือกสถานะพนักงาน';
     }
 
     setErrors(validationErrors);
@@ -268,9 +235,9 @@ function EmployeeFormPage({ mode = 'add' }) {
       phone: formData.phone.trim() || null,
       departmentId: Number(formData.department),
       positionId: Number(formData.position),
+      roleName: formData.role,
       supervisorId: formData.supervisor ? Number(formData.supervisor) : null,
       hireDate: formData.employmentDate,
-      status: formData.status,
     };
     setSaving(true);
     setConfirmationError('');
@@ -495,16 +462,23 @@ function EmployeeFormPage({ mode = 'add' }) {
               fullWidth
               required
               label="เบอร์โทรศัพท์"
-              placeholder="08X-XXX-XXXX"
+              placeholder="0812345678"
               value={formData.phone}
               onChange={(event) =>
                 handleInputChange(
                   'phone',
-                  event.target.value,
+                  event.target.value.replace(/\D/g, '').slice(0, 10),
                 )
               }
               error={Boolean(errors.phone)}
               helperText={errors.phone}
+              slotProps={{
+                htmlInput: {
+                  maxLength: 10,
+                  inputMode: 'numeric',
+                  pattern: '[0-9]*',
+                },
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '8px',
@@ -561,7 +535,7 @@ function EmployeeFormPage({ mode = 'add' }) {
             <FormControl
               fullWidth
               required
-              error={Boolean(errors.department)}
+              error={Boolean(errors.departmentName)}
             >
               <InputLabel id="employee-department-label">
                 แผนก
@@ -569,24 +543,48 @@ function EmployeeFormPage({ mode = 'add' }) {
 
               <Select
                 labelId="employee-department-label"
-                value={formData.department}
+                value={formData.departmentName}
                 label="แผนก"
-                onChange={(event) =>
-                  handleInputChange(
-                    'department',
-                    event.target.value,
-                  )
-                }
+                onChange={(event) => setFormData((current) => ({ ...current, departmentName: event.target.value, department: '', positionGroup: '', position: '' }))}
                 sx={{
                   borderRadius: '8px',
                 }}
               >
-                {departments.map((department) => (
+                {[...new Set(departments.map((department) => department.departmentName))].map((name) => <MenuItem key={name} value={name}>{name}</MenuItem>)}
+              </Select>
+
+              {errors.departmentName && (
+                <FormHelperText>
+                  {errors.departmentName}
+                </FormHelperText>
+              )}
+            </FormControl>
+
+            <FormControl
+              fullWidth
+              required
+              disabled={!formData.departmentName}
+              error={Boolean(errors.department)}
+            >
+              <InputLabel id="employee-division-label">
+                ฝ่าย
+              </InputLabel>
+
+              <Select
+                labelId="employee-division-label"
+                value={formData.department}
+                label="ฝ่าย"
+                onChange={(event) => setFormData((current) => ({ ...current, department: event.target.value, positionGroup: '', position: '' }))}
+                sx={{
+                  borderRadius: '8px',
+                }}
+              >
+                {departments.filter((department) => department.departmentName === formData.departmentName).map((department) => (
                   <MenuItem
                     key={department.departmentId}
                     value={department.departmentId}
                   >
-                    {department.departmentName}
+                    {divisionLabelFor(department.divisionName)}
                   </MenuItem>
                 ))}
               </Select>
@@ -598,47 +596,28 @@ function EmployeeFormPage({ mode = 'add' }) {
               )}
             </FormControl>
 
-            <FormControl
-              fullWidth
-              required
-              error={Boolean(errors.position)}
-            >
-              <InputLabel id="employee-position-label">
-                ตำแหน่ง
-              </InputLabel>
-
-              <Select
-                labelId="employee-position-label"
-                value={formData.position}
-                label="ตำแหน่ง"
-                onChange={(event) =>
-                  handleInputChange(
-                    'position',
-                    event.target.value,
-                  )
-                }
-                sx={{
-                  borderRadius: '8px',
-                }}
-              >
-                {positions.map((position) => (
-                  <MenuItem
-                    key={position.positionId}
-                    value={position.positionId}
-                  >
-                    {position.positionName}
-                  </MenuItem>
-                ))}
+            <FormControl fullWidth required disabled={!formData.department} error={Boolean(errors.positionGroup)}>
+              <InputLabel id="employee-position-group-label">กลุ่มตำแหน่ง</InputLabel>
+              <Select labelId="employee-position-group-label" value={formData.positionGroup} label="กลุ่มตำแหน่ง"
+                onChange={(event) => setFormData((current) => ({ ...current, positionGroup: event.target.value, position: '' }))}
+                sx={{ borderRadius: '8px' }}>
+                {[...new Set(positions.filter((position) => String(position.departmentId) === String(formData.department)).map((position) => position.positionGroup).filter(Boolean))]
+                  .map((group) => <MenuItem key={group} value={group}>{group}</MenuItem>)}
               </Select>
-
-              {errors.position && (
-                <FormHelperText>
-                  {errors.position}
-                </FormHelperText>
-              )}
+              {errors.positionGroup && <FormHelperText>{errors.positionGroup}</FormHelperText>}
             </FormControl>
 
-            <FormControl fullWidth>
+            <FormControl fullWidth required disabled={!formData.positionGroup} error={Boolean(errors.position)}>
+              <InputLabel id="employee-position-label">ชื่อตำแหน่ง</InputLabel>
+              <Select labelId="employee-position-label" value={formData.position} label="ชื่อตำแหน่ง"
+                onChange={(event) => handleInputChange('position', event.target.value)} sx={{ borderRadius: '8px' }}>
+                {positions.filter((position) => String(position.departmentId) === String(formData.department) && position.positionGroup === formData.positionGroup)
+                  .map((position) => <MenuItem key={position.positionId} value={position.positionId}>{position.positionName}</MenuItem>)}
+              </Select>
+              {errors.position && <FormHelperText>{errors.position}</FormHelperText>}
+            </FormControl>
+
+            <FormControl fullWidth required={formData.role !== 'Supervisor'} disabled={formData.role === 'Supervisor'} error={Boolean(errors.supervisor)}>
               <InputLabel id="employee-supervisor-label">
                 ผู้บังคับบัญชา
               </InputLabel>
@@ -657,10 +636,6 @@ function EmployeeFormPage({ mode = 'add' }) {
                   borderRadius: '8px',
                 }}
               >
-                <MenuItem value="">
-                  ไม่มีผู้บังคับบัญชา
-                </MenuItem>
-
                 {supervisors.map((supervisor) => (
                   <MenuItem
                     key={supervisor.employeeId}
@@ -670,6 +645,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                   </MenuItem>
                 ))}
               </Select>
+              {errors.supervisor && <FormHelperText>{errors.supervisor}</FormHelperText>}
             </FormControl>
 
             <ThaiDateField
@@ -743,18 +719,17 @@ function EmployeeFormPage({ mode = 'add' }) {
                   labelId="employee-role-label"
                   value={formData.role}
                   label="บทบาท"
-                  onChange={(event) =>
-                    handleInputChange(
-                      'role',
-                      event.target.value,
-                    )
-                  }
+                  onChange={(event) => {
+                    const role = event.target.value;
+                    setFormData((current) => ({ ...current, role, supervisor: role === 'Supervisor' ? '' : current.supervisor }));
+                    setErrors((current) => ({ ...current, role: '', supervisor: '' }));
+                  }}
                   sx={{
                     borderRadius: '8px',
                   }}
                 >
                   {roles.map((role) => (
-                    <MenuItem key={role} value={role}>
+                    <MenuItem key={role} value={role} disabled={role === 'Supervisor' && Boolean(formData.supervisor)}>
                       {({ Employee: 'พนักงาน', Supervisor: 'หัวหน้างาน', HR: 'ฝ่ายทรัพยากรบุคคล', Admin: 'ผู้ดูแลระบบ' })[role]}
                     </MenuItem>
                   ))}
@@ -767,44 +742,6 @@ function EmployeeFormPage({ mode = 'add' }) {
                 )}
               </FormControl>
 
-              <FormControl
-                fullWidth
-                required
-                error={Boolean(errors.status)}
-              >
-                <InputLabel id="employee-status-label">
-                  สถานะ
-                </InputLabel>
-
-                <Select
-                  labelId="employee-status-label"
-                  value={formData.status}
-                  label="สถานะ"
-                  onChange={(event) =>
-                    handleInputChange(
-                      'status',
-                      event.target.value,
-                    )
-                  }
-                  sx={{
-                    borderRadius: '8px',
-                  }}
-                >
-                  <MenuItem value="Active">
-                    ใช้งานอยู่
-                  </MenuItem>
-
-                  <MenuItem value="Inactive">
-                    ไม่ใช้งาน
-                  </MenuItem>
-                </Select>
-
-                {errors.status && (
-                  <FormHelperText>
-                    {errors.status}
-                  </FormHelperText>
-                )}
-              </FormControl>
             </Box>
 
           </Box>
@@ -890,8 +827,10 @@ function EmployeeFormPage({ mode = 'add' }) {
             <Typography><strong>ชื่อ:</strong> {formData.firstName} {formData.lastName}</Typography>
             <Typography><strong>รหัสพนักงาน:</strong> {isEditMode ? formData.employeeId : 'ระบบสร้างอัตโนมัติ'}</Typography>
             <Typography><strong>อีเมล:</strong> {formData.email}</Typography>
-            <Typography><strong>แผนก:</strong> {departments.find((item) => String(item.departmentId) === String(formData.department))?.departmentName || '-'}</Typography>
-            <Typography><strong>ตำแหน่ง:</strong> {positions.find((item) => String(item.positionId) === String(formData.position))?.positionName || '-'}</Typography>
+            <Typography><strong>แผนก:</strong> {formData.departmentName || '-'}</Typography>
+            <Typography><strong>ฝ่าย:</strong> {divisionLabelFor(departments.find((item) => String(item.departmentId) === String(formData.department))?.divisionName)}</Typography>
+            <Typography><strong>กลุ่มตำแหน่ง:</strong> {formData.positionGroup || '-'}</Typography>
+            <Typography><strong>ชื่อตำแหน่ง:</strong> {positions.find((item) => String(item.positionId) === String(formData.position))?.positionName || '-'}</Typography>
           </Box>
         </DialogContent>
         <DialogActions sx={{ padding: '14px 20px' }}><Button type="button" variant="outlined" color="secondary" disabled={saving} onClick={() => { setConfirmationOpen(false); setConfirmationError(''); }}>กลับไปแก้ไข</Button><Button type="button" variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions>

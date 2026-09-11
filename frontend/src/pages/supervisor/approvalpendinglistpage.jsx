@@ -16,7 +16,6 @@ import {
   Paper,
   Select,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TablePagination,
@@ -24,6 +23,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
 
 import {
   useNavigate,
@@ -875,7 +875,7 @@ function ApprovalPendingListPage({
                   </TableRow>
                 </TableHead>
 
-                <TableBody>
+                <FixedTableBody>
                   {paginatedRequests.map(
                     (
                       request,
@@ -1116,7 +1116,7 @@ function ApprovalPendingListPage({
                       </TableRow>
                     ),
                   )}
-                </TableBody>
+                </FixedTableBody>
               </Table>
             </Box>
 

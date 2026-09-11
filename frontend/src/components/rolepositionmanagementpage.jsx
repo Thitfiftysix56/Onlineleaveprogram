@@ -18,7 +18,6 @@ import {
   Paper,
   Select,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TablePagination,
@@ -26,6 +25,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import FixedTableBody from './fixedtablebody.jsx';
 
 import { ConfirmationDialog, DataListToolbar } from './shareduiprimitives.jsx';
 import { InlineListSummary } from './sharedvisualfoundation.jsx';
@@ -261,6 +261,9 @@ function RolePositionManagementPage({
             ).includes(
               keyword,
             ) ||
+            normalizeValue(position.positionGroup).includes(keyword) ||
+            normalizeValue(position.departmentName).includes(keyword) ||
+            normalizeValue(position.divisionName).includes(keyword) ||
             normalizeValue(
               translateStatus(
                 position.status,
@@ -1111,7 +1114,7 @@ function RolePositionManagementPage({
                 </TableRow>
               </TableHead>
 
-              <TableBody>
+              <FixedTableBody>
                 {paginatedPositions.map(
                   (position) => {
                     const isActive =
@@ -1163,9 +1166,7 @@ function RolePositionManagementPage({
                               '1px solid #E5E7EB',
                           }}
                         >
-                          {
-                            position.positionName
-                          }
+                          {position.positionName}
                         </TableCell>
 
                         {/* Employees */}
@@ -1359,7 +1360,7 @@ function RolePositionManagementPage({
                     );
                   },
                 )}
-              </TableBody>
+              </FixedTableBody>
             </Table>
             {filteredPositions.length > rowsPerPage ? <TablePagination component="div" count={filteredPositions.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredPositions.length / rowsPerPage)}`} /> : null}
           </Box>

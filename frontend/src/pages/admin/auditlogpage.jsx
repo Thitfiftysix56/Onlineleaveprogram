@@ -21,7 +21,6 @@ import {
   Select,
   Stack,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TablePagination,
@@ -29,6 +28,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
 
 import CloseRounded from '@mui/icons-material/CloseRounded';
 
@@ -1612,7 +1612,7 @@ function AuditLogPage() {
                 </TableRow>
               </TableHead>
 
-              <TableBody>
+              <FixedTableBody>
                 {paginatedAuditLogs.map(
                   (log) => {
                     const roleStyle =
@@ -1761,7 +1761,7 @@ function AuditLogPage() {
                     );
                   },
                 )}
-              </TableBody>
+              </FixedTableBody>
             </Table>
             {filteredAuditLogs.length > rowsPerPage ? (
               <TablePagination component="div" count={filteredAuditLogs.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredAuditLogs.length / rowsPerPage)}`} />

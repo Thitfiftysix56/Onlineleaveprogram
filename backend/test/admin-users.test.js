@@ -159,6 +159,8 @@ test('available employees returns only employees without an account', async () =
           email: 'available@example.com',
           department_name: 'Information Technology',
           position_name: 'Developer',
+          intended_role_id: 2,
+          intended_role_name: 'Supervisor',
         },
       ],
     ]
@@ -181,6 +183,8 @@ test('available employees returns only employees without an account', async () =
         email: 'available@example.com',
         department: 'Information Technology',
         position: 'Developer',
+        roleId: 2,
+        roleName: 'Supervisor',
       },
     ],
   })
@@ -190,9 +194,8 @@ test('POST /api/admin/users creates a hashed account and returns the temporary p
   const queries = []
   const connectionQueries = []
   const results = [
-    [[{ employee_id: 10, employee_code: 'EMP-010', user_id: null }]],
+    [[{ employee_id: 10, employee_code: 'EMP-010', intended_role_id: 1, intended_role_name: 'Employee', user_id: null }]],
     [[]],
-    [[{ role_id: 1, role_name: 'Employee' }]],
   ]
   const connectionResults = [
     [{ insertId: 7 }],
@@ -240,7 +243,7 @@ test('POST /api/admin/users creates a hashed account and returns the temporary p
     body: JSON.stringify({
       employeeId: 10,
       username: 'employee010',
-      role: 'Employee',
+      role: 'Admin',
       status: 'active',
     }),
   })
@@ -257,6 +260,7 @@ test('POST /api/admin/users creates a hashed account and returns the temporary p
   assert.equal(JSON.stringify(body).includes('password_hash'), false)
   assert.match(connectionQueries[0].sql, /INSERT INTO users/)
   assert.match(connectionQueries[0].sql, /must_change_password/)
+  assert.equal(connectionQueries[0].parameters[1], 1)
   assert.notEqual(connectionQueries[0].parameters[3], body.temporaryPassword)
   assert.match(connectionQueries[0].parameters[3], /^\$2[aby]\$/)
   pool.getConnection = originalPoolGetConnection

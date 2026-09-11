@@ -1,7 +1,7 @@
 import { pool } from '../config/database.js'
 
 export async function listLeaveReport(request, response) {
-  const conditions = []
+  const conditions = ["lr.status <> 'draft'"]
   const parameters = []
   const filters = [
     ['status', 'lr.status'],
@@ -9,7 +9,7 @@ export async function listLeaveReport(request, response) {
     ['departmentId', 'e.department_id'],
   ]
   for (const [key, column] of filters) {
-    if (request.query[key] && request.query[key] !== 'all') {
+    if (request.query[key] && request.query[key] !== 'all' && !(key === 'status' && request.query[key] === 'draft')) {
       conditions.push(`${column} = ?`)
       parameters.push(request.query[key])
     }

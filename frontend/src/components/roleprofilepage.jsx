@@ -467,6 +467,11 @@ function RoleProfilePage({
         return;
       }
 
+      if (!/^\d{10}$/.test(editForm.phone.trim())) {
+        setEditError('กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 10 หลัก');
+        return;
+      }
+
       const formData =
         new FormData();
 
@@ -1536,8 +1541,10 @@ function RoleProfilePage({
 
               <TextField
                 fullWidth
+                required
                 size="small"
                 label="เบอร์โทรศัพท์"
+                placeholder="0812345678"
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '10px',
@@ -1552,7 +1559,7 @@ function RoleProfilePage({
                     (previous) => ({
                       ...previous,
                       phone:
-                        event.target.value,
+                        event.target.value.replace(/\D/g, '').slice(0, 10),
                     }),
                   )
                 }
@@ -1562,7 +1569,9 @@ function RoleProfilePage({
                 slotProps={{
                   htmlInput: {
                     maxLength:
-                      20,
+                      10,
+                    inputMode: 'numeric',
+                    pattern: '[0-9]*',
                   },
                 }}
               />

@@ -16,7 +16,6 @@ import {
   Paper,
   Select,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TablePagination,
@@ -24,6 +23,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
 
 import {
   useNavigate,
@@ -976,7 +976,7 @@ function EmployeeManagementPage() {
                 </TableRow>
               </TableHead>
 
-              <TableBody>
+              <FixedTableBody>
                 {paginatedEmployees.map(
                   (
                     employee,
@@ -1173,7 +1173,7 @@ function EmployeeManagementPage() {
                     );
                   },
                 )}
-              </TableBody>
+              </FixedTableBody>
             </Table>
             {filteredEmployees.length > rowsPerPage ? <TablePagination component="div" count={filteredEmployees.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredEmployees.length / rowsPerPage)}`} /> : null}
           </Box>

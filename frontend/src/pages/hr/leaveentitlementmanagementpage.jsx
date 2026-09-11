@@ -13,13 +13,13 @@ import {
   Paper,
   Select,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TablePagination,
   TableRow,
   Typography,
 } from '@mui/material';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
 
 import api from '../../api/axios.js';
 import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
@@ -260,7 +260,7 @@ function LeaveEntitlementManagementPage() {
                   ))}
                 </TableRow>
               </TableHead>
-              <TableBody>
+              <FixedTableBody>
                 {paginatedEntitlements.map((item) => (
                   <TableRow
                     key={item.id}
@@ -291,7 +291,7 @@ function LeaveEntitlementManagementPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
+              </FixedTableBody>
             </Table>
             <TablePagination
               component="div"

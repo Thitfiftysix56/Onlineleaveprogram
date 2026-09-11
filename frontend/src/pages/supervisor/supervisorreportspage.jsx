@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   Alert,
@@ -6,22 +6,19 @@ import {
   Chip,
   CircularProgress,
   FormControl,
-  IconButton,
-  InputAdornment,
   MenuItem,
   Paper,
   Select,
   Stack,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TableRow,
   TablePagination,
-  TextField,
   Typography,
 } from '@mui/material';
-import CalendarMonthRounded from '@mui/icons-material/CalendarMonthRounded';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
+import ThaiCalendarField from '../../components/thaicalendarfield.jsx';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -123,79 +120,7 @@ function ThaiDateField({
   min,
   max,
 }) {
-  const pickerRef = useRef(null);
-  const openPicker = (event) => {
-    event?.stopPropagation?.();
-    const picker = pickerRef.current;
-    if (!picker) return;
-    try {
-      if (typeof picker.showPicker === 'function') picker.showPicker();
-      else picker.click();
-    } catch {
-      picker.click();
-    }
-  };
-
-  return (
-    <Box
-      sx={{
-        position: 'relative',
-      }}
-    >
-      <TextField
-        fullWidth
-        label={label}
-        value={value ? formatDate(value) : ''}
-        placeholder="วว/ดด/ปปปป"
-        onClick={openPicker}
-        slotProps={{
-          input: {
-            readOnly: true,
-            endAdornment: <InputAdornment position="end"><IconButton type="button" aria-label={`เลือก${label}`} onClick={openPicker} edge="end"><CalendarMonthRounded fontSize="small" /></IconButton></InputAdornment>,
-          },
-          inputLabel: {
-            shrink: true,
-          },
-        }}
-        sx={{
-          '& .MuiOutlinedInput-root': {
-            height: '44px',
-            borderRadius: '11px',
-          },
-
-          '& .MuiOutlinedInput-input': {
-            fontSize: '14px',
-            cursor: 'pointer',
-          },
-
-          '& .MuiInputBase-input::placeholder': {
-            opacity: 1,
-            color: '#64748B',
-          },
-        }}
-      />
-
-      <input
-        ref={pickerRef}
-        type="date"
-        value={value}
-        onChange={(event) =>
-          onChange(event.target.value)
-        }
-        style={{
-          position: 'absolute',
-          width: 1,
-          height: 1,
-          opacity: 0,
-          pointerEvents: 'none',
-          insetInlineStart: 0,
-          bottom: 0,
-        }}
-        min={min}
-        max={max}
-      />
-    </Box>
-  );
+  return <ThaiCalendarField label={label} value={value} onChange={onChange} min={min} max={max} />;
 }
 
 function SupervisorReportsPage() {
@@ -582,7 +507,7 @@ function SupervisorReportsPage() {
                 </TableRow>
               </TableHead>
 
-              <TableBody>
+              <FixedTableBody>
                 {paginatedRequests.map(
                   (request) => {
                     const requestStatus =
@@ -763,7 +688,7 @@ function SupervisorReportsPage() {
                     );
                   },
                 )}
-              </TableBody>
+              </FixedTableBody>
             </Table>
             {filteredRequests.length > rowsPerPage ? (
               <TablePagination

@@ -9,7 +9,7 @@ process.env.DB_USER = 'test_user'
 process.env.JWT_SECRET = 'leave-remediation-test-secret-with-at-least-32-bytes'
 
 const [
-  { calculateApprovalAvailability, calculateDisplayedRemaining, calculateRequestAvailability, calculateWorkingDays, isSickLeaveType, isValidLeaveReason, recheckApprovalBalance, validateLeaveBoundaryDates, validateLeaveStartDatePolicy, validateSubmissionParticipants },
+  { calculateApprovalAvailability, calculateDisplayedRemaining, calculateRequestAvailability, calculateWorkingDayAllocations, calculateWorkingDays, isSickLeaveType, isValidLeaveReason, recheckApprovalBalance, validateAdvanceBookingPolicy, validateLeaveBoundaryDates, validateLeaveStartDatePolicy, validateSubmissionParticipants },
   { isAllowedLeaveAttachment },
 ] = await Promise.all([
   import('../src/controllers/leave-controller.js'),
@@ -94,6 +94,20 @@ test('leave day calculation excludes weekends and active holidays represented as
   assert.equal(await calculateWorkingDays(connection, '2026-08-24', '2026-08-30'), 4)
 })
 
+test('cross-year working days are allocated to the correct entitlement year', async () => {
+  const connection = { execute: async () => [[]] }
+  assert.deepEqual(await calculateWorkingDayAllocations(connection, '2026-12-30', '2027-01-05'), [
+    { year: 2026, leaveDays: 2 },
+    { year: 2027, leaveDays: 3 },
+  ])
+})
+
+test('next-year booking opens in December and is limited to January', () => {
+  assert.equal(validateAdvanceBookingPolicy('2026-12-30', '2027-01-15', '2026-12-01'), null)
+  assert.match(validateAdvanceBookingPolicy('2026-12-30', '2027-02-01', '2026-12-01'), /31 มกราคม/)
+  assert.match(validateAdvanceBookingPolicy('2026-12-30', '2027-01-15', '2026-11-30'), /1 ธันวาคม/)
+})
+
 test('leave boundary dates reject weekends and official holidays', async () => {
   const noHolidays = { execute: async () => [[]] }
   assert.match(await validateLeaveBoundaryDates(noHolidays, '2026-09-12', '2026-09-14'), /วันหยุดสุดสัปดาห์/)
@@ -144,7 +158,8 @@ test('other pending requests reserve request availability before approval', () =
 test('approval implementation locks entitlement and checks current approved usage', async () => {
   const calls = []
   const results = [
-    [[{ entitlement_id: 7, total_days: '10.00', used_days: '2.00' }]],
+    [[{ year: 2026, leave_days: '4.00' }]],
+    [[{ entitlement_id: 7, year: 2026, total_days: '10.00', used_days: '2.00' }]],
   ]
   const connection = {
     execute: async (sql, parameters) => {
@@ -152,11 +167,11 @@ test('approval implementation locks entitlement and checks current approved usag
       return results.shift()
     },
   }
-  const row = { employee_id: 10, leave_type_id: 2, start_date: '2026-09-01', leave_days: 4 }
+  const row = { employee_id: 10, leave_type_id: 2, start_date: '2026-09-01', end_date: '2026-09-04', leave_days: 4 }
   const result = await recheckApprovalBalance(connection, row, 99)
   assert.equal(result.allowed, true)
-  assert.match(calls[0].sql, /FOR UPDATE/)
-  assert.equal(calls.length, 1)
+  assert.match(calls[1].sql, /FOR UPDATE/)
+  assert.equal(calls.length, 2)
 })
 
 test('general leave must be requested at least three calendar days in advance', () => {

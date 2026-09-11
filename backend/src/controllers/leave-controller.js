@@ -124,19 +124,60 @@ export function calculateApprovalAvailability(entitlement) {
   return Number(entitlement.total_days) - Number(entitlement.used_days)
 }
 
+export function validateAdvanceBookingPolicy(startDate, endDate, todayDate = todayInBangkok()) {
+  const currentYear = Number(todayDate.slice(0, 4))
+  const currentMonth = Number(todayDate.slice(5, 7))
+  const startYear = Number(startDate.slice(0, 4))
+  const endYear = Number(endDate.slice(0, 4))
+  if (endYear <= currentYear) return null
+  const nextJanuaryEnd = `${currentYear + 1}-01-31`
+  if (currentMonth === 12 && startYear >= currentYear && endYear === currentYear + 1 && endDate <= nextJanuaryEnd) return null
+  return currentMonth === 12
+    ? `สามารถยื่นล่วงหน้าสำหรับปี ${currentYear + 1} ได้ถึงวันที่ 31 มกราคมเท่านั้น`
+    : `สิทธิ์ปี ${currentYear + 1} จะเปิดให้ยื่นล่วงหน้าตั้งแต่วันที่ 1 ธันวาคม`
+}
+
+export async function calculateWorkingDayAllocations(connection, startDate, endDate) {
+  const [holidays] = await connection.execute('SELECT holiday_date FROM holidays WHERE is_active = 1 AND holiday_date BETWEEN ? AND ?', [startDate, endDate])
+  const excluded = new Set(holidays.map((x) => dateOnly(x.holiday_date)))
+  const allocations = new Map()
+  for (let cursor = new Date(`${startDate}T00:00:00Z`), end = new Date(`${endDate}T00:00:00Z`); cursor <= end; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+    const key = cursor.toISOString().slice(0, 10)
+    if (cursor.getUTCDay() === 0 || cursor.getUTCDay() === 6 || excluded.has(key)) continue
+    const year = cursor.getUTCFullYear()
+    allocations.set(year, (allocations.get(year) || 0) + 1)
+  }
+  return [...allocations.entries()].map(([year, leaveDays]) => ({ year, leaveDays }))
+}
+
 export async function recheckApprovalBalance(connection, row, requestId) {
-  const year = Number(dateOnly(row.start_date).slice(0, 4))
-  const [entitlements] = await connection.execute(
-    'SELECT entitlement_id, total_days, used_days FROM leave_entitlements WHERE employee_id = ? AND leave_type_id = ? AND year = ? FOR UPDATE',
-    [row.employee_id, row.leave_type_id, year],
+  let [allocations] = await connection.execute(
+    'SELECT year, leave_days FROM leave_request_year_allocations WHERE leave_request_id = ? ORDER BY year',
+    [requestId],
   )
-  const entitlement = entitlements[0]
-  if (!entitlement) return { allowed: false, entitlement: null }
-  const availableForCurrent = calculateApprovalAvailability(entitlement)
+  if (!allocations.length) {
+    allocations = await calculateWorkingDayAllocations(connection, dateOnly(row.start_date), dateOnly(row.end_date))
+    allocations = allocations.map((item) => ({ year: item.year, leave_days: item.leaveDays }))
+  }
+  const years = allocations.map((item) => Number(item.year))
+  if (!years.length) return { allowed: false, entitlements: [], deductions: [] }
+  const placeholders = years.map(() => '?').join(',')
+  const [entitlements] = await connection.execute(
+    `SELECT entitlement_id, year, total_days, used_days FROM leave_entitlements
+     WHERE employee_id = ? AND leave_type_id = ? AND year IN (${placeholders})
+     ORDER BY year FOR UPDATE`,
+    [row.employee_id, row.leave_type_id, ...years],
+  )
+  const entitlementByYear = new Map(entitlements.map((item) => [Number(item.year), item]))
+  const deductions = allocations.map((allocation) => ({
+    year: Number(allocation.year),
+    leaveDays: Number(allocation.leave_days),
+    entitlement: entitlementByYear.get(Number(allocation.year)) || null,
+  }))
   return {
-    allowed: Number(row.leave_days) <= availableForCurrent,
-    entitlement,
-    availableForCurrent,
+    allowed: deductions.every((item) => item.entitlement && item.leaveDays <= calculateApprovalAvailability(item.entitlement)),
+    entitlements,
+    deductions,
   }
 }
 
@@ -155,6 +196,10 @@ async function attachments(connection, requestId) {
   return rows.map((x) => ({ id: x.attachment_id, name: x.original_name, type: x.mime_type, size: Number(x.file_size), url: `/api/leave-attachments/${x.attachment_id}` }))
 }
 async function serialize(connection, row) {
+  const [yearAllocations] = await connection.execute(
+    'SELECT year, leave_days FROM leave_request_year_allocations WHERE leave_request_id = ? ORDER BY year',
+    [row.leave_request_id],
+  )
   return { id: row.leave_request_id, leaveRequestId: row.leave_request_id, requestNo: row.request_no,
     employeeId: row.employee_id, employeeCode: row.employee_code, employeeName: row.employee_name,
     department: row.department_name, position: row.position_name, leaveTypeId: row.leave_type_id,
@@ -164,6 +209,7 @@ async function serialize(connection, row) {
     approverEmployeeId: row.approver_employee_id, approvedAt: row.approved_at,
     rejectedAt: row.rejected_at, rejectionReason: row.rejection_reason,
     cancelledAt: row.cancelled_at, createdAt: row.created_at, updatedAt: row.updated_at,
+    yearAllocations: yearAllocations.map((item) => ({ year: Number(item.year), leaveDays: Number(item.leave_days) })),
     attachments: await attachments(connection, row.leave_request_id) }
 }
 async function byId(connection, requestId) {
@@ -172,14 +218,8 @@ async function byId(connection, requestId) {
 }
 
 export async function calculateWorkingDays(connection, startDate, endDate) {
-  const [holidays] = await connection.execute('SELECT holiday_date FROM holidays WHERE is_active = 1 AND holiday_date BETWEEN ? AND ?', [startDate, endDate])
-  const excluded = new Set(holidays.map((x) => dateOnly(x.holiday_date)))
-  let total = 0
-  for (let cursor = new Date(`${startDate}T00:00:00Z`), end = new Date(`${endDate}T00:00:00Z`); cursor <= end; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
-    const day = cursor.getUTCDay(); const key = cursor.toISOString().slice(0, 10)
-    if (day !== 0 && day !== 6 && !excluded.has(key)) total += 1
-  }
-  return total
+  const allocations = await calculateWorkingDayAllocations(connection, startDate, endDate)
+  return allocations.reduce((total, item) => total + item.leaveDays, 0)
 }
 
 export async function validateLeaveBoundaryDates(connection, startDate, endDate) {
@@ -213,7 +253,9 @@ async function validate(connection, employeeId, body, currentId = 0, submitting 
   if (!submitting && !leaveTypeId && !startDate && !endDate && !reason) return { value: { leaveTypeId: null, startDate: null, endDate: null, reason: '' } }
   if (!leaveTypeId || !startDate || !endDate || !reason) return { error: 'กรุณาระบุประเภทการลา วันที่เริ่มต้น วันที่สิ้นสุด และเหตุผลการลาให้ครบถ้วน' }
   if (startDate > endDate) return { error: 'วันที่สิ้นสุดต้องตรงกับหรืออยู่หลังวันที่เริ่มลา' }
-  if (startDate.slice(0, 4) !== endDate.slice(0, 4)) return { error: 'ระบบไม่รองรับการยื่นคำขอลาคร่อมปี' }
+  if (Number(endDate.slice(0, 4)) - Number(startDate.slice(0, 4)) > 1) return { error: 'คำขอลาคร่อมได้ไม่เกิน 2 ปีต่อเนื่อง' }
+  const advanceBookingError = validateAdvanceBookingPolicy(startDate, endDate)
+  if (advanceBookingError) return { error: advanceBookingError }
   if (!isValidLeaveReason(reason)) return { error: 'เหตุผลการลาต้องเป็นตัวอักษรภาษาไทยหรือภาษาอังกฤษเท่านั้น' }
   const [types] = await connection.execute('SELECT * FROM leave_types WHERE leave_type_id = ? AND is_active = 1 LIMIT 1', [leaveTypeId])
   if (!types.length) return { error: 'ประเภทการลาที่เลือกไม่ถูกต้องหรือถูกปิดใช้งาน' }
@@ -221,35 +263,42 @@ async function validate(connection, employeeId, body, currentId = 0, submitting 
   if (startDatePolicyError) return { error: startDatePolicyError }
   const boundaryDateError = await validateLeaveBoundaryDates(connection, startDate, endDate)
   if (boundaryDateError) return { error: boundaryDateError }
-  const days = await calculateWorkingDays(connection, startDate, endDate)
+  const yearAllocations = await calculateWorkingDayAllocations(connection, startDate, endDate)
+  const days = yearAllocations.reduce((total, item) => total + item.leaveDays, 0)
   if (!days) return { error: 'ช่วงวันที่เลือกไม่มีวันทำงานที่สามารถใช้สิทธิ์ลาได้' }
   const type = types[0]
   if (days < Number(type.minimum_days || 0) || days > Number(type.maximum_days_per_request || 365)) return { error: 'จำนวนวันลาไม่เป็นไปตามเงื่อนไขของประเภทการลาที่เลือก' }
-  const year = Number(startDate.slice(0, 4))
-  const [ents] = await connection.execute(`SELECT entitlement_id, total_days, used_days
-    FROM leave_entitlements
-    WHERE employee_id = ? AND leave_type_id = ? AND year = ?
-    LIMIT 1${submitting ? ' FOR UPDATE' : ''}`, [employeeId, leaveTypeId, year])
-  if (!ents.length) return { error: 'ไม่พบสิทธิ์การลาสำหรับประเภทและปีที่เลือก' }
-  const [[pending]] = await connection.execute(`SELECT COALESCE(SUM(leave_days), 0) pending_days
-    FROM leave_requests
-    WHERE employee_id = ? AND leave_type_id = ? AND YEAR(start_date) = ?
-      AND status = 'pending' AND leave_request_id <> ?`, [employeeId, leaveTypeId, year, currentId])
-  const requestAvailability = calculateRequestAvailability({
-    ...ents[0],
-    pending_days: pending.pending_days,
-  })
-  if (requestAvailability < days) {
-    const pendingDays = Number(pending.pending_days || 0)
-    return {
-      error: pendingDays > 0
-        ? `ไม่สามารถส่งคำขอได้ เนื่องจากสิทธิ์ที่ยื่นได้คงเหลือ ${requestAvailability} วัน และมีคำขอรออนุมัติ ${pendingDays} วัน`
-        : `ไม่สามารถส่งคำขอได้ เนื่องจากสิทธิ์วันลาคงเหลือ ${requestAvailability} วัน`,
+  const currentYear = Number(todayInBangkok().slice(0, 4))
+  for (const allocation of yearAllocations) {
+    if (allocation.year === currentYear + 1 && Number(todayInBangkok().slice(5, 7)) === 12) {
+      await connection.execute(
+        `INSERT IGNORE INTO leave_entitlements (employee_id, leave_type_id, year, total_days, used_days, updated_by)
+         SELECT ?, leave_type_id, ?, annual_quota_days, 0, NULL FROM leave_types
+         WHERE leave_type_id = ? AND annual_quota_days > 0`,
+        [employeeId, allocation.year, leaveTypeId],
+      )
+    }
+    const [ents] = await connection.execute(`SELECT entitlement_id, total_days, used_days
+      FROM leave_entitlements
+      WHERE employee_id = ? AND leave_type_id = ? AND year = ?
+      LIMIT 1${submitting ? ' FOR UPDATE' : ''}`, [employeeId, leaveTypeId, allocation.year])
+    if (!ents.length) return { error: `ยังไม่เปิดสิทธิ์การลาสำหรับปี ${allocation.year}` }
+    const [[pending]] = await connection.execute(`SELECT COALESCE(SUM(lra.leave_days), 0) pending_days
+      FROM leave_request_year_allocations lra
+      JOIN leave_requests lr ON lr.leave_request_id = lra.leave_request_id
+      WHERE lr.employee_id = ? AND lr.leave_type_id = ? AND lra.year = ?
+        AND lr.status = 'pending' AND lr.leave_request_id <> ?`, [employeeId, leaveTypeId, allocation.year, currentId])
+    const requestAvailability = calculateRequestAvailability({ ...ents[0], pending_days: pending.pending_days })
+    if (requestAvailability < allocation.leaveDays) {
+      const pendingDays = Number(pending.pending_days || 0)
+      return { error: pendingDays > 0
+        ? `สิทธิ์ปี ${allocation.year} ยื่นเพิ่มได้ ${requestAvailability} วัน และมีคำขอรออนุมัติ ${pendingDays} วัน`
+        : `สิทธิ์วันลาปี ${allocation.year} คงเหลือไม่เพียงพอ` }
     }
   }
   const [overlap] = await connection.execute(`SELECT leave_request_id FROM leave_requests WHERE employee_id = ? AND status IN ('pending','approved') AND leave_request_id <> ? AND start_date <= ? AND end_date >= ? LIMIT 1`, [employeeId, currentId, endDate, startDate])
   if (overlap.length) return { error: 'ช่วงวันที่เลือกซ้ำกับคำขอที่รออนุมัติหรือได้รับอนุมัติแล้ว' }
-  return { value: { leaveTypeId, startDate, endDate, reason, days, entitlementId: ents[0].entitlement_id, type } }
+  return { value: { leaveTypeId, startDate, endDate, reason, days, yearAllocations, type } }
 }
 
 async function storeFiles(connection, requestId, files = []) {
@@ -264,10 +313,23 @@ async function storeFiles(connection, requestId, files = []) {
 
 export async function options(request, response) {
   const employeeId = await identity(pool, request); const year = Number(request.query.year || new Date().getFullYear())
+  const today = todayInBangkok(); const currentYear = Number(today.slice(0, 4))
+  if (Number(today.slice(5, 7)) === 12 && year === currentYear + 1) {
+    await pool.execute(
+      `INSERT IGNORE INTO leave_entitlements (employee_id, leave_type_id, year, total_days, used_days, updated_by)
+       SELECT ?, leave_type_id, ?, annual_quota_days, 0, NULL FROM leave_types
+       WHERE is_active=1 AND annual_quota_days > 0`,
+      [employeeId, year],
+    )
+  }
   const [types] = await pool.execute(`SELECT lt.leave_type_id, lt.leave_type_code, lt.leave_type_name, lt.minimum_days, lt.maximum_days_per_request, lt.requires_attachment, lt.attachment_required_after_days,
-    le.total_days, le.used_days, COALESCE(SUM(CASE WHEN lr.status='pending' THEN lr.leave_days ELSE 0 END),0) pending_days
+    le.total_days, le.used_days,
+    COALESCE((SELECT SUM(lra.leave_days) FROM leave_request_year_allocations lra
+      JOIN leave_requests pending_lr ON pending_lr.leave_request_id=lra.leave_request_id
+      WHERE pending_lr.employee_id=? AND pending_lr.leave_type_id=lt.leave_type_id
+        AND pending_lr.status='pending' AND lra.year=?),0) pending_days
     FROM leave_types lt LEFT JOIN leave_entitlements le ON le.leave_type_id=lt.leave_type_id AND le.employee_id=? AND le.year=?
-    LEFT JOIN leave_requests lr ON lr.employee_id=? AND lr.leave_type_id=lt.leave_type_id AND YEAR(lr.start_date)=? WHERE lt.is_active=1 GROUP BY lt.leave_type_id, le.entitlement_id ORDER BY lt.leave_type_name`, [employeeId, year, employeeId, year])
+    WHERE lt.is_active=1 ORDER BY lt.leave_type_name`, [employeeId, year, employeeId, year])
   const [holidays] = await pool.execute('SELECT holiday_id, holiday_date, holiday_name FROM holidays WHERE is_active=1 AND YEAR(holiday_date)=? ORDER BY holiday_date', [year])
   response.json({ status: 'ok', data: { leaveTypes: types.map((x) => ({ id:x.leave_type_id, leaveTypeId:x.leave_type_id, code:x.leave_type_code, name:x.leave_type_name, status:'Active', minimumDays:Number(x.minimum_days), maximumDaysPerRequest:Number(x.maximum_days_per_request), requiresAttachment:Boolean(x.requires_attachment), attachmentRequiredAfterDays:Number(x.attachment_required_after_days), totalDays:Number(x.total_days||0), usedDays:Number(x.used_days||0), pendingDays:Number(x.pending_days||0), remainingDays:calculateDisplayedRemaining(x), availableDays:calculateRequestAvailability(x), hasEntitlement:Boolean(x.total_days!==null) })), holidays: holidays.map((x)=>({ id:x.holiday_id, date:dateOnly(x.holiday_date), name:x.holiday_name })) } })
 }
@@ -294,6 +356,13 @@ async function save(request,response,submitting) {
     const participants=submitting?await validateSubmissionParticipants(connection,employeeId):null; if(participants?.error)return rollbackError(connection,response,400,participants.error)
     let id=requestId; if(id) await connection.execute(`UPDATE leave_requests SET leave_type_id=?,start_date=?,end_date=?,leave_days=?,reason=?,status=?,submitted_at=${submitting?'NOW()':'NULL'} WHERE leave_request_id=?`,[v.leaveTypeId,v.startDate,v.endDate,v.days||0,v.reason,submitting?'pending':'draft',id])
     else { const [result]=await connection.execute(`INSERT INTO leave_requests(employee_id,leave_type_id,start_date,end_date,leave_days,reason,status,submitted_at) VALUES(?,?,?,?,?,?,?,${submitting?'NOW()':'NULL'})`,[employeeId,v.leaveTypeId,v.startDate,v.endDate,v.days||0,v.reason,submitting?'pending':'draft']); id=result.insertId }
+    await connection.execute('DELETE FROM leave_request_year_allocations WHERE leave_request_id = ?', [id])
+    for (const allocation of v.yearAllocations || []) {
+      await connection.execute(
+        'INSERT INTO leave_request_year_allocations (leave_request_id, year, leave_days) VALUES (?, ?, ?)',
+        [id, allocation.year, allocation.leaveDays],
+      )
+    }
     if(submitting){ const [[storedCount]]=await connection.execute('SELECT COUNT(*) attachment_count FROM leave_request_attachments WHERE leave_request_id=?',[id]); const mustAttach=Boolean(v.type.requires_attachment)&&Number(v.days)>=Number(v.type.attachment_required_after_days||0); if(mustAttach&&!request.files?.length&&!Number(storedCount.attachment_count))return rollbackError(connection,response,400,'คำขอลาประเภทนี้จำเป็นต้องแนบเอกสาร'); const requestNo=`LR-${new Date().toISOString().slice(0,10).replaceAll('-','')}-${String(id).padStart(6,'0')}`; await connection.execute('UPDATE leave_requests SET request_no=? WHERE leave_request_id=?',[requestNo,id]); const approverUserIds=participants.approverUserIds||[participants.supervisorUserId]; for (const approverUserId of approverUserIds) await createNotification(connection,{userId:approverUserId,type:'leave-submitted',title:'New leave request',message:`Leave request ${requestNo} is waiting for approval.`,leaveRequestId:id}) }
     await storeFiles(connection,id,request.files)
     const row=await byId(connection,id)
@@ -381,13 +450,13 @@ export async function cancelOwn(request, response) {
   }
 }
 
-export async function balance(request,response){const employeeId=await identity(pool,request);const year=Number(request.query.year||new Date().getFullYear());const [rows]=await pool.execute(`SELECT le.entitlement_id,lt.leave_type_id,lt.leave_type_name,le.total_days,le.used_days,COALESCE(SUM(CASE WHEN lr.status='pending' THEN lr.leave_days ELSE 0 END),0) pending_days FROM leave_entitlements le JOIN leave_types lt ON lt.leave_type_id=le.leave_type_id LEFT JOIN leave_requests lr ON lr.employee_id=le.employee_id AND lr.leave_type_id=le.leave_type_id AND YEAR(lr.start_date)=le.year WHERE le.employee_id=? AND le.year=? GROUP BY le.entitlement_id ORDER BY lt.leave_type_name`,[employeeId,year]);response.json({status:'ok',data:{year,balances:rows.map(x=>({id:x.entitlement_id,leaveTypeId:x.leave_type_id,leaveType:x.leave_type_name,total:Number(x.total_days),used:Number(x.used_days),pending:Number(x.pending_days),remaining:calculateDisplayedRemaining(x),available:calculateRequestAvailability(x)}))}})}
+export async function balance(request,response){const employeeId=await identity(pool,request);const year=Number(request.query.year||new Date().getFullYear());const [rows]=await pool.execute(`SELECT le.entitlement_id,lt.leave_type_id,lt.leave_type_name,le.total_days,le.used_days,COALESCE((SELECT SUM(lra.leave_days) FROM leave_request_year_allocations lra JOIN leave_requests lr ON lr.leave_request_id=lra.leave_request_id WHERE lr.employee_id=le.employee_id AND lr.leave_type_id=le.leave_type_id AND lr.status='pending' AND lra.year=le.year),0) pending_days FROM leave_entitlements le JOIN leave_types lt ON lt.leave_type_id=le.leave_type_id WHERE le.employee_id=? AND le.year=? ORDER BY lt.leave_type_name`,[employeeId,year]);response.json({status:'ok',data:{year,balances:rows.map(x=>({id:x.entitlement_id,leaveTypeId:x.leave_type_id,leaveType:x.leave_type_name,total:Number(x.total_days),used:Number(x.used_days),pending:Number(x.pending_days),remaining:calculateDisplayedRemaining(x),available:calculateRequestAvailability(x)}))}})}
 
 export async function supervisorList(request,response){const supervisorId=await identity(pool,request);const [rows]=await pool.execute(`${select} WHERE e.supervisor_id=? AND lr.status='pending' AND lr.employee_id<>? ORDER BY lr.submitted_at`,[supervisorId,supervisorId]);response.json({status:'ok',data:{leaveRequests:await Promise.all(rows.map(x=>serialize(pool,x)))}})}
-export async function supervisorDetail(request,response){const supervisorId=await identity(pool,request);const row=await byId(pool,positiveId(request.params.requestId));if(!row){return error(response,404,'ไม่พบคำขอลาที่ต้องการ')}const [ok]=await pool.execute('SELECT employee_id FROM employees WHERE employee_id=? AND supervisor_id=?',[row.employee_id,supervisorId]);if(!ok.length||row.employee_id===supervisorId)return error(response,403,'คุณไม่มีสิทธิ์เข้าถึงคำขอลานี้');response.json({status:'ok',data:{leaveRequest:await serialize(pool,row)}})}
+export async function supervisorDetail(request,response){const supervisorId=await identity(pool,request);const row=await byId(pool,positiveId(request.params.requestId));if(!row||row.status==='draft'){return error(response,404,'ไม่พบคำขอลาที่ต้องการ')}const [ok]=await pool.execute('SELECT employee_id FROM employees WHERE employee_id=? AND supervisor_id=?',[row.employee_id,supervisorId]);if(!ok.length||row.employee_id===supervisorId)return error(response,403,'คุณไม่มีสิทธิ์เข้าถึงคำขอลานี้');response.json({status:'ok',data:{leaveRequest:await serialize(pool,row)}})}
 const submittedByRoleSql = `EXISTS (SELECT 1 FROM users submitter_user JOIN roles submitter_role ON submitter_role.role_id=submitter_user.role_id WHERE submitter_user.employee_id=lr.employee_id AND LOWER(submitter_role.role_name)=?)`
 export async function hrApprovalList(_request,response){const [rows]=await pool.execute(`${select} WHERE lr.status='pending' AND ${submittedByRoleSql} ORDER BY lr.submitted_at`,['supervisor']);response.json({status:'ok',data:{leaveRequests:await Promise.all(rows.map(x=>serialize(pool,x)))}})}
-export async function hrApprovalDetail(request,response){const row=await byId(pool,positiveId(request.params.requestId));if(!row)return error(response,404,'ไม่พบคำขอลาที่ต้องการ');const [ok]=await pool.execute(`SELECT lr.leave_request_id FROM leave_requests lr WHERE lr.leave_request_id=? AND ${submittedByRoleSql}`,[row.leave_request_id,'supervisor']);if(!ok.length)return error(response,403,'คุณไม่มีสิทธิ์เข้าถึงคำขอลานี้');response.json({status:'ok',data:{leaveRequest:await serialize(pool,row)}})}
+export async function hrApprovalDetail(request,response){const row=await byId(pool,positiveId(request.params.requestId));if(!row||row.status==='draft')return error(response,404,'ไม่พบคำขอลาที่ต้องการ');const [ok]=await pool.execute(`SELECT lr.leave_request_id FROM leave_requests lr WHERE lr.leave_request_id=? AND lr.status<>'draft' AND ${submittedByRoleSql}`,[row.leave_request_id,'supervisor']);if(!ok.length)return error(response,403,'คุณไม่มีสิทธิ์เข้าถึงคำขอลานี้');response.json({status:'ok',data:{leaveRequest:await serialize(pool,row)}})}
 export async function decide(request, response) {
   const connection = await pool.getConnection()
   try {
@@ -417,10 +486,12 @@ export async function decide(request, response) {
       if (!balanceCheck.allowed) {
         return rollbackError(connection, response, 409, 'สิทธิ์วันลาคงเหลือไม่เพียงพอสำหรับการอนุมัติคำขอนี้')
       }
-      await connection.execute(
-        'UPDATE leave_entitlements SET used_days = used_days + ? WHERE entitlement_id = ?',
-        [row.leave_days, balanceCheck.entitlement.entitlement_id],
-      )
+      for (const deduction of balanceCheck.deductions) {
+        await connection.execute(
+          'UPDATE leave_entitlements SET used_days = used_days + ? WHERE entitlement_id = ?',
+          [deduction.leaveDays, deduction.entitlement.entitlement_id],
+        )
+      }
       await connection.execute(
         `UPDATE leave_requests
          SET status = 'approved', approver_employee_id = ?, approved_at = NOW(),
@@ -465,7 +536,7 @@ export async function decide(request, response) {
     connection.release()
   }
 }
-export async function teamReport(request,response){const supervisorId=await identity(pool,request);const conditions=['e.supervisor_id=?','lr.employee_id<>?'];const params=[supervisorId,supervisorId];for(const [key,column] of [['status','lr.status'],['leaveTypeId','lr.leave_type_id'],['departmentId','e.department_id']])if(request.query[key]&&request.query[key]!=='all'){conditions.push(`${column}=?`);params.push(request.query[key])}if(date(request.query.startDate)){conditions.push('lr.start_date>=?');params.push(request.query.startDate)}if(date(request.query.endDate)){conditions.push('lr.end_date<=?');params.push(request.query.endDate)}const [rows]=await pool.execute(`${select} WHERE ${conditions.join(' AND ')} ORDER BY lr.start_date DESC`,params);const items=await Promise.all(rows.map(x=>serialize(pool,x)));response.json({status:'ok',data:{leaveRequests:items,summary:{total:items.length,pending:items.filter(x=>x.status==='pending').length,approved:items.filter(x=>x.status==='approved').length,rejected:items.filter(x=>x.status==='rejected').length,cancelled:items.filter(x=>x.status==='cancelled').length}}})}
+export async function teamReport(request,response){const supervisorId=await identity(pool,request);const conditions=['e.supervisor_id=?','lr.employee_id<>?','lr.status<>\'draft\''];const params=[supervisorId,supervisorId];for(const [key,column] of [['status','lr.status'],['leaveTypeId','lr.leave_type_id'],['departmentId','e.department_id']])if(request.query[key]&&request.query[key]!=='all'&&request.query[key]!=='draft'){conditions.push(`${column}=?`);params.push(request.query[key])}if(date(request.query.startDate)){conditions.push('lr.start_date>=?');params.push(request.query.startDate)}if(date(request.query.endDate)){conditions.push('lr.end_date<=?');params.push(request.query.endDate)}const [rows]=await pool.execute(`${select} WHERE ${conditions.join(' AND ')} ORDER BY lr.start_date DESC`,params);const items=await Promise.all(rows.map(x=>serialize(pool,x)));response.json({status:'ok',data:{leaveRequests:items,summary:{total:items.length,pending:items.filter(x=>x.status==='pending').length,approved:items.filter(x=>x.status==='approved').length,rejected:items.filter(x=>x.status==='rejected').length,cancelled:items.filter(x=>x.status==='cancelled').length}}})}
 
-export async function downloadAttachment(request,response){const attachmentId=positiveId(request.params.attachmentId);const employeeId=await identity(pool,request);const [rows]=await pool.execute(`SELECT a.*,lr.employee_id,e.supervisor_id FROM leave_request_attachments a JOIN leave_requests lr ON lr.leave_request_id=a.leave_request_id JOIN employees e ON e.employee_id=lr.employee_id WHERE a.attachment_id=?`,[attachmentId]);const row=rows[0];if(!row||!(row.employee_id===employeeId||row.supervisor_id===employeeId||['hr','admin'].includes(role(request))))return error(response,404,'ไม่พบไฟล์แนบหรือคุณไม่มีสิทธิ์เข้าถึง');response.download(path.join(leaveAttachmentsDirectory,row.stored_name),row.original_name)}
+export async function downloadAttachment(request,response){const attachmentId=positiveId(request.params.attachmentId);const employeeId=await identity(pool,request);const [rows]=await pool.execute(`SELECT a.*,lr.employee_id,lr.status,e.supervisor_id FROM leave_request_attachments a JOIN leave_requests lr ON lr.leave_request_id=a.leave_request_id JOIN employees e ON e.employee_id=lr.employee_id WHERE a.attachment_id=?`,[attachmentId]);const row=rows[0];const isOwner=row?.employee_id===employeeId;const canViewSubmitted=row?.status!=='draft'&&(row?.supervisor_id===employeeId||['hr','admin'].includes(role(request)));if(!row||(!isOwner&&!canViewSubmitted))return error(response,404,'ไม่พบไฟล์แนบหรือคุณไม่มีสิทธิ์เข้าถึง');response.download(path.join(leaveAttachmentsDirectory,row.stored_name),row.original_name)}
 export async function deleteAttachment(request,response){const attachmentId=positiveId(request.params.attachmentId);const employeeId=await identity(pool,request);const [rows]=await pool.execute(`SELECT a.stored_name,lr.status FROM leave_request_attachments a JOIN leave_requests lr ON lr.leave_request_id=a.leave_request_id WHERE a.attachment_id=? AND lr.employee_id=?`,[attachmentId,employeeId]);if(!rows.length||rows[0].status!=='draft')return error(response,409,'ลบไฟล์แนบได้เฉพาะแบบร่างของตนเองเท่านั้น');await pool.execute('DELETE FROM leave_request_attachments WHERE attachment_id=?',[attachmentId]);await unlink(path.join(leaveAttachmentsDirectory,rows[0].stored_name)).catch(()=>{});response.json({status:'ok',message:'ลบไฟล์แนบเรียบร้อยแล้ว'})}

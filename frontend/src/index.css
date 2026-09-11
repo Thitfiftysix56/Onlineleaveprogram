@@ -27,6 +27,11 @@ body,
   padding: 0;
 }
 
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
 body {
   min-height: 100vh;
   background-color: #f6f8fc;

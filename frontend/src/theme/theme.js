@@ -554,6 +554,7 @@ const theme = createTheme({
         root: {
           backgroundColor: '#FFFFFF',
           borderRadius: radiusTokens.surface,
+          scrollbarGutter: 'stable both-edges',
         },
       },
     },

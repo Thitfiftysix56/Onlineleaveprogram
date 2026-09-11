@@ -63,6 +63,8 @@ const HRMyRequestsPage = lazy(() => import('./pages/hr/myrequestspage.jsx'));
 const HROwnLeaveRequestDetailPage = lazy(() => import('./pages/hr/leaverequestdetailpage.jsx'));
 const EmployeeManagementPage = lazy(() => import('./pages/hr/employeemanagementpage.jsx'));
 const EmployeeFormPage = lazy(() => import('./pages/hr/employeeformpage.jsx'));
+const HRDepartmentManagementPage = lazy(() => import('./pages/hr/departmentmanagementpage.jsx'));
+const HRPositionManagementPage = lazy(() => import('./pages/hr/positionmanagementpage.jsx'));
 const LeaveEntitlementManagementPage = lazy(() => import('./pages/hr/leaveentitlementmanagementpage.jsx'));
 const LeaveTypeManagementPage = lazy(() => import('./pages/hr/leavetypemanagementpage.jsx'));
 const LeaveTypeFormPage = lazy(() => import('./pages/hr/leavetypeformpage.jsx'));
@@ -385,6 +387,9 @@ function App() {
             />
           }
         />
+
+        <Route path="/hr/department-management" element={<HRDepartmentManagementPage />} />
+        <Route path="/hr/position-management" element={<HRPositionManagementPage />} />
 
         <Route
           path="/hr/leave-entitlement"

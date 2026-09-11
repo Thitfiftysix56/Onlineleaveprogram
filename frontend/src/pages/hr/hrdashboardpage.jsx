@@ -12,12 +12,12 @@ import {
   CircularProgress,
   Paper,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TableRow,
   Typography,
 } from '@mui/material';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
 
 import {
   useNavigate,
@@ -711,7 +711,7 @@ function HRDashboardPage() {
                     </TableRow>
                   </TableHead>
 
-                  <TableBody>
+                  <FixedTableBody>
                     {recentEmployees.map(
                       (
                         employee,
@@ -863,7 +863,7 @@ function HRDashboardPage() {
                         );
                       },
                     )}
-                  </TableBody>
+                  </FixedTableBody>
                 </Table>
               </Box>
               <DashboardTablePagination

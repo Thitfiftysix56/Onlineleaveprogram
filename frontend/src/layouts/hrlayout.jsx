@@ -10,6 +10,8 @@ function HRLayout({
     'My Requests',
     'Approval',
     'Employee Management',
+    'Department Management',
+    'Position Management',
     'Leave Entitlement',
     'Leave Type',
     'Holiday Management',

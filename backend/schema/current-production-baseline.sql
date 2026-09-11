@@ -18,22 +18,27 @@ CREATE TABLE roles (
 CREATE TABLE departments (
   department_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   department_name VARCHAR(100) NOT NULL,
+  division_name VARCHAR(100) NOT NULL,
   description TEXT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (department_id),
-  UNIQUE KEY uq_departments_name (department_name)
+  UNIQUE KEY uq_department_division (department_name, division_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE positions (
   position_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   position_name VARCHAR(100) NOT NULL,
+  department_id INT UNSIGNED NULL,
+  position_group VARCHAR(100) NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (position_id),
-  UNIQUE KEY uq_positions_name (position_name)
+  UNIQUE KEY uq_positions_name (position_name),
+  KEY idx_positions_department (department_id),
+  CONSTRAINT fk_positions_department FOREIGN KEY (department_id) REFERENCES departments (department_id) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE employees (
@@ -46,6 +51,7 @@ CREATE TABLE employees (
   profile_image_url VARCHAR(255) NULL,
   department_id INT UNSIGNED NOT NULL,
   position_id INT UNSIGNED NOT NULL,
+  intended_role_id INT UNSIGNED NOT NULL,
   supervisor_id INT UNSIGNED NULL,
   hire_date DATE NOT NULL,
   status ENUM('active','inactive','resigned') NOT NULL DEFAULT 'active',
@@ -56,10 +62,12 @@ CREATE TABLE employees (
   UNIQUE KEY uq_employees_email (email),
   KEY idx_employees_department_id (department_id),
   KEY idx_employees_position_id (position_id),
+  KEY idx_employees_intended_role_id (intended_role_id),
   KEY idx_employees_supervisor_id (supervisor_id),
   KEY idx_employees_status (status),
   CONSTRAINT fk_employees_department FOREIGN KEY (department_id) REFERENCES departments (department_id) ON UPDATE CASCADE,
   CONSTRAINT fk_employees_position FOREIGN KEY (position_id) REFERENCES positions (position_id) ON UPDATE CASCADE,
+  CONSTRAINT fk_employees_intended_role FOREIGN KEY (intended_role_id) REFERENCES roles (role_id) ON UPDATE CASCADE,
   CONSTRAINT fk_employees_supervisor FOREIGN KEY (supervisor_id) REFERENCES employees (employee_id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -157,6 +165,20 @@ CREATE TABLE leave_requests (
   CONSTRAINT fk_leave_requests_approver FOREIGN KEY (approver_employee_id) REFERENCES employees (employee_id) ON UPDATE CASCADE,
   CONSTRAINT fk_leave_requests_employee FOREIGN KEY (employee_id) REFERENCES employees (employee_id) ON UPDATE CASCADE,
   CONSTRAINT fk_leave_requests_leave_type FOREIGN KEY (leave_type_id) REFERENCES leave_types (leave_type_id) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE leave_request_year_allocations (
+  allocation_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  leave_request_id INT UNSIGNED NOT NULL,
+  year SMALLINT UNSIGNED NOT NULL,
+  leave_days DECIMAL(6,2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (allocation_id),
+  UNIQUE KEY uq_leave_request_year (leave_request_id, year),
+  KEY idx_leave_allocation_year (year),
+  CONSTRAINT fk_leave_allocation_request FOREIGN KEY (leave_request_id)
+    REFERENCES leave_requests (leave_request_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Legacy physical table retained for production-schema reproducibility.

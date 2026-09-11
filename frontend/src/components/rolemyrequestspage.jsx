@@ -18,7 +18,6 @@ import {
   Paper,
   Select,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TablePagination,
@@ -26,6 +25,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import FixedTableBody from './fixedtablebody.jsx';
 import RequestNumberText from './requestnumbertext.jsx';
 import { DataListToolbar } from './shareduiprimitives.jsx';
 import { HeaderlessPageTopOffset, InlineListSummary } from './sharedvisualfoundation.jsx';
@@ -1339,7 +1339,7 @@ function RoleMyRequestsPage({
                   </TableRow>
                 </TableHead>
 
-                <TableBody>
+                <FixedTableBody>
                   {paginatedRequests.map(
                     (
                       request,
@@ -1600,7 +1600,7 @@ function RoleMyRequestsPage({
                       );
                     },
                   )}
-                </TableBody>
+                </FixedTableBody>
               </Table>
             </Box>
 

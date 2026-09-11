@@ -2,7 +2,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 
@@ -25,7 +24,6 @@ import {
   Select,
   Stack,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TablePagination,
@@ -33,12 +31,13 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
 
 import {
-  CalendarMonthRounded,
   CloseRounded,
   SearchRounded,
 } from '@mui/icons-material';
+import ThaiCalendarField from '../../components/thaicalendarfield.jsx';
 
 import {
   useNavigate,
@@ -279,129 +278,7 @@ function ThaiDateField({
   value,
   onChange,
 }) {
-  const nativeInputRef = useRef(null);
-  const openPicker = () => {
-    const input = nativeInputRef.current;
-    if (!input) return;
-    input.focus({ preventScroll: true });
-    if (typeof input.showPicker === 'function') input.showPicker();
-    else input.click();
-  };
-
-  return (
-    <Box
-      role="button"
-      tabIndex={0}
-      onClick={openPicker}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          openPicker();
-        }
-      }}
-      sx={{
-        position:
-          'relative',
-        cursor: 'pointer',
-      }}
-    >
-      <TextField
-        fullWidth
-        label={label}
-        value={
-          value
-            ? formatDate(
-                value,
-              )
-            : ''
-        }
-        placeholder="วว/ดด/ปปปป"
-        slotProps={{
-          input: {
-            readOnly: true,
-
-            endAdornment: (
-              <InputAdornment position="end">
-                <CalendarMonthRounded
-                  sx={{
-                    color:
-                      '#64748B',
-
-                    fontSize:
-                      '20px',
-                  }}
-                />
-              </InputAdornment>
-            ),
-          },
-
-          inputLabel: {
-            shrink: true,
-          },
-        }}
-        sx={{
-          '& .MuiOutlinedInput-root':
-            {
-              height:
-                '44px',
-
-              borderRadius:
-                '9px',
-
-              '&.Mui-focused fieldset':
-                {
-                  borderColor:
-                    theme.primary,
-                },
-            },
-
-          '& .MuiInputLabel-root.Mui-focused':
-            {
-              color:
-                theme.primary,
-            },
-
-          '& .MuiInputBase-input::placeholder':
-            {
-              opacity: 1,
-
-              color:
-                '#64748B',
-            },
-        }}
-      />
-
-      <input
-        ref={nativeInputRef}
-        type="date"
-        value={value}
-        onChange={(
-          event,
-        ) =>
-          onChange(
-            event.target
-              .value,
-          )
-        }
-        style={{
-          position:
-            'absolute',
-
-          inset: 0,
-
-          width:
-            '100%',
-
-          height:
-            '100%',
-
-          opacity: 0,
-
-          pointerEvents: 'none',
-        }}
-      />
-    </Box>
-  );
+  return <ThaiCalendarField label={label} value={value} onChange={onChange} primaryColor={theme.primary} />;
 }
 
 /* =========================
@@ -1416,7 +1293,6 @@ function HRReportsPage() {
                     inputProps={{ 'aria-label': 'สถานะ' }}
                     onChange={(event) => setStatusFilter(event.target.value || 'all')}
                   >
-                    <MenuItem value="draft">ฉบับร่าง</MenuItem>
                     <MenuItem value="pending">รออนุมัติ</MenuItem>
                     <MenuItem value="approved">อนุมัติแล้ว</MenuItem>
                     <MenuItem value="rejected">ปฏิเสธแล้ว</MenuItem>
@@ -1634,9 +1510,6 @@ function HRReportsPage() {
                 }}
               >
 
-                <MenuItem value="draft">
-                  ฉบับร่าง
-                </MenuItem>
 
                 <MenuItem value="pending">
                   รออนุมัติ
@@ -1920,7 +1793,7 @@ function HRReportsPage() {
                 </TableRow>
               </TableHead>
 
-              <TableBody>
+              <FixedTableBody>
                 {paginatedRequests.map(
                   (
                     request,
@@ -2257,7 +2130,7 @@ function HRReportsPage() {
                     );
                   },
                 )}
-              </TableBody>
+              </FixedTableBody>
             </Table>
             {filteredRequests.length > rowsPerPage ? (
               <TablePagination

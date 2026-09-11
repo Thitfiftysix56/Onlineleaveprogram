@@ -81,6 +81,8 @@ function publicAvailableEmployee(employee) {
     email: employee.email,
     department: employee.department_name,
     position: employee.position_name,
+    roleId: employee.intended_role_id,
+    roleName: employee.intended_role_name,
   }
 }
 
@@ -227,12 +229,16 @@ export async function listAvailableEmployees(_request, response) {
          e.last_name,
          e.email,
          d.department_name,
-         p.position_name
+         p.position_name,
+         e.intended_role_id,
+         ir.role_name AS intended_role_name
        FROM employees AS e
        INNER JOIN departments AS d
          ON d.department_id = e.department_id
        INNER JOIN positions AS p
          ON p.position_id = e.position_id
+       INNER JOIN roles AS ir
+         ON ir.role_id = e.intended_role_id AND ir.is_active = 1
        LEFT JOIN users AS u
          ON u.employee_id = e.employee_id
        WHERE u.user_id IS NULL
@@ -311,8 +317,11 @@ export async function createAdminUser(request, response) {
     }
 
     const [employees] = await pool.execute(
-      `SELECT e.employee_id, e.employee_code, u.user_id
+      `SELECT e.employee_id, e.employee_code, e.intended_role_id,
+              ir.role_name AS intended_role_name, u.user_id
        FROM employees AS e
+       INNER JOIN roles AS ir
+         ON ir.role_id = e.intended_role_id AND ir.is_active = 1
        LEFT JOIN users AS u
          ON u.employee_id = e.employee_id
        WHERE e.employee_id = ?
@@ -350,13 +359,9 @@ export async function createAdminUser(request, response) {
       })
     }
 
-    const role = await findRole(request.body.role)
-
-    if (!role) {
-      return response.status(400).json({
-        status: 'error',
-        message: 'The selected role is invalid or inactive.',
-      })
+    const role = {
+      role_id: employee.intended_role_id,
+      role_name: employee.intended_role_name,
     }
 
     const temporaryPassword = generateTemporaryPassword()

@@ -11,12 +11,12 @@ import {
   Chip,
   Paper,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TableRow,
   Typography,
 } from '@mui/material';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
 
 import { useNavigate } from 'react-router-dom';
 import AddRounded from '@mui/icons-material/AddRounded';
@@ -668,13 +668,16 @@ function AdminDashboardPage() {
     setAuditLogs,
   ] = useState([]);
 
+  const [availableEmployees, setAvailableEmployees] = useState([]);
+
   const loadDashboardData =
     useCallback(async () => {
-      const [userResponse, departmentResponse, positionResponse, auditResponse] = await Promise.all([
+      const [userResponse, departmentResponse, positionResponse, auditResponse, availableEmployeeResponse] = await Promise.all([
         api.get('/admin/users'),
         api.get('/hr/departments'),
         api.get('/hr/positions'),
         api.get('/admin/audit-logs'),
+        api.get('/admin/employees/available-for-account'),
       ]);
       const normalizedUsers =
         (userResponse.data?.users || [])
@@ -747,6 +750,12 @@ function AdminDashboardPage() {
       setAuditLogs(
         storedAuditLogs,
       );
+
+      setAvailableEmployees(
+        Array.isArray(availableEmployeeResponse.data?.employees)
+          ? availableEmployeeResponse.data.employees
+          : [],
+      );
     }, []);
 
   useEffect(() => {
@@ -809,17 +818,6 @@ function AdminDashboardPage() {
     [users],
   );
 
-  const todayActivityCount = useMemo(() => {
-    const today = new Date();
-    return auditLogs.filter((log) => {
-      const occurredAt = new Date(getAuditDateValue(log));
-      return !Number.isNaN(occurredAt.getTime()) &&
-        occurredAt.getFullYear() === today.getFullYear() &&
-        occurredAt.getMonth() === today.getMonth() &&
-        occurredAt.getDate() === today.getDate();
-    }).length;
-  }, [auditLogs]);
-
   const activeDepartments =
     useMemo(
       () =>
@@ -868,17 +866,17 @@ function AdminDashboardPage() {
     },
     {
       title:
-        'ประวัติกิจกรรมวันนี้',
+        'พนักงานที่ยังไม่มีบัญชี',
 
       value:
-        todayActivityCount,
+        availableEmployees.length,
 
 
       color:
         '#0891B2',
 
       accent: 'info',
-      unit: 'รายการ',
+      unit: 'คน',
     },
     {
       title:
@@ -1288,7 +1286,7 @@ function AdminDashboardPage() {
                   </TableRow>
                 </TableHead>
 
-                <TableBody>
+                <FixedTableBody>
                   {recentUsers.map(
                     (user) => {
                       const roleStyle =
@@ -1451,7 +1449,7 @@ function AdminDashboardPage() {
                       );
                     },
                   )}
-                </TableBody>
+                </FixedTableBody>
               </Table>
             </Box>
             <DashboardTablePagination

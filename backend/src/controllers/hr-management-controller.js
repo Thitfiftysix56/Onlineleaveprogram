@@ -44,17 +44,19 @@ function internalError(response, context, error) {
 
 const employeeSelect = `
   SELECT e.employee_id, e.employee_code, e.first_name, e.last_name,
-         e.phone, e.email, e.department_id, d.department_name,
-         e.position_id, p.position_name, e.supervisor_id,
+         e.phone, e.email, e.department_id, d.department_name, d.division_name,
+         e.position_id, p.position_name, p.position_group, e.supervisor_id,
          CONCAT(s.first_name, ' ', s.last_name) AS supervisor_name,
          e.hire_date, e.status, e.created_at, e.updated_at,
-         u.user_id, r.role_id, r.role_name
+         u.user_id, COALESCE(ir.role_id, r.role_id) AS role_id,
+         COALESCE(ir.role_name, r.role_name) AS role_name
   FROM employees e
   JOIN departments d ON d.department_id = e.department_id
   JOIN positions p ON p.position_id = e.position_id
   LEFT JOIN employees s ON s.employee_id = e.supervisor_id
   LEFT JOIN users u ON u.employee_id = e.employee_id
-  LEFT JOIN roles r ON r.role_id = u.role_id`
+  LEFT JOIN roles r ON r.role_id = u.role_id
+  LEFT JOIN roles ir ON ir.role_id = e.intended_role_id`
 
 function employeeData(row) {
   return {
@@ -67,8 +69,10 @@ function employeeData(row) {
     email: row.email,
     departmentId: row.department_id,
     department: row.department_name,
+    divisionName: row.division_name,
     positionId: row.position_id,
     position: row.position_name,
+    positionGroup: row.position_group,
     supervisorId: row.supervisor_id,
     supervisorName: row.supervisor_name,
     hireDate: row.hire_date,
@@ -144,21 +148,38 @@ async function validateEmployee(body, currentId = null) {
   const firstName = trim(body.firstName)
   const lastName = trim(body.lastName)
   const email = lower(body.email)
-  const phone = trim(body.phone) || null
+  const phone = trim(body.phone)
   const departmentId = positiveId(body.departmentId)
   const positionId = positiveId(body.positionId)
+  const roleName = trim(body.roleName || body.role)
   const supervisorId = body.supervisorId ? positiveId(body.supervisorId) : null
   const hireDate = validDate(body.hireDate)
   const status = lower(body.status)
   if (currentId && (!employeeCode || employeeCode.length > 20)) return { error: 'Employee code is required and must not exceed 20 characters.' }
   if (!firstName || !lastName || firstName.length > 100 || lastName.length > 100) return { error: 'First name and last name are required.' }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 100) return { error: 'A valid email is required.' }
-  if (phone && phone.length > 20) return { error: 'Phone must not exceed 20 characters.' }
+  if (!/^\d{10}$/.test(phone)) return { error: 'กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 10 หลัก' }
   if (!departmentId || !await referenceExists('departments', 'department_id', departmentId, true)) return { error: 'The selected department is invalid or inactive.' }
   if (!positionId || !await referenceExists('positions', 'position_id', positionId, true)) return { error: 'The selected position is invalid or inactive.' }
+  const [roles] = await pool.execute(
+    'SELECT role_id, role_name FROM roles WHERE LOWER(role_name) = LOWER(?) AND is_active = 1 LIMIT 1',
+    [roleName],
+  )
+  if (!roles.length) return { error: 'The selected role is invalid or inactive.' }
+  const [positionLinks] = await pool.execute(
+    'SELECT position_id FROM positions WHERE position_id = ? AND (department_id = ? OR department_id IS NULL) LIMIT 1',
+    [positionId, departmentId],
+  )
+  if (!positionLinks.length) return { error: 'ตำแหน่งที่เลือกไม่ได้อยู่ในแผนกและฝ่ายที่เลือก' }
   if (supervisorId) {
     if (supervisorId === currentId) return { error: 'An employee cannot be their own supervisor.' }
-    const [supervisors] = await pool.execute('SELECT employee_id FROM employees WHERE employee_id = ? AND status = ? LIMIT 1', [supervisorId, 'active'])
+    const [supervisors] = await pool.execute(
+      `SELECT e.employee_id FROM employees e
+       JOIN users u ON u.employee_id = e.employee_id AND u.status = 'active'
+       JOIN roles r ON r.role_id = u.role_id AND LOWER(r.role_name) = 'supervisor'
+       WHERE e.employee_id = ? AND e.status = ? LIMIT 1`,
+      [supervisorId, 'active'],
+    )
     if (!supervisors.length) return { error: 'The selected supervisor is invalid or inactive.' }
   }
   if (!hireDate) return { error: 'A valid hire date is required.' }
@@ -176,7 +197,7 @@ async function validateEmployee(body, currentId = null) {
   if (duplicates.length) {
     return { error: currentId && lower(duplicates[0].employee_code) === lower(employeeCode) ? 'Employee code is already in use.' : 'Email is already in use.', conflict: true }
   }
-  return { value: { employeeCode, firstName, lastName, email, phone, departmentId, positionId, supervisorId, hireDate, status } }
+  return { value: { employeeCode, firstName, lastName, email, phone, departmentId, positionId, roleId: roles[0].role_id, roleName: roles[0].role_name, supervisorId, hireDate, status } }
 }
 
 async function nextEmployeeCode(connection, employeeId) {
@@ -196,16 +217,16 @@ async function nextEmployeeCode(connection, employeeId) {
 export async function createEmployee(request, response) {
   let connection
   try {
-    const validation = await validateEmployee(request.body)
+    const validation = await validateEmployee({ ...request.body, status: 'active' })
     if (validation.error) return sendError(response, validation.conflict ? 409 : 400, validation.error)
     const v = validation.value
     connection = await pool.getConnection()
     await connection.beginTransaction()
     const temporaryCode = `TMP-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`.toUpperCase()
     const [result] = await connection.execute(
-      `INSERT INTO employees (employee_code, first_name, last_name, phone, email, department_id, position_id, supervisor_id, hire_date, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [temporaryCode, v.firstName, v.lastName, v.phone, v.email, v.departmentId, v.positionId, v.supervisorId, v.hireDate, v.status],
+      `INSERT INTO employees (employee_code, first_name, last_name, phone, email, department_id, position_id, intended_role_id, supervisor_id, hire_date, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [temporaryCode, v.firstName, v.lastName, v.phone, v.email, v.departmentId, v.positionId, v.roleId, v.supervisorId, v.hireDate, v.status],
     )
     const employeeCode = await nextEmployeeCode(connection, result.insertId)
     await connection.execute(
@@ -252,15 +273,20 @@ export async function updateEmployee(request, response) {
     const existingEmployee = await employeeById(id)
     if (!existingEmployee) return sendError(response, 404, 'Employee was not found.')
     const validation = await validateEmployee(
-      { ...request.body, employeeCode: existingEmployee.employee_code },
+      {
+        ...request.body,
+        employeeCode: existingEmployee.employee_code,
+        status: existingEmployee.status,
+      },
       id,
     )
     if (validation.error) return sendError(response, validation.conflict ? 409 : 400, validation.error)
     const v = validation.value
     await pool.execute(
-      `UPDATE employees SET employee_code = ?, first_name = ?, last_name = ?, phone = ?, email = ?, department_id = ?, position_id = ?, supervisor_id = ?, hire_date = ?, status = ? WHERE employee_id = ?`,
-      [v.employeeCode, v.firstName, v.lastName, v.phone, v.email, v.departmentId, v.positionId, v.supervisorId, v.hireDate, v.status, id],
+      `UPDATE employees SET employee_code = ?, first_name = ?, last_name = ?, phone = ?, email = ?, department_id = ?, position_id = ?, intended_role_id = ?, supervisor_id = ?, hire_date = ?, status = ? WHERE employee_id = ?`,
+      [v.employeeCode, v.firstName, v.lastName, v.phone, v.email, v.departmentId, v.positionId, v.roleId, v.supervisorId, v.hireDate, v.status, id],
     )
+    await pool.execute('UPDATE users SET role_id = ?, updated_at = NOW() WHERE employee_id = ?', [v.roleId, id])
     if (v.status === 'active') {
       await ensureCurrentYearEntitlements(pool, {
         employeeId: id,
@@ -333,6 +359,7 @@ function departmentData(row) {
   return {
     departmentId: row.department_id,
     departmentName: row.department_name,
+    divisionName: row.division_name,
     description: row.description,
     isActive: Boolean(row.is_active),
     status: row.is_active ? 'Active' : 'Inactive',
@@ -343,7 +370,7 @@ function departmentData(row) {
   }
 }
 
-const departmentSelect = `SELECT d.department_id, d.department_name, d.description, d.is_active, d.created_at, d.updated_at,
+const departmentSelect = `SELECT d.department_id, d.department_name, d.division_name, d.description, d.is_active, d.created_at, d.updated_at,
   COUNT(e.employee_id) AS employee_count, COALESCE(SUM(e.status = 'active'), 0) AS active_employee_count
   FROM departments d LEFT JOIN employees e ON e.department_id = d.department_id`
 
@@ -371,18 +398,20 @@ export async function getDepartment(request, response) {
 
 async function saveDepartment(request, response, id = null) {
   const name = trim(request.body.departmentName)
+  const divisionName = trim(request.body.divisionName)
   const description = trim(request.body.description) || null
   const isActive = activeValue(request.body.isActive ?? request.body.status)
   if (name.length < 2 || name.length > 100) return sendError(response, 400, 'Department name must contain 2-100 characters.')
+  if (divisionName.length < 2 || divisionName.length > 100) return sendError(response, 400, 'กรุณาเลือกฝ่ายให้ถูกต้อง')
   if (isActive === null) return sendError(response, 400, 'Status must be Active or Inactive.')
   if (id && !await departmentById(id)) return sendError(response, 404, 'Department was not found.')
-  const [duplicates] = await pool.execute('SELECT department_id FROM departments WHERE LOWER(department_name) = LOWER(?) AND department_id <> ? LIMIT 1', [name, id || 0])
-  if (duplicates.length) return sendError(response, 409, 'Department name is already in use.')
+  const [duplicates] = await pool.execute('SELECT department_id FROM departments WHERE LOWER(department_name) = LOWER(?) AND LOWER(division_name) = LOWER(?) AND department_id <> ? LIMIT 1', [name, divisionName, id || 0])
+  if (duplicates.length) return sendError(response, 409, 'แผนกและฝ่ายนี้มีอยู่ในระบบแล้ว')
   let savedId = id
   if (id) {
-    await pool.execute('UPDATE departments SET department_name = ?, description = ?, is_active = ? WHERE department_id = ?', [name, description, isActive, id])
+    await pool.execute('UPDATE departments SET department_name = ?, division_name = ?, description = ?, is_active = ? WHERE department_id = ?', [name, divisionName, description, isActive, id])
   } else {
-    const [result] = await pool.execute('INSERT INTO departments (department_name, description, is_active) VALUES (?, ?, ?)', [name, description, isActive])
+    const [result] = await pool.execute('INSERT INTO departments (department_name, division_name, description, is_active) VALUES (?, ?, ?, ?)', [name, divisionName, description, isActive])
     savedId = result.insertId
   }
   const row = await departmentById(savedId)
@@ -391,7 +420,7 @@ async function saveDepartment(request, response, id = null) {
 
 export async function createDepartment(request, response) {
   try { return await saveDepartment(request, response) } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'Department name is already in use.')
+    if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'แผนกและฝ่ายนี้มีอยู่ในระบบแล้ว')
     return internalError(response, 'Create department error:', error)
   }
 }
@@ -401,7 +430,7 @@ export async function updateDepartment(request, response) {
     if (!id) return sendError(response, 400, 'A valid departmentId is required.')
     return await saveDepartment(request, response, id)
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'Department name is already in use.')
+    if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'แผนกและฝ่ายนี้มีอยู่ในระบบแล้ว')
     return internalError(response, 'Update department error:', error)
   }
 }
@@ -434,6 +463,10 @@ function positionData(row) {
   return {
     positionId: row.position_id,
     positionName: row.position_name,
+    positionGroup: row.position_group,
+    departmentId: row.department_id,
+    departmentName: row.department_name,
+    divisionName: row.division_name,
     isActive: Boolean(row.is_active),
     status: row.is_active ? 'Active' : 'Inactive',
     employeeCount: Number(row.employee_count || 0),
@@ -441,8 +474,11 @@ function positionData(row) {
     updatedAt: row.updated_at,
   }
 }
-const positionSelect = `SELECT p.position_id, p.position_name, p.is_active, p.created_at, p.updated_at,
-  COUNT(e.employee_id) AS employee_count FROM positions p LEFT JOIN employees e ON e.position_id = p.position_id`
+const positionSelect = `SELECT p.position_id, p.position_name, p.position_group, p.department_id,
+  d.department_name, d.division_name, p.is_active, p.created_at, p.updated_at,
+  COUNT(e.employee_id) AS employee_count FROM positions p
+  LEFT JOIN departments d ON d.department_id=p.department_id
+  LEFT JOIN employees e ON e.position_id = p.position_id`
 async function positionById(id) {
   const [rows] = await pool.execute(`${positionSelect} WHERE p.position_id = ? GROUP BY p.position_id LIMIT 1`, [id])
   return rows[0] || null
@@ -464,16 +500,27 @@ export async function getPosition(request, response) {
 }
 async function savePosition(request, response, id = null) {
   const name = trim(request.body.positionName)
+  const positionGroup = trim(request.body.positionGroup)
+  const departmentId = positiveId(request.body.departmentId)
   const isActive = activeValue(request.body.isActive ?? request.body.status)
   if (name.length < 2 || name.length > 100) return sendError(response, 400, 'Position name must contain 2-100 characters.')
+  if (!positionGroup || positionGroup.length > 100) return sendError(response, 400, 'กรุณาเลือกกลุ่มตำแหน่ง')
+  if (!departmentId || !await referenceExists('departments', 'department_id', departmentId, true)) return sendError(response, 400, 'กรุณาเลือกแผนกและฝ่ายที่เปิดใช้งาน')
   if (isActive === null) return sendError(response, 400, 'Status must be Active or Inactive.')
-  if (id && !await positionById(id)) return sendError(response, 404, 'Position was not found.')
+  const currentPosition = id ? await positionById(id) : null
+  if (id && !currentPosition) return sendError(response, 404, 'Position was not found.')
+  if (currentPosition && lower(currentPosition.position_name) === lower(name)
+    && Number(currentPosition.department_id) === Number(departmentId)
+    && currentPosition.position_group === positionGroup
+    && Boolean(currentPosition.is_active) === Boolean(isActive)) {
+    return response.json({ status: 'ok', message: 'บันทึกข้อมูลตำแหน่งเรียบร้อยแล้ว', data: { position: positionData(currentPosition) } })
+  }
   const [duplicates] = await pool.execute('SELECT position_id FROM positions WHERE LOWER(position_name) = LOWER(?) AND position_id <> ? LIMIT 1', [name, id || 0])
-  if (duplicates.length) return sendError(response, 409, 'Position name is already in use.')
+  if (duplicates.length) return sendError(response, 409, 'ชื่อตำแหน่งนี้มีอยู่ในระบบแล้ว')
   let savedId = id
-  if (id) await pool.execute('UPDATE positions SET position_name = ?, is_active = ? WHERE position_id = ?', [name, isActive, id])
+  if (id) await pool.execute('UPDATE positions SET position_name = ?, department_id = ?, position_group = ?, is_active = ? WHERE position_id = ?', [name, departmentId, positionGroup, isActive, id])
   else {
-    const [result] = await pool.execute('INSERT INTO positions (position_name, is_active) VALUES (?, ?)', [name, isActive])
+    const [result] = await pool.execute('INSERT INTO positions (position_name, department_id, position_group, is_active) VALUES (?, ?, ?, ?)', [name, departmentId, positionGroup, isActive])
     savedId = result.insertId
   }
   const row = await positionById(savedId)
@@ -481,7 +528,7 @@ async function savePosition(request, response, id = null) {
 }
 export async function createPosition(request, response) {
   try { return await savePosition(request, response) } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'Position name is already in use.')
+    if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'ชื่อตำแหน่งนี้มีอยู่ในระบบแล้ว')
     return internalError(response, 'Create position error:', error)
   }
 }
@@ -491,7 +538,7 @@ export async function updatePosition(request, response) {
     if (!id) return sendError(response, 400, 'A valid positionId is required.')
     return await savePosition(request, response, id)
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'Position name is already in use.')
+    if (error.code === 'ER_DUP_ENTRY') return sendError(response, 409, 'ชื่อตำแหน่งนี้มีอยู่ในระบบแล้ว')
     return internalError(response, 'Update position error:', error)
   }
 }
@@ -912,16 +959,18 @@ async function ensureCurrentYearEntitlements(
      SELECT e.employee_id,
             lt.leave_type_id,
             ?,
-            GREATEST(lt.annual_quota_days, COALESCE(SUM(lr.leave_days), 0)),
-            COALESCE(SUM(lr.leave_days), 0),
+            GREATEST(lt.annual_quota_days, COALESCE(SUM(lra.leave_days), 0)),
+            COALESCE(SUM(lra.leave_days), 0),
             ?
        FROM employees e
        CROSS JOIN leave_types lt
-       LEFT JOIN leave_requests lr
+      LEFT JOIN leave_requests lr
          ON lr.employee_id = e.employee_id
         AND lr.leave_type_id = lt.leave_type_id
         AND lr.status = 'approved'
-        AND YEAR(lr.start_date) = ?
+      LEFT JOIN leave_request_year_allocations lra
+        ON lra.leave_request_id = lr.leave_request_id
+       AND lra.year = ?
       WHERE ${conditions.join(' AND ')}
       GROUP BY e.employee_id, lt.leave_type_id, lt.annual_quota_days`,
     parameters,
@@ -948,11 +997,12 @@ async function ensureCurrentYearEntitlements(
        JOIN employees e ON e.employee_id = le.employee_id
        JOIN leave_types lt ON lt.leave_type_id = le.leave_type_id
        LEFT JOIN (
-         SELECT employee_id, leave_type_id, YEAR(start_date) AS request_year,
-                COALESCE(SUM(leave_days), 0) AS approved_days
-           FROM leave_requests
-          WHERE status = 'approved' AND YEAR(start_date) = ?
-          GROUP BY employee_id, leave_type_id, YEAR(start_date)
+         SELECT lr.employee_id, lr.leave_type_id, lra.year AS request_year,
+                COALESCE(SUM(lra.leave_days), 0) AS approved_days
+           FROM leave_requests lr
+           JOIN leave_request_year_allocations lra ON lra.leave_request_id = lr.leave_request_id
+          WHERE lr.status = 'approved' AND lra.year = ?
+          GROUP BY lr.employee_id, lr.leave_type_id, lra.year
        ) usage_summary
          ON usage_summary.employee_id = le.employee_id
         AND usage_summary.leave_type_id = le.leave_type_id

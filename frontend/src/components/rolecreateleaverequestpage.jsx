@@ -287,6 +287,7 @@ function ThaiDateField({
   value,
   onChange,
   minDate,
+  maxDate,
   disabled = false,
   error = false,
   helperText = '',
@@ -440,7 +441,7 @@ function ThaiDateField({
               const dateValue = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               const dayOfWeek = new Date(`${dateValue}T00:00:00Z`).getUTCDay();
               const holiday = holidaysByDate.get(dateValue);
-              const isBlocked = dayOfWeek === 0 || dayOfWeek === 6 || Boolean(holiday) || Boolean(minDate && dateValue < minDate);
+              const isBlocked = dayOfWeek === 0 || dayOfWeek === 6 || Boolean(holiday) || Boolean(minDate && dateValue < minDate) || Boolean(maxDate && dateValue > maxDate);
               return (
                 <Button
                   key={dateValue}
@@ -557,6 +558,7 @@ function RoleCreateLeaveRequestPage({
   ] = useState(null);
 
   const [leaveOptions, setLeaveOptions] = useState({ leaveTypes: [], holidays: [] });
+  const [leaveOptionsByYear, setLeaveOptionsByYear] = useState({});
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [roleRequests, setRoleRequests] = useState([]);
   const storageRevision = 0;
@@ -595,19 +597,29 @@ function RoleCreateLeaveRequestPage({
       ],
     );
 
+  const optionYears = useMemo(() => Array.from(new Set([
+    entitlementYear,
+    getYearFromDate(formData.endDate),
+  ].filter(Boolean))), [entitlementYear, formData.endDate]);
+
   useEffect(() => {
     let active = true;
-    Promise.all([getLeaveOptions(entitlementYear), getMyLeaveRequests()])
-      .then(([options, requests]) => {
+    Promise.all([Promise.all(optionYears.map((year) => getLeaveOptions(year))), getMyLeaveRequests()])
+      .then(([yearOptions, requests]) => {
         if (!active) return;
-        setLeaveOptions(options || { leaveTypes: [], holidays: [] });
+        const optionsMap = Object.fromEntries(optionYears.map((year, index) => [year, yearOptions[index] || { leaveTypes: [], holidays: [] }]));
+        setLeaveOptionsByYear(optionsMap);
+        setLeaveOptions({
+          leaveTypes: optionsMap[entitlementYear]?.leaveTypes || [],
+          holidays: yearOptions.flatMap((options) => options?.holidays || []),
+        });
         setRoleRequests(requests);
       })
       .catch((error) => {
         if (active) setMessage({ severity: 'error', text: error.response?.data?.message || 'ไม่สามารถโหลดข้อมูลคำขอลาได้' });
       });
     return () => { active = false; };
-  }, [entitlementYear]);
+  }, [entitlementYear, optionYears]);
 
   useEffect(() => {
     if (!isEditMode) return undefined;
@@ -806,6 +818,14 @@ function RoleCreateLeaveRequestPage({
     [selectedLeaveType],
   );
 
+  const maximumSelectableDate = useMemo(() => {
+    const today = getBangkokToday();
+    const year = Number(today.slice(0, 4));
+    return today.slice(5, 7) === '12'
+      ? `${year + 1}-01-31`
+      : `${year}-12-31`;
+  }, []);
+
   const dateSelectionDisabled = !selectedLeaveType || !selectedLeaveType.isSelectable;
 
   const activeHolidayByDate =
@@ -878,6 +898,7 @@ function RoleCreateLeaveRequestPage({
           weekendDays: 0,
           holidayDays: 0,
           excludedDates: [],
+          yearAllocations: [],
         };
       }
 
@@ -905,12 +926,14 @@ function RoleCreateLeaveRequestPage({
           weekendDays: 0,
           holidayDays: 0,
           excludedDates: [],
+          yearAllocations: [],
         };
       }
 
       let workingDays = 0;
       let weekendDays = 0;
       let holidayDays = 0;
+      const allocationMap = new Map();
 
       const excludedDates = [];
 
@@ -959,6 +982,8 @@ function RoleCreateLeaveRequestPage({
           });
         } else {
           workingDays += 1;
+          const allocationYear = currentDate.getUTCFullYear();
+          allocationMap.set(allocationYear, (allocationMap.get(allocationYear) || 0) + 1);
         }
 
         currentDate.setUTCDate(
@@ -972,6 +997,7 @@ function RoleCreateLeaveRequestPage({
         weekendDays,
         holidayDays,
         excludedDates,
+        yearAllocations: Array.from(allocationMap, ([year, leaveDays]) => ({ year, leaveDays })),
       };
     }, [
       activeHolidayDateSet,
@@ -1398,24 +1424,10 @@ function RoleCreateLeaveRequestPage({
           'วันที่สิ้นสุดต้องตรงกับหรือหลังวันที่เริ่มลา';
       }
 
-      const startYear =
-        getYearFromDate(
-          formData.startDate,
-        );
-
-      const endYear =
-        getYearFromDate(
-          formData.endDate,
-        );
-
-      if (
-        startYear &&
-        endYear &&
-        startYear !==
-          endYear
-      ) {
-        validationErrors.dateRange =
-          'ระบบยังไม่รองรับการยื่นลาคร่อมปี';
+      if (formData.endDate && formData.endDate > maximumSelectableDate) {
+        validationErrors.dateRange = getBangkokToday().slice(5, 7) === '12'
+          ? 'เดือนธันวาคมสามารถยื่นล่วงหน้าสำหรับปีหน้าได้ถึงวันที่ 31 มกราคมเท่านั้น'
+          : 'สิทธิ์ปีหน้าจะเปิดให้ยื่นล่วงหน้าตั้งแต่วันที่ 1 ธันวาคม';
       }
 
       if (
@@ -1460,23 +1472,20 @@ function RoleCreateLeaveRequestPage({
         }
       }
 
-      if (
-        selectedLeaveType &&
-        !selectedLeaveType
-          .hasEntitlement
-      ) {
-        validationErrors.balance =
-          `ไม่พบสิทธิ์วันลาสำหรับปี ${entitlementYear}`;
-      } else if (
-        selectedLeaveType &&
-        requestedDays >
-          selectedLeaveType
-            .availableDays
-      ) {
-        validationErrors.balance =
-          `ไม่สามารถส่งคำขอได้ เนื่องจากสิทธิ์ที่ยื่นได้คงเหลือ ${formatDays(
-            selectedLeaveType.availableDays,
-          )} วัน${selectedLeaveType.pendingDays > 0 ? ` และมีคำขอรออนุมัติ ${formatDays(selectedLeaveType.pendingDays)} วัน` : ''}`;
+      if (selectedLeaveType) {
+        for (const allocation of workingDaySummary.yearAllocations || []) {
+          const yearLeaveType = (leaveOptionsByYear[allocation.year]?.leaveTypes || [])
+            .map(normalizeLeaveType)
+            .find((leaveType) => Number(leaveType.id) === Number(formData.leaveTypeId));
+          if (!yearLeaveType?.hasEntitlement) {
+            validationErrors.balance = `ยังไม่เปิดสิทธิ์การลาสำหรับปี ${allocation.year}`;
+            break;
+          }
+          if (allocation.leaveDays > Number(yearLeaveType.availableDays || 0)) {
+            validationErrors.balance = `สิทธิ์ปี ${allocation.year} ยื่นเพิ่มได้ ${formatDays(yearLeaveType.availableDays)} วัน`;
+            break;
+          }
+        }
       }
 
       if (
@@ -1827,6 +1836,11 @@ function RoleCreateLeaveRequestPage({
         requestedDays,
       )} วัน`,
     ],
+
+    ...(workingDaySummary.yearAllocations || []).map((allocation) => [
+      `ใช้สิทธิ์ปี ${allocation.year}`,
+      `${formatDays(allocation.leaveDays)} วัน`,
+    ]),
 
     [
       'ไฟล์แนบ',
@@ -2271,6 +2285,7 @@ function RoleCreateLeaveRequestPage({
             <ThaiDateField
               label="วันที่เริ่มลา"
               minDate={minimumStartDate}
+              maxDate={maximumSelectableDate}
               holidaysByDate={activeHolidayByDate}
               disabled={dateSelectionDisabled}
               value={
@@ -2296,6 +2311,7 @@ function RoleCreateLeaveRequestPage({
             <ThaiDateField
               label="วันที่สิ้นสุด"
               minDate={formData.startDate || minimumStartDate}
+              maxDate={maximumSelectableDate}
               holidaysByDate={activeHolidayByDate}
               disabled={dateSelectionDisabled}
               value={
@@ -2345,6 +2361,12 @@ function RoleCreateLeaveRequestPage({
                 >
                   ใช้สิทธิ์ {formatDays(requestedDays)} วันทำงาน
                 </Typography>
+
+                {workingDaySummary.yearAllocations.map((allocation) => (
+                  <Typography key={allocation.year} sx={{ color: '#475569', fontSize: '12px', fontWeight: 600 }}>
+                    • ปี {allocation.year} จำนวน {formatDays(allocation.leaveDays)} วัน
+                  </Typography>
+                ))}
 
                 {(workingDaySummary.weekendDays > 0 ||
                   workingDaySummary.holidayDays > 0) && (

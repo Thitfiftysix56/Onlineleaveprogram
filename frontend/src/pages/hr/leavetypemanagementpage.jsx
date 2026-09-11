@@ -16,7 +16,6 @@ import {
   Paper,
   Select,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TablePagination,
@@ -24,6 +23,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
 
 import {
   useNavigate,
@@ -1037,7 +1037,7 @@ function LeaveTypeManagementPage() {
                 </TableRow>
               </TableHead>
 
-              <TableBody>
+              <FixedTableBody>
                 {paginatedLeaveTypes.map(
                   (
                     leaveType,
@@ -1285,7 +1285,7 @@ function LeaveTypeManagementPage() {
                     </TableRow>
                   ),
                 )}
-              </TableBody>
+              </FixedTableBody>
             </Table>
             <TablePagination
               component="div"

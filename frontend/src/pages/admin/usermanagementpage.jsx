@@ -20,7 +20,6 @@ import {
   Paper,
   Select,
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TablePagination,
@@ -28,6 +27,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
 
 
 import AdminLayout from '../../layouts/adminlayout.jsx';
@@ -1431,7 +1431,7 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
                 </TableRow>
               </TableHead>
 
-              <TableBody>
+              <FixedTableBody>
                 {paginatedUsers.map(
                   (user) => {
                     const roleStyle =
@@ -1715,7 +1715,7 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
                     );
                   },
                 )}
-              </TableBody>
+              </FixedTableBody>
             </Table>
             {filteredUsers.length > rowsPerPage ? (
               <TablePagination component="div" count={filteredUsers.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredUsers.length / rowsPerPage)}`} />

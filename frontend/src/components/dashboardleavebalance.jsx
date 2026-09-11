@@ -13,13 +13,13 @@ import { getLeaveBalance } from '../api/leave-service.js';
 
 const number = (value) => Number(value || 0);
 
-const getAvailableDays = (balance) => {
-  if (balance.available !== undefined && balance.available !== null) {
-    return Math.max(number(balance.available), 0);
+const getRemainingDays = (balance) => {
+  if (balance.remaining !== undefined && balance.remaining !== null) {
+    return Math.max(number(balance.remaining), 0);
   }
 
   return Math.max(
-    number(balance.remaining) - number(balance.pending),
+    number(balance.total) - number(balance.used),
     0,
   );
 };
@@ -332,7 +332,7 @@ export default function DashboardLeaveBalance() {
                       fontWeight: 500,
                     }}
                   >
-                    ยื่นเพิ่มได้
+                    คงเหลือ
                   </Typography>
 
                   <Box
@@ -357,7 +357,7 @@ export default function DashboardLeaveBalance() {
                         lineHeight: 1.1,
                       }}
                     >
-                      {getAvailableDays(balance)}
+                      {getRemainingDays(balance)}
                     </Typography>
 
                     <Typography

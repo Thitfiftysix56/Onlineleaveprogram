@@ -46,8 +46,8 @@ const employeeRow = {
   role_name: 'Employee', user_id: 20, created_at: '2026-01-01', updated_at: '2026-01-01',
   password_hash: 'never-return-this',
 }
-const departmentRow = { department_id: 1, department_name: 'IT', description: 'Tech', is_active: 1, employee_count: 2, active_employee_count: 2 }
-const positionRow = { position_id: 1, position_name: 'Developer', is_active: 1, employee_count: 2 }
+const departmentRow = { department_id: 1, department_name: 'IT', division_name: 'Development', description: 'Tech', is_active: 1, employee_count: 2, active_employee_count: 2 }
+const positionRow = { position_id: 1, position_name: 'Developer', department_id: 1, department_name: 'IT', division_name: 'Development', position_group: 'Developer', is_active: 1, employee_count: 2 }
 const leaveTypeRow = {
   leave_type_id: 1, leave_type_code: 'ANN', leave_type_name: 'Annual Leave', description: 'Annual leave type',
   annual_quota_days: '10.00', minimum_days: '0.50', maximum_days_per_request: '5.00',
@@ -92,7 +92,7 @@ test('employee GET one returns 404', async () => {
 })
 
 test('employee create rejects invalid department and position', async () => {
-  const payload = { employeeCode: 'TST011', firstName: 'New', lastName: 'Employee', email: 'new@example.test', departmentId: 99, positionId: 99, hireDate: '2026-01-01', status: 'active' }
+  const payload = { employeeCode: 'TST011', firstName: 'New', lastName: 'Employee', email: 'new@example.test', phone: '0812345678', departmentId: 99, positionId: 99, hireDate: '2026-01-01', status: 'active' }
   pool.execute = async () => [[]]
   let response = await fetch(`${baseUrl}/api/hr/employees`, { method: 'POST', headers: auth(), body: JSON.stringify(payload) })
   assert.equal(response.status, 400)
@@ -102,14 +102,14 @@ test('employee create rejects invalid department and position', async () => {
 })
 
 test('employee create ignores a supplied code and rejects duplicate email', async () => {
-  const payload = { employeeCode: 'TST010', firstName: 'New', lastName: 'Employee', email: 'new@example.test', departmentId: 1, positionId: 1, hireDate: '2026-01-01', status: 'active' }
-  const results = [[[{ department_id: 1 }]], [[{ position_id: 1 }]], [[{ employee_id: 10, employee_code: 'OTHER', email: 'new@example.test' }]]]
+  const payload = { employeeCode: 'TST010', firstName: 'New', lastName: 'Employee', email: 'new@example.test', phone: '0812345678', departmentId: 1, positionId: 1, roleName: 'Employee', hireDate: '2026-01-01', status: 'active' }
+  const results = [[[{ department_id: 1 }]], [[{ position_id: 1 }]], [[{ role_id: 1, role_name: 'Employee' }]], [[{ position_id: 1 }]], [[{ employee_id: 10, employee_code: 'OTHER', email: 'new@example.test' }]]]
   pool.execute = async () => results.shift()
   assert.equal((await fetch(`${baseUrl}/api/hr/employees`, { method: 'POST', headers: auth(), body: JSON.stringify(payload) })).status, 409)
 })
 
 test('employee create, update and status update succeed with parameterized SQL', async () => {
-  let results = [[[{ department_id: 1 }]], [[{ position_id: 1 }]], [[]], [[employeeRow]]]
+  let results = [[[{ department_id: 1 }]], [[{ position_id: 1 }]], [[{ role_id: 1, role_name: 'Employee' }]], [[{ position_id: 1 }]], [[]], [[employeeRow]]]
   const queries = []
   pool.execute = async (sql, parameters) => { queries.push({ sql, parameters }); return results.shift() }
   const connectionQueries = []
@@ -132,7 +132,7 @@ test('employee create, update and status update succeed with parameterized SQL',
       return connectionResults.shift()
     },
   })
-  const payload = { employeeCode: 'TST010', firstName: 'Test', lastName: 'Employee', email: 'test10@example.test', phone: '0812345678', departmentId: 1, positionId: 1, hireDate: '2026-01-01', status: 'active' }
+  const payload = { employeeCode: 'TST010', firstName: 'Test', lastName: 'Employee', email: 'test10@example.test', phone: '0812345678', departmentId: 1, positionId: 1, roleName: 'Employee', hireDate: '2026-01-01', status: 'active' }
   let response = await fetch(`${baseUrl}/api/hr/employees`, { method: 'POST', headers: auth(), body: JSON.stringify(payload) })
   assert.equal(response.status, 201)
   assert.match(connectionQueries[0].parameters[0], /^TMP-/)
@@ -142,7 +142,7 @@ test('employee create, update and status update succeed with parameterized SQL',
   assert.equal(connectionQueries[6].parameters[0], 4)
   assert.equal(connectionQueries[6].parameters[4], 'employee-account-required')
 
-  results = [[[employeeRow]], [[{ department_id: 1 }]], [[{ position_id: 1 }]], [[]], [{ affectedRows: 1 }], [{ affectedRows: 1 }], [{ affectedRows: 1 }], [[employeeRow]]]
+  results = [[[employeeRow]], [[{ department_id: 1 }]], [[{ position_id: 1 }]], [[{ role_id: 1, role_name: 'Employee' }]], [[{ position_id: 1 }]], [[]], [{ affectedRows: 1 }], [{ affectedRows: 1 }], [{ affectedRows: 1 }], [{ affectedRows: 1 }], [[employeeRow]]]
   pool.execute = async () => results.shift()
   response = await fetch(`${baseUrl}/api/hr/employees/10`, { method: 'PUT', headers: auth(), body: JSON.stringify(payload) })
   assert.equal(response.status, 200)
@@ -151,6 +151,18 @@ test('employee create, update and status update succeed with parameterized SQL',
   pool.execute = async () => results.shift()
   response = await fetch(`${baseUrl}/api/hr/employees/10/status`, { method: 'PATCH', headers: auth(), body: JSON.stringify({ status: 'inactive' }) })
   assert.equal(response.status, 200)
+})
+
+test('employee phone is required and must contain exactly ten digits', async () => {
+  const payload = { firstName: 'New', lastName: 'Employee', email: 'phone@example.test', departmentId: 1, positionId: 1, hireDate: '2026-01-01', status: 'active' }
+  for (const phone of ['', '081234567', '08123456789', '08A2345678']) {
+    const response = await fetch(`${baseUrl}/api/hr/employees`, {
+      method: 'POST',
+      headers: auth(),
+      body: JSON.stringify({ ...payload, phone }),
+    })
+    assert.equal(response.status, 400, phone)
+  }
 })
 
 test('employee delete requires inactive data without business references and removes generated entitlements', async () => {
@@ -185,12 +197,12 @@ test('department list/get/create/update/status and duplicate validation', async 
 
   let results = [[[]], [{ insertId: 1 }], [[departmentRow]]]
   pool.execute = async () => results.shift()
-  response = await fetch(`${baseUrl}/api/hr/departments`, { method: 'POST', headers: auth(), body: JSON.stringify({ departmentName: 'IT', description: 'Tech', status: 'Active' }) })
+  response = await fetch(`${baseUrl}/api/hr/departments`, { method: 'POST', headers: auth(), body: JSON.stringify({ departmentName: 'IT', divisionName: 'Development', description: 'Tech', status: 'Active' }) })
   assert.equal(response.status, 201)
 
   results = [[[departmentRow]], [[]], [{ affectedRows: 1 }], [[departmentRow]]]
   pool.execute = async () => results.shift()
-  response = await fetch(`${baseUrl}/api/hr/departments/1`, { method: 'PUT', headers: auth(), body: JSON.stringify({ departmentName: 'IT', description: 'Tech', status: 'Active' }) })
+  response = await fetch(`${baseUrl}/api/hr/departments/1`, { method: 'PUT', headers: auth(), body: JSON.stringify({ departmentName: 'IT', divisionName: 'Development', description: 'Tech', status: 'Active' }) })
   assert.equal(response.status, 200)
 
   results = [[[departmentRow]], [{ affectedRows: 1 }]]
@@ -198,7 +210,7 @@ test('department list/get/create/update/status and duplicate validation', async 
   assert.equal((await fetch(`${baseUrl}/api/hr/departments/1/status`, { method: 'PATCH', headers: auth(), body: JSON.stringify({ status: 'Inactive' }) })).status, 200)
 
   pool.execute = async () => [[{ department_id: 2 }]]
-  assert.equal((await fetch(`${baseUrl}/api/hr/departments`, { method: 'POST', headers: auth(), body: JSON.stringify({ departmentName: 'IT', status: 'Active' }) })).status, 409)
+  assert.equal((await fetch(`${baseUrl}/api/hr/departments`, { method: 'POST', headers: auth(), body: JSON.stringify({ departmentName: 'IT', divisionName: 'Development', status: 'Active' }) })).status, 409)
 })
 
 test('department delete requires inactive department without employees', async () => {
@@ -215,14 +227,15 @@ test('position list/get/create/update/status, duplicate and 404 work', async () 
   pool.execute = async () => [[positionRow]]
   assert.equal((await fetch(`${baseUrl}/api/hr/positions`, { headers: auth() })).status, 200)
   assert.equal((await fetch(`${baseUrl}/api/hr/positions/1`, { headers: auth() })).status, 200)
-  let results = [[[]], [{ insertId: 1 }], [[positionRow]]]
+  let results = [[[departmentRow]], [[]], [{ insertId: 1 }], [[positionRow]]]
   pool.execute = async () => results.shift()
-  assert.equal((await fetch(`${baseUrl}/api/hr/positions`, { method: 'POST', headers: auth(), body: JSON.stringify({ positionName: 'Developer', status: 'Active' }) })).status, 201)
-  pool.execute = async () => [[{ position_id: 2 }]]
-  assert.equal((await fetch(`${baseUrl}/api/hr/positions`, { method: 'POST', headers: auth(), body: JSON.stringify({ positionName: 'Developer', status: 'Active' }) })).status, 409)
-  results = [[[positionRow]], [[]], [{ affectedRows: 1 }], [[positionRow]]]
+  const positionPayload = { departmentId: 1, positionGroup: 'Developer', positionName: 'Developer', status: 'Active' }
+  assert.equal((await fetch(`${baseUrl}/api/hr/positions`, { method: 'POST', headers: auth(), body: JSON.stringify(positionPayload) })).status, 201)
+  pool.execute = async (sql) => sql.includes('FROM departments') ? [[departmentRow]] : [[{ position_id: 2 }]]
+  assert.equal((await fetch(`${baseUrl}/api/hr/positions`, { method: 'POST', headers: auth(), body: JSON.stringify(positionPayload) })).status, 409)
+  results = [[[positionRow]], [[departmentRow]], [[]], [{ affectedRows: 1 }], [[positionRow]]]
   pool.execute = async () => results.shift()
-  assert.equal((await fetch(`${baseUrl}/api/hr/positions/1`, { method: 'PUT', headers: auth(), body: JSON.stringify({ positionName: 'Developer', status: 'Active' }) })).status, 200)
+  assert.equal((await fetch(`${baseUrl}/api/hr/positions/1`, { method: 'PUT', headers: auth(), body: JSON.stringify(positionPayload) })).status, 200)
   results = [[[positionRow]], [{ affectedRows: 1 }]]
   pool.execute = async () => results.shift()
   assert.equal((await fetch(`${baseUrl}/api/hr/positions/1/status`, { method: 'PATCH', headers: auth(), body: JSON.stringify({ status: 'Inactive' }) })).status, 200)

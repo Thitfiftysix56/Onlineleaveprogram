@@ -7,13 +7,15 @@ import {
   DialogContent,
   DialogTitle,
   Stack,
+  MenuItem,
   TextField,
   Typography,
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
-import { createDepartment, getDepartment, updateDepartment } from '../api/department-service.js';
+import { createDepartment, getDepartment, getDepartments, updateDepartment } from '../api/department-service.js';
+import { departmentNames, divisionLabelFor, divisionNamesFor } from '../constants/organizationcatalog.js';
 
-const emptyData = { departmentName: '', description: '', status: 'Active' };
+const emptyData = { departmentName: '', divisionName: '', description: '', status: 'Active' };
 
 function RoleDepartmentFormPage({
   LayoutComponent,
@@ -35,20 +37,38 @@ function RoleDepartmentFormPage({
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [existingDepartments, setExistingDepartments] = useState([]);
+  const [customDepartmentMode, setCustomDepartmentMode] = useState(false);
+  const [customDivisionMode, setCustomDivisionMode] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getDepartments()
+      .then((rows) => { if (active) setExistingDepartments(Array.isArray(rows) ? rows : []); })
+      .catch(() => { if (active) setExistingDepartments([]); });
+    return () => { active = false; };
+  }, [open]);
 
   useEffect(() => {
     let active = true;
     const load = async () => {
       if (!isEditMode) {
         setFormData(emptyData);
+        setCustomDepartmentMode(false);
+        setCustomDivisionMode(false);
         setLoading(false);
         return;
       }
       setLoading(true);
+      setCustomDepartmentMode(false);
+      setCustomDivisionMode(false);
+      setErrors({});
+      setMessage({ type: '', text: '' });
       try {
         const department = await getDepartment(departmentId);
         const nextData = {
           departmentName: department.departmentName || '',
+          divisionName: department.divisionName || '',
           description: department.description || '',
           status: department.status || 'Active',
         };
@@ -65,18 +85,13 @@ function RoleDepartmentFormPage({
     return () => { active = false; };
   }, [departmentId, isEditMode]);
 
-  const updateField = (field, value) => {
-    setFormData((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: '' }));
-    setMessage({ type: '', text: '' });
-  };
-
   const validate = () => {
     const nextErrors = {};
     const name = formData.departmentName.trim();
     if (!name) nextErrors.departmentName = 'กรุณากรอกชื่อแผนก';
     else if (name.length < 2) nextErrors.departmentName = 'ชื่อแผนกต้องมีอย่างน้อย 2 ตัวอักษร';
     else if (name.length > 100) nextErrors.departmentName = 'ชื่อแผนกต้องไม่เกิน 100 ตัวอักษร';
+    if (!formData.divisionName) nextErrors.divisionName = 'กรุณาเลือกฝ่าย';
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -89,7 +104,8 @@ function RoleDepartmentFormPage({
   const confirmSave = async () => {
     const payload = {
       departmentName: formData.departmentName.trim(),
-      description: formData.description.trim() || null,
+      divisionName: formData.divisionName,
+      description: divisionLabelFor(formData.divisionName),
       status: formData.status,
     };
     setSaving(true);
@@ -140,27 +156,63 @@ function RoleDepartmentFormPage({
           {message.text ? <Alert severity={message.type} onClose={() => setMessage({ type: '', text: '' })} sx={{ marginBottom: '20px' }}>{message.text}</Alert> : null}
           {loading ? <Alert severity="info" sx={{ marginBottom: '20px' }}>กำลังโหลดข้อมูลแผนก...</Alert> : null}
           <TextField
+            select
             fullWidth
             required
-            label="ชื่อแผนก"
-            placeholder="เช่น เทคโนโลยีสารสนเทศ"
-            value={formData.departmentName}
-            onChange={(event) => updateField('departmentName', event.target.value)}
+            disabled={customDepartmentMode}
+            label="แผนก"
+            value={customDepartmentMode ? '__new_department__' : formData.departmentName}
+            onChange={(event) => {
+              const isCustom = event.target.value === '__new_department__';
+              setCustomDepartmentMode(isCustom);
+              setCustomDivisionMode(isCustom);
+              setFormData((current) => ({ ...current, departmentName: isCustom ? '' : event.target.value, divisionName: '', description: '' }));
+              setErrors((current) => ({ ...current, departmentName: '', divisionName: '' }));
+            }}
             error={Boolean(errors.departmentName)}
-            helperText={errors.departmentName || `${formData.departmentName.length}/100 ตัวอักษร`}
-            slotProps={{ htmlInput: { maxLength: 100 } }}
-            sx={{ marginBottom: '22px' }}
-          />
+            helperText={errors.departmentName}
+            sx={{ display: customDepartmentMode ? 'none' : undefined, marginBottom: '22px' }}
+          >
+            {departmentNames.map((name) => <MenuItem key={name} value={name}>{name}</MenuItem>)}
+            {!isEditMode ? <MenuItem value="__new_department__">เพิ่มแผนกใหม่</MenuItem> : null}
+          </TextField>
+          {customDepartmentMode ? (
+            <TextField fullWidth required label="ชื่อแผนกใหม่" value={formData.departmentName}
+              onChange={(event) => setFormData((current) => ({ ...current, departmentName: event.target.value }))}
+              error={Boolean(errors.departmentName)} helperText={errors.departmentName} sx={{ marginBottom: '22px' }} />
+          ) : null}
           <TextField
+            select
             fullWidth
-            multiline
-            minRows={3}
-            maxRows={6}
-            label="รายละเอียด"
-            placeholder="ระบุหน้าที่หรือขอบเขตงานของแผนก"
-            value={formData.description}
-            onChange={(event) => updateField('description', event.target.value)}
-          />
+            required
+            disabled={!formData.departmentName || customDivisionMode}
+            label="ฝ่าย"
+            value={customDivisionMode ? '__new_division__' : formData.divisionName}
+            onChange={(event) => {
+              const isCustom = event.target.value === '__new_division__';
+              setCustomDivisionMode(isCustom);
+              setFormData((current) => ({ ...current, divisionName: isCustom ? '' : event.target.value, description: '' }));
+              setErrors((current) => ({ ...current, divisionName: '' }));
+            }}
+            error={Boolean(errors.divisionName)}
+            helperText={errors.divisionName || (!formData.departmentName ? 'เลือกแผนกก่อน' : '')}
+            sx={{ display: customDivisionMode ? 'none' : undefined, marginBottom: '22px' }}
+          >
+            {(isEditMode
+              ? [...new Set([
+                  ...divisionNamesFor(formData.departmentName),
+                  ...existingDepartments.filter((row) => row.departmentName === formData.departmentName).map((row) => row.divisionName),
+                ])]
+              : divisionNamesFor(formData.departmentName)
+                  .filter((name) => !existingDepartments.some((row) => row.departmentName === formData.departmentName && row.divisionName === name)))
+              .map((name) => <MenuItem key={name} value={name}>{divisionLabelFor(name)}</MenuItem>)}
+            {!isEditMode ? <MenuItem value="__new_division__">เพิ่มฝ่ายใหม่</MenuItem> : null}
+          </TextField>
+          {customDivisionMode ? (
+            <TextField fullWidth required label="ชื่อฝ่ายใหม่" value={formData.divisionName}
+              onChange={(event) => setFormData((current) => ({ ...current, divisionName: event.target.value, description: event.target.value }))}
+              error={Boolean(errors.divisionName)} helperText={errors.divisionName} />
+          ) : null}
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'flex-end', columnGap: '12px', rowGap: '10px', flexWrap: 'wrap', padding: '16px 22px 20px', borderTop: 0, backgroundColor: 'transparent' }}>
           <Button type="button" variant="outlined" onClick={closeForm} sx={{ minWidth: '116px', height: '42px', borderRadius: '9px', fontSize: '13px', fontWeight: 600 }}>ยกเลิก</Button>
@@ -173,7 +225,7 @@ function RoleDepartmentFormPage({
         <DialogContent>
           <Stack gap="8px">
             <Typography><strong>ชื่อแผนก:</strong> {formData.departmentName.trim()}</Typography>
-            <Typography><strong>รายละเอียด:</strong> {formData.description.trim() || '-'}</Typography>
+            <Typography><strong>ฝ่าย:</strong> {divisionLabelFor(formData.divisionName)}</Typography>
           </Stack>
         </DialogContent>
         <DialogActions sx={{ padding: '14px 20px' }}>
