@@ -18,6 +18,7 @@ import {
 } from './controllers/password-reset-controller.js'
 import {
   createAdminUser,
+  deleteAdminUser,
   getAdminUser,
   listAdminUsers,
   listAvailableEmployees,
@@ -34,7 +35,11 @@ import {
   createLeaveEntitlement,
   createLeaveType,
   createPosition,
+  deleteDepartment,
+  deleteEmployee,
   deleteHoliday,
+  deleteLeaveType,
+  deletePosition,
   getDepartment,
   getEmployee,
   getHoliday,
@@ -58,11 +63,12 @@ import {
   updatePosition,
   updatePositionStatus,
 } from './controllers/hr-management-controller.js'
-import { requireAdmin, requireHrOrAdmin, requireSupervisor } from './middleware/authorization.js'
+import { requireAdmin, requireHr, requireHrOrAdmin, requireSupervisor } from './middleware/authorization.js'
+import { auditActivity } from './middleware/audit-activity.js'
 import {
   balance, cancelOwn, decide, deleteAttachment, deleteDraft, downloadAttachment,
   getOwn, leaveAttachmentsDirectory, listOwn, options, saveDraft, submit,
-  supervisorDetail, supervisorList, teamReport,
+  hrApprovalDetail, hrApprovalList, supervisorDetail, supervisorList, teamReport,
 } from './controllers/leave-controller.js'
 import {
   deleteNotification, listNotifications, markAllNotificationsRead, markNotificationRead,
@@ -74,6 +80,7 @@ import {
   updateProfile,
 } from './controllers/profile-controller.js'
 import { uploadProfileImage } from './middleware/profile-upload.js'
+import { listAuditLogs, listLeaveReport } from './controllers/integration-read-controller.js'
 
 export const expressApp = express()
 const adminAccess = [
@@ -97,6 +104,8 @@ expressApp.use(cors({
 expressApp.use(express.json({ limit: '1mb' }))
 expressApp.use(express.urlencoded({ extended: false }))
 expressApp.use(cookieParser())
+// Record successful business mutations after authentication/RBAC middleware has populated request.user.
+expressApp.use(auditActivity)
 expressApp.use(
   '/api/profile-images',
   requireAuthentication,
@@ -166,10 +175,15 @@ expressApp.get('/api/supervisor/approvals', ...authenticated, requireSupervisor,
 expressApp.get('/api/supervisor/approvals/:requestId', ...authenticated, requireSupervisor, supervisorDetail)
 expressApp.post('/api/supervisor/approvals/:requestId/decision', ...authenticated, requireSupervisor, decide)
 expressApp.get('/api/supervisor/team-report', ...authenticated, requireSupervisor, teamReport)
+expressApp.get('/api/hr/approvals', ...authenticated, requireHr, hrApprovalList)
+expressApp.get('/api/hr/approvals/:requestId', ...authenticated, requireHr, hrApprovalDetail)
+expressApp.post('/api/hr/approvals/:requestId/decision', ...authenticated, requireHr, decide)
 expressApp.get('/api/notifications', ...authenticated, listNotifications)
 expressApp.patch('/api/notifications/read-all', ...authenticated, markAllNotificationsRead)
 expressApp.patch('/api/notifications/:notificationId/read', ...authenticated, markNotificationRead)
 expressApp.delete('/api/notifications/:notificationId', ...authenticated, deleteNotification)
+expressApp.get('/api/reports/leave-requests', ...authenticated, requireHrOrAdmin, listLeaveReport)
+expressApp.get('/api/admin/audit-logs', ...adminAccess, listAuditLogs)
 expressApp.get(
   '/api/admin/users',
   ...adminAccess,
@@ -195,6 +209,11 @@ expressApp.put(
   ...adminAccess,
   updateAdminUser,
 )
+expressApp.delete(
+  '/api/admin/users/:userId',
+  ...adminAccess,
+  deleteAdminUser,
+)
 expressApp.patch(
   '/api/admin/users/:userId/status',
   ...adminAccess,
@@ -212,21 +231,25 @@ const hrRoutes = [
   ['post', '/api/hr/employees', createEmployee],
   ['put', '/api/hr/employees/:employeeId', updateEmployee],
   ['patch', '/api/hr/employees/:employeeId/status', updateEmployeeStatus],
+  ['delete', '/api/hr/employees/:employeeId', deleteEmployee],
   ['get', '/api/hr/departments', listDepartments],
   ['get', '/api/hr/departments/:departmentId', getDepartment],
   ['post', '/api/hr/departments', createDepartment],
   ['put', '/api/hr/departments/:departmentId', updateDepartment],
   ['patch', '/api/hr/departments/:departmentId/status', updateDepartmentStatus],
+  ['delete', '/api/hr/departments/:departmentId', deleteDepartment],
   ['get', '/api/hr/positions', listPositions],
   ['get', '/api/hr/positions/:positionId', getPosition],
   ['post', '/api/hr/positions', createPosition],
   ['put', '/api/hr/positions/:positionId', updatePosition],
   ['patch', '/api/hr/positions/:positionId/status', updatePositionStatus],
+  ['delete', '/api/hr/positions/:positionId', deletePosition],
   ['get', '/api/hr/leave-types', listLeaveTypes],
   ['get', '/api/hr/leave-types/:leaveTypeId', getLeaveType],
   ['post', '/api/hr/leave-types', createLeaveType],
   ['put', '/api/hr/leave-types/:leaveTypeId', updateLeaveType],
   ['patch', '/api/hr/leave-types/:leaveTypeId/status', updateLeaveTypeStatus],
+  ['delete', '/api/hr/leave-types/:leaveTypeId', deleteLeaveType],
   ['get', '/api/hr/holidays', listHolidays],
   ['get', '/api/hr/holidays/:holidayId', getHoliday],
   ['post', '/api/hr/holidays', createHoliday],

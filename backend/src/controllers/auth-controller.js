@@ -7,6 +7,9 @@ import { validateNewPassword } from '../auth/password-policy.js'
 import { writeAuditLog } from '../services/audit-service.js'
 
 const authCookieName = 'online_leave_token'
+const maximumFailedLoginAttempts = 5
+const failedLoginWindowMs = 15 * 60 * 1000
+const automaticLockDurationMs = 30 * 60 * 1000
 
 function publicUser(user) {
   return {
@@ -89,6 +92,9 @@ export async function login(
            u.username,
            u.password_hash,
            u.status,
+           u.failed_login_attempts,
+           u.last_failed_login_at,
+           u.locked_until,
            u.last_login_at,
            u.password_changed_at,
            u.must_change_password,
@@ -123,6 +129,30 @@ export async function login(
     const user =
       users[0] || null
 
+    let normalizedStatus = String(user?.status || '').trim().toLowerCase()
+
+    if (
+      user &&
+      normalizedStatus === 'locked' &&
+      user.locked_until &&
+      new Date(user.locked_until).getTime() <= Date.now()
+    ) {
+      await pool.execute(
+        `UPDATE users
+         SET status = 'active',
+             failed_login_attempts = 0,
+             last_failed_login_at = NULL,
+             locked_until = NULL
+         WHERE user_id = ?`,
+        [user.user_id],
+      )
+      user.status = 'active'
+      user.failed_login_attempts = 0
+      user.last_failed_login_at = null
+      user.locked_until = null
+      normalizedStatus = 'active'
+    }
+
     const storedPasswordHash =
       String(
         user?.password_hash ||
@@ -147,6 +177,37 @@ export async function login(
       !user ||
       !passwordMatches
     ) {
+      if (user && normalizedStatus === 'active') {
+        const lastFailureAt = user.last_failed_login_at
+          ? new Date(user.last_failed_login_at).getTime()
+          : 0
+        const previousAttempts = Date.now() - lastFailureAt <= failedLoginWindowMs
+          ? Number(user.failed_login_attempts || 0)
+          : 0
+        const failedAttempts = previousAttempts + 1
+        const shouldLock = failedAttempts >= maximumFailedLoginAttempts
+        const lockedUntil = shouldLock
+          ? new Date(Date.now() + automaticLockDurationMs)
+          : null
+
+        await pool.execute(
+          `UPDATE users
+           SET failed_login_attempts = ?,
+               last_failed_login_at = NOW(),
+               status = CASE WHEN ? = 1 THEN 'locked' ELSE status END,
+               locked_until = CASE WHEN ? = 1 THEN ? ELSE locked_until END
+           WHERE user_id = ?`,
+          [failedAttempts, shouldLock ? 1 : 0, shouldLock ? 1 : 0, lockedUntil, user.user_id],
+        )
+
+        if (shouldLock) {
+          return response.status(423).json({
+            status: 'error',
+            message: 'บัญชีถูกล็อกชั่วคราว 30 นาที เนื่องจากกรอกรหัสผ่านไม่ถูกต้องครบ 5 ครั้ง',
+          })
+        }
+      }
+
       return response
         .status(401)
         .json({
@@ -157,25 +218,19 @@ export async function login(
         })
     }
 
-    const normalizedStatus =
-      String(
-        user.status ||
-          '',
-      )
-        .trim()
-        .toLowerCase()
-
     if (
       normalizedStatus !==
       'active'
     ) {
       return response
-        .status(403)
+        .status(normalizedStatus === 'locked' ? 423 : 403)
         .json({
           status: 'error',
 
           message:
-            'บัญชีนี้ไม่พร้อมใช้งาน กรุณาติดต่อผู้ดูแลระบบ',
+            normalizedStatus === 'locked'
+              ? 'บัญชีถูกล็อก กรุณารอให้ระบบปลดล็อกหรือติดต่อผู้ดูแลระบบ'
+              : 'บัญชีนี้ไม่พร้อมใช้งาน กรุณาติดต่อผู้ดูแลระบบ',
         })
     }
 
@@ -194,7 +249,10 @@ export async function login(
 
     await pool.execute(
       `UPDATE users
-       SET last_login_at = NOW()
+       SET last_login_at = NOW(),
+           failed_login_attempts = 0,
+           last_failed_login_at = NULL,
+           locked_until = NULL
        WHERE user_id = ?`,
       [
         user.user_id,

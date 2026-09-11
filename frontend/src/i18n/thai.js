@@ -11,7 +11,7 @@ const exact = new Map(Object.entries({
   'Employee Code': 'รหัสพนักงาน', 'Employee ID': 'รหัสพนักงาน',
   'Leave Request': 'คำขอลา', 'Leave Requests': 'คำขอลา', 'Create Leave Request': 'สร้างคำขอลา', 'My Requests': 'คำขอลาของฉัน',
   'Request Detail': 'รายละเอียดคำขอลา', 'Leave Request Detail': 'รายละเอียดคำขอลา', 'Leave Balance': 'สิทธิ์วันลาคงเหลือ',
-  Approval: 'การอนุมัติ', 'Approval List': 'รายการรออนุมัติ', 'Team Reports': 'รายงานทีม', 'Team Report': 'รายงานทีม', Reports: 'รายงาน', Report: 'รายงาน',
+  Approval: 'การอนุมัติ', 'Approval List': 'รายการรออนุมัติ', 'Team Reports': 'ประวัติการลาของทีม', 'Team Report': 'ประวัติการลาของทีม', Reports: 'รายงาน', Report: 'รายงาน',
   'Employee Management': 'จัดการพนักงาน', 'User Management': 'จัดการผู้ใช้งาน', 'Leave Type Management': 'จัดการประเภทการลา',
   'Leave Types': 'ประเภทการลา', 'Leave Type': 'ประเภทการลา', 'Leave Entitlement Management': 'จัดการสิทธิ์วันลา',
   'Leave Entitlement': 'สิทธิ์วันลา', 'Holiday Management': 'จัดการวันหยุด', Holidays: 'วันหยุด', Holiday: 'วันหยุด',
@@ -35,7 +35,7 @@ const exact = new Map(Object.entries({
   'Search requests': 'ค้นหาคำขอลา', 'Search notifications': 'ค้นหาการแจ้งเตือน', 'Search employees': 'ค้นหาพนักงาน', 'Search users': 'ค้นหาผู้ใช้งาน',
   'First Name': 'ชื่อ', 'Last Name': 'นามสกุล', 'Hire Date': 'วันที่เริ่มงาน', 'Employment Date': 'วันที่เริ่มงาน',
   'Public Holiday': 'วันหยุดราชการ', 'Company Holiday': 'วันหยุดบริษัท', 'Special Holiday': 'วันหยุดพิเศษ',
-  'Annual Leave': 'ลาพักร้อน', 'Sick Leave': 'ลาป่วย', 'Personal Leave': 'ลากิจ', 'Maternity Leave': 'ลาคลอด',
+  'Annual Leave': 'ลาพักร้อน', 'Sick Leave': 'ลาป่วย', 'Personal Leave': 'ลากิจ',
   'Request ID': 'รหัสคำขอ', 'Request Number': 'เลขที่คำขอ', 'Date Range': 'ช่วงวันที่', 'Leave Period': 'ช่วงวันลา', Submitted: 'ส่งเมื่อ', Updated: 'อัปเดตเมื่อ',
   Total: 'รวม', 'Total Requests': 'คำขอทั้งหมด', 'Total Leave Days': 'วันลารวม', 'Total Entitlement': 'สิทธิ์ทั้งหมด', 'Available Days': 'วันลาที่ใช้ได้',
   'Pending Approval': 'รอการอนุมัติ', 'Waiting for your review': 'รอการตรวจสอบจากคุณ', 'Approved this month': 'อนุมัติในเดือนนี้', 'Rejected this month': 'ปฏิเสธในเดือนนี้',
@@ -65,13 +65,14 @@ const exact = new Map(Object.entries({
 }))
 
 const phrases = [
+  [/^A valid active supervisor employee is required before submission\.?$/i, 'ไม่สามารถส่งคำขอลาได้ เนื่องจากยังไม่ได้กำหนดหัวหน้างานที่สามารถอนุมัติคำขอได้ กรุณาติดต่อฝ่ายบุคคล'],
   [/^Welcome back,?\s*/i, 'ยินดีต้อนรับกลับ '], [/^Welcome,?\s*/i, 'ยินดีต้อนรับ '],
   [/Please sign in to continue\.?/gi, 'กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ'],
   [/Enter your username and password to access the system\.?/gi, 'กรอก Username และ Password เพื่อเข้าใช้งานระบบ'],
   [/The system identifies your Role from the user account\. You do not need to select a Role manually\.?/gi, 'ระบบจะตรวจสอบ Role จากบัญชีผู้ใช้งานโดยอัตโนมัติ'],
   [/Manage leave requests in one place\.?/gi, 'จัดการคำขอลาได้ในที่เดียว'], [/Secure role-based access/gi, 'เข้าใช้งานอย่างปลอดภัยตาม Role'],
   [/Verifying your session\.\.\./gi, 'กำลังตรวจสอบการเข้าสู่ระบบ...'],
-  [/Loading team report\.\.\./gi, 'กำลังโหลดรายงานทีม...'], [/Loading leave balance\.\.\./gi, 'กำลังโหลดสิทธิ์วันลา...'],
+  [/Loading team report\.\.\./gi, 'กำลังโหลดประวัติการลาของทีม...'], [/Loading leave balance\.\.\./gi, 'กำลังโหลดสิทธิ์วันลา...'],
   [/Loading notifications\.\.\./gi, 'กำลังโหลดการแจ้งเตือน...'], [/Loading requests\.\.\./gi, 'กำลังโหลดคำขอลา...'],
   [/Loading ([^.]+)\.\.\./gi, 'กำลังโหลด$1...'],
   [/Unable to load ([^.]+)\.?/gi, 'ไม่สามารถโหลด$1ได้'], [/Unable to save ([^.]+)\.?/gi, 'ไม่สามารถบันทึก$1ได้'],

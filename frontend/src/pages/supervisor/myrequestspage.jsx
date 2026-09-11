@@ -1,17 +1,12 @@
 import RoleMyRequestsPage from '../../components/rolemyrequestspage.jsx';
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
+import { roleAccentTokens } from '../../theme/tokens.js';
 
 function MyRequestsPage() {
-  const supervisorTheme = {
-    primary: '#7C3AED',
-    dark: '#6D28D9',
-    soft: '#F5F3FF',
-  };
-
   return (
     <RoleMyRequestsPage
       LayoutComponent={SupervisorLayout}
-      theme={supervisorTheme}
+      theme={roleAccentTokens.supervisor}
     />
   );
 }

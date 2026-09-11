@@ -19,6 +19,7 @@ const [{ expressApp }, { pool }, { default: jwt }] =
 let httpServer
 let baseUrl
 const originalPoolExecute = pool.execute
+const originalPoolGetConnection = pool.getConnection
 
 test.before(async () => {
   await new Promise((resolve) => {
@@ -31,6 +32,7 @@ test.before(async () => {
 
 test.after(async () => {
   pool.execute = originalPoolExecute
+  pool.getConnection = originalPoolGetConnection
 
   await new Promise((resolve, reject) => {
     httpServer.close((error) => {
@@ -117,6 +119,9 @@ test('GET /api/admin/users returns sanitized users for an admin', async () => {
     roleId: 4,
     roleName: 'Admin',
     status: 'active',
+    failedLoginAttempts: 0,
+    lastFailedLoginAt: null,
+    lockedUntil: null,
     lastLoginAt: '2026-08-03T01:00:00.000Z',
     mustChangePassword: false,
     createdAt: '2026-01-01T00:00:00.000Z',
@@ -154,6 +159,8 @@ test('available employees returns only employees without an account', async () =
           email: 'available@example.com',
           department_name: 'Information Technology',
           position_name: 'Developer',
+          intended_role_id: 2,
+          intended_role_name: 'Supervisor',
         },
       ],
     ]
@@ -176,6 +183,8 @@ test('available employees returns only employees without an account', async () =
         email: 'available@example.com',
         department: 'Information Technology',
         position: 'Developer',
+        roleId: 2,
+        roleName: 'Supervisor',
       },
     ],
   })
@@ -183,15 +192,17 @@ test('available employees returns only employees without an account', async () =
 
 test('POST /api/admin/users creates a hashed account and returns the temporary password once', async () => {
   const queries = []
+  const connectionQueries = []
   const results = [
-    [[{ employee_id: 10, user_id: null }]],
+    [[{ employee_id: 10, employee_code: 'EMP-010', intended_role_id: 1, intended_role_name: 'Employee', user_id: null }]],
     [[]],
-    [[{ role_id: 1, role_name: 'Employee' }]],
+  ]
+  const connectionResults = [
     [{ insertId: 7 }],
     [[{
       user_id: 7,
       employee_id: 10,
-      employee_code: 'EMP010',
+      employee_code: 'EMP-010',
       username: 'employee010',
       password_hash: 'must-not-be-returned',
       first_name: 'Available',
@@ -212,6 +223,16 @@ test('POST /api/admin/users creates a hashed account and returns the temporary p
     queries.push({ sql, parameters })
     return results.shift()
   }
+  pool.getConnection = async () => ({
+    beginTransaction: async () => {},
+    commit: async () => {},
+    rollback: async () => {},
+    release: () => {},
+    execute: async (sql, parameters) => {
+      connectionQueries.push({ sql, parameters })
+      return connectionResults.shift()
+    },
+  })
 
   const response = await fetch(`${baseUrl}/api/admin/users`, {
     method: 'POST',
@@ -222,7 +243,7 @@ test('POST /api/admin/users creates a hashed account and returns the temporary p
     body: JSON.stringify({
       employeeId: 10,
       username: 'employee010',
-      role: 'Employee',
+      role: 'Admin',
       status: 'active',
     }),
   })
@@ -237,10 +258,12 @@ test('POST /api/admin/users creates a hashed account and returns the temporary p
   assert.match(body.temporaryPassword, /[0-9]/)
   assert.match(body.temporaryPassword, /[^A-Za-z0-9]/)
   assert.equal(JSON.stringify(body).includes('password_hash'), false)
-  assert.match(queries[3].sql, /INSERT INTO users/)
-  assert.match(queries[3].sql, /must_change_password/)
-  assert.notEqual(queries[3].parameters[3], body.temporaryPassword)
-  assert.match(queries[3].parameters[3], /^\$2[aby]\$/)
+  assert.match(connectionQueries[0].sql, /INSERT INTO users/)
+  assert.match(connectionQueries[0].sql, /must_change_password/)
+  assert.equal(connectionQueries[0].parameters[1], 1)
+  assert.notEqual(connectionQueries[0].parameters[3], body.temporaryPassword)
+  assert.match(connectionQueries[0].parameters[3], /^\$2[aby]\$/)
+  pool.getConnection = originalPoolGetConnection
 })
 
 test('POST /api/admin/users rejects a duplicate username', async () => {
@@ -293,7 +316,7 @@ test('PUT /api/admin/users/:userId updates only username, role and status', asyn
   const user = {
     user_id: 7,
     employee_id: 10,
-    employee_code: 'EMP010',
+    employee_code: 'EMP-010',
     username: 'employee010',
     password_hash: 'must-not-be-returned',
     first_name: 'Available',
@@ -310,16 +333,22 @@ test('PUT /api/admin/users/:userId updates only username, role and status', asyn
   }
   const updatedUser = {
     ...user,
+    employee_code: 'SUP-002',
     username: 'employee010.edited',
     role_id: 2,
     role_name: 'Supervisor',
     status: 'inactive',
   }
   const queries = []
+  const connectionQueries = []
   const results = [
     [[user]],
     [[]],
     [[{ role_id: 2, role_name: 'Supervisor' }]],
+  ]
+  const connectionResults = [
+    [[{ employee_code: 'SUP-001' }]],
+    [{ affectedRows: 1 }],
     [{ affectedRows: 1 }],
     [[updatedUser]],
   ]
@@ -327,6 +356,16 @@ test('PUT /api/admin/users/:userId updates only username, role and status', asyn
     queries.push({ sql, parameters })
     return results.shift()
   }
+  pool.getConnection = async () => ({
+    beginTransaction: async () => {},
+    commit: async () => {},
+    rollback: async () => {},
+    release: () => {},
+    execute: async (sql, parameters) => {
+      connectionQueries.push({ sql, parameters })
+      return connectionResults.shift()
+    },
+  })
 
   const response = await fetch(`${baseUrl}/api/admin/users/7`, {
     method: 'PUT',
@@ -346,17 +385,55 @@ test('PUT /api/admin/users/:userId updates only username, role and status', asyn
 
   assert.equal(response.status, 200)
   assert.equal(body.user.employeeId, 10)
+  assert.equal(body.user.employeeCode, 'SUP-002')
   assert.equal(body.user.username, 'employee010.edited')
   assert.equal(body.user.roleName, 'Supervisor')
   assert.equal(body.user.status, 'inactive')
   assert.equal(JSON.stringify(body).includes('password_hash'), false)
-  assert.doesNotMatch(queries[3].sql, /employee_id|password_hash/)
-  assert.deepEqual(queries[3].parameters, [
+  assert.match(connectionQueries[1].sql, /UPDATE employees/)
+  assert.deepEqual(connectionQueries[1].parameters, ['SUP-002', 10])
+  assert.doesNotMatch(connectionQueries[2].sql, /employee_id|password_hash/)
+  assert.deepEqual(connectionQueries[2].parameters, [
     'employee010.edited',
     2,
     'inactive',
     7,
   ])
+  pool.getConnection = originalPoolGetConnection
+})
+
+test('DELETE /api/admin/users/:userId requires an inactive account and removes only account data', async () => {
+  let results = [[[{ user_id: 7, username: 'employee007', status: 'active' }]]]
+  pool.execute = async () => results.shift()
+  let response = await fetch(`${baseUrl}/api/admin/users/7`, {
+    method: 'DELETE',
+    headers: authorizationHeader('Admin'),
+  })
+  assert.equal(response.status, 409)
+
+  results = [
+    [[{ user_id: 7, username: 'employee007', status: 'inactive' }]],
+    [[{ approval_count: 0, attachment_count: 0 }]],
+  ]
+  pool.execute = async () => results.shift()
+  const deleteQueries = []
+  pool.getConnection = async () => ({
+    beginTransaction: async () => {},
+    commit: async () => {},
+    rollback: async () => {},
+    release: () => {},
+    execute: async (sql, parameters) => {
+      deleteQueries.push({ sql, parameters })
+      return [{ affectedRows: 1 }]
+    },
+  })
+  response = await fetch(`${baseUrl}/api/admin/users/7`, {
+    method: 'DELETE',
+    headers: authorizationHeader('Admin'),
+  })
+  assert.equal(response.status, 200)
+  assert.match(deleteQueries.at(-1).sql, /DELETE FROM users/)
+  assert.equal(deleteQueries.every(({ parameters }) => parameters[0] === 7), true)
 })
 
 test('PATCH /api/admin/users/:userId/status returns 401 when unauthenticated', async () => {
@@ -427,6 +504,46 @@ for (const requestedStatus of ['Active', 'Locked', 'Inactive']) {
     ])
   })
 }
+
+test('DELETE /api/admin/users/:userId requires an inactive unused account', async () => {
+  let results = [[[{ user_id: 7, username: 'employee001', status: 'active' }]]]
+  pool.execute = async () => results.shift()
+  let response = await fetch(`${baseUrl}/api/admin/users/7`, {
+    method: 'DELETE',
+    headers: authorizationHeader('Admin'),
+  })
+  assert.equal(response.status, 409)
+
+  results = [
+    [[{ user_id: 7, username: 'employee007', status: 'inactive' }]],
+    [[{ approval_count: 0, attachment_count: 0 }]],
+  ]
+  pool.execute = async () => results.shift()
+  const deleteQueries = []
+  pool.getConnection = async () => ({
+    beginTransaction: async () => {},
+    commit: async () => {},
+    rollback: async () => {},
+    release: () => {},
+    execute: async (sql, parameters) => {
+      deleteQueries.push({ sql, parameters })
+      if (sql.includes("LOWER(r.role_name) = 'hr'")) return [[{ user_id: 3 }]]
+      return [{ affectedRows: 1 }]
+    },
+  })
+
+  response = await fetch(`${baseUrl}/api/admin/users/7`, {
+    method: 'DELETE',
+    headers: authorizationHeader('Admin'),
+  })
+  assert.equal(response.status, 200)
+  const deleteUserQuery = deleteQueries.find(({ sql }) => /DELETE FROM users/.test(sql))
+  const notificationQuery = deleteQueries.find(({ sql }) => /INSERT INTO notifications/.test(sql))
+  assert.deepEqual(deleteUserQuery.parameters, [7])
+  assert.equal(notificationQuery.parameters[0], 3)
+  assert.equal(notificationQuery.parameters[4], 'user-account-deleted')
+  pool.getConnection = originalPoolGetConnection
+})
 
 test('POST /api/admin/users/:userId/reset-password returns 401 when unauthenticated', async () => {
   const response = await fetch(`${baseUrl}/api/admin/users/7/reset-password`, {

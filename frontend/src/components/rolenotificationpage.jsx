@@ -10,18 +10,59 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
+  IconButton,
   InputLabel,
+  Menu,
   MenuItem,
   Paper,
   Select,
+  TablePagination,
   TextField,
   Typography,
 } from '@mui/material';
 
-import { useLocation } from 'react-router-dom';
+import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
+import MoreVertRounded from '@mui/icons-material/MoreVertRounded';
+import RequestNumberText from './requestnumbertext.jsx';
+import { DataListToolbar } from './shareduiprimitives.jsx';
+import { PageHeader } from './sharedvisualfoundation.jsx';
+import { roleDashboardCardSurfaceSx } from '../theme/rolecardsurface.js';
 
-import { getNotifications, markAllNotificationsRead, markNotificationRead } from '../api/notification-service.js';
+import { useNavigate } from 'react-router-dom';
+
+import {
+  deleteNotification,
+  getNotifications,
+  markAllNotificationsRead as markAllNotificationsAsRead,
+  markNotificationRead as markNotificationAsRead,
+} from '../api/notification-service.js';
+
+import {
+  formatNotificationMessage,
+  formatNotificationTitle,
+} from '../utils/presentationformatter.js';
+
+
+/* =========================
+   Stable Default
+========================= */
+
+/*
+ * ห้ามใช้ initialNotifications = []
+ * เพราะ [] จะถูกสร้างใหม่ทุก render
+ * และทำให้ dependency ของ useCallback/useEffect เปลี่ยน
+ */
+const emptyInitialNotifications = [];
+
+/* =========================
+   Category
+========================= */
 
 const getCategoryFromType = (type) => {
   const normalizedType = String(
@@ -48,96 +89,887 @@ const getCategoryFromType = (type) => {
 
     'category-account':
       'Account',
+
+    'category-holiday':
+      'Holiday',
+
+    'leave-submitted':
+      'Approval',
+
+    'leave-approved':
+      'Leave Request',
+
+    'leave-rejected':
+      'Leave Request',
+
+    'leave-cancelled':
+      'Leave Request',
+
+    'employee-created':
+      'Employee',
+
+    'employee-account-required':
+      'Account',
+
+    'employee-updated':
+      'Employee',
+
+    'employee-status':
+      'Employee',
+
+    'entitlement-updated':
+      'Entitlement',
+
+    'holiday-created':
+      'Holiday',
+
+    'holiday-updated':
+      'Holiday',
+
+    'account-created':
+      'Account',
+
+    'account-updated':
+      'Account',
+
+    'user-account-deleted':
+      'Account',
+
+    'password-reset':
+      'Account',
+  };
+
+  return (
+    categoryTypes[
+      normalizedType
+    ] || 'System'
+  );
+};
+
+const translateCategory = (
+  category,
+) => {
+  const labels = {
+    'Leave Request':
+      'คำขอลา',
+
+    Approval:
+      'การอนุมัติ',
+
+    Employee:
+      'พนักงาน',
+
+    Entitlement:
+      'สิทธิ์การลา',
+
+    System:
+      'ระบบ',
+
+    Account:
+      'บัญชี',
+
+    Holiday:
+      'วันหยุด',
+  };
+
+  return (
+    labels[category] ||
+    category ||
+    'ระบบ'
+  );
+};
+
+const getCategorySymbol = (
+  category,
+) => {
+  const symbols = {
+    'Leave Request':
+      'ค',
+
+    Approval:
+      'อ',
+
+    Employee:
+      'พ',
+
+    Entitlement:
+      'ส',
+
+    System:
+      'ร',
+
+    Account:
+      'บ',
+
+    Holiday:
+      'ว',
+  };
+
+  return (
+    symbols[category] ||
+    'ร'
+  );
+};
+
+/* =========================
+   Leave Type
+========================= */
+
+const translateLeaveType = (
+  value,
+) => {
+  const labels = {
+    Annual:
+      'ลาพักร้อน',
+
+    'Annual Leave':
+      'ลาพักร้อน',
+
+    Sick:
+      'ลาป่วย',
+
+    'Sick Leave':
+      'ลาป่วย',
+
+    Personal:
+      'ลากิจ',
+
+    'Personal Leave':
+      'ลากิจ',
+
+    Paternity:
+      'ลาเพื่อดูแลบุตร',
+
+    'Paternity Leave':
+      'ลาเพื่อดูแลบุตร',
+
+    Ordination:
+      'ลาอุปสมบท',
+
+    'Ordination Leave':
+      'ลาอุปสมบท',
+
+    Military:
+      'ลาเพื่อรับราชการทหาร',
+
+    'Military Leave':
+      'ลาเพื่อรับราชการทหาร',
+
+    Other:
+      'ลาอื่น ๆ',
+
+    'Other Leave':
+      'ลาอื่น ๆ',
+  };
+
+  return (
+    labels[value] ||
+    value ||
+    'การลา'
+  );
+};
+
+/* =========================
+   Status
+========================= */
+
+const translateEmployeeStatus = (
+  value,
+) => {
+  const labels = {
+    Active:
+      'ใช้งานอยู่',
+
+    Inactive:
+      'ไม่ใช้งาน',
+
+    Locked:
+      'ถูกล็อก',
+
+    Suspended:
+      'ระงับการใช้งาน',
+
+    active:
+      'ใช้งานอยู่',
+
+    inactive:
+      'ไม่ใช้งาน',
+
+    locked:
+      'ถูกล็อก',
+
+    suspended:
+      'ระงับการใช้งาน',
+  };
+
+  return (
+    labels[value] ||
+    value
+  );
+};
+
+const translateUserRole = (
+  value,
+) => {
+  const labels = {
+    Employee:
+      'พนักงาน',
+
+    Supervisor:
+      'หัวหน้างาน',
+
+    HR:
+      'HR',
+
+    Admin:
+      'ผู้ดูแลระบบ',
+  };
+
+  return (
+    labels[value] ||
+    value
+  );
+};
+
+/* =========================
+   Notification Title
+========================= */
+
+const _translateNotificationTitle = (
+  title,
+) => {
+  const text = String(
+    title || '',
+  ).trim();
+
+  if (!text) {
+    return 'การแจ้งเตือน';
+  }
+
+  const normalized =
+    text.toLowerCase();
+
+  const exactLabels = {
+    notification:
+      'การแจ้งเตือน',
+
+    'new notification':
+      'การแจ้งเตือนใหม่',
+
+    'new leave request':
+      'มีคำขอลาใหม่',
+
+    'leave request submitted':
+      'ส่งคำขอลาแล้ว',
+
+    'leave request approved':
+      'คำขอลาได้รับการอนุมัติ',
+
+    'leave request rejected':
+      'คำขอลาถูกปฏิเสธ',
+
+    'leave request cancelled':
+      'ยกเลิกคำขอลาแล้ว',
+
+    'pending approval reminder':
+      'แจ้งเตือนคำขอรออนุมัติ',
+
+    'new employee account created':
+      'สร้างบัญชีพนักงานใหม่แล้ว',
+
+    'employee account created':
+      'สร้างบัญชีพนักงานแล้ว',
+
+    'employee created':
+      'เพิ่มพนักงานแล้ว',
+
+    'employee information updated':
+      'อัปเดตข้อมูลพนักงานแล้ว',
+
+    'employee updated':
+      'อัปเดตข้อมูลพนักงานแล้ว',
+
+    'employee status changed':
+      'เปลี่ยนสถานะพนักงานแล้ว',
+
+    'leave entitlement updated':
+      'อัปเดตสิทธิ์การลาแล้ว',
+
+    'entitlement updated':
+      'อัปเดตสิทธิ์การลาแล้ว',
+
+    'leave entitlement created':
+      'เพิ่มสิทธิ์การลาแล้ว',
+
+    'holiday information updated':
+      'อัปเดตข้อมูลวันหยุดแล้ว',
+
+    'holiday updated':
+      'อัปเดตข้อมูลวันหยุดแล้ว',
+
+    'holiday added':
+      'เพิ่มวันหยุดแล้ว',
+
+    'holiday created':
+      'เพิ่มวันหยุดแล้ว',
+
+    'leave type created':
+      'เพิ่มประเภทการลาแล้ว',
+
+    'leave type updated':
+      'อัปเดตประเภทการลาแล้ว',
+
+    'account status changed':
+      'เปลี่ยนสถานะบัญชีแล้ว',
+
+    'user status changed':
+      'เปลี่ยนสถานะผู้ใช้งานแล้ว',
+
+    'user account created':
+      'สร้างบัญชีผู้ใช้งานแล้ว',
+
+    'user account updated':
+      'อัปเดตบัญชีผู้ใช้งานแล้ว',
+
+    'user account locked':
+      'บัญชีผู้ใช้ถูกล็อก',
+
+    'new user account created':
+      'สร้างบัญชีผู้ใช้ใหม่แล้ว',
+
+    'department information updated':
+      'อัปเดตข้อมูลแผนกแล้ว',
+
+    'position created':
+      'เพิ่มตำแหน่งแล้ว',
+
+    'account status updated':
+      'อัปเดตสถานะบัญชีแล้ว',
+
+    'password changed':
+      'เปลี่ยนรหัสผ่านแล้ว',
+
+    'password reset':
+      'รีเซ็ตรหัสผ่านแล้ว',
+
+    'password reset completed':
+      'รีเซ็ตรหัสผ่านแล้ว',
   };
 
   if (
-    categoryTypes[normalizedType]
+    exactLabels[normalized]
   ) {
-    return categoryTypes[
-      normalizedType
+    return exactLabels[
+      normalized
     ];
   }
 
   if (
-    normalizedType ===
-    'leave-submitted'
+    normalized.includes(
+      'approved',
+    ) &&
+    normalized.includes(
+      'leave',
+    )
   ) {
-    return 'Approval';
+    return 'คำขอลาได้รับการอนุมัติ';
   }
 
   if (
-    normalizedType ===
-      'leave-approved' ||
-    normalizedType ===
-      'leave-rejected' ||
-    normalizedType ===
-      'leave-cancelled'
+    normalized.includes(
+      'rejected',
+    ) &&
+    normalized.includes(
+      'leave',
+    )
   ) {
-    return 'Leave Request';
+    return 'คำขอลาถูกปฏิเสธ';
   }
 
-  return 'System';
+  if (
+    normalized.includes(
+      'cancelled',
+    ) &&
+    normalized.includes(
+      'leave',
+    )
+  ) {
+    return 'ยกเลิกคำขอลาแล้ว';
+  }
+
+  if (
+    normalized.includes(
+      'employee',
+    ) &&
+    normalized.includes(
+      'created',
+    )
+  ) {
+    return 'สร้างบัญชีพนักงานใหม่แล้ว';
+  }
+
+  if (
+    normalized.includes(
+      'employee',
+    ) &&
+    normalized.includes(
+      'updated',
+    )
+  ) {
+    return 'อัปเดตข้อมูลพนักงานแล้ว';
+  }
+
+  if (
+    normalized.includes(
+      'entitlement',
+    ) &&
+    normalized.includes(
+      'updated',
+    )
+  ) {
+    return 'อัปเดตสิทธิ์การลาแล้ว';
+  }
+
+  if (
+    normalized.includes(
+      'holiday',
+    ) &&
+    normalized.includes(
+      'updated',
+    )
+  ) {
+    return 'อัปเดตข้อมูลวันหยุดแล้ว';
+  }
+
+  if (
+    normalized.includes(
+      'password',
+    ) &&
+    normalized.includes(
+      'reset',
+    )
+  ) {
+    return 'รีเซ็ตรหัสผ่านแล้ว';
+  }
+
+  return text;
 };
 
-const getTypeFromCategory = (
-  category,
+/* =========================
+   Notification Message
+========================= */
+
+const _translateNotificationMessage = (
+  message,
 ) => {
-  const categoryTypes = {
-    'Leave Request':
-      'category-leave-request',
+  const text = String(
+    message || '',
+  ).trim();
 
-    Approval:
-      'category-approval',
+  if (!text) {
+    return '';
+  }
 
-    Employee:
-      'category-employee',
+  let match;
 
-    Entitlement:
-      'category-entitlement',
-
-    System:
-      'category-system',
-
-    Account:
-      'category-account',
-  };
-
-  return (
-    categoryTypes[category] ||
-    'category-system'
+  /*
+   * Employee:
+   * Your leave request LR-... was approved.
+   */
+  match = text.match(
+    /^Your leave request (.+?) was approved\.?$/i,
   );
+
+  if (match) {
+    return `คำขอลา ${match[1]} ของคุณได้รับการอนุมัติแล้ว`;
+  }
+
+  /*
+   * Employee:
+   * Your leave request LR-... was rejected. Reason: ...
+   */
+  match = text.match(
+    /^Your leave request (.+?) was rejected(?:\.\s*Reason:\s*(.+?))?\.?$/i,
+  );
+
+  if (match) {
+    return match[2]
+      ? `คำขอลา ${match[1]} ของคุณถูกปฏิเสธ เหตุผล: ${match[2]}`
+      : `คำขอลา ${match[1]} ของคุณถูกปฏิเสธ`;
+  }
+
+  /*
+   * Leave request LR-... was cancelled.
+   */
+  match = text.match(
+    /^Leave request (.+?) was cancelled\.?$/i,
+  );
+
+  if (match) {
+    return `ยกเลิกคำขอลา ${match[1]} แล้ว`;
+  }
+
+  /*
+   * Employee User submitted leave request LR-... for approval.
+   */
+  match = text.match(
+    /^(.+?) submitted leave request (.+?) for approval\.?$/i,
+  );
+
+  if (match) {
+    return `${match[1]} ส่งคำขอลา ${match[2]} เพื่อรอการอนุมัติ`;
+  }
+
+  /*
+   * Employee User submitted Annual Leave request LR-...
+   */
+  match = text.match(
+    /^(.+?) submitted (Annual Leave|Sick Leave|Personal Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) request (.+?)(?: for approval)?\.?$/i,
+  );
+
+  if (match) {
+    return `${match[1]} ส่งคำขอ${translateLeaveType(
+      match[2],
+    )} ${match[3]} เพื่อรอการอนุมัติ`;
+  }
+
+  /*
+   * Supervisor User approved Annual Leave request LR-...
+   */
+  match = text.match(
+    /^(.+?) approved (Annual Leave|Sick Leave|Personal Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) request (.+?)\.?$/i,
+  );
+
+  if (match) {
+    return `หัวหน้างานอนุมัติคำขอ${translateLeaveType(
+      match[2],
+    )} ${match[3]} แล้ว`;
+  }
+
+  /*
+   * Supervisor User approved leave request LR-...
+   */
+  match = text.match(
+    /^(.+?) approved leave request (.+?)\.?$/i,
+  );
+
+  if (match) {
+    return `หัวหน้างานอนุมัติคำขอลา ${match[2]} แล้ว`;
+  }
+
+  /*
+   * Personal Leave request LR-... was rejected by the supervisor.
+   */
+  match = text.match(
+    /^(Annual Leave|Sick Leave|Personal Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) request (.+?) was rejected by the supervisor\.?$/i,
+  );
+
+  if (match) {
+    return `คำขอ${translateLeaveType(
+      match[1],
+    )} ${match[2]} ถูกหัวหน้างานปฏิเสธแล้ว`;
+  }
+
+  /*
+   * Leave request LR-... was rejected by the supervisor.
+   */
+  match = text.match(
+    /^Leave request (.+?) was rejected by the supervisor\.?$/i,
+  );
+
+  if (match) {
+    return `คำขอลา ${match[1]} ถูกหัวหน้างานปฏิเสธแล้ว`;
+  }
+
+  /*
+   * The employee account for Thanawat Meechai (EMP006)
+   * was created successfully.
+   */
+  match = text.match(
+    /^The employee account for (.+?) was created successfully\.?$/i,
+  );
+
+  if (match) {
+    return `สร้างบัญชีพนักงานสำหรับ ${match[1]} สำเร็จแล้ว`;
+  }
+
+  /*
+   * Employee account for ...
+   */
+  match = text.match(
+    /^Employee account for (.+?) was created successfully\.?$/i,
+  );
+
+  if (match) {
+    return `สร้างบัญชีพนักงานสำหรับ ${match[1]} สำเร็จแล้ว`;
+  }
+
+  /*
+   * Created employee account for ...
+   */
+  match = text.match(
+    /^Created employee account for (.+?)\.?$/i,
+  );
+
+  if (match) {
+    return `สร้างบัญชีพนักงานสำหรับ ${match[1]} สำเร็จแล้ว`;
+  }
+
+  /*
+   * Updated Annual Leave entitlement for Employee User to 10 days.
+   */
+  match = text.match(
+    /^Updated (Annual Leave|Sick Leave|Personal Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) entitlement for (.+?) to (.+?) days?\.?$/i,
+  );
+
+  if (match) {
+    return `อัปเดตสิทธิ์${translateLeaveType(
+      match[1],
+    )}ของ ${match[2]} เป็น ${match[3]} วันแล้ว`;
+  }
+
+  /*
+   * Annual Leave entitlement for Employee User was updated to 10 days.
+   */
+  match = text.match(
+    /^(Annual Leave|Sick Leave|Personal Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) entitlement for (.+?) was updated to (.+?) days?\.?$/i,
+  );
+
+  if (match) {
+    return `อัปเดตสิทธิ์${translateLeaveType(
+      match[1],
+    )}ของ ${match[2]} เป็น ${match[3]} วันแล้ว`;
+  }
+
+  /*
+   * Updated Annual Leave entitlement for employee EMP001.
+   */
+  match = text.match(
+    /^Updated (Annual Leave|Sick Leave|Personal Leave|Paternity Leave|Ordination Leave|Military Leave|Other Leave) entitlement for employee (.+?)\.?$/i,
+  );
+
+  if (match) {
+    return `อัปเดตสิทธิ์${translateLeaveType(
+      match[1],
+    )}ของพนักงาน ${match[2]} แล้ว`;
+  }
+
+  /*
+   * Buddhist Lent Day was added to the organization holiday calendar.
+   */
+  match = text.match(
+    /^Buddhist Lent Day was added to (?:the )?(?:organization|company|corporate) holiday calendar\.?$/i,
+  );
+
+  if (match) {
+    return 'เพิ่มวันเข้าพรรษาลงในปฏิทินวันหยุดขององค์กรแล้ว';
+  }
+
+  /*
+   * Holiday ... was added ...
+   */
+  match = text.match(
+    /^(.+?) was added to (?:the )?(?:organization|company|corporate) holiday calendar\.?$/i,
+  );
+
+  if (match) {
+    return `เพิ่ม ${match[1]} ลงในปฏิทินวันหยุดขององค์กรแล้ว`;
+  }
+
+  /*
+   * The employment status of employee EMP005 was changed to Active.
+   */
+  match = text.match(
+    /^The employment status of employee (.+?) was changed to (.+?)\.?$/i,
+  );
+
+  if (match) {
+    return `เปลี่ยนสถานะการทำงานของพนักงาน ${match[1]} เป็น ${translateEmployeeStatus(
+      match[2],
+    )} แล้ว`;
+  }
+
+  /*
+   * Employee EMP005 status was changed to Active.
+   */
+  match = text.match(
+    /^Employee (.+?) status was changed to (.+?)\.?$/i,
+  );
+
+  if (match) {
+    return `เปลี่ยนสถานะของพนักงาน ${match[1]} เป็น ${translateEmployeeStatus(
+      match[2],
+    )} แล้ว`;
+  }
+
+  /*
+   * User account ... status changed to ...
+   */
+  match = text.match(
+    /^(?:The )?user account (.+?) status was changed to (.+?)\.?$/i,
+  );
+
+  if (match) {
+    return `เปลี่ยนสถานะบัญชี ${match[1]} เป็น ${translateEmployeeStatus(
+      match[2],
+    )} แล้ว`;
+  }
+
+  /*
+   * Password for ... was reset successfully.
+   */
+  match = text.match(
+    /^Password for (.+?) was reset successfully\.?$/i,
+  );
+
+  if (match) {
+    return `รีเซ็ตรหัสผ่านของ ${match[1]} สำเร็จแล้ว`;
+  }
+
+  /*
+   * Password was changed successfully.
+   */
+  if (
+    /^Password was changed successfully\.?$/i.test(
+      text,
+    )
+  ) {
+    return 'เปลี่ยนรหัสผ่านสำเร็จแล้ว';
+  }
+
+  /*
+   * The account employee005 was locked
+   * after multiple failed login attempts.
+   */
+  match = text.match(
+    /^The account (.+?) was locked after multiple failed login attempts\.?$/i,
+  );
+
+  if (match) {
+    return `บัญชี ${match[1]} ถูกล็อกหลังจากพยายามเข้าสู่ระบบไม่สำเร็จหลายครั้ง`;
+  }
+
+  /*
+   * The account employee006 was created
+   * and assigned the Employee role.
+   */
+  match = text.match(
+    /^The account (.+?) was created and assigned the (Employee|Supervisor|HR|Admin) role\.?$/i,
+  );
+
+  if (match) {
+    return `สร้างบัญชี ${match[1]} และกำหนดบทบาทเป็น ${translateUserRole(
+      match[2],
+    )} แล้ว`;
+  }
+
+  /*
+   * The Information Technology department
+   * information was updated.
+   */
+  match = text.match(
+    /^The (.+?) department information was updated\.?$/i,
+  );
+
+  if (match) {
+    return `อัปเดตข้อมูลแผนก ${match[1]} แล้ว`;
+  }
+
+  /*
+   * The Marketing Officer position
+   * was added to the system.
+   */
+  match = text.match(
+    /^The (.+?) position was added to the system\.?$/i,
+  );
+
+  if (match) {
+    return `เพิ่มตำแหน่ง ${match[1]} เข้าสู่ระบบแล้ว`;
+  }
+
+  /*
+   * The account supervisor001
+   * was changed to Active.
+   */
+  match = text.match(
+    /^The account (.+?) was changed to (Active|Inactive|Locked|Suspended)\.?$/i,
+  );
+
+  if (match) {
+    return `เปลี่ยนสถานะบัญชี ${match[1]} เป็น ${translateEmployeeStatus(
+      match[2],
+    )} แล้ว`;
+  }
+
+  return text;
 };
+
+/* =========================
+   Date
+========================= */
+
+const formatDateTime = (
+  value,
+) => {
+  if (!value) {
+    return '-';
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return String(value);
+  }
+
+  const pad = (number) =>
+    String(number).padStart(
+      2,
+      '0',
+    );
+
+  return `${pad(
+    date.getDate(),
+  )}/${pad(
+    date.getMonth() + 1,
+  )}/${date.getFullYear()} ${pad(
+    date.getHours(),
+  )}:${pad(
+    date.getMinutes(),
+  )}`;
+};
+
+/* =========================
+   Component
+========================= */
 
 function RoleNotificationPage({
   LayoutComponent,
 
-  pageTitle = 'Notifications',
+  pageTitle =
+    'การแจ้งเตือน',
 
-  pageDescription =
-    'Review notifications and important updates.',
+  pageDescription = '',
 
-  initialNotifications = [],
+  initialNotifications =
+    emptyInitialNotifications,
 
   theme,
+  visualCalibration = true,
 }) {
-  const location = useLocation();
-
-  const pathRole =
-    location.pathname.split('/')[1];
-
-  const currentRole = [
-    'employee',
-    'supervisor',
-    'hr',
-    'admin',
-  ].includes(pathRole)
-    ? pathRole
-    : 'employee';
-
+  const navigate = useNavigate();
   const [
     notifications,
     setNotifications,
   ] = useState([]);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 5;
 
   const [
     searchText,
@@ -157,13 +989,62 @@ function RoleNotificationPage({
   const [
     actionMessage,
     setActionMessage,
-  ] = useState('');
+  ] = useState(null);
+
+  const [
+    notificationMenuAnchorEl,
+    setNotificationMenuAnchorEl,
+  ] = useState(null);
+
+  const [
+    notificationMenuTarget,
+    setNotificationMenuTarget,
+  ] = useState(null);
+
+  const [
+    deleteTarget,
+    setDeleteTarget,
+  ] = useState(null);
+
+  const [
+    isDeleting,
+    setIsDeleting,
+  ] = useState(false);
+
+  /* =========================
+     Page Title
+  ========================= */
+
+  const normalizedPageTitle =
+    String(
+      pageTitle || '',
+    )
+      .trim()
+      .toLowerCase();
+
+  const displayPageTitle =
+    normalizedPageTitle.includes(
+      'notification',
+    ) ||
+    normalizedPageTitle === ''
+      ? 'การแจ้งเตือน'
+      : pageTitle;
+
+  /*
+   * เก็บ prop นี้ไว้เพื่อให้ wrapper เก่า
+   * ยังส่ง pageDescription มาได้
+   * แต่ไม่แสดง subtitle
+   */
+  void pageDescription;
+
+  /* =========================
+     Normalize
+  ========================= */
 
   const normalizeForPage =
     useCallback(
       (notification) => ({
         ...notification,
-        isRead: notification.isRead ?? notification.read,
 
         category:
           notification.category ||
@@ -174,23 +1055,74 @@ function RoleNotificationPage({
       [],
     );
 
-  const loadNotifications = useCallback(async () => { try { const data=await getNotifications(); setNotifications((data?.notifications||[]).map(normalizeForPage)); } catch(error) { setActionMessage(error.response?.data?.message||'Unable to load notifications.'); } }, [normalizeForPage]);
+  /* =========================
+     Load
+  ========================= */
+
+  const loadNotifications =
+    useCallback(async () => {
+      setIsLoading(true);
+      try {
+        const result = await getNotifications();
+        const items = Array.isArray(result) ? result : result?.notifications;
+        setNotifications((Array.isArray(items) ? items : []).map((notification) => normalizeForPage({
+          ...notification,
+          isRead: Boolean(notification.read),
+        })));
+      } catch (error) {
+        setNotifications([]);
+        setActionMessage({ severity: 'error', text: error.response?.data?.message || 'ไม่สามารถโหลดการแจ้งเตือนได้' });
+      } finally {
+        setIsLoading(false);
+      }
+    }, [
+      normalizeForPage,
+    ]);
+
+  /* =========================
+     Initial Seed
+  ========================= */
+
+  /* =========================
+     Effects
+  ========================= */
 
   useEffect(() => {
+    void initialNotifications;
     loadNotifications();
 
     setSearchText('');
     setStatusFilter('All');
     setCategoryFilter('All');
-    setActionMessage('');
+    setActionMessage(null);
 
-    return undefined;
+    const handleWindowFocus =
+      () => {
+        loadNotifications();
+      };
+
+    window.addEventListener(
+      'focus',
+      handleWindowFocus,
+    );
+
+    return () => {
+      window.removeEventListener(
+        'focus',
+        handleWindowFocus,
+      );
+    };
   }, [
     loadNotifications,
+    initialNotifications,
   ]);
 
-  const categories = useMemo(
-    () => {
+  /* =========================
+     Categories
+  ========================= */
+
+  const categories =
+    useMemo(() => {
       const availableCategories =
         notifications
           .map(
@@ -201,14 +1133,15 @@ function RoleNotificationPage({
 
       return [
         'All',
-
         ...new Set(
           availableCategories,
         ),
       ];
-    },
-    [notifications],
-  );
+    }, [notifications]);
+
+  /* =========================
+     Filter
+  ========================= */
 
   const filteredNotifications =
     useMemo(() => {
@@ -220,11 +1153,23 @@ function RoleNotificationPage({
       return notifications
         .filter(
           (notification) => {
-            const title = String(
-              notification.title || '',
-            ).toLowerCase();
+            const translatedTitle =
+              formatNotificationTitle(
+                notification.title,
+              ).toLowerCase();
 
-            const notificationMessage =
+            const translatedMessage =
+              formatNotificationMessage(
+                notification.message,
+              ).toLowerCase();
+
+            const originalTitle =
+              String(
+                notification.title ||
+                  '',
+              ).toLowerCase();
+
+            const originalMessage =
               String(
                 notification.message ||
                   '',
@@ -232,15 +1177,22 @@ function RoleNotificationPage({
 
             const matchesSearch =
               !keyword ||
-              title.includes(
+              translatedTitle.includes(
                 keyword,
               ) ||
-              notificationMessage.includes(
+              translatedMessage.includes(
+                keyword,
+              ) ||
+              originalTitle.includes(
+                keyword,
+              ) ||
+              originalMessage.includes(
                 keyword,
               );
 
             const matchesStatus =
-              statusFilter === 'All' ||
+              statusFilter ===
+                'All' ||
               (statusFilter ===
                 'Unread' &&
                 !notification.isRead) ||
@@ -280,133 +1232,144 @@ function RoleNotificationPage({
       categoryFilter,
     ]);
 
+  const paginatedNotifications = useMemo(
+    () => filteredNotifications.slice(page * rowsPerPage, (page + 1) * rowsPerPage),
+    [filteredNotifications, page],
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [searchText, statusFilter]);
+
+  useEffect(() => {
+    const lastPage = Math.max(0, Math.ceil(filteredNotifications.length / rowsPerPage) - 1);
+    if (page > lastPage) setPage(lastPage);
+  }, [filteredNotifications.length, page]);
+
+  /* =========================
+     Summary
+  ========================= */
+
   const unreadCount =
     notifications.filter(
       (notification) =>
         !notification.isRead,
     ).length;
 
-  const readCount =
-    notifications.filter(
-      (notification) =>
-        notification.isRead,
-    ).length;
-
-  const todayDate = new Date();
-
   const todayCount =
-    notifications.filter(
-      (notification) => {
-        const notificationDate =
-          new Date(
-            notification.createdAt,
+    useMemo(() => {
+      const today =
+        new Date();
+
+      return notifications.filter(
+        (notification) => {
+          const notificationDate =
+            new Date(
+              notification.createdAt,
+            );
+
+          if (
+            Number.isNaN(
+              notificationDate.getTime(),
+            )
+          ) {
+            return false;
+          }
+
+          return (
+            notificationDate.getFullYear() ===
+              today.getFullYear() &&
+            notificationDate.getMonth() ===
+              today.getMonth() &&
+            notificationDate.getDate() ===
+              today.getDate()
           );
+        },
+      ).length;
+    }, [notifications]);
 
-        if (
-          Number.isNaN(
-            notificationDate.getTime(),
-          )
-        ) {
-          return false;
-        }
-
-        return (
-          notificationDate.getFullYear() ===
-            todayDate.getFullYear() &&
-          notificationDate.getMonth() ===
-            todayDate.getMonth() &&
-          notificationDate.getDate() ===
-            todayDate.getDate()
-        );
-      },
-    ).length;
-
-  const formatDateTime = (
-    dateTimeString,
-  ) => {
-    if (!dateTimeString) {
-      return '-';
-    }
-
-    const date =
-      new Date(dateTimeString);
-
-    if (
-      Number.isNaN(date.getTime())
-    ) {
-      return '-';
-    }
-
-    return date.toLocaleString(
-      'en-GB',
-      {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      },
-    );
-  };
+  /* =========================
+     Category Style
+  ========================= */
 
   const getCategoryStyle = (
     category,
   ) => {
-    const categoryStyles = {
+    const styles = {
       'Leave Request': {
         backgroundColor:
           '#EFF6FF',
 
-        color: '#1D4ED8',
+        color:
+          '#1D4ED8',
       },
 
       Approval: {
         backgroundColor:
           '#F5F3FF',
 
-        color: '#6D28D9',
+        color:
+          '#6D28D9',
       },
 
       Employee: {
         backgroundColor:
           '#ECFDF5',
 
-        color: '#047857',
+        color:
+          '#047857',
       },
 
       Entitlement: {
         backgroundColor:
           '#FFF7ED',
 
-        color: '#C2410C',
+        color:
+          '#C2410C',
       },
 
       System: {
         backgroundColor:
           '#FEF3C7',
 
-        color: '#B45309',
+        color:
+          '#B45309',
       },
 
       Account: {
         backgroundColor:
           '#F3F4F6',
 
-        color: '#4B5563',
+        color:
+          '#4B5563',
+      },
+
+      Holiday: {
+        backgroundColor:
+          '#FEF3C7',
+
+        color:
+          '#B45309',
       },
     };
 
     return (
-      categoryStyles[category] || {
+      styles[category] || {
         backgroundColor:
-          theme.soft,
+          theme?.soft ||
+          '#F3F4F6',
 
         color:
-          theme.dark ||
-          theme.primary,
+          theme?.dark ||
+          theme?.primary ||
+          '#4B5563',
       }
     );
   };
+
+  /* =========================
+     Actions
+  ========================= */
 
   const handleMarkAsRead = (
     notificationId,
@@ -422,467 +1385,784 @@ function RoleNotificationPage({
           ),
       );
 
-    if (!selectedNotification) {
+    if (
+      !selectedNotification
+    ) {
       return;
     }
 
-    markNotificationRead(notificationId).then(loadNotifications).then(()=>setActionMessage(`"${selectedNotification.title}" was marked as read.`)).catch((error)=>setActionMessage(error.response?.data?.message||'The notification could not be marked as read.'));
-    const updatedNotification = true;
+    const updatedNotification = markNotificationAsRead(notificationId);
 
-    if (!updatedNotification) {
-      setActionMessage(
-        'The notification could not be marked as read.',
-      );
+    if (
+      !updatedNotification
+    ) {
+      setActionMessage({
+        severity:
+          'error',
+
+        text:
+          'ไม่สามารถเปลี่ยนสถานะการแจ้งเตือนได้',
+      });
 
       return;
     }
 
-    loadNotifications();
+    updatedNotification.then(loadNotifications).catch((error) => {
+      setActionMessage({ severity: 'error', text: error.response?.data?.message || 'ไม่สามารถเปลี่ยนสถานะการแจ้งเตือนได้' });
+    });
 
-    setActionMessage(
-      `"${selectedNotification.title}" was marked as read.`,
-    );
+    setActionMessage({
+      severity:
+        'success',
 
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
+      text:
+        `ทำเครื่องหมาย "${formatNotificationTitle(
+          selectedNotification.title,
+        )}" ว่าอ่านแล้ว`,
     });
   };
 
   const handleMarkAllAsRead =
-    async () => {
-      if (unreadCount === 0) {
-        setActionMessage(
-          'All notifications are already marked as read.',
-        );
+    () => {
+      if (
+        unreadCount === 0
+      ) {
+        setActionMessage({
+          severity:
+            'info',
+
+          text:
+            'การแจ้งเตือนทั้งหมดถูกอ่านแล้ว',
+        });
 
         return;
       }
 
-      await markAllNotificationsRead();
-      await loadNotifications();
       const updatedCount = unreadCount;
+      markAllNotificationsAsRead().then(loadNotifications).catch((error) => {
+        setActionMessage({ severity: 'error', text: error.response?.data?.message || 'ไม่สามารถเปลี่ยนสถานะการแจ้งเตือนได้' });
+      });
 
-      setActionMessage(
-        `${updatedCount} notification(s) were marked as read.`,
-      );
+      setActionMessage({
+        severity:
+          'success',
 
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth',
+        text:
+          `ทำเครื่องหมายว่าอ่านแล้ว ${updatedCount} รายการ`,
       });
     };
 
-  const handleClearFilters = () => {
-    setSearchText('');
-    setStatusFilter('All');
-    setCategoryFilter('All');
-    setActionMessage('');
+  const handleOpenNotification = async (notification) => {
+    if (!notification) return;
+    if (!notification.isRead) {
+      try {
+        await markNotificationAsRead(notification.id);
+        setNotifications((items) => items.map((item) => item.id === notification.id ? { ...item, isRead: true, read: true } : item));
+        window.dispatchEvent(new CustomEvent('notification-read-state-changed'));
+      } catch {
+        setActionMessage({ severity: 'error', text: 'ไม่สามารถอัปเดตสถานะการแจ้งเตือนได้ กรุณาลองใหม่' });
+        return;
+      }
+    }
+    if (notification.path) {
+      navigate(
+        notification.path,
+        {
+          state: {
+            returnTo:
+              window.location.pathname,
+            returnLabel:
+              'การแจ้งเตือน',
+          },
+        },
+      );
+    }
   };
 
+  const handleDeleteNotification = async (notificationId) => {
+    try {
+      await deleteNotification(notificationId);
+      await loadNotifications();
+      setActionMessage({ severity: 'success', text: 'ลบการแจ้งเตือนเรียบร้อยแล้ว' });
+      return true;
+    } catch (error) {
+      setActionMessage({ severity: 'error', text: error.response?.data?.message || 'ไม่สามารถลบการแจ้งเตือนได้' });
+      return false;
+    }
+  };
+
+  const handleOpenNotificationMenu = (event, notification) => {
+    event.stopPropagation();
+    setNotificationMenuAnchorEl(event.currentTarget);
+    setNotificationMenuTarget(notification);
+  };
+
+  const handleCloseNotificationMenu = (event) => {
+    event?.stopPropagation?.();
+    setNotificationMenuAnchorEl(null);
+    setNotificationMenuTarget(null);
+  };
+
+  const handleRequestDeleteNotification = (event) => {
+    event?.stopPropagation?.();
+    setDeleteTarget(notificationMenuTarget);
+    setNotificationMenuAnchorEl(null);
+    setNotificationMenuTarget(null);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    if (isDeleting) return;
+    setDeleteTarget(null);
+  };
+
+  const handleConfirmDeleteNotification = async () => {
+    if (!deleteTarget) return;
+
+    setIsDeleting(true);
+    const deleted = await handleDeleteNotification(deleteTarget.id);
+    setIsDeleting(false);
+
+    if (deleted) {
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleClearFilters =
+    () => {
+      setSearchText('');
+      setStatusFilter('All');
+      setCategoryFilter('All');
+      setActionMessage(null);
+    };
+
+  /* =========================
+     Summary Cards
+  ========================= */
+
+  const summaryCards = [
+    {
+      title:
+        'ยังไม่ได้อ่าน',
+
+      value:
+        unreadCount,
+
+      color:
+        '#DC2626',
+      backgroundColor: '#FCF4F3',
+      borderColor: '#EFCFCB',
+    },
+
+    {
+      title:
+        'ได้รับวันนี้',
+
+      value:
+        todayCount,
+
+      color:
+        '#D97706',
+      backgroundColor: '#FCF8EC',
+      borderColor: '#EEDFAF',
+    },
+  ];
+
+  /* =========================
+     UI
+  ========================= */
+
   return (
-    <LayoutComponent activeMenu="Notification">
+    <LayoutComponent
+      activeMenu="Notification"
+    >
+      <PageHeader title={displayPageTitle} />
+
       <Box
         sx={{
-          display: 'flex',
+          display: 'none',
 
           alignItems: {
-            xs: 'flex-start',
-            sm: 'center',
+            xs:
+              'flex-start',
+
+            sm:
+              'center',
           },
 
           justifyContent:
             'space-between',
 
           flexDirection: {
-            xs: 'column',
-            sm: 'row',
+            xs:
+              'column',
+
+            sm:
+              'row',
           },
 
-          gap: '16px',
+          gap:
+            '16px',
 
-          marginBottom: '28px',
+          marginBottom:
+            '24px',
+          ...(visualCalibration && {
+            gap: { xs: '12px', sm: '16px' },
+            paddingBottom: '2px',
+          }),
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color: '#111827',
-
-              fontSize: {
-                xs: '26px',
-                sm: '30px',
-              },
-
-              fontWeight: 800,
-            }}
-          >
-            {pageTitle}
-          </Typography>
-
-          <Typography
-            sx={{
-              color: '#6B7280',
-
-              fontSize: '15px',
-
-              marginTop: '6px',
-            }}
-          >
-            {pageDescription}
-          </Typography>
-        </Box>
-
-        <Button
-          type="button"
-          variant="contained"
-          onClick={
-            handleMarkAllAsRead
-          }
-          disabled={
-            unreadCount === 0
-          }
+        <Typography
+          component="h1"
           sx={{
-            minWidth: '160px',
+            color:
+              '#111827',
 
-            height: '44px',
+            fontSize: {
+              xs:
+                '26px',
 
-            padding: '0 20px',
-
-            backgroundColor:
-              theme.primary,
-
-            color: '#FFFFFF',
-
-            borderRadius: '8px',
-
-            fontSize: '14px',
-
-            fontWeight: 700,
-
-            textTransform: 'none',
-
-            boxShadow: 'none',
-
-            '&:hover': {
-              backgroundColor:
-                theme.dark,
-
-              boxShadow: 'none',
+              sm:
+                '30px',
             },
 
-            '&.Mui-disabled': {
-              backgroundColor:
-                '#D1D5DB',
-
-              color: '#6B7280',
-            },
+            fontWeight:
+              800,
           }}
         >
-          Mark All as Read
-        </Button>
+          {displayPageTitle}
+        </Typography>
+
       </Box>
+
+      {/* Message */}
 
       {actionMessage && (
         <Alert
-          severity="success"
+          severity={
+            actionMessage.severity
+          }
           onClose={() =>
-            setActionMessage('')
+            setActionMessage(
+              null,
+            )
           }
           sx={{
-            marginBottom: '24px',
+            marginBottom:
+              '20px',
 
-            borderRadius: '8px',
+            borderRadius:
+              '10px',
           }}
         >
-          {actionMessage}
+          {
+            actionMessage.text
+          }
         </Alert>
       )}
 
       <Box
         sx={{
-          display: 'grid',
-
-          gridTemplateColumns: {
-            xs: '1fr',
-
-            sm: 'repeat(2, minmax(0, 1fr))',
-
-            xl: 'repeat(4, minmax(0, 1fr))',
+          display: 'flex',
+          justifyContent: {
+            xs: 'flex-start',
+            sm: 'flex-end',
           },
-
-          gap: '20px',
-
-          marginBottom: '24px',
-        }}
-      >
-        {[
-          {
-            title:
-              'Total Notifications',
-
-            value:
-              notifications.length,
-
-            color: '#2563EB',
-          },
-
-          {
-            title:
-              'Unread Notifications',
-
-            value: unreadCount,
-
-            color: '#DC2626',
-          },
-
-          {
-            title:
-              'Read Notifications',
-
-            value: readCount,
-
-            color: '#059669',
-          },
-
-          {
-            title:
-              'Received Today',
-
-            value: todayCount,
-
-            color: '#7C3AED',
-          },
-        ].map((card) => (
-          <Paper
-            key={card.title}
-            elevation={0}
-            sx={{
-              padding: '20px',
-
-              backgroundColor:
-                '#FFFFFF',
-
-              border:
-                '1px solid #E5E7EB',
-
-              borderRadius: '12px',
-            }}
-          >
-            <Typography
-              sx={{
-                color: '#6B7280',
-
-                fontSize: '14px',
-
-                fontWeight: 600,
-              }}
-            >
-              {card.title}
-            </Typography>
-
-            <Typography
-              sx={{
-                color: card.color,
-
-                fontSize: '30px',
-
-                fontWeight: 800,
-
-                marginTop: '8px',
-              }}
-            >
-              {card.value}
-            </Typography>
-          </Paper>
-        ))}
-      </Box>
-
-      <Paper
-        elevation={0}
-        sx={{
-          backgroundColor: '#FFFFFF',
-
-          border:
-            '1px solid #E5E7EB',
-
-          borderRadius: '12px',
-
-          overflow: 'hidden',
+          width: '100%',
+          padding: '0 2px 16px',
+          marginBottom: '2px',
         }}
       >
         <Box
           sx={{
-            padding: {
-              xs: '20px',
-              sm: '24px',
-            },
-
-            borderBottom:
-              '1px solid #E5E7EB',
+            display: 'flex',
+            alignItems: 'stretch',
+            flexWrap: 'wrap',
+            gap: 0,
           }}
         >
+          {[
+            {
+              label: 'ยังไม่ได้อ่าน',
+              value: unreadCount,
+              color: '#DC2626',
+            },
+            {
+              label: 'วันนี้',
+              value: todayCount,
+              color: '#D97706',
+            },
+          ].map((item, index) => (
+            <Box
+              key={item.label}
+              sx={{
+                minWidth: {
+                  xs: '88px',
+                  sm: '104px',
+                },
+                padding: {
+                  xs: '0 14px',
+                  sm: '0 18px',
+                },
+                textAlign: 'right',
+                borderLeft:
+                  index === 0
+                    ? 'none'
+                    : '1px solid #E2E8F0',
+              }}
+            >
+              <Typography
+                sx={{
+                  color: '#64748B',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  lineHeight: 1.3,
+                  marginBottom: '4px',
+                }}
+              >
+                {item.label}
+              </Typography>
+
+              <Typography
+                sx={{
+                  color: item.color,
+                  fontSize: '20px',
+                  fontWeight: 800,
+                  lineHeight: 1,
+                }}
+              >
+                {item.value}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+
+      {/* Summary */}
+
+      <Box
+        sx={{
+          display:
+            'none',
+
+          gridTemplateColumns: {
+            xs:
+              '1fr',
+
+            sm:
+              'repeat(2, minmax(0, 1fr))',
+
+            xl:
+              'repeat(4, minmax(0, 1fr))',
+          },
+
+          gap:
+            '18px',
+
+          marginBottom:
+            '24px',
+          ...(visualCalibration && {
+            gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
+            gap: { xs: '10px', sm: '12px' },
+          }),
+        }}
+      >
+        {summaryCards.map(
+          (card) => (
+            <Paper
+              key={
+                card.title
+              }
+              elevation={0}
+              sx={{
+                minHeight:
+                  '142px',
+
+                padding:
+                  '20px',
+
+                backgroundColor:
+                  '#FFFFFF',
+
+                border:
+                  '1px solid #E5E7EB',
+
+                borderRadius:
+                  '14px',
+
+                boxSizing:
+                  'border-box',
+                ...(visualCalibration && {
+                  minHeight: '106px',
+                  padding: { xs: '14px', sm: '16px 18px' },
+                  backgroundColor: card.backgroundColor,
+                  border: `1px solid ${card.borderColor}`,
+                  borderRadius: '10px',
+                  boxShadow: 'none',
+                }),
+              }}
+            >
+              <Box
+                sx={{
+                  display:
+                    'flex',
+
+                  alignItems:
+                    'center',
+
+                  justifyContent:
+                    'space-between',
+
+                  gap:
+                    '12px',
+                }}
+              >
+                <Typography
+                  sx={{
+                    color:
+                      '#64748B',
+
+                    fontSize:
+                      '12px',
+
+                    fontWeight:
+                      700,
+                  }}
+                >
+                  {card.title}
+                </Typography>
+
+                <Box
+                  sx={{
+                    width:
+                      visualCalibration ? '4px' : '9px',
+
+                    height:
+                      visualCalibration ? '28px' : '9px',
+
+                    flexShrink:
+                      0,
+
+                    backgroundColor:
+                      card.color,
+
+                    borderRadius:
+                      visualCalibration ? '999px' : '50%',
+
+                    boxShadow:
+                      visualCalibration ? 'none' : `0 0 0 4px ${card.color}14`,
+                  }}
+                />
+              </Box>
+
+              <Typography
+                sx={{
+                  color:
+                    '#111827',
+
+                  fontSize:
+                    '32px',
+
+                  fontWeight:
+                    800,
+
+                  lineHeight:
+                    1.2,
+
+                  marginTop:
+                    '14px',
+                  ...(visualCalibration && {
+                    fontSize: '24px',
+                    marginTop: '5px',
+                  }),
+                }}
+              >
+                {card.value}
+              </Typography>
+
+              <Typography
+                sx={{
+                  color:
+                    '#94A3B8',
+
+                  fontSize:
+                    '11px',
+
+                  marginTop:
+                    '13px',
+                  ...(visualCalibration && {
+                    display: 'block',
+                    color: '#667085',
+                    lineHeight: 1.45,
+                    marginTop: '6px',
+                  }),
+                }}
+              >
+                {card.title ===
+                'การแจ้งเตือนทั้งหมด'
+                  ? 'รายการแจ้งเตือนทั้งหมด'
+                  : card.title ===
+                      'ยังไม่ได้อ่าน'
+                    ? 'รายการที่ยังไม่ได้เปิดอ่าน'
+                    : card.title ===
+                        'อ่านแล้ว'
+                      ? 'รายการที่อ่านเรียบร้อยแล้ว'
+                      : 'รายการที่ได้รับในวันนี้'}
+              </Typography>
+            </Paper>
+          ),
+        )}
+      </Box>
+
+      {/* Notification List */}
+
+      <Paper
+        elevation={0}
+        sx={{
+          ...roleDashboardCardSurfaceSx,
+          width:
+            '100%',
+          '--role-primary': theme?.primary || '#2563EB',
+          '--role-secondary': theme?.dark || '#1D4ED8',
+          '--role-soft': theme?.soft || '#EFF6FF',
+          '--role-border': theme?.border || '#CBD5E1',
+          '--role-text': theme?.text || '#1E3A8A',
+          ...(visualCalibration && {
+            overflow: 'hidden',
+            boxShadow:
+              '0 8px 24px rgba(15, 23, 42, 0.04)',
+          }),
+        }}
+      >
+        {/* Filters */}
+
+        <Box
+          sx={{
+            padding:
+              '20px 22px',
+            ...(visualCalibration && {
+              padding: {
+                xs: '14px',
+                sm: '16px 18px',
+              },
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderBottom: 0,
+              borderRadius: 0,
+              marginBottom: 0,
+              boxShadow: 'none',
+            }),
+          }}
+        >
+          <Box sx={{ display: 'none' }}>
+            <Typography sx={{ color: '#111827', fontSize: '17px', fontWeight: 800 }}>
+              รายการแจ้งเตือน
+            </Typography>
+            <Button
+              type="button"
+              variant="contained"
+              onClick={handleMarkAllAsRead}
+              disabled={unreadCount === 0}
+              sx={{
+                display: 'none',
+                minWidth: '118px',
+                height: '38px',
+                padding: '0 18px',
+                backgroundColor: visualCalibration ? theme?.soft : theme?.primary,
+                color: visualCalibration ? theme?.dark : '#FFFFFF',
+                borderRadius: '9px',
+                fontSize: '12px',
+                fontWeight: 700,
+                textTransform: 'none',
+                boxShadow: 'none',
+                '&:hover': { backgroundColor: theme?.dark, color: '#FFFFFF', boxShadow: 'none' },
+              }}
+            >
+              อ่านทั้งหมด
+            </Button>
+          </Box>
+
           <Typography
             sx={{
-              color: '#111827',
+              display: 'none',
+              color:
+                '#64748B',
 
-              fontSize: '18px',
+              fontSize:
+                '12px',
 
-              fontWeight: 800,
+              marginTop:
+                '4px',
             }}
           >
-            Notification List
-          </Typography>
-
-          <Typography
-            sx={{
-              color: '#6B7280',
-
-              fontSize: '14px',
-
-              marginTop: '4px',
-            }}
-          >
-            Showing{' '}
+            แสดง{' '}
             {
               filteredNotifications.length
             }{' '}
-            of {notifications.length}{' '}
-            notifications
+            จาก{' '}
+            {
+              notifications.length
+            }{' '}
+            รายการ
           </Typography>
+
+          <DataListToolbar
+            searchValue={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="ค้นหาการแจ้งเตือน"
+            activeFilters={[
+              ...(statusFilter !== 'All' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'Unread' ? 'ยังไม่ได้อ่าน' : 'อ่านแล้ว'}`, onDelete: () => setStatusFilter('All') }] : []),
+            ]}
+            onClearFilters={handleClearFilters}
+            showClearFilters={false}
+            filters={<FormControl size="small"><Select value={statusFilter === 'All' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'Unread' ? 'ยังไม่ได้อ่าน' : value === 'Read' ? 'อ่านแล้ว' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'All')}><MenuItem value="Unread">ยังไม่ได้อ่าน</MenuItem><MenuItem value="Read">อ่านแล้ว</MenuItem></Select></FormControl>}
+            sx={{
+              marginTop: 0,
+              '& .MuiOutlinedInput-root': {
+                minHeight: '42px',
+                borderRadius: '12px',
+                backgroundColor: '#FFFFFF',
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#E2E8F0',
+              },
+            }}
+          />
 
           <Box
             sx={{
-              display: 'grid',
+              display:
+                'none',
 
               gridTemplateColumns: {
-                xs: '1fr',
+                xs:
+                  '1fr',
 
-                lg: 'minmax(280px, 2fr) minmax(180px, 1fr) minmax(190px, 1fr) auto',
+                lg:
+                  'minmax(260px, 1.5fr) repeat(2, minmax(160px, 0.8fr)) auto',
               },
 
-              gap: '16px',
+              gap:
+                '12px',
 
-              marginTop: '22px',
+              marginTop:
+                '18px',
+              ...(visualCalibration && {
+                marginTop: '14px',
+                gap: 0,
+                '& .MuiOutlinedInput-root': {
+                  height: '42px',
+                  backgroundColor: '#FFFFFF',
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#DCE3EA',
+                },
+                '& .MuiButton-root': {
+                  height: '42px',
+                  borderColor: '#D4DCE5',
+                  backgroundColor: 'transparent',
+                },
+              }),
             }}
           >
-            <TextField
+            <TextField fullWidth label="ค้นหาการแจ้งเตือน" placeholder="หัวข้อหรือรายละเอียด" value={searchText} onChange={(event) => setSearchText(event.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: '42px', borderRadius: '9px', backgroundColor: '#FFFFFF', '&.Mui-focused fieldset': { borderColor: theme?.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: theme?.primary } }} />
+
+            {/* Status */}
+
+            <FormControl
               fullWidth
-              label="Search Notification"
-              placeholder="Notification title or message"
-              value={searchText}
-              onChange={(event) =>
-                setSearchText(
-                  event.target.value,
-                )
-              }
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    height: '48px',
-
-                    borderRadius:
-                      '8px',
-
-                    '&.Mui-focused fieldset':
-                      {
-                        borderColor:
-                          theme.primary,
-                      },
-                  },
-
-                '& .MuiInputLabel-root.Mui-focused':
-                  {
-                    color:
-                      theme.primary,
-                  },
-              }}
-            />
-
-            <FormControl fullWidth>
-              <InputLabel id="notification-status-label">
-                Status
+            >
+              <InputLabel id="notification-status-filter-label">
+                สถานะ
               </InputLabel>
 
               <Select
-                labelId="notification-status-label"
-                value={statusFilter}
-                label="Status"
-                onChange={(event) =>
+                labelId="notification-status-filter-label"
+                value={
+                  statusFilter
+                }
+                label="สถานะ"
+                onChange={(
+                  event,
+                ) =>
                   setStatusFilter(
                     event.target.value,
                   )
                 }
                 sx={{
-                  height: '48px',
+                  height:
+                    '46px',
 
-                  borderRadius: '8px',
-
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline':
-                    {
-                      borderColor:
-                        theme.primary,
-                    },
+                  borderRadius:
+                    '9px',
                 }}
               >
                 <MenuItem value="All">
-                  All Statuses
+                  ทุกสถานะ
                 </MenuItem>
 
                 <MenuItem value="Unread">
-                  Unread
+                  ยังไม่ได้อ่าน
                 </MenuItem>
 
                 <MenuItem value="Read">
-                  Read
+                  อ่านแล้ว
                 </MenuItem>
               </Select>
             </FormControl>
 
-            <FormControl fullWidth>
-              <InputLabel id="notification-category-label">
-                Category
+            {/* Category */}
+
+            <FormControl
+              fullWidth
+            >
+              <InputLabel id="notification-category-filter-label">
+                หมวดหมู่
               </InputLabel>
 
               <Select
-                labelId="notification-category-label"
+                labelId="notification-category-filter-label"
                 value={
                   categoryFilter
                 }
-                label="Category"
-                onChange={(event) =>
+                label="หมวดหมู่"
+                onChange={(
+                  event,
+                ) =>
                   setCategoryFilter(
                     event.target.value,
                   )
                 }
                 sx={{
-                  height: '48px',
+                  height:
+                    '46px',
 
-                  borderRadius: '8px',
-
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline':
-                    {
-                      borderColor:
-                        theme.primary,
-                    },
+                  borderRadius:
+                    '9px',
                 }}
               >
                 {categories.map(
                   (category) => (
                     <MenuItem
-                      key={category}
-                      value={category}
+                      key={
+                        category
+                      }
+                      value={
+                        category
+                      }
                     >
                       {category ===
                       'All'
-                        ? 'All Categories'
-                        : category}
+                        ? 'ทุกหมวดหมู่'
+                        : translateCategory(
+                            category,
+                          )}
                     </MenuItem>
                   ),
                 )}
               </Select>
             </FormControl>
+
+            {/* Clear */}
 
             <Button
               type="button"
@@ -891,44 +2171,66 @@ function RoleNotificationPage({
                 handleClearFilters
               }
               sx={{
-                minWidth: '110px',
+                minWidth:
+                  '105px',
 
-                height: '48px',
+                height:
+                  '46px',
 
-                padding: '0 18px',
+                padding:
+                  '0 14px',
 
-                color: '#374151',
+                color:
+                  '#475569',
 
                 borderColor:
-                  '#D1D5DB',
+                  '#CBD5E1',
 
-                borderRadius: '8px',
+                borderRadius:
+                  '9px',
 
-                fontSize: '14px',
+                fontSize:
+                  '11px',
 
-                fontWeight: 700,
+                fontWeight:
+                  700,
+
+                whiteSpace:
+                  'nowrap',
 
                 textTransform:
                   'none',
 
                 '&:hover': {
                   backgroundColor:
-                    '#F9FAFB',
+                    '#F8FAFC',
 
                   borderColor:
-                    '#9CA3AF',
+                    '#94A3B8',
                 },
               }}
             >
-              Clear
+              ล้างตัวกรอง
             </Button>
           </Box>
         </Box>
 
-        {filteredNotifications.length >
+        {/* Items */}
+
+        {isLoading ? (
+          <Box sx={{ minHeight: 280, display: 'grid', placeItems: 'center' }}>
+            <CircularProgress size={30} sx={{ color: theme?.primary }} />
+          </Box>
+        ) : filteredNotifications.length >
         0 ? (
-          <Box>
-            {filteredNotifications.map(
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            {paginatedNotifications.map(
               (
                 notification,
                 index,
@@ -938,74 +2240,139 @@ function RoleNotificationPage({
                     notification.category,
                   );
 
-                const categorySymbol =
-                  String(
-                    notification.category ||
-                      'N',
-                  )
-                    .charAt(0)
-                    .toUpperCase();
-
                 return (
                   <Box
                     key={
                       notification.id
                     }
+                    role={notification.path ? 'button' : undefined}
+                    tabIndex={notification.path ? 0 : undefined}
+                    onClick={() => handleOpenNotification(notification)}
+                    onKeyDown={(event) => {
+                      if (notification.path && ['Enter', ' '].includes(event.key)) handleOpenNotification(notification);
+                    }}
                     sx={{
-                      display: 'flex',
+                      display:
+                        'flex',
 
                       alignItems: {
-                        xs: 'flex-start',
-                        md: 'center',
+                        xs:
+                          'flex-start',
+
+                        md:
+                          'center',
                       },
 
                       flexDirection: {
-                        xs: 'column',
-                        md: 'row',
+                        xs:
+                          'column',
+
+                        md:
+                          'row',
                       },
 
-                      gap: '18px',
+                      gap:
+                        '16px',
+                      ...(visualCalibration && {
+                        alignItems: 'flex-start',
+                        flexDirection: 'row',
+                        gap: {
+                          xs: '11px',
+                          sm: '13px',
+                        },
+                        padding: {
+                          xs: '15px 14px',
+                          sm: '16px 18px',
+                        },
+                        backgroundColor:
+                          notification.isRead
+                            ? '#FFFFFF'
+                            : (theme?.soft || '#F8FAFF'),
+                        border: 'none',
+                        borderLeft:
+                          notification.isRead
+                            ? '3px solid transparent'
+                            : `3px solid ${theme?.primary || '#2563EB'}`,
+                        borderBottom:
+                          index === paginatedNotifications.length - 1
+                            ? 'none'
+                            : '1px solid #EEF2F7',
+                        borderRadius: 0,
+                        boxShadow: 'none',
+                        transition:
+                          'background-color 0.16s ease',
+                        '&:hover': {
+                          backgroundColor:
+                            notification.isRead
+                              ? '#FAFBFC'
+                              : (theme?.soft || '#F8FAFF'),
+                        },
+                      }),
+
+                      cursor: notification.path ? 'pointer' : 'default',
 
                       padding: {
-                        xs: '20px',
-                        sm: '22px 24px',
+                        xs:
+                          '20px',
+
+                        sm:
+                          '20px 22px',
                       },
 
                       backgroundColor:
-                        notification.isRead
-                          ? '#FFFFFF'
-                          : theme.unreadBackground ||
-                            theme.soft,
+                        visualCalibration
+                          ? undefined
+                          : notification.isRead
+                            ? '#FFFFFF'
+                            : theme?.unreadBackground ||
+                              theme?.soft ||
+                              '#F8FAFC',
 
                       borderLeft:
-                        notification.isRead
-                          ? '4px solid transparent'
-                          : `4px solid ${theme.primary}`,
+                        visualCalibration
+                          ? undefined
+                          : notification.isRead
+                            ? '4px solid transparent'
+                            : `4px solid ${
+                                theme?.primary ||
+                                '#2563EB'
+                              }`,
 
                       borderBottom:
-                        index ===
-                        filteredNotifications.length -
-                          1
-                          ? 'none'
-                          : '1px solid #E5E7EB',
+                        visualCalibration
+                          ? undefined
+                          : index ===
+                              paginatedNotifications.length -
+                                1
+                            ? 'none'
+                            : '1px solid #E5E7EB',
 
-                      '&:hover': {
-                        backgroundColor:
-                          notification.isRead
-                            ? '#F9FAFB'
-                            : theme.soft,
-                      },
+                      '&:hover': visualCalibration
+                        ? undefined
+                        : {
+                            backgroundColor:
+                              notification.isRead
+                                ? '#F8FAFC'
+                                : theme?.soft ||
+                                  '#F8FAFC',
+                          },
                     }}
                   >
+                    {/* Symbol */}
+
                     <Box
                       sx={{
-                        width: '46px',
+                        width:
+                          '44px',
 
-                        height: '46px',
+                        height:
+                          '44px',
 
-                        flexShrink: 0,
+                        flexShrink:
+                          0,
 
-                        display: 'flex',
+                        display:
+                          'flex',
 
                         alignItems:
                           'center',
@@ -1020,33 +2387,51 @@ function RoleNotificationPage({
                           categoryStyle.color,
 
                         borderRadius:
-                          '12px',
+                          '11px',
 
-                        fontSize: '16px',
+                        fontSize:
+                          '15px',
 
-                        fontWeight: 800,
+                        fontWeight:
+                          800,
+                        ...(visualCalibration && {
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '10px',
+                          fontSize: '12px',
+                          boxShadow: 'none',
+                        }),
                       }}
                     >
-                      {categorySymbol}
+                      {getCategorySymbol(
+                        notification.category,
+                      )}
                     </Box>
+
+                    {/* Content */}
 
                     <Box
                       sx={{
-                        minWidth: 0,
+                        minWidth:
+                          0,
 
-                        flex: 1,
+                        flex:
+                          1,
                       }}
                     >
                       <Box
                         sx={{
-                          display: 'flex',
+                          display:
+                            'flex',
 
                           alignItems:
                             'center',
 
-                          flexWrap: 'wrap',
+                          flexWrap:
+                            'wrap',
 
-                          gap: '10px',
+                          gap:
+                            '8px',
                         }}
                       >
                         <Typography
@@ -1055,7 +2440,7 @@ function RoleNotificationPage({
                               '#111827',
 
                             fontSize:
-                              '15px',
+                              '14px',
 
                             fontWeight:
                               notification.isRead
@@ -1063,35 +2448,49 @@ function RoleNotificationPage({
                                 : 800,
                           }}
                         >
-                          {
-                            notification.title
-                          }
+                          <RequestNumberText>
+                            {formatNotificationTitle(notification.title)}
+                          </RequestNumberText>
                         </Typography>
 
                         {!notification.isRead && (
-                          <Box
+                          <Chip
+                            label="ใหม่"
+                            size="small"
                             sx={{
-                              width:
-                                '8px',
-
                               height:
-                                '8px',
+                                '21px',
 
                               backgroundColor:
-                                theme.primary,
+                                theme?.soft ||
+                                '#EFF6FF',
+
+                              color:
+                                theme?.dark ||
+                                theme?.primary ||
+                                '#1D4ED8',
 
                               borderRadius:
-                                '50%',
+                                '7px',
+
+                              fontSize:
+                                '9px',
+
+                              fontWeight:
+                                700,
                             }}
                           />
                         )}
 
                         <Chip
-                          label={
-                            notification.category
-                          }
+                          label={translateCategory(
+                            notification.category,
+                          )}
                           size="small"
                           sx={{
+                            height:
+                              '23px',
+
                             backgroundColor:
                               categoryStyle.backgroundColor,
 
@@ -1099,10 +2498,10 @@ function RoleNotificationPage({
                               categoryStyle.color,
 
                             borderRadius:
-                              '999px',
+                              '7px',
 
                             fontSize:
-                              '11px',
+                              '9px',
 
                             fontWeight:
                               700,
@@ -1112,27 +2511,37 @@ function RoleNotificationPage({
 
                       <Typography
                         sx={{
-                          color: '#4B5563',
+                          color:
+                            '#475569',
 
-                          fontSize: '14px',
+                          fontSize:
+                            '12px',
 
-                          lineHeight: 1.7,
+                          lineHeight:
+                            1.7,
 
-                          marginTop: '7px',
+                          marginTop:
+                            '6px',
+
+                          wordBreak:
+                            'break-word',
                         }}
                       >
-                        {
-                          notification.message
-                        }
+                        <RequestNumberText>
+                          {formatNotificationMessage(notification.message)}
+                        </RequestNumberText>
                       </Typography>
 
                       <Typography
                         sx={{
-                          color: '#9CA3AF',
+                          color:
+                            '#94A3B8',
 
-                          fontSize: '12px',
+                          fontSize:
+                            '10px',
 
-                          marginTop: '8px',
+                          marginTop:
+                            '6px',
                         }}
                       >
                         {formatDateTime(
@@ -1141,137 +2550,196 @@ function RoleNotificationPage({
                       </Typography>
                     </Box>
 
+                    {/* Status / Actions */}
+
                     <Box
                       sx={{
                         flexShrink: 0,
+                        width: { xs: '100%', md: 'auto' },
+                        display: 'none',
+                        alignItems: 'center',
+                        justifyContent: { xs: 'flex-end', md: 'flex-start' },
+                        gap: '6px',
+                        ...(visualCalibration && {
+                          width: 'auto',
+                          alignSelf: 'center',
+                          justifyContent: 'flex-start',
+                        }),
                       }}
                     >
                       {notification.isRead ? (
                         <Chip
-                          label="Read"
+                          label="อ่านแล้ว"
                           size="small"
                           sx={{
-                            minWidth:
-                              '66px',
-
-                            backgroundColor:
-                              '#F3F4F6',
-
-                            color:
-                              '#6B7280',
-
-                            borderRadius:
-                              '999px',
-
-                            fontSize:
-                              '11px',
-
-                            fontWeight:
-                              700,
+                            minWidth: '68px',
+                            height: '27px',
+                            backgroundColor: '#F1F5F9',
+                            color: '#64748B',
+                            borderRadius: '999px',
+                            fontSize: '9px',
+                            fontWeight: 700,
                           }}
                         />
                       ) : (
                         <Button
                           type="button"
                           variant="outlined"
-                          onClick={() =>
-                            handleMarkAsRead(
-                              notification.id,
-                            )
-                          }
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleMarkAsRead(notification.id);
+                          }}
                           sx={{
-                            minWidth:
-                              '120px',
-
-                            height:
-                              '40px',
-
-                            padding:
-                              '0 16px',
-
-                            backgroundColor:
-                              '#FFFFFF',
-
-                            color:
-                              theme.primary,
-
-                            borderColor:
-                              theme.primary,
-
-                            borderRadius:
-                              '8px',
-
-                            fontSize:
-                              '13px',
-
-                            fontWeight:
-                              700,
-
-                            textTransform:
-                              'none',
-
-                            '&:hover':
-                              {
-                                backgroundColor:
-                                  theme.soft,
-
-                                borderColor:
-                                  theme.dark,
-                              },
+                            minWidth: '105px',
+                            height: '34px',
+                            padding: '0 12px',
+                            backgroundColor: '#FFFFFF',
+                            color: theme?.primary,
+                            borderColor: theme?.primary,
+                            borderRadius: '8px',
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            whiteSpace: 'nowrap',
+                            textTransform: 'none',
+                            '&:hover': {
+                              backgroundColor: theme?.soft,
+                              borderColor: theme?.dark,
+                            },
+                            ...(visualCalibration && {
+                              minWidth: '96px',
+                              height: '32px',
+                              backgroundColor: 'transparent',
+                              borderColor: '#CBD8E8',
+                            }),
                           }}
                         >
-                          Mark as Read
+                          ทำเครื่องหมายว่าอ่านแล้ว
                         </Button>
                       )}
+
+                      <IconButton
+                        type="button"
+                        aria-label="ตัวเลือกการแจ้งเตือน"
+                        aria-haspopup="menu"
+                        aria-expanded={
+                          notificationMenuTarget?.id === notification.id
+                            ? 'true'
+                            : undefined
+                        }
+                        size="small"
+                        onClick={(event) =>
+                          handleOpenNotificationMenu(event, notification)
+                        }
+                        sx={{
+                          width: '32px',
+                          height: '32px',
+                          color: '#64748B',
+                          borderRadius: '8px',
+                          transition: 'background-color 180ms ease, color 180ms ease',
+                          '&:hover': {
+                            color: '#334155',
+                            backgroundColor: '#F1F5F9',
+                          },
+                          '&:focus-visible': {
+                            color: '#334155',
+                            backgroundColor: '#F1F5F9',
+                          },
+                        }}
+                      >
+                        <MoreVertRounded sx={{ fontSize: '20px' }} />
+                      </IconButton>
                     </Box>
                   </Box>
                 );
               },
             )}
+            {filteredNotifications.length > rowsPerPage ? (
+              <TablePagination
+                component="div"
+                count={filteredNotifications.length}
+                page={page}
+                onPageChange={(_, nextPage) => setPage(nextPage)}
+                rowsPerPage={rowsPerPage}
+                rowsPerPageOptions={[rowsPerPage]}
+                labelRowsPerPage=""
+                labelDisplayedRows={() =>
+                  `หน้า ${page + 1} จาก ${Math.max(
+                    1,
+                    Math.ceil(
+                      filteredNotifications.length /
+                        rowsPerPage,
+                    ),
+                  )}`
+                }
+                sx={{
+                  marginTop: 0,
+                  color: '#64748B',
+                  borderTop:
+                    '1px solid #EEF2F7',
+                  backgroundColor:
+                    '#FFFFFF',
+                }}
+              />
+            ) : null}
           </Box>
         ) : (
+          /* Empty */
+
           <Box
             sx={{
-              minHeight: '300px',
+              minHeight:
+                '280px',
 
-              padding: '40px 24px',
+              padding:
+                '40px 24px',
 
-              display: 'flex',
+              display:
+                'flex',
 
-              flexDirection: 'column',
+              flexDirection:
+                'column',
 
-              alignItems: 'center',
+              alignItems:
+                'center',
 
               justifyContent:
                 'center',
 
-              textAlign: 'center',
+              textAlign:
+                'center',
             }}
           >
             <Box
               sx={{
-                width: '64px',
+                width:
+                  '56px',
 
-                height: '64px',
+                height:
+                  '56px',
 
-                display: 'flex',
+                display:
+                  'flex',
 
-                alignItems: 'center',
+                alignItems:
+                  'center',
 
                 justifyContent:
                   'center',
 
                 backgroundColor:
-                  theme.soft,
+                  theme?.soft,
 
                 color:
-                  theme.primary,
+                  theme?.primary,
 
-                borderRadius: '50%',
+                borderRadius:
+                  '14px',
 
-                fontSize: '24px',
+                fontSize:
+                  '20px',
 
-                fontWeight: 800,
+                fontWeight:
+                  800,
               }}
             >
               0
@@ -1279,73 +2747,192 @@ function RoleNotificationPage({
 
             <Typography
               sx={{
-                color: '#111827',
+                color:
+                  '#111827',
 
-                fontSize: '18px',
+                fontSize:
+                  '15px',
 
-                fontWeight: 800,
+                fontWeight:
+                  800,
 
-                marginTop: '16px',
+                marginTop:
+                  '14px',
               }}
             >
-              No notifications found
+              ไม่พบการแจ้งเตือน
             </Typography>
 
             <Typography
               sx={{
-                color: '#6B7280',
+                color:
+                  '#64748B',
 
-                fontSize: '14px',
+                fontSize:
+                  '12px',
 
-                marginTop: '6px',
+                marginTop:
+                  '5px',
               }}
             >
-              Try changing or clearing
-              the selected filters.
+              {(searchText || statusFilter !== 'All' || categoryFilter !== 'All')
+                ? 'ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่า'
+                : 'ขณะนี้ยังไม่มีการแจ้งเตือนสำหรับบัญชีนี้'}
             </Typography>
 
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={
-                handleClearFilters
-              }
-              sx={{
-                height: '42px',
-
-                marginTop: '20px',
-
-                padding: '0 18px',
-
-                color:
-                  theme.primary,
-
-                borderColor:
-                  theme.primary,
-
-                borderRadius: '8px',
-
-                fontSize: '14px',
-
-                fontWeight: 700,
-
-                textTransform:
-                  'none',
-
-                '&:hover': {
-                  backgroundColor:
-                    theme.soft,
-
-                  borderColor:
-                    theme.dark,
-                },
-              }}
-            >
-              Clear Filters
-            </Button>
           </Box>
         )}
       </Paper>
+
+      <Menu
+        anchorEl={notificationMenuAnchorEl}
+        open={Boolean(notificationMenuAnchorEl)}
+        onClose={handleCloseNotificationMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{
+          paper: {
+            sx: {
+              minWidth: '180px',
+              marginTop: '4px',
+              border: '1px solid #E2E8F0',
+              borderRadius: '10px',
+              boxShadow: '0 10px 30px rgba(15, 23, 42, 0.10)',
+            },
+          },
+        }}
+      >
+        <MenuItem
+          onClick={handleRequestDeleteNotification}
+          sx={{
+            minHeight: '40px',
+            gap: '10px',
+            color: '#DC2626',
+            fontSize: '12px',
+            fontWeight: 700,
+            '&:hover': {
+              backgroundColor: '#FEF2F2',
+            },
+          }}
+        >
+          <DeleteOutlineRounded sx={{ fontSize: '18px' }} />
+          ลบการแจ้งเตือน
+        </MenuItem>
+      </Menu>
+
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onClose={handleCloseDeleteDialog}
+        maxWidth="xs"
+        fullWidth
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: '14px',
+            },
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            color: '#111827',
+            fontSize: '18px',
+            fontWeight: 800,
+            padding: '22px 24px 8px',
+          }}
+        >
+          ลบการแจ้งเตือนนี้?
+        </DialogTitle>
+
+        <DialogContent sx={{ padding: '8px 24px 10px' }}>
+          <Typography
+            sx={{
+              color: '#64748B',
+              fontSize: '13px',
+              lineHeight: 1.7,
+            }}
+          >
+            เมื่อลบแล้ว การแจ้งเตือนนี้จะไม่สามารถกู้คืนได้
+          </Typography>
+
+          {deleteTarget && (
+            <Box
+              sx={{
+                marginTop: '14px',
+                padding: '12px 14px',
+                backgroundColor: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '10px',
+              }}
+            >
+              <Typography
+                sx={{
+                  color: '#334155',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  lineHeight: 1.6,
+                }}
+              >
+                <RequestNumberText>
+                  {formatNotificationTitle(deleteTarget.title)}
+                </RequestNumberText>
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions
+          sx={{
+            padding: '12px 24px 22px',
+            gap: '8px',
+          }}
+        >
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={handleCloseDeleteDialog}
+            disabled={isDeleting}
+            sx={{
+              minWidth: '88px',
+              height: '38px',
+              color: '#475569',
+              borderColor: '#CBD5E1',
+              borderRadius: '9px',
+              fontSize: '12px',
+              fontWeight: 700,
+              textTransform: 'none',
+              '&:hover': {
+                backgroundColor: '#F8FAFC',
+                borderColor: '#94A3B8',
+              },
+            }}
+          >
+            ยกเลิก
+          </Button>
+
+          <Button
+            type="button"
+            variant="contained"
+            color="error"
+            onClick={handleConfirmDeleteNotification}
+            disabled={isDeleting}
+            sx={{
+              minWidth: '88px',
+              height: '38px',
+              borderRadius: '9px',
+              fontSize: '12px',
+              fontWeight: 700,
+              textTransform: 'none',
+              boxShadow: 'none',
+              '&:hover': {
+                boxShadow: 'none',
+              },
+            }}
+          >
+            {isDeleting ? 'กำลังลบ...' : 'ลบ'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </LayoutComponent>
   );
 }

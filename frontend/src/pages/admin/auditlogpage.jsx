@@ -5,6 +5,7 @@ import {
 } from 'react';
 
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -13,213 +14,920 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
-  InputLabel,
+  IconButton,
+  InputAdornment,
   MenuItem,
   Paper,
   Select,
+  Stack,
   Table,
-  TableBody,
   TableCell,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
 } from '@mui/material';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
+
+import CloseRounded from '@mui/icons-material/CloseRounded';
 
 import AdminLayout from '../../layouts/adminlayout.jsx';
-
+import { HeaderlessPageTopOffset, InlineListSummary } from '../../components/sharedvisualfoundation.jsx';
+import api from '../../api/axios.js';
 import {
-  auditLogStorageKey,
-  formatAuditAction,
-  getAuditLogs,
-} from '../../utils/auditlogstorage.js';
+  formatAuditActivity,
+} from '../../utils/presentationformatter.js';
 
-const employeeNames = {
-  employee001: 'Employee User',
-  supervisor001: 'Nattapong Srisuk',
-  hr001: 'Suda Rattanapong',
-  admin001: 'Preecha Wongchai',
-  system: 'System',
+/* =========================
+   Theme
+========================= */
+
+const adminTheme = {
+  primary: '#EA580C',
+  dark: '#C2410C',
+  soft: '#FFF7ED',
 };
 
-const actionGroups = [
+/* =========================
+   Demo Audit Data
+========================= */
+
+const auditLogs = [
   {
-    value: 'Authentication',
-    label: 'Authentication',
-    actions: [
-      'LOGIN',
-      'LOGOUT',
-      'LOGIN_FAILED',
-      'CHANGE_PASSWORD',
-    ],
-  },
-  {
-    value: 'User Management',
-    label: 'User Management',
-    actions: [
-      'CREATE_USER',
-      'UPDATE_USER',
+    id: 1,
+    createdAt:
+      '2026-07-21T09:45:00',
+    username:
+      'admin001',
+    employeeName:
+      'Preecha Wongchai',
+    role:
+      'Admin',
+    action:
       'UPDATE_USER_STATUS',
-      'ASSIGN_ROLE',
-    ],
+    tableName:
+      'users',
+    recordId:
+      5,
+    ipAddress:
+      '192.168.1.25',
+    detail:
+      'Changed user employee005 account status from Active to Locked.',
   },
   {
-    value: 'Leave Request',
-    label: 'Leave Request',
-    actions: [
-      'CREATE_LEAVE_REQUEST',
-      'UPDATE_LEAVE_REQUEST_DRAFT',
-      'DELETE_LEAVE_REQUEST_DRAFT',
-      'SUBMIT_LEAVE_REQUEST',
-      'APPROVE_LEAVE_REQUEST',
-      'REJECT_LEAVE_REQUEST',
-      'CANCEL_LEAVE_REQUEST',
-    ],
+    id: 2,
+    createdAt:
+      '2026-07-21T09:30:00',
+    username:
+      'employee001',
+    employeeName:
+      'Employee User',
+    role:
+      'Employee',
+    action:
+      'LOGIN',
+    tableName:
+      'users',
+    recordId:
+      1,
+    ipAddress:
+      '192.168.1.18',
+    detail:
+      'User logged in successfully.',
   },
   {
-    value: 'Employee Management',
-    label: 'Employee Management',
-    actions: [
-      'CREATE_EMPLOYEE',
+    id: 3,
+    createdAt:
+      '2026-07-21T09:10:00',
+    username:
+      'admin001',
+    employeeName:
+      'Preecha Wongchai',
+    role:
+      'Admin',
+    action:
+      'CREATE_USER',
+    tableName:
+      'users',
+    recordId:
+      6,
+    ipAddress:
+      '192.168.1.25',
+    detail:
+      'Created user account employee006 with the Employee role.',
+  },
+  {
+    id: 4,
+    createdAt:
+      '2026-07-21T08:55:00',
+    username:
+      'supervisor001',
+    employeeName:
+      'Nattapong Srisuk',
+    role:
+      'Supervisor',
+    action:
+      'APPROVE_LEAVE',
+    tableName:
+      'leave_requests',
+    recordId:
+      12,
+    ipAddress:
+      '192.168.1.20',
+    detail:
+      'Approved leave request LR-20260720-0012 submitted by EMP001.',
+  },
+  {
+    id: 5,
+    createdAt:
+      '2026-07-20T16:20:00',
+    username:
+      'hr001',
+    employeeName:
+      'Suda Rattanapong',
+    role:
+      'HR',
+    action:
       'UPDATE_EMPLOYEE',
-      'UPDATE_EMPLOYEE_STATUS',
-      'CREATE_LEAVE_ENTITLEMENT',
-      'UPDATE_LEAVE_ENTITLEMENT',
-      'ADJUST_LEAVE_ENTITLEMENT',
-    ],
+    tableName:
+      'employees',
+    recordId:
+      5,
+    ipAddress:
+      '192.168.1.22',
+    detail:
+      'Updated employee EMP005 contact and employment information.',
   },
   {
-    value: 'Organization',
-    label: 'Organization',
-    actions: [
-      'CREATE_DEPARTMENT',
+    id: 6,
+    createdAt:
+      '2026-07-20T15:30:00',
+    username:
+      'admin001',
+    employeeName:
+      'Preecha Wongchai',
+    role:
+      'Admin',
+    action:
       'UPDATE_DEPARTMENT',
-      'UPDATE_DEPARTMENT_STATUS',
-      'CREATE_POSITION',
-      'UPDATE_POSITION',
-      'UPDATE_POSITION_STATUS',
-      'CREATE_HOLIDAY',
-      'UPDATE_HOLIDAY',
-      'UPDATE_HOLIDAY_STATUS',
-    ],
+    tableName:
+      'departments',
+    recordId:
+      1,
+    ipAddress:
+      '192.168.1.25',
+    detail:
+      'Updated Information Technology department information.',
   },
   {
-    value: 'File and Report',
-    label: 'File and Report',
-    actions: [
+    id: 7,
+    createdAt:
+      '2026-07-20T14:05:00',
+    username:
+      'employee001',
+    employeeName:
+      'Employee User',
+    role:
+      'Employee',
+    action:
+      'SUBMIT_LEAVE',
+    tableName:
+      'leave_requests',
+    recordId:
+      13,
+    ipAddress:
+      '192.168.1.18',
+    detail:
+      'Submitted Annual Leave request LR-20260720-0013.',
+  },
+  {
+    id: 8,
+    createdAt:
+      '2026-07-20T13:15:00',
+    username:
+      'hr001',
+    employeeName:
+      'Suda Rattanapong',
+    role:
+      'HR',
+    action:
+      'UPDATE_ENTITLEMENT',
+    tableName:
+      'leave_entitlements',
+    recordId:
+      8,
+    ipAddress:
+      '192.168.1.22',
+    detail:
+      'Updated Annual Leave entitlement for employee EMP001.',
+  },
+  {
+    id: 9,
+    createdAt:
+      '2026-07-19T11:40:00',
+    username:
+      'supervisor001',
+    employeeName:
+      'Nattapong Srisuk',
+    role:
+      'Supervisor',
+    action:
+      'REJECT_LEAVE',
+    tableName:
+      'leave_requests',
+    recordId:
+      11,
+    ipAddress:
+      '192.168.1.20',
+    detail:
+      'Rejected leave request LR-20260719-0011 and recorded the rejection reason.',
+  },
+  {
+    id: 10,
+    createdAt:
+      '2026-07-19T10:25:00',
+    username:
+      'employee001',
+    employeeName:
+      'Employee User',
+    role:
+      'Employee',
+    action:
       'UPLOAD_ATTACHMENT',
-      'DELETE_ATTACHMENT',
+    tableName:
+      'leave_attachments',
+    recordId:
+      4,
+    ipAddress:
+      '192.168.1.18',
+    detail:
+      'Uploaded attachment medical-certificate.pdf to leave request 10.',
+  },
+  {
+    id: 11,
+    createdAt:
+      '2026-07-18T17:05:00',
+    username:
+      'hr001',
+    employeeName:
+      'Suda Rattanapong',
+    role:
+      'HR',
+    action:
       'EXPORT_REPORT',
-    ],
+    tableName:
+      'leave_requests',
+    recordId:
+      null,
+    ipAddress:
+      '192.168.1.22',
+    detail:
+      'Exported the leave request report in Excel format.',
+  },
+  {
+    id: 12,
+    createdAt:
+      '2026-07-18T16:40:00',
+    username:
+      'admin001',
+    employeeName:
+      'Preecha Wongchai',
+    role:
+      'Admin',
+    action:
+      'LOGOUT',
+    tableName:
+      'users',
+    recordId:
+      3,
+    ipAddress:
+      '192.168.1.25',
+    detail:
+      'User logged out successfully.',
   },
 ];
 
-const normalizeRoleName = (role) => {
-  const normalizedRole = String(
-    role || 'system',
-  )
+/* =========================
+   Helpers
+========================= */
+
+const normalizeValue = (
+  value,
+) =>
+  String(value || '')
     .trim()
     .toLowerCase();
 
-  if (normalizedRole === 'hr') {
-    return 'HR';
-  }
+const translateRole = (
+  role,
+) => {
+  const labels = {
+    Employee:
+      'พนักงาน',
+
+    Supervisor:
+      'หัวหน้างาน',
+
+    HR:
+      'HR',
+
+    Admin:
+      'ผู้ดูแลระบบ',
+  };
 
   return (
-    normalizedRole
-      .charAt(0)
-      .toUpperCase() +
-    normalizedRole.slice(1)
+    labels[role] ||
+    role ||
+    '-'
   );
 };
 
-const normalizeAuditLogForPage = (
-  auditLog,
+const _translateAction = (
+  action,
 ) => {
-  const username =
-    auditLog.username ||
-    'system';
+  const normalized =
+    String(
+      action || '',
+    ).toUpperCase();
+
+  const labels = {
+    LOGIN:
+      'เข้าสู่ระบบ',
+
+    LOGOUT:
+      'ออกจากระบบ',
+
+    LOGIN_FAILED:
+      'เข้าสู่ระบบไม่สำเร็จ',
+
+    CREATE_USER:
+      'สร้างบัญชีผู้ใช้',
+
+    UPDATE_USER:
+      'แก้ไขบัญชีผู้ใช้',
+
+    UPDATE_USER_STATUS:
+      'เปลี่ยนสถานะบัญชี',
+
+    CREATE_LEAVE:
+      'สร้างคำขอลา',
+
+    SUBMIT_LEAVE:
+      'ส่งคำขอลา',
+
+    APPROVE_LEAVE:
+      'อนุมัติคำขอลา',
+
+    REJECT_LEAVE:
+      'ปฏิเสธคำขอลา',
+
+    CANCEL_LEAVE:
+      'ยกเลิกคำขอลา',
+
+    CREATE_EMPLOYEE:
+      'เพิ่มพนักงาน',
+
+    UPDATE_EMPLOYEE:
+      'แก้ไขข้อมูลพนักงาน',
+
+    DELETE_EMPLOYEE:
+      'ลบพนักงาน',
+
+    UPDATE_ENTITLEMENT:
+      'อัปเดตสิทธิ์การลา',
+
+    CREATE_DEPARTMENT:
+      'เพิ่มแผนก',
+
+    UPDATE_DEPARTMENT:
+      'แก้ไขข้อมูลแผนก',
+
+    DELETE_DEPARTMENT:
+      'ลบแผนก',
+
+    CREATE_POSITION:
+      'เพิ่มตำแหน่ง',
+
+    UPDATE_POSITION:
+      'แก้ไขข้อมูลตำแหน่ง',
+
+    DELETE_POSITION:
+      'ลบตำแหน่ง',
+
+    UPLOAD_ATTACHMENT:
+      'อัปโหลดเอกสาร',
+
+    DELETE_ATTACHMENT:
+      'ลบเอกสาร',
+
+    EXPORT_REPORT:
+      'ส่งออกรายงาน',
+
+    CHANGE_PASSWORD:
+      'เปลี่ยนรหัสผ่าน',
+
+    RESET_PASSWORD:
+      'รีเซ็ตรหัสผ่าน',
+  };
+
+  return (
+    labels[normalized] ||
+    String(
+      action || '-',
+    )
+  );
+};
+
+const translateTable = (
+  tableName,
+) => {
+  const labels = {
+    users:
+      'บัญชีผู้ใช้',
+
+    employees:
+      'พนักงาน',
+
+    departments:
+      'แผนก',
+
+    positions:
+      'ตำแหน่ง',
+
+    leave_requests:
+      'คำขอลา',
+
+    leave_entitlements:
+      'สิทธิ์การลา',
+
+    leave_attachments:
+      'เอกสารแนบ',
+
+    leave_types:
+      'ประเภทการลา',
+
+    holidays:
+      'วันหยุด',
+
+    notifications:
+      'การแจ้งเตือน',
+
+    auth_sessions:
+      'การเข้าสู่ระบบ',
+
+    password_reset_otps:
+      'รหัส OTP รีเซ็ตรหัสผ่าน',
+  };
+
+  return (
+    labels[
+      String(
+        tableName || '',
+      ).toLowerCase()
+    ] ||
+    tableName ||
+    '-'
+  );
+};
+
+const translateStatusWord = (
+  value,
+) => {
+  const labels = {
+    Active:
+      'ใช้งานอยู่',
+
+    Inactive:
+      'ไม่ใช้งาน',
+
+    Locked:
+      'ถูกล็อก',
+
+    Employee:
+      'พนักงาน',
+
+    Supervisor:
+      'หัวหน้างาน',
+
+    Admin:
+      'ผู้ดูแลระบบ',
+
+    HR:
+      'HR',
+  };
+
+  return (
+    labels[value] ||
+    value
+  );
+};
+
+const translateLeaveType = (
+  value,
+) => {
+  const labels = {
+    'Annual Leave':
+      'ลาพักร้อน',
+
+    'Sick Leave':
+      'ลาป่วย',
+
+    'Personal Leave':
+      'ลากิจ',
+
+  };
+
+  return (
+    labels[value] ||
+    value
+  );
+};
+
+const _translateDetail = (
+  detail,
+) => {
+  const text =
+    String(
+      detail || '',
+    ).trim();
+
+  if (!text) {
+    return '-';
+  }
+
+  if (
+    text ===
+    'User logged in successfully.'
+  ) {
+    return 'ผู้ใช้เข้าสู่ระบบสำเร็จ';
+  }
+
+  if (
+    text ===
+    'User logged out successfully.'
+  ) {
+    return 'ผู้ใช้ออกจากระบบสำเร็จ';
+  }
+
+  let match =
+    text.match(
+      /^Changed user (.+?) account status from (.+?) to (.+?)\.$/i,
+    );
+
+  if (match) {
+    return `เปลี่ยนสถานะบัญชีผู้ใช้ ${match[1]} จาก ${translateStatusWord(
+      match[2],
+    )} เป็น ${translateStatusWord(
+      match[3],
+    )}`;
+  }
+
+  match =
+    text.match(
+      /^Created user account (.+?) with the (.+?) role\.$/i,
+    );
+
+  if (match) {
+    return `สร้างบัญชีผู้ใช้ ${match[1]} ด้วยบทบาท ${translateStatusWord(
+      match[2],
+    )}`;
+  }
+
+  match =
+    text.match(
+      /^Approved leave request (.+?) submitted by (.+?)\.$/i,
+    );
+
+  if (match) {
+    return `อนุมัติคำขอลา ${match[1]} ของ ${match[2]} แล้ว`;
+  }
+
+  match =
+    text.match(
+      /^Updated employee (.+?) contact and employment information\.$/i,
+    );
+
+  if (match) {
+    return `อัปเดตข้อมูลติดต่อและข้อมูลการทำงานของพนักงาน ${match[1]} แล้ว`;
+  }
+
+  match =
+    text.match(
+      /^Updated (.+?) department information\.$/i,
+    );
+
+  if (match) {
+    return `อัปเดตข้อมูลแผนก ${match[1]} แล้ว`;
+  }
+
+  match =
+    text.match(
+      /^Submitted (.+?) request (.+?)\.$/i,
+    );
+
+  if (match) {
+    return `ส่งคำขอ${translateLeaveType(
+      match[1],
+    )} ${match[2]} แล้ว`;
+  }
+
+  match =
+    text.match(
+      /^Updated (.+?) entitlement for employee (.+?)\.$/i,
+    );
+
+  if (match) {
+    return `อัปเดตสิทธิ์${translateLeaveType(
+      match[1],
+    )}ของพนักงาน ${match[2]} แล้ว`;
+  }
+
+  match =
+    text.match(
+      /^Rejected leave request (.+?) and recorded the rejection reason\.$/i,
+    );
+
+  if (match) {
+    return `ปฏิเสธคำขอลา ${match[1]} และบันทึกเหตุผลการปฏิเสธแล้ว`;
+  }
+
+  match =
+    text.match(
+      /^Uploaded attachment (.+?) to leave request (.+?)\.$/i,
+    );
+
+  if (match) {
+    return `อัปโหลดเอกสาร ${match[1]} ไปยังคำขอลา ${match[2]} แล้ว`;
+  }
+
+  if (
+    text ===
+    'Exported the leave request report in Excel format.'
+  ) {
+    return 'ส่งออกรายงานคำขอลาเป็นไฟล์ Excel แล้ว';
+  }
+
+  return text;
+};
+
+/* =========================
+   Date Helpers
+========================= */
+
+const getDateOnly = (
+  value,
+) => {
+  const text =
+    String(value || '');
+
+  const match =
+    text.match(
+      /^\d{4}-\d{2}-\d{2}/,
+    );
+
+  return (
+    match?.[0] ||
+    ''
+  );
+};
+
+const formatDateTime = (
+  value,
+) => {
+  if (!value) {
+    return '-';
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return '-';
+  }
+
+  const pad = (
+    number,
+  ) =>
+    String(
+      number,
+    ).padStart(
+      2,
+      '0',
+    );
+
+  return `${pad(
+    date.getDate(),
+  )}/${pad(
+    date.getMonth() + 1,
+  )}/${date.getFullYear()} ${pad(
+    date.getHours(),
+  )}:${pad(
+    date.getMinutes(),
+  )}`;
+};
+
+/* =========================
+   UI Styles
+========================= */
+
+const getRoleStyle = (
+  role,
+) => {
+  const styles = {
+    Employee: {
+      backgroundColor:
+        '#EFF6FF',
+
+      color:
+        '#1D4ED8',
+    },
+
+    Supervisor: {
+      backgroundColor:
+        '#F5F3FF',
+
+      color:
+        '#6D28D9',
+    },
+
+    HR: {
+      backgroundColor:
+        '#ECFDF5',
+
+      color:
+        '#047857',
+    },
+
+    Admin: {
+      backgroundColor:
+        '#FFF7ED',
+
+      color:
+        '#C2410C',
+    },
+  };
+
+  return (
+    styles[role] || {
+      backgroundColor:
+        '#F1F5F9',
+
+      color:
+        '#475569',
+    }
+  );
+};
+
+const getActionStyle = (
+  action,
+) => {
+  const normalized =
+    String(
+      action || '',
+    ).toUpperCase();
+
+  if (
+    normalized.includes('FAILED') ||
+    normalized.includes('REJECT') ||
+    normalized.includes('DELETE') ||
+    normalized.includes('LOCK') ||
+    normalized.includes('CANCEL') ||
+    normalized.includes('RATE_LIMITED')
+  ) {
+    return {
+      backgroundColor: '#FEF2F2',
+      color: '#B91C1C',
+    };
+  }
+
+  if (
+    [
+      'LOGIN',
+      'LOGOUT',
+    ].includes(
+      normalized,
+    )
+  ) {
+    return {
+      backgroundColor:
+        '#EFF6FF',
+
+      color:
+        '#1D4ED8',
+    };
+  }
+
+  if (
+    normalized.includes(
+      'APPROVE',
+    ) ||
+    normalized.includes(
+      'CREATE',
+    )
+  ) {
+    return {
+      backgroundColor:
+        '#ECFDF5',
+
+      color:
+        '#047857',
+    };
+  }
+
+  if (
+    normalized.includes(
+      'UPDATE',
+    )
+  ) {
+    return {
+      backgroundColor:
+        '#FFF7ED',
+
+      color:
+        '#C2410C',
+    };
+  }
+
+  if (
+    normalized.includes(
+      'UPLOAD',
+    ) ||
+    normalized.includes(
+      'EXPORT',
+    )
+  ) {
+    return {
+      backgroundColor:
+        '#F5F3FF',
+
+      color:
+        '#6D28D9',
+    };
+  }
 
   return {
-    ...auditLog,
+    backgroundColor:
+      '#F1F5F9',
 
-    id: Number(auditLog.id),
-
-    username,
-
-    employeeName:
-      employeeNames[username] ||
-      username,
-
-    role: normalizeRoleName(
-      auditLog.role,
-    ),
-
-    action: String(
-      auditLog.action ||
-        'unknown_action',
-    )
-      .trim()
-      .toUpperCase(),
-
-    tableName:
-      auditLog.tableName ||
-      null,
-
-    recordId:
-      auditLog.recordId !==
-        undefined &&
-      auditLog.recordId !== null
-        ? Number(
-            auditLog.recordId,
-          )
-        : null,
-
-    ipAddress:
-      auditLog.ipAddress ||
-      '127.0.0.1',
-
-    detail:
-      auditLog.detail || '-',
-
-    createdAt:
-      auditLog.createdAt ||
-      new Date().toISOString(),
+    color:
+      '#475569',
   };
 };
 
-const getLocalDateKey = (
-  dateTimeString,
-) => {
-  const date =
-    new Date(dateTimeString);
+const headerCellStyle = {
+  padding:
+    '12px 8px',
 
-  if (
-    Number.isNaN(date.getTime())
-  ) {
-    return '';
-  }
+  color:
+    '#64748B',
 
-  const year =
-    date.getFullYear();
+  fontSize:
+    '10.5px',
 
-  const month = String(
-    date.getMonth() + 1,
-  ).padStart(2, '0');
+  fontWeight:
+    800,
 
-  const day = String(
-    date.getDate(),
-  ).padStart(2, '0');
+  lineHeight:
+    1.4,
 
-  return `${year}-${month}-${day}`;
+  whiteSpace:
+    'normal',
+
+  wordBreak:
+    'break-word',
+
+  borderBottom:
+    '1px solid #E5E7EB',
 };
 
-function AuditLogPage() {
-  const [
-    auditLogs,
-    setAuditLogs,
-  ] = useState([]);
+/* =========================
+   Component
+========================= */
 
+function AuditLogPage() {
+  void auditLogs;
+  const [loadedAuditLogs, setLoadedAuditLogs] = useState([]);
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 5;
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    setLoadError('');
+    api.get('/admin/audit-logs')
+      .then((response) => {
+        if (active) setLoadedAuditLogs(response.data?.data?.auditLogs || []);
+      })
+      .catch((error) => {
+        if (active) setLoadError(error.response?.data?.message || 'ไม่สามารถโหลดบันทึกกิจกรรมได้');
+      });
+    return () => { active = false; };
+  }, []);
   const [
     searchText,
     setSearchText,
@@ -236,113 +944,173 @@ function AuditLogPage() {
   ] = useState('All');
 
   const [
-    startDate,
-    setStartDate,
-  ] = useState('');
-
-  const [
-    endDate,
-    setEndDate,
-  ] = useState('');
-
-  const [
     selectedLog,
     setSelectedLog,
   ] = useState(null);
 
-  const loadAuditLogs = () => {
-    const storedAuditLogs =
-      getAuditLogs().map(
-        normalizeAuditLogForPage,
-      );
+  /* =========================
+     Activity Groups
+  ========================= */
 
-    setAuditLogs(
-      storedAuditLogs,
-    );
-  };
+  const actionGroups = useMemo(() => ([
+    {
+      value:
+        'Authentication',
 
-  useEffect(() => {
-    loadAuditLogs();
+      label:
+        'บัญชีและการเข้าสู่ระบบ',
 
-    const handleStorageChange = (
-      event,
-    ) => {
-      if (
-        !event.key ||
-        event.key ===
-          auditLogStorageKey
-      ) {
-        loadAuditLogs();
-      }
-    };
+      actions: [
+        'LOGIN',
+        'LOGOUT',
+        'LOGIN_FAILED',
+        'PASSWORD_RESET_OTP_REQUESTED',
+        'PASSWORD_RESET_OTP_VERIFIED',
+        'PASSWORD_RESET_RATE_LIMITED',
+        'PASSWORD_RESET_COMPLETED',
+        'CHANGE_PASSWORD',
+      ],
+    },
 
-    const handleWindowFocus =
-      () => {
-        loadAuditLogs();
-      };
+    {
+      value:
+        'User Management',
 
-    window.addEventListener(
-      'storage',
-      handleStorageChange,
-    );
+      label:
+        'จัดการผู้ใช้งาน',
 
-    window.addEventListener(
-      'focus',
-      handleWindowFocus,
-    );
+        actions: [
+          'CREATE_USER',
+          'UPDATE_USER',
+          'UPDATE_USER_STATUS',
+          'RESET_PASSWORD',
+          'ADMIN_PASSWORD_RESET',
+          'UPDATE_PROFILE',
+      ],
+    },
 
-    return () => {
-      window.removeEventListener(
-        'storage',
-        handleStorageChange,
-      );
+    {
+      value:
+        'Leave Request',
 
-      window.removeEventListener(
-        'focus',
-        handleWindowFocus,
-      );
-    };
-  }, []);
+      label:
+        'คำขอลาและการอนุมัติ',
+
+      actions: [
+          'CREATE_LEAVE',
+          'SAVE_LEAVE_DRAFT',
+          'DELETE_LEAVE_DRAFT',
+          'SUBMIT_LEAVE',
+        'APPROVE_LEAVE',
+        'REJECT_LEAVE',
+        'CANCEL_LEAVE',
+        'LEAVE_APPROVED',
+        'LEAVE_REJECTED',
+        'LEAVE_CANCELLED',
+      ],
+    },
+
+    {
+      value:
+        'Employee Management',
+
+      label:
+        'จัดการพนักงาน',
+
+      actions: [
+          'CREATE_EMPLOYEE',
+          'UPDATE_EMPLOYEE',
+          'UPDATE_EMPLOYEE_STATUS',
+          'DELETE_EMPLOYEE',
+          'UPDATE_ENTITLEMENT',
+          'CREATE_LEAVE_ENTITLEMENT',
+          'UPDATE_LEAVE_ENTITLEMENT',
+          'CREATE_LEAVE_TYPE',
+          'UPDATE_LEAVE_TYPE',
+          'UPDATE_LEAVE_TYPE_STATUS',
+      ],
+    },
+
+    {
+      value:
+        'Organization',
+
+      label:
+        'โครงสร้างองค์กร',
+
+      actions: [
+          'CREATE_DEPARTMENT',
+          'UPDATE_DEPARTMENT',
+          'UPDATE_DEPARTMENT_STATUS',
+          'DELETE_DEPARTMENT',
+          'CREATE_POSITION',
+          'UPDATE_POSITION',
+          'UPDATE_POSITION_STATUS',
+          'DELETE_POSITION',
+          'CREATE_HOLIDAY',
+          'UPDATE_HOLIDAY',
+          'DELETE_HOLIDAY',
+      ],
+    },
+
+    {
+      value:
+        'File and Report',
+
+      label:
+        'เอกสารและรายงาน',
+
+      actions: [
+        'UPLOAD_ATTACHMENT',
+        'DELETE_ATTACHMENT',
+        'EXPORT_REPORT',
+      ],
+    },
+  ]), []);
+
+  /* =========================
+     Filter
+  ========================= */
 
   const filteredAuditLogs =
     useMemo(() => {
       const keyword =
-        searchText
-          .trim()
-          .toLowerCase();
+        normalizeValue(
+          searchText,
+        );
 
-      const selectedActionGroup =
+      const selectedGroup =
         actionGroups.find(
           (group) =>
             group.value ===
             actionFilter,
         );
 
-      return auditLogs.filter(
+      return loadedAuditLogs.filter(
         (log) => {
-          const searchableText = [
-            log.username,
-            log.employeeName,
-            log.role,
-            log.action,
-            log.tableName,
-            log.recordId,
-            log.detail,
-            log.ipAddress,
-          ]
-            .filter(
-              (value) =>
-                value !== null &&
-                value !== undefined,
-            )
-            .join(' ')
-            .toLowerCase();
-
           const matchesSearch =
             !keyword ||
-            searchableText.includes(
+            normalizeValue(
+              log.username,
+            ).includes(
               keyword,
-            );
+            ) ||
+            normalizeValue(
+              log.employeeName,
+            ).includes(
+              keyword,
+            ) ||
+            normalizeValue(log.action).includes(keyword) ||
+            normalizeValue(
+              formatAuditActivity(
+                log.action,
+              ),
+            ).includes(keyword) ||
+            normalizeValue(
+              translateRole(
+                log.role,
+              ),
+            ).includes(keyword);
 
           const matchesRole =
             roleFilter ===
@@ -353,690 +1121,351 @@ function AuditLogPage() {
           const matchesAction =
             actionFilter ===
               'All' ||
-            selectedActionGroup
+            selectedGroup
               ?.actions
               .includes(
-                log.action,
+                String(
+                  log.action ||
+                    '',
+                ).toUpperCase(),
               );
-
-          const logDate =
-            getLocalDateKey(
-              log.createdAt,
-            );
-
-          const matchesStartDate =
-            !startDate ||
-            logDate >= startDate;
-
-          const matchesEndDate =
-            !endDate ||
-            logDate <= endDate;
 
           return (
             matchesSearch &&
             matchesRole &&
-            matchesAction &&
-            matchesStartDate &&
-            matchesEndDate
+            matchesAction
           );
         },
       );
     }, [
-      auditLogs,
       searchText,
       roleFilter,
       actionFilter,
-      startDate,
-      endDate,
+      actionGroups,
+      loadedAuditLogs,
     ]);
 
-  const summary = useMemo(
-    () => {
+  const paginatedAuditLogs = useMemo(
+    () => filteredAuditLogs.slice(page * rowsPerPage, (page + 1) * rowsPerPage),
+    [filteredAuditLogs, page],
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [searchText, roleFilter, actionFilter]);
+
+  /* =========================
+     Summary
+  ========================= */
+
+  const summary =
+    useMemo(() => {
       const today =
-        getLocalDateKey(
-          new Date(),
+        new Date();
+
+      const year =
+        today.getFullYear();
+
+      const month =
+        String(
+          today.getMonth() +
+            1,
+        ).padStart(
+          2,
+          '0',
         );
+
+      const day =
+        String(
+          today.getDate(),
+        ).padStart(
+          2,
+          '0',
+        );
+
+      const todayText =
+        `${year}-${month}-${day}`;
 
       return {
         total:
-          auditLogs.length,
+          loadedAuditLogs.length,
 
         today:
-          auditLogs.filter(
+          loadedAuditLogs.filter(
             (log) =>
-              getLocalDateKey(
+              getDateOnly(
                 log.createdAt,
-              ) === today,
+              ) ===
+              todayText,
           ).length,
 
         authentication:
-          auditLogs.filter(
+          loadedAuditLogs.filter(
             (log) =>
               [
                 'LOGIN',
                 'LOGOUT',
                 'LOGIN_FAILED',
-                'CHANGE_PASSWORD',
               ].includes(
-                log.action,
+                String(
+                  log.action ||
+                    '',
+                ).toUpperCase(),
               ),
           ).length,
 
-        administrative:
-          auditLogs.filter(
+        admin:
+          loadedAuditLogs.filter(
             (log) =>
               log.role ===
               'Admin',
           ).length,
       };
-    },
-    [auditLogs],
-  );
-
-  const formatDateTime = (
-    dateTimeString,
-  ) => {
-    if (!dateTimeString) {
-      return '-';
-    }
-
-    const date =
-      new Date(dateTimeString);
-
-    if (
-      Number.isNaN(date.getTime())
-    ) {
-      return '-';
-    }
-
-    return date.toLocaleString(
-      'en-GB',
-      {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      },
-    );
-  };
-
-  const getRoleStyle = (
-    role,
-  ) => {
-    const styles = {
-      Employee: {
-        backgroundColor:
-          '#EFF6FF',
-        color: '#1D4ED8',
-      },
-
-      Supervisor: {
-        backgroundColor:
-          '#F5F3FF',
-        color: '#6D28D9',
-      },
-
-      HR: {
-        backgroundColor:
-          '#ECFDF5',
-        color: '#047857',
-      },
-
-      Admin: {
-        backgroundColor:
-          '#FFF7ED',
-        color: '#C2410C',
-      },
-
-      System: {
-        backgroundColor:
-          '#F3F4F6',
-        color: '#4B5563',
-      },
-    };
-
-    return (
-      styles[role] || {
-        backgroundColor:
-          '#F3F4F6',
-
-        color: '#4B5563',
-      }
-    );
-  };
-
-  const getActionStyle = (
-    action,
-  ) => {
-    if (
-      [
-        'LOGIN',
-        'LOGOUT',
-        'CHANGE_PASSWORD',
-      ].includes(action)
-    ) {
-      return {
-        backgroundColor:
-          '#EFF6FF',
-
-        color: '#1D4ED8',
-      };
-    }
-
-    if (
-      action.includes(
-        'APPROVE',
-      ) ||
-      action.includes(
-        'CREATE',
-      )
-    ) {
-      return {
-        backgroundColor:
-          '#ECFDF5',
-
-        color: '#047857',
-      };
-    }
-
-    if (
-      action.includes(
-        'REJECT',
-      ) ||
-      action.includes(
-        'DELETE',
-      ) ||
-      action.includes(
-        'LOCK',
-      )
-    ) {
-      return {
-        backgroundColor:
-          '#FEF2F2',
-
-        color: '#B91C1C',
-      };
-    }
-
-    if (
-      action.includes(
-        'UPDATE',
-      ) ||
-      action.includes(
-        'ADJUST',
-      )
-    ) {
-      return {
-        backgroundColor:
-          '#FFF7ED',
-
-        color: '#C2410C',
-      };
-    }
-
-    if (
-      action.includes(
-        'UPLOAD',
-      ) ||
-      action.includes(
-        'EXPORT',
-      )
-    ) {
-      return {
-        backgroundColor:
-          '#F5F3FF',
-
-        color: '#6D28D9',
-      };
-    }
-
-    return {
-      backgroundColor:
-        '#F3F4F6',
-
-      color: '#4B5563',
-    };
-  };
-
-  const handleClearFilters =
-    () => {
-      setSearchText('');
-      setRoleFilter('All');
-      setActionFilter('All');
-      setStartDate('');
-      setEndDate('');
-    };
+    }, [loadedAuditLogs]);
 
   const summaryCards = [
     {
       title:
-        'Total Audit Logs',
-
-      value: summary.total,
-
-      color: '#EA580C',
-
-      backgroundColor:
-        '#FFF7ED',
-    },
-
-    {
-      title:
-        'Activity Today',
-
-      value: summary.today,
-
-      color: '#2563EB',
-
-      backgroundColor:
-        '#EFF6FF',
-    },
-
-    {
-      title:
-        'Authentication',
+        'บันทึกทั้งหมด',
 
       value:
-        summary.authentication,
+        summary.total,
 
-      color: '#7C3AED',
-
-      backgroundColor:
-        '#F5F3FF',
+      color:
+        '#0891B2',
     },
 
     {
       title:
-        'Admin Actions',
+        'กิจกรรมวันนี้',
 
       value:
-        summary.administrative,
+        summary.today,
 
-      color: '#059669',
-
-      backgroundColor:
-        '#ECFDF5',
+      color:
+        '#2563EB',
     },
+
   ];
 
+  /* =========================
+     Actions
+  ========================= */
+
+  const activeFilterChips = [
+    ...(roleFilter !== 'All' ? [{ key: 'role', label: `บทบาท: ${translateRole(roleFilter)}`, onDelete: () => setRoleFilter('All') }] : []),
+    ...(actionFilter !== 'All' ? [{ key: 'action', label: `กิจกรรม: ${actionGroups.find((group) => group.value === actionFilter)?.label || actionFilter}`, onDelete: () => setActionFilter('All') }] : []),
+  ];
+
+  const handleCloseDialog =
+    () => {
+      setSelectedLog(null);
+    };
+
+  /* =========================
+     UI
+  ========================= */
+
   return (
-    <AdminLayout activeMenu="Audit Log">
+    <AdminLayout
+      activeMenu="Audit Log"
+    >
+      <HeaderlessPageTopOffset />
+      {/* Header */}
+
       <Box
         sx={{
-          display: 'flex',
-
-          alignItems: {
-            xs: 'flex-start',
-            sm: 'center',
-          },
-
-          justifyContent:
-            'space-between',
-
-          flexDirection: {
-            xs: 'column',
-            sm: 'row',
-          },
-
+          display: 'none',
+          alignItems: { xs: 'stretch', sm: 'center' },
+          justifyContent: 'space-between',
+          flexDirection: { xs: 'column', sm: 'row' },
           gap: '16px',
-
           marginBottom:
-            '28px',
+            '16px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color: '#111827',
-
-              fontSize: {
-                xs: '26px',
-                sm: '30px',
-              },
-
-              fontWeight: 800,
-            }}
-          >
-            Audit Log
-          </Typography>
-
-          <Typography
-            sx={{
-              color: '#6B7280',
-
-              fontSize: '15px',
-
-              marginTop: '6px',
-            }}
-          >
-            Review important user
-            activities and system
-            changes.
-          </Typography>
-        </Box>
-
- 
-      </Box>
-
-      <Paper
-        elevation={0}
-        sx={{
-          padding: {
-            xs: '18px',
-            sm: '20px 24px',
-          },
-
-          marginBottom:
-            '24px',
-
-          display: 'flex',
-
-          alignItems:
-            'flex-start',
-
-          gap: '14px',
-
-          backgroundColor:
-            '#FFF7ED',
-
-          border:
-            '1px solid #FED7AA',
-
-          borderRadius: '12px',
-        }}
-      >
-        <Box
+        <Typography
+          component="h1"
           sx={{
-            width: '38px',
+            color:
+              '#111827',
 
-            height: '38px',
+            fontSize: {
+              xs:
+                '26px',
 
-            flexShrink: 0,
+              sm:
+                '30px',
+            },
 
-            display: 'flex',
-
-            alignItems: 'center',
-
-            justifyContent:
-              'center',
-
-            backgroundColor:
-              '#FFFFFF',
-
-            color: '#EA580C',
-
-            borderRadius: '10px',
-
-            fontSize: '18px',
-
-            fontWeight: 800,
+            fontWeight:
+              800,
           }}
         >
-          !
-        </Box>
+          ประวัติการใช้งาน
+        </Typography>
+      </Box>
 
-        <Box>
-          <Typography
-            sx={{
-              color: '#C2410C',
-
-              fontSize: '14px',
-
-              fontWeight: 800,
-            }}
-          >
-            Read-only system records
-          </Typography>
-
-          <Typography
-            sx={{
-              color: '#9A3412',
-
-              fontSize: '13px',
-
-              lineHeight: 1.7,
-
-              marginTop: '4px',
-            }}
-          >
-            Audit Log records can be
-            searched and viewed, but
-            they cannot be edited or
-            deleted through the
-            system.
-          </Typography>
-        </Box>
-      </Paper>
+      {/* Summary */}
 
       <Box
         sx={{
-          display: 'grid',
+          display:
+            'grid',
 
           gridTemplateColumns: {
-            xs: '1fr',
+            xs:
+              '1fr',
 
-            sm: 'repeat(2, minmax(0, 1fr))',
+            sm:
+              'repeat(2, minmax(0, 1fr))',
 
-            xl: 'repeat(4, minmax(0, 1fr))',
+            md:
+              'repeat(2, minmax(0, 1fr))',
           },
 
-          gap: '20px',
+          gap:
+            '16px',
 
           marginBottom:
-            '24px',
+            '16px',
+          maxWidth: '760px',
+          marginRight: 'auto',
         }}
       >
-        {summaryCards.map(
-          (card) => (
-            <Paper
-              key={card.title}
-              elevation={0}
-              sx={{
-                padding: '20px',
-
-                backgroundColor:
-                  '#FFFFFF',
-
-                border:
-                  '1px solid #E5E7EB',
-
-                borderRadius:
-                  '12px',
-              }}
-            >
-              <Box
-                sx={{
-                  width: '44px',
-
-                  height: '44px',
-
-                  display: 'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'center',
-
-                  backgroundColor:
-                    card.backgroundColor,
-
-                  color:
-                    card.color,
-
-                  borderRadius:
-                    '12px',
-
-                  fontSize:
-                    '18px',
-
-                  fontWeight:
-                    800,
-                }}
-              >
-                {card.value}
-              </Box>
-
-              <Typography
-                sx={{
-                  color: '#111827',
-
-                  fontSize: '15px',
-
-                  fontWeight: 800,
-
-                  marginTop: '14px',
-                }}
-              >
-                {card.title}
-              </Typography>
-            </Paper>
-          ),
-        )}
+        <InlineListSummary items={summaryCards} sx={{ gridColumn: '1 / -1', marginBottom: 0 }} />
       </Box>
+
+      {loadError ? (
+        <Alert severity="error" sx={{ marginBottom: '16px' }}>
+          {loadError}
+        </Alert>
+      ) : null}
+
+      {/* Main Card */}
 
       <Paper
         elevation={0}
         sx={{
+          width:
+            '100%',
+
+          maxWidth:
+            '100%',
+
+          boxSizing:
+            'border-box',
+
           backgroundColor:
             '#FFFFFF',
 
           border:
             '1px solid #E5E7EB',
 
-          borderRadius: '12px',
+          borderRadius:
+            '20px',
 
-          overflow: 'hidden',
+          boxShadow:
+            '0 4px 16px rgba(15, 23, 42, 0.04)',
+
+          overflow:
+            'hidden',
         }}
       >
+        {/* Filters */}
+
         <Box
           sx={{
-            padding: {
-              xs: '20px',
-              sm: '24px',
-            },
-
-            borderBottom:
-              '1px solid #E5E7EB',
+            padding:
+              '20px 22px',
           }}
         >
-          <Typography
+          <Box
             sx={{
-              color: '#111827',
+              display:
+                'flex',
 
-              fontSize: '18px',
+              alignItems:
+                'flex-start',
 
-              fontWeight: 800,
+              justifyContent:
+                'space-between',
+
+              gap:
+                '12px',
             }}
           >
-            System Activity List
-          </Typography>
+            <Box>
+              <Typography
+                sx={{
+                  color:
+                    '#111827',
 
-          <Typography
-            sx={{
-              color: '#6B7280',
+                  fontSize:
+                    '17px',
 
-              fontSize: '14px',
+                  fontWeight:
+                    600,
+                }}
+              >
+                รายการประวัติการใช้งาน
+              </Typography>
 
-              marginTop: '4px',
-            }}
-          >
-            Showing{' '}
-            {
-              filteredAuditLogs.length
-            }{' '}
-            of {auditLogs.length}{' '}
-            records
-          </Typography>
+            </Box>
+          </Box>
+
+          {/* Filter Row 1 */}
 
           <Box
             sx={{
-              display: 'grid',
+              display:
+                'grid',
 
               gridTemplateColumns: {
-                xs: '1fr',
+                xs:
+                  '1fr',
 
-                lg: 'repeat(2, minmax(0, 1fr))',
-
-                xl: 'minmax(260px, 1.5fr) repeat(2, minmax(160px, 0.7fr)) repeat(2, minmax(170px, 0.8fr)) auto',
+                md: 'minmax(280px, 1.5fr) repeat(2, minmax(170px, 0.7fr))',
               },
 
-              gap: '16px',
+              gap:
+                '12px',
 
-              marginTop: '22px',
+              marginTop:
+                '18px',
             }}
           >
-            <TextField
+            <TextField fullWidth label="ชื่อผู้ใช้งาน" placeholder="ค้นหาชื่อผู้ใช้งาน" value={searchText} onChange={(event) => setSearchText(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); event.target.blur(); } }} slotProps={{ input: { endAdornment: searchText ? <InputAdornment position="end"><IconButton type="button" size="small" aria-label="ล้างคำค้นหา" onClick={() => setSearchText('')}><CloseRounded fontSize="small" /></IconButton></InputAdornment> : null } }} sx={{ '& .MuiOutlinedInput-root': { height: '44px', borderRadius: '11px', '&.Mui-focused fieldset': { borderColor: adminTheme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: adminTheme.primary } }} />
+
+            <FormControl
               fullWidth
-              label="Search Audit Log"
-              placeholder="User, action, table, detail or IP"
-              value={searchText}
-              onChange={(event) =>
-                setSearchText(
-                  event.target.value,
-                )
-              }
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    height: '48px',
-
-                    borderRadius:
-                      '8px',
-
-                    '&.Mui-focused fieldset':
-                      {
-                        borderColor:
-                          '#EA580C',
-                      },
-                  },
-
-                '& .MuiInputLabel-root.Mui-focused':
-                  {
-                    color:
-                      '#EA580C',
-                  },
-              }}
-            />
-
-            <FormControl fullWidth>
-              <InputLabel id="audit-role-filter-label">
-                Role
-              </InputLabel>
-
+            >
               <Select
-                labelId="audit-role-filter-label"
-                value={roleFilter}
-                label="Role"
-                onChange={(event) =>
+                value={roleFilter === 'All' ? '' : roleFilter}
+                displayEmpty
+                renderValue={(value) => value ? translateRole(value) : 'บทบาท'}
+                inputProps={{ 'aria-label': 'บทบาท' }}
+                onChange={(
+                  event,
+                ) =>
                   setRoleFilter(
-                    event.target.value,
+                    event.target.value || 'All',
                   )
                 }
                 sx={{
-                  height: '48px',
+                  height:
+                    '46px',
 
-                  borderRadius: '8px',
-
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline':
-                    {
-                      borderColor:
-                        '#EA580C',
-                    },
+                  borderRadius:
+                    '9px',
                 }}
               >
-                <MenuItem value="All">
-                  All Roles
-                </MenuItem>
-
                 <MenuItem value="Employee">
-                  Employee
+                  พนักงาน
                 </MenuItem>
 
                 <MenuItem value="Supervisor">
-                  Supervisor
+                  หัวหน้างาน
                 </MenuItem>
 
                 <MenuItem value="HR">
@@ -1044,52 +1473,43 @@ function AuditLogPage() {
                 </MenuItem>
 
                 <MenuItem value="Admin">
-                  Admin
-                </MenuItem>
-
-                <MenuItem value="System">
-                  System
+                  ผู้ดูแลระบบ
                 </MenuItem>
               </Select>
             </FormControl>
 
-            <FormControl fullWidth>
-              <InputLabel id="audit-action-filter-label">
-                Activity
-              </InputLabel>
-
+            <FormControl
+              fullWidth
+            >
               <Select
-                labelId="audit-action-filter-label"
-                value={
-                  actionFilter
-                }
-                label="Activity"
-                onChange={(event) =>
+                value={actionFilter === 'All' ? '' : actionFilter}
+                displayEmpty
+                renderValue={(value) => value ? actionGroups.find((group) => group.value === value)?.label || value : 'ประเภทกิจกรรม'}
+                inputProps={{ 'aria-label': 'ประเภทกิจกรรม' }}
+                onChange={(
+                  event,
+                ) =>
                   setActionFilter(
-                    event.target.value,
+                    event.target.value || 'All',
                   )
                 }
                 sx={{
-                  height: '48px',
+                  height:
+                    '46px',
 
-                  borderRadius: '8px',
-
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline':
-                    {
-                      borderColor:
-                        '#EA580C',
-                    },
+                  borderRadius:
+                    '9px',
                 }}
               >
-                <MenuItem value="All">
-                  All Activities
-                </MenuItem>
-
                 {actionGroups.map(
                   (group) => (
                     <MenuItem
-                      key={group.value}
-                      value={group.value}
+                      key={
+                        group.value
+                      }
+                      value={
+                        group.value
+                      }
                     >
                       {group.label}
                     </MenuItem>
@@ -1098,195 +1518,102 @@ function AuditLogPage() {
               </Select>
             </FormControl>
 
-            <TextField
-              fullWidth
-              type="date"
-              label="Start Date"
-              value={startDate}
-              onChange={(event) =>
-                setStartDate(
-                  event.target.value,
-                )
-              }
-              slotProps={{
-                inputLabel: {
-                  shrink: true,
-                },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    height: '48px',
-
-                    borderRadius:
-                      '8px',
-
-                    '&.Mui-focused fieldset':
-                      {
-                        borderColor:
-                          '#EA580C',
-                      },
-                  },
-
-                '& .MuiInputLabel-root.Mui-focused':
-                  {
-                    color:
-                      '#EA580C',
-                  },
-              }}
-            />
-
-            <TextField
-              fullWidth
-              type="date"
-              label="End Date"
-              value={endDate}
-              onChange={(event) =>
-                setEndDate(
-                  event.target.value,
-                )
-              }
-              slotProps={{
-                inputLabel: {
-                  shrink: true,
-                },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    height: '48px',
-
-                    borderRadius:
-                      '8px',
-
-                    '&.Mui-focused fieldset':
-                      {
-                        borderColor:
-                          '#EA580C',
-                      },
-                  },
-
-                '& .MuiInputLabel-root.Mui-focused':
-                  {
-                    color:
-                      '#EA580C',
-                  },
-              }}
-            />
-
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={
-                handleClearFilters
-              }
-              sx={{
-                minWidth: '100px',
-
-                height: '48px',
-
-                padding: '0 18px',
-
-                color: '#374151',
-
-                borderColor:
-                  '#D1D5DB',
-
-                borderRadius: '8px',
-
-                fontSize: '14px',
-
-                fontWeight: 700,
-
-                textTransform:
-                  'none',
-
-                '&:hover': {
-                  backgroundColor:
-                    '#F9FAFB',
-
-                  borderColor:
-                    '#9CA3AF',
-                },
-              }}
-            >
-              Clear
-            </Button>
           </Box>
+          {activeFilterChips.length > 0 ? (
+            <Stack direction="row" alignItems="center" gap="8px" useFlexGap flexWrap="wrap" sx={{ marginTop: '12px' }}>
+              {activeFilterChips.map((filter) => (
+                <Chip key={filter.key} size="small" label={filter.label} onDelete={filter.onDelete} sx={{ backgroundColor: adminTheme.soft }} />
+              ))}
+            </Stack>
+          ) : null}
+
         </Box>
+
+        {/* Table */}
 
         {filteredAuditLogs.length >
         0 ? (
           <Box
             sx={{
-              width: '100%',
+              width:
+                '100%',
 
-              overflowX: 'auto',
+              maxWidth:
+                '100%',
+
+              overflowX:
+                'auto',
             }}
           >
             <Table
+              size="small"
               sx={{
-                minWidth: '1250px',
+                width:
+                  '100%',
+
+                minWidth: '520px',
+
+                tableLayout:
+                  'fixed',
+
+                marginInline:
+                  'auto',
+
+                '& .MuiTableCell-head': { fontSize: '12px !important', padding: '13px 14px !important', whiteSpace: 'nowrap' },
+                '& .MuiTableCell-body': { fontSize: '12px !important', padding: '14px !important' },
+
+                '& th, & td':
+                  {
+                    boxSizing:
+                      'border-box',
+                  },
               }}
             >
+              <colgroup>
+                <col style={{ width: '42%' }} />
+                <col style={{ width: '22%' }} />
+                <col style={{ width: '36%' }} />
+              </colgroup>
+
               <TableHead>
                 <TableRow
                   sx={{
                     backgroundColor:
-                      '#F9FAFB',
+                      '#F8FAFC',
                   }}
                 >
-                  {[
-                    'Date and Time',
-                    'User',
-                    'Role',
-                    'Action',
-                    'Target',
-                    'IP Address',
-                    'Details',
-                    'View',
-                  ].map(
-                    (heading) => (
-                      <TableCell
-                        key={heading}
-                        align={
-                          heading ===
-                          'View'
-                            ? 'right'
-                            : 'left'
-                        }
-                        sx={{
-                          color:
-                            '#6B7280',
+                  <TableCell
+                    align="left"
+                    sx={
+                      headerCellStyle
+                    }
+                  >
+                    ผู้ใช้งาน
+                  </TableCell>
 
-                          fontSize:
-                            '12px',
+                  <TableCell
+                    align="center"
+                    sx={
+                      headerCellStyle
+                    }
+                  >
+                    บทบาท
+                  </TableCell>
 
-                          fontWeight:
-                            800,
+                  <TableCell
+                    align="left"
+                    sx={
+                      headerCellStyle
+                    }
+                  >
+                    กิจกรรม
+                  </TableCell>
 
-                          textTransform:
-                            'uppercase',
-
-                          letterSpacing:
-                            '0.4px',
-
-                          whiteSpace:
-                            'nowrap',
-
-                          borderBottom:
-                            '1px solid #E5E7EB',
-                        }}
-                      >
-                        {heading}
-                      </TableCell>
-                    ),
-                  )}
                 </TableRow>
               </TableHead>
 
-              <TableBody>
-                {filteredAuditLogs.map(
+              <FixedTableBody>
+                {paginatedAuditLogs.map(
                   (log) => {
                     const roleStyle =
                       getRoleStyle(
@@ -1300,9 +1627,21 @@ function AuditLogPage() {
 
                     return (
                       <TableRow
-                        key={log.id}
+                        key={
+                          log.id
+                        }
                         hover
+                        tabIndex={0}
+                        onClick={() => setSelectedLog(log)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setSelectedLog(log);
+                          }
+                        }}
                         sx={{
+                          cursor: 'pointer',
+                          '&:focus-visible': { outline: `2px solid ${adminTheme.primary}`, outlineOffset: -2 },
                           '&:last-child td':
                             {
                               borderBottom:
@@ -1310,307 +1649,182 @@ function AuditLogPage() {
                             },
                         }}
                       >
-                        <TableCell
-                          sx={{
-                            color:
-                              '#6B7280',
-
-                            fontSize:
-                              '12px',
-
-                            whiteSpace:
-                              'nowrap',
-
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          {formatDateTime(
-                            log.createdAt,
-                          )}
-                        </TableCell>
+                        {/* User */}
 
                         <TableCell
+                          align="left"
                           sx={{
+                            padding:
+                              '13px 8px',
+
                             borderBottom:
                               '1px solid #E5E7EB',
                           }}
                         >
                           <Typography
                             sx={{
-                              color:
-                                '#111827',
-
-                              fontSize:
-                                '13px',
-
-                              fontWeight:
-                                800,
+                              color: '#111827',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              lineHeight: 1.4,
+                              wordBreak: 'break-word',
+                              textAlign: 'left',
                             }}
                           >
                             {log.username}
                           </Typography>
-
                           <Typography
                             sx={{
-                              color:
-                                '#9CA3AF',
-
-                              fontSize:
-                                '11px',
-
-                              marginTop:
-                                '3px',
+                              color: '#94A3B8',
+                              fontSize: '9.5px',
+                              lineHeight: 1.35,
+                              marginTop: '3px',
+                              wordBreak: 'break-word',
+                              textAlign: 'left',
                             }}
                           >
-                            {
-                              log.employeeName
-                            }
+                            {log.employeeName}
                           </Typography>
                         </TableCell>
 
+                        {/* Role */}
+
                         <TableCell
+                          align="center"
                           sx={{
+                            padding:
+                              '13px 5px',
+
                             borderBottom:
                               '1px solid #E5E7EB',
                           }}
                         >
                           <Chip
-                            label={log.role}
+                            label={translateRole(
+                              log.role,
+                            )}
                             size="small"
                             sx={{
-                              minWidth:
-                                '82px',
-
-                              backgroundColor:
-                                roleStyle.backgroundColor,
-
-                              color:
-                                roleStyle.color,
-
-                              borderRadius:
-                                '999px',
-
-                              fontSize:
-                                '11px',
-
-                              fontWeight:
-                                700,
+                              maxWidth: '100%',
+                              height: '26px',
+                              backgroundColor: roleStyle.backgroundColor,
+                              color: roleStyle.color,
+                              borderRadius: '999px',
+                              fontSize: '8.5px',
+                              fontWeight: 700,
+                              '& .MuiChip-label': {
+                                paddingLeft: '7px',
+                                paddingRight: '7px',
+                              },
                             }}
                           />
                         </TableCell>
 
+                        {/* Action */}
+
                         <TableCell
+                          align="left"
                           sx={{
+                            padding:
+                              '13px 6px',
+
                             borderBottom:
                               '1px solid #E5E7EB',
                           }}
                         >
                           <Chip
-                            label={formatAuditAction(
+                            label={formatAuditActivity(
                               log.action,
                             )}
                             size="small"
                             sx={{
-                              backgroundColor:
-                                actionStyle.backgroundColor,
-
-                              color:
-                                actionStyle.color,
-
-                              borderRadius:
-                                '999px',
-
-                              fontSize:
-                                '11px',
-
-                              fontWeight:
-                                700,
+                              maxWidth: '100%',
+                              height: '26px',
+                              backgroundColor: actionStyle.backgroundColor,
+                              color: actionStyle.color,
+                              borderRadius: '999px',
+                              fontSize: '8.5px',
+                              fontWeight: 700,
+                              '& .MuiChip-label': {
+                                display: 'block',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                paddingLeft: '7px',
+                                paddingRight: '7px',
+                              },
+                              marginInline: 0,
                             }}
                           />
                         </TableCell>
 
-                        <TableCell
-                          sx={{
-                            color:
-                              '#374151',
-
-                            fontSize:
-                              '12px',
-
-                            whiteSpace:
-                              'nowrap',
-
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          {log.tableName ||
-                            '-'}
-
-                          {log.recordId !==
-                          null
-                            ? ` #${log.recordId}`
-                            : ''}
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            color:
-                              '#6B7280',
-
-                            fontSize:
-                              '12px',
-
-                            whiteSpace:
-                              'nowrap',
-
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          {log.ipAddress}
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            maxWidth:
-                              '340px',
-
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          <Typography
-                            sx={{
-                              maxWidth:
-                                '340px',
-
-                              color:
-                                '#4B5563',
-
-                              fontSize:
-                                '12px',
-
-                              overflow:
-                                'hidden',
-
-                              textOverflow:
-                                'ellipsis',
-
-                              whiteSpace:
-                                'nowrap',
-                            }}
-                          >
-                            {log.detail}
-                          </Typography>
-                        </TableCell>
-
-                        <TableCell
-                          align="right"
-                          sx={{
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          <Button
-                            type="button"
-                            variant="outlined"
-                            onClick={() =>
-                              setSelectedLog(
-                                log,
-                              )
-                            }
-                            sx={{
-                              minWidth:
-                                '68px',
-
-                              height:
-                                '36px',
-
-                              padding:
-                                '0 12px',
-
-                              color:
-                                '#EA580C',
-
-                              borderColor:
-                                '#EA580C',
-
-                              borderRadius:
-                                '8px',
-
-                              fontSize:
-                                '12px',
-
-                              fontWeight:
-                                700,
-
-                              textTransform:
-                                'none',
-
-                              '&:hover':
-                                {
-                                  backgroundColor:
-                                    '#FFF7ED',
-
-                                  borderColor:
-                                    '#C2410C',
-                                },
-                            }}
-                          >
-                            View
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     );
                   },
                 )}
-              </TableBody>
+              </FixedTableBody>
             </Table>
+            {filteredAuditLogs.length > rowsPerPage ? (
+              <TablePagination component="div" count={filteredAuditLogs.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredAuditLogs.length / rowsPerPage)}`} />
+            ) : null}
           </Box>
         ) : (
+          /* Empty */
+
           <Box
             sx={{
-              minHeight: '300px',
+              minHeight:
+                '300px',
 
-              padding: '40px 24px',
+              padding:
+                '40px 24px',
 
-              display: 'flex',
+              display:
+                'flex',
 
-              flexDirection: 'column',
+              flexDirection:
+                'column',
 
-              alignItems: 'center',
+              alignItems:
+                'center',
 
               justifyContent:
                 'center',
 
-              textAlign: 'center',
+              textAlign:
+                'center',
             }}
           >
             <Box
               sx={{
-                width: '64px',
+                width:
+                  '56px',
 
-                height: '64px',
+                height:
+                  '56px',
 
-                display: 'flex',
+                display:
+                  'flex',
 
-                alignItems: 'center',
+                alignItems:
+                  'center',
 
                 justifyContent:
                   'center',
 
                 backgroundColor:
-                  '#FFF7ED',
+                  adminTheme.soft,
 
-                color: '#EA580C',
+                color:
+                  adminTheme.primary,
 
-                borderRadius: '50%',
+                borderRadius:
+                  '50%',
 
-                fontSize: '24px',
+                fontSize:
+                  '20px',
 
-                fontWeight: 800,
+                fontWeight:
+                  800,
               }}
             >
               0
@@ -1618,101 +1832,77 @@ function AuditLogPage() {
 
             <Typography
               sx={{
-                color: '#111827',
+                color:
+                  '#111827',
 
-                fontSize: '18px',
+                fontSize:
+                  '15px',
 
-                fontWeight: 800,
+                fontWeight:
+                  800,
 
-                marginTop: '16px',
+                marginTop:
+                  '14px',
               }}
             >
-              No audit records found
+              ไม่พบประวัติการใช้งาน
             </Typography>
 
             <Typography
               sx={{
-                color: '#6B7280',
+                color:
+                  '#64748B',
 
-                fontSize: '14px',
+                fontSize:
+                  '12px',
 
-                marginTop: '6px',
+                marginTop:
+                  '5px',
               }}
             >
-              Try changing or clearing
-              the selected filters.
+              ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่า
             </Typography>
 
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={
-                handleClearFilters
-              }
-              sx={{
-                height: '42px',
-
-                marginTop: '20px',
-
-                padding: '0 18px',
-
-                color: '#EA580C',
-
-                borderColor:
-                  '#EA580C',
-
-                borderRadius: '8px',
-
-                fontSize: '14px',
-
-                fontWeight: 700,
-
-                textTransform:
-                  'none',
-
-                '&:hover': {
-                  backgroundColor:
-                    '#FFF7ED',
-
-                  borderColor:
-                    '#C2410C',
-                },
-              }}
-            >
-              Clear Filters
-            </Button>
           </Box>
         )}
       </Paper>
 
+      {/* Detail Dialog */}
+
       <Dialog
-        open={Boolean(selectedLog)}
-        onClose={() =>
-          setSelectedLog(null)
+        open={Boolean(
+          selectedLog,
+        )}
+        onClose={
+          handleCloseDialog
         }
         fullWidth
         maxWidth="sm"
         slotProps={{
           paper: {
             sx: {
-              borderRadius: '12px',
+              borderRadius:
+                '14px',
             },
           },
         }}
       >
         <DialogTitle
           sx={{
-            color: '#111827',
+            color:
+              '#111827',
 
-            fontSize: '20px',
+            fontSize:
+              '20px',
 
-            fontWeight: 800,
+            fontWeight:
+              800,
 
             borderBottom:
               '1px solid #E5E7EB',
           }}
         >
-          Audit Log Detail
+          รายละเอียดประวัติการใช้งาน
         </DialogTitle>
 
         <DialogContent
@@ -1724,21 +1914,25 @@ function AuditLogPage() {
           {selectedLog && (
             <Box
               sx={{
-                display: 'grid',
+                display:
+                  'grid',
 
                 gridTemplateColumns: {
-                  xs: '1fr',
+                  xs:
+                    '1fr',
 
-                  sm: 'repeat(2, minmax(0, 1fr))',
+                  sm:
+                    'repeat(2, minmax(0, 1fr))',
                 },
 
-                gap: '20px',
+                gap:
+                  '12px',
               }}
             >
               {[
                 {
                   label:
-                    'Date and Time',
+                    'วันที่และเวลา',
 
                   value:
                     formatDateTime(
@@ -1747,51 +1941,58 @@ function AuditLogPage() {
                 },
 
                 {
-                  label: 'Username',
+                  label:
+                    'ชื่อผู้ใช้',
 
                   value:
                     selectedLog.username,
                 },
 
                 {
-                  label: 'Employee',
+                  label:
+                    'พนักงาน',
 
                   value:
                     selectedLog.employeeName,
                 },
 
                 {
-                  label: 'Role',
+                  label:
+                    'บทบาท',
 
                   value:
-                    selectedLog.role,
+                    translateRole(
+                      selectedLog.role,
+                    ),
                 },
 
                 {
-                  label: 'Action',
+                  label:
+                    'กิจกรรม',
 
                   value:
-                    formatAuditAction(
+                    formatAuditActivity(
                       selectedLog.action,
                     ),
                 },
 
                 {
                   label:
-                    'Target Table',
+                    'ข้อมูลที่เกี่ยวข้อง',
 
                   value:
-                    selectedLog.tableName ||
-                    'Not applicable',
+                    translateTable(
+                      selectedLog.tableName,
+                    ),
                 },
 
                 {
                   label:
-                    'Record ID',
+                    'รหัสรายการ',
 
                   value:
                     selectedLog.recordId ??
-                    'Not applicable',
+                    'ไม่มี',
                 },
 
                 {
@@ -1799,29 +2000,27 @@ function AuditLogPage() {
                     'IP Address',
 
                   value:
-                    selectedLog.ipAddress,
+                    selectedLog.ipAddress ||
+                    '-',
                 },
               ].map(
                 (item) => (
                   <Box
-                    key={item.label}
+                    key={
+                      item.label
+                    }
+                    sx={{ padding: '12px 14px', backgroundColor: '#F8FAFC', border: '1px solid #E5E7EB', borderRadius: '10px' }}
                   >
                     <Typography
                       sx={{
                         color:
-                          '#9CA3AF',
+                          '#94A3B8',
 
                         fontSize:
-                          '11px',
+                          '10px',
 
                         fontWeight:
                           700,
-
-                        textTransform:
-                          'uppercase',
-
-                        letterSpacing:
-                          '0.5px',
                       }}
                     >
                       {item.label}
@@ -1833,7 +2032,7 @@ function AuditLogPage() {
                           '#111827',
 
                         fontSize:
-                          '14px',
+                          '13px',
 
                         fontWeight:
                           700,
@@ -1854,60 +2053,6 @@ function AuditLogPage() {
                 ),
               )}
 
-              <Box
-                sx={{
-                  gridColumn: {
-                    xs: 'auto',
-
-                    sm: '1 / -1',
-                  },
-
-                  padding: '18px',
-
-                  backgroundColor:
-                    '#F9FAFB',
-
-                  border:
-                    '1px solid #E5E7EB',
-
-                  borderRadius: '8px',
-                }}
-              >
-                <Typography
-                  sx={{
-                    color: '#9CA3AF',
-
-                    fontSize: '11px',
-
-                    fontWeight: 700,
-
-                    textTransform:
-                      'uppercase',
-
-                    letterSpacing:
-                      '0.5px',
-                  }}
-                >
-                  Activity Detail
-                </Typography>
-
-                <Typography
-                  sx={{
-                    color: '#374151',
-
-                    fontSize: '14px',
-
-                    lineHeight: 1.7,
-
-                    marginTop: '8px',
-
-                    whiteSpace:
-                      'pre-wrap',
-                  }}
-                >
-                  {selectedLog.detail}
-                </Typography>
-              </Box>
             </Box>
           )}
         </DialogContent>
@@ -1923,39 +2068,54 @@ function AuditLogPage() {
         >
           <Button
             type="button"
-            variant="contained"
-            onClick={() =>
-              setSelectedLog(null)
+            variant="outlined"
+            onClick={
+              handleCloseDialog
             }
             sx={{
-              minWidth: '100px',
+              minWidth:
+                '100px',
 
-              height: '42px',
+              height:
+                '40px',
 
               backgroundColor:
-                '#EA580C',
+                '#FFFFFF',
 
-              color: '#FFFFFF',
+              color:
+                '#475569',
 
-              borderRadius: '8px',
+              borderColor:
+                '#CBD5E1',
 
-              fontSize: '14px',
+              borderRadius:
+                '8px',
 
-              fontWeight: 700,
+              fontSize:
+                '12px',
 
-              textTransform: 'none',
+              fontWeight:
+                700,
 
-              boxShadow: 'none',
+              textTransform:
+                'none',
+
+              boxShadow:
+                'none',
 
               '&:hover': {
                 backgroundColor:
-                  '#C2410C',
+                  '#F8FAFC',
 
-                boxShadow: 'none',
+                borderColor:
+                  '#94A3B8',
+
+                boxShadow:
+                  'none',
               },
             }}
           >
-            Close
+            ปิด
           </Button>
         </DialogActions>
       </Dialog>

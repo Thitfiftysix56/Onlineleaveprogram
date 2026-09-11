@@ -14,40 +14,34 @@ import {
 } from '@mui/material';
 
 import {
-  BeachAccessRounded,
-  HourglassTopRounded,
-  MedicalServicesRounded,
-  TaskAltRounded,
-} from '@mui/icons-material';
-
-import {
   useNavigate,
 } from 'react-router-dom';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
 
 import EmployeeLayout from '../../layouts/employeelayout.jsx';
-
+import RequestNumberText from '../../components/requestnumbertext.jsx';
 import {
-  getLeaveRequests,
-  leaveRequestStorageKey,
-} from '../../utils/leaverequeststorage.js';
-
+  CompactSummaryCard,
+} from '../../components/sharedvisualfoundation.jsx';
+import DashboardLeaveBalance from '../../components/dashboardleavebalance.jsx';
+import { DashboardTablePagination } from '../../components/shareduiprimitives.jsx';
+import { getLeaveBalance, getMyLeaveRequests } from '../../api/leave-service.js';
+import { getNotifications, markNotificationRead as markNotificationAsRead } from '../../api/notification-service.js';
 import {
-  getNotifications,
-  markNotificationAsRead,
-  notificationStorageKey,
-} from '../../utils/notificationstorage.js';
+  formatNotificationMessage,
+  formatNotificationTitle,
+} from '../../utils/presentationformatter.js';
 
-import {
-  getLeaveEntitlements,
-  leaveEntitlementStorageKey,
-} from '../../utils/leaveentitlementstorage.js';
-
-const normalizeStatus = (status) =>
+const normalizeStatus = (
+  status,
+) =>
   String(status || '')
     .trim()
     .toLowerCase();
 
-const toNumber = (value) => {
+const toNumber = (
+  value,
+) => {
   const numericValue =
     Number(value);
 
@@ -58,21 +52,77 @@ const toNumber = (value) => {
     : 0;
 };
 
-const capitalizeStatus = (
+const formatDays = (
+  value,
+) => {
+  const number =
+    toNumber(value);
+
+  return Number.isInteger(
+    number,
+  )
+    ? String(number)
+    : number
+        .toFixed(2)
+        .replace(
+          /\.?0+$/,
+          '',
+        );
+};
+
+const getStatusLabel = (
   status,
 ) => {
   const normalizedStatus =
     normalizeStatus(status);
 
-  if (!normalizedStatus) {
-    return 'Draft';
-  }
+  const labels = {
+    draft:
+      'แบบร่าง',
+
+    pending:
+      'รออนุมัติ',
+
+    approved:
+      'อนุมัติแล้ว',
+
+    rejected:
+      'ปฏิเสธแล้ว',
+
+    cancelled:
+      'ยกเลิกแล้ว',
+  };
 
   return (
-    normalizedStatus
-      .charAt(0)
-      .toUpperCase() +
-    normalizedStatus.slice(1)
+    labels[
+      normalizedStatus
+    ] ||
+    status ||
+    '-'
+  );
+};
+
+const getLeaveTypeLabel = (
+  leaveType,
+) => {
+  const labels = {
+    'Annual Leave':
+      'ลาพักร้อน',
+
+    'Sick Leave':
+      'ลาป่วย',
+
+    'Personal Leave':
+      'ลากิจ',
+
+    'Other Leave':
+      'ลาอื่น ๆ',
+  };
+
+  return (
+    labels[leaveType] ||
+    leaveType ||
+    '-'
   );
 };
 
@@ -114,7 +164,10 @@ const getRequestYear = (
     Number(
       String(
         dateValue,
-      ).slice(0, 4),
+      ).slice(
+        0,
+        4,
+      ),
     );
 
   if (
@@ -127,7 +180,9 @@ const getRequestYear = (
   }
 
   const date =
-    new Date(dateValue);
+    new Date(
+      dateValue,
+    );
 
   return Number.isNaN(
     date.getTime(),
@@ -143,9 +198,35 @@ const formatDate = (
     return '-';
   }
 
+  const normalizedDate =
+    String(
+      dateString,
+    )
+      .trim()
+      .slice(
+        0,
+        10,
+      );
+
+  const match =
+    normalizedDate.match(
+      /^(\d{4})-(\d{2})-(\d{2})$/,
+    );
+
+  if (match) {
+    const [
+      ,
+      year,
+      month,
+      day,
+    ] = match;
+
+    return `${day}/${month}/${year}`;
+  }
+
   const date =
     new Date(
-      `${dateString}T00:00:00`,
+      dateString,
     );
 
   if (
@@ -156,14 +237,27 @@ const formatDate = (
     return '-';
   }
 
-  return date.toLocaleDateString(
-    'en-GB',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    },
-  );
+  const day =
+    String(
+      date.getDate(),
+    ).padStart(
+      2,
+      '0',
+    );
+
+  const month =
+    String(
+      date.getMonth() +
+        1,
+    ).padStart(
+      2,
+      '0',
+    );
+
+  const year =
+    date.getFullYear();
+
+  return `${day}/${month}/${year}`;
 };
 
 const formatDateRange = (
@@ -213,23 +307,55 @@ const formatDateTime = (
     return '-';
   }
 
-  return date.toLocaleString(
-    'en-GB',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    },
-  );
+  const day =
+    String(
+      date.getDate(),
+    ).padStart(
+      2,
+      '0',
+    );
+
+  const month =
+    String(
+      date.getMonth() +
+        1,
+    ).padStart(
+      2,
+      '0',
+    );
+
+  const year =
+    date.getFullYear();
+
+  const hour =
+    String(
+      date.getHours(),
+    ).padStart(
+      2,
+      '0',
+    );
+
+  const minute =
+    String(
+      date.getMinutes(),
+    ).padStart(
+      2,
+      '0',
+    );
+
+  return `${day}/${month}/${year} ${hour}:${minute}`;
 };
 
 const getStatusStyle = (
   status,
 ) => {
+  const normalizedStatus =
+    normalizeStatus(
+      status,
+    );
+
   const styles = {
-    Approved: {
+    approved: {
       backgroundColor:
         '#DCFCE7',
 
@@ -237,7 +363,7 @@ const getStatusStyle = (
         '#15803D',
     },
 
-    Pending: {
+    pending: {
       backgroundColor:
         '#FEF3C7',
 
@@ -245,7 +371,7 @@ const getStatusStyle = (
         '#B45309',
     },
 
-    Rejected: {
+    rejected: {
       backgroundColor:
         '#FEE2E2',
 
@@ -253,15 +379,15 @@ const getStatusStyle = (
         '#B91C1C',
     },
 
-    Cancelled: {
+    cancelled: {
       backgroundColor:
-        '#F3F4F6',
+        '#FEE2E2',
 
       color:
-        '#6B7280',
+        '#B91C1C',
     },
 
-    Draft: {
+    draft: {
       backgroundColor:
         '#DBEAFE',
 
@@ -271,18 +397,143 @@ const getStatusStyle = (
   };
 
   return (
-    styles[status] ||
-    styles.Cancelled
+    styles[
+      normalizedStatus
+    ] ||
+    styles.cancelled
   );
 };
 
-const calculateLeaveBalances = ({
+const _translateNotificationTitle = (
+  title,
+) => {
+  const text =
+    String(
+      title || '',
+    ).trim();
+
+  const normalized =
+    text.toLowerCase();
+
+  const titleMap = {
+    'leave request approved':
+      'คำขอลาได้รับการอนุมัติ',
+
+    'leave request rejected':
+      'คำขอลาถูกปฏิเสธ',
+
+    'leave request cancelled':
+      'คำขอลาถูกยกเลิก',
+
+    'leave request submitted':
+      'ส่งคำขอลาเรียบร้อยแล้ว',
+
+    'leave request updated':
+      'คำขอลาได้รับการอัปเดต',
+
+    'new leave request submitted':
+      'มีการส่งคำขอลาใหม่',
+
+    notification:
+      'การแจ้งเตือน',
+  };
+
+  return (
+    titleMap[
+      normalized
+    ] ||
+    text ||
+    'การแจ้งเตือน'
+  );
+};
+
+const _translateNotificationMessage = (
+  message,
+) => {
+  const text =
+    String(
+      message || '',
+    ).trim();
+
+  if (!text) {
+    return '-';
+  }
+
+  let match =
+    text.match(
+      /^Your leave request (.+?) was approved\.?$/i,
+    );
+
+  if (match) {
+    return `คำขอลา ${match[1]} ได้รับการอนุมัติแล้ว`;
+  }
+
+  match =
+    text.match(
+      /^Your leave request (.+?) was rejected\.?$/i,
+    );
+
+  if (match) {
+    return `คำขอลา ${match[1]} ถูกปฏิเสธ`;
+  }
+
+  match =
+    text.match(
+      /^Your leave request (.+?) was cancelled\.?$/i,
+    );
+
+  if (match) {
+    return `คำขอลา ${match[1]} ถูกยกเลิกแล้ว`;
+  }
+
+  match =
+    text.match(
+      /^Your leave request (.+?) was submitted\.?$/i,
+    );
+
+  if (match) {
+    return `ส่งคำขอลา ${match[1]} เรียบร้อยแล้ว`;
+  }
+
+  match =
+    text.match(
+      /^Your leave request (.+?) was rejected\.\s*Reason:\s*(.+)$/i,
+    );
+
+  if (match) {
+    return `คำขอลา ${match[1]} ถูกปฏิเสธ เหตุผล: ${match[2]}`;
+  }
+
+  match =
+    text.match(
+      /^Leave request (.+?) was approved\.?$/i,
+    );
+
+  if (match) {
+    return `คำขอลา ${match[1]} ได้รับการอนุมัติแล้ว`;
+  }
+
+  match =
+    text.match(
+      /^Leave request (.+?) was rejected\.?$/i,
+    );
+
+  if (match) {
+    return `คำขอลา ${match[1]} ถูกปฏิเสธ`;
+  }
+
+  return text;
+};
+
+const _calculateLeaveBalances = ({
   requests,
   entitlements,
   year,
 }) =>
   entitlements.map(
-    (entitlement) => {
+    (
+      entitlement,
+    ) => {
       const leaveTypeId =
         Number(
           entitlement.leaveTypeId,
@@ -291,7 +542,9 @@ const calculateLeaveBalances = ({
       const pendingDays =
         requests
           .filter(
-            (request) =>
+            (
+              request,
+            ) =>
               normalizeStatus(
                 request.status,
               ) ===
@@ -352,10 +605,15 @@ const calculateLeaveBalances = ({
 
       return {
         ...entitlement,
+
         totalDays,
+
         usedDays,
+
         pendingDays,
+
         remainingDays,
+
         availableDays,
       };
     },
@@ -369,6 +627,8 @@ function EmployeeDashboardPage() {
     leaveRequests,
     setLeaveRequests,
   ] = useState([]);
+
+  const [requestPage, setRequestPage] = useState(0);
 
   const [
     leaveBalances,
@@ -384,17 +644,25 @@ function EmployeeDashboardPage() {
     new Date().getFullYear();
 
   const loadDashboardData =
-    useCallback(() => {
+    useCallback(async () => {
+      const [requestData, balanceData, notificationData] = await Promise.all([
+        getMyLeaveRequests(), getLeaveBalance(currentYear), getNotifications(),
+      ]);
+      /*
+       * โหลดคำขอลาก่อน เพื่อให้ข้อมูล Entitlement
+       * อัปเดตยอด Used จากรายการ Approved ก่อน
+       * นำไปคำนวณสิทธิ์คงเหลือ
+       */
       const employeeRequests =
-        getLeaveRequests({
-          role: 'employee',
-        })
+        requestData
           .map(
-            (request) => ({
+            (
+              request,
+            ) => ({
               ...request,
 
               statusLabel:
-                capitalizeStatus(
+                getStatusLabel(
                   request.status,
                 ),
             }),
@@ -412,39 +680,24 @@ function EmployeeDashboardPage() {
               ),
           );
 
-      const employeeEntitlements =
-        getLeaveEntitlements({
-          role: 'employee',
-          year: currentYear,
-        });
-
       const calculatedBalances =
-        calculateLeaveBalances({
-          requests:
-            employeeRequests,
-
-          entitlements:
-            employeeEntitlements,
-
-          year:
-            currentYear,
-        });
+        (balanceData?.balances || []).map((balance) => ({ ...balance, year: balanceData.year, totalDays: balance.total, usedDays: balance.used, pendingDays: balance.pending, remainingDays: balance.remaining, availableDays: balance.available ?? Math.max(Number(balance.remaining || 0) - Number(balance.pending || 0), 0) }));
 
       const employeeNotifications =
-        getNotifications({
-          role: 'employee',
-        }).sort(
+        (notificationData?.notifications || []).map((notification) => ({ ...notification, isRead: Boolean(notification.read) })).sort(
           (
             firstNotification,
             secondNotification,
           ) =>
             new Date(
               secondNotification
-                .createdAt || 0,
+                .createdAt ||
+                0,
             ).getTime() -
             new Date(
               firstNotification
-                .createdAt || 0,
+                .createdAt ||
+                0,
             ).getTime(),
         );
 
@@ -464,24 +717,14 @@ function EmployeeDashboardPage() {
   useEffect(() => {
     loadDashboardData();
 
-    const handleStorageChange = (
-      event,
-    ) => {
-      const watchedKeys = [
-        leaveRequestStorageKey,
-        leaveEntitlementStorageKey,
-        notificationStorageKey,
-      ];
-
-      if (
-        !event.key ||
-        watchedKeys.includes(
-          event.key,
-        )
-      ) {
-        loadDashboardData();
-      }
-    };
+    const handleStorageChange =
+      (
+        event,
+      ) => {
+        if (!event.key) {
+          loadDashboardData();
+        }
+      };
 
     window.addEventListener(
       'storage',
@@ -504,81 +747,109 @@ function EmployeeDashboardPage() {
         loadDashboardData,
       );
     };
-  }, [loadDashboardData]);
+  }, [
+    loadDashboardData,
+  ]);
 
   const annualBalance =
     useMemo(
       () =>
         leaveBalances.find(
-          (balance) =>
+          (
+            balance,
+          ) =>
             Number(
               balance.leaveTypeId,
-            ) === 1 ||
+            ) ===
+              1 ||
             balance.leaveType ===
               'Annual Leave',
-        ) || null,
-      [leaveBalances],
+        ) ||
+        null,
+      [
+        leaveBalances,
+      ],
     );
 
   const sickBalance =
     useMemo(
       () =>
         leaveBalances.find(
-          (balance) =>
+          (
+            balance,
+          ) =>
             Number(
               balance.leaveTypeId,
-            ) === 2 ||
+            ) ===
+              2 ||
             balance.leaveType ===
               'Sick Leave',
-        ) || null,
-      [leaveBalances],
+        ) ||
+        null,
+      [
+        leaveBalances,
+      ],
     );
 
   const pendingRequestCount =
     useMemo(
       () =>
         leaveRequests.filter(
-          (request) =>
+          (
+            request,
+          ) =>
             normalizeStatus(
               request.status,
-            ) === 'pending',
+            ) ===
+            'pending',
         ).length,
-      [leaveRequests],
+      [
+        leaveRequests,
+      ],
     );
+
+  const draftRequestCount = useMemo(
+    () => leaveRequests.filter(
+      (request) => normalizeStatus(request.status) === 'draft',
+    ).length,
+    [leaveRequests],
+  );
 
   const approvedRequestCount =
     useMemo(
       () =>
         leaveRequests.filter(
-          (request) =>
+          (
+            request,
+          ) =>
             normalizeStatus(
               request.status,
             ) ===
-              'approved' &&
-            getRequestYear(
-              request,
-            ) ===
-              currentYear,
+              'approved',
         ).length,
       [
-        currentYear,
         leaveRequests,
       ],
     );
 
-  const summaryCards = [
+  const rejectedRequestCount = useMemo(
+    () => leaveRequests.filter(
+      (request) => normalizeStatus(request.status) === 'rejected',
+    ).length,
+    [leaveRequests],
+  );
+
+  const dashboardCardCandidates = [
     {
       title:
-        'Annual Leave',
+        'สิทธิ์ลาพักร้อน',
 
       value:
-        `${annualBalance?.availableDays || 0} Days`,
-
-      description:
-        annualBalance?.pendingDays >
-        0
-          ? `${annualBalance.pendingDays} day(s) pending`
-          : 'Available balance',
+        `${formatDays(
+          annualBalance
+            ?.availableDays ||
+            0,
+        )} วัน`,
 
       backgroundColor:
         '#EFF6FF',
@@ -586,24 +857,22 @@ function EmployeeDashboardPage() {
       borderColor:
         '#BFDBFE',
 
-      accentColor:
+      color:
         '#2563EB',
 
-      Icon:
-        BeachAccessRounded,
+      accent: 'info',
     },
+
     {
       title:
-        'Sick Leave',
+        'สิทธิ์ลาป่วย',
 
       value:
-        `${sickBalance?.availableDays || 0} Days`,
-
-      description:
-        sickBalance?.pendingDays >
-        0
-          ? `${sickBalance.pendingDays} day(s) pending`
-          : 'Available balance',
+        `${formatDays(
+          sickBalance
+            ?.availableDays ||
+            0,
+        )} วัน`,
 
       backgroundColor:
         '#FFF1F2',
@@ -611,21 +880,18 @@ function EmployeeDashboardPage() {
       borderColor:
         '#FECDD3',
 
-      accentColor:
+      color:
         '#E11D48',
 
-      Icon:
-        MedicalServicesRounded,
+      accent: 'error',
     },
+
     {
       title:
-        'Pending Requests',
+        'คำขอรออนุมัติ',
 
       value:
         pendingRequestCount,
-
-      description:
-        'รออนุมัติ',
 
       backgroundColor:
         '#FFFBEB',
@@ -633,49 +899,87 @@ function EmployeeDashboardPage() {
       borderColor:
         '#FDE68A',
 
-      accentColor:
+      color:
         '#D97706',
 
-      Icon:
-        HourglassTopRounded,
+      accent: 'warning',
     },
+
     {
       title:
-        'Approved Requests',
+        'คำขออนุมัติแล้ว',
 
       value:
         approvedRequestCount,
 
-      description:
-        `In ${currentYear}`,
-
       backgroundColor:
-        '#F0FDF4',
+        '#ECFDF5',
 
       borderColor:
-        '#BBF7D0',
+        '#A7F3D0',
 
-      accentColor:
-        '#16A34A',
+      color:
+        '#059669',
 
-      Icon:
-        TaskAltRounded,
+      accent: 'success',
     },
   ];
 
-  const recentRequests =
+  // Leave balances are rendered once by DashboardLeaveBalance below. These
+  // four cards intentionally contain request counts only.
+  const summaryCards = [
+    {
+      title: 'แบบร่าง',
+      value: draftRequestCount,
+      background: 'linear-gradient(135deg, #F1F5F9 0%, #FFFFFF 78%)',
+      glowColor: 'rgba(100, 116, 139, 0.12)',
+      valueColor: '#64748B',
+    },
+    {
+      ...dashboardCardCandidates[2],
+      title: 'รออนุมัติ',
+      background: 'linear-gradient(135deg, #FFF8DC 0%, #FFFCF1 68%, #FFFFFF 100%)',
+      glowColor: 'rgba(250, 204, 21, 0.18)',
+      valueColor: '#B45309',
+    },
+    {
+      ...dashboardCardCandidates[3],
+      title: 'อนุมัติแล้ว',
+      background: 'linear-gradient(135deg, #EAFBF2 0%, #F6FEF9 68%, #FFFFFF 100%)',
+      glowColor: 'rgba(74, 222, 128, 0.18)',
+      valueColor: '#15803D',
+    },
+    {
+      title: 'ไม่อนุมัติ',
+      value: rejectedRequestCount,
+      background: 'linear-gradient(135deg, #FFF0F1 0%, #FFF8F8 68%, #FFFFFF 100%)',
+      glowColor: 'rgba(248, 113, 113, 0.16)',
+      valueColor: '#DC2626',
+    },
+  ];
+
+  const dashboardRequests =
     useMemo(
       () =>
         leaveRequests
           .filter(
-            (request) =>
+            (
+              request,
+            ) =>
               normalizeStatus(
                 request.status,
-              ) !== 'draft',
-          )
-          .slice(0, 5),
-      [leaveRequests],
+              ) !==
+              'draft',
+          ),
+      [
+        leaveRequests,
+      ],
     );
+
+  const recentRequests = useMemo(
+    () => dashboardRequests.slice(requestPage * 5, requestPage * 5 + 5),
+    [dashboardRequests, requestPage],
+  );
 
   const recentNotifications =
     useMemo(
@@ -684,17 +988,23 @@ function EmployeeDashboardPage() {
           0,
           4,
         ),
-      [notifications],
+      [
+        notifications,
+      ],
     );
 
   const unreadNotificationCount =
     useMemo(
       () =>
         notifications.filter(
-          (notification) =>
+          (
+            notification,
+          ) =>
             !notification.isRead,
         ).length,
-      [notifications],
+      [
+        notifications,
+      ],
     );
 
   const handleOpenRequest = (
@@ -702,6 +1012,7 @@ function EmployeeDashboardPage() {
   ) => {
     navigate(
       `/employee/my-requests/${requestId}`,
+      { state: { returnTo: '/employee/dashboard', returnLabel: 'แดชบอร์ด' } },
     );
   };
 
@@ -721,37 +1032,15 @@ function EmployeeDashboardPage() {
     navigate(
       notification.path ||
         '/employee/notification',
+      { state: { returnTo: '/employee/dashboard', returnLabel: 'แดชบอร์ด' } },
     );
   };
 
   return (
     <EmployeeLayout
       activeMenu="Dashboard"
+      calibrated
     >
-      <Typography
-        component="h1"
-        sx={{
-          color:
-            '#111827',
-
-          fontSize: {
-            xs:
-              '26px',
-
-            sm:
-              '30px',
-          },
-
-          fontWeight:
-            800,
-
-          marginBottom:
-            '28px',
-        }}
-      >
-        Dashboard
-      </Typography>
-
       <Box
         sx={{
           display:
@@ -764,209 +1053,26 @@ function EmployeeDashboardPage() {
             sm:
               'repeat(2, minmax(0, 1fr))',
 
-            xl:
+            md:
               'repeat(4, minmax(0, 1fr))',
           },
-
-          gap:
-            '20px',
-
-          marginBottom:
-            '28px',
+          gap: '16px',
+          marginBottom: '16px',
         }}
       >
-        {summaryCards.map(
-          (card) => {
-            const CardIcon =
-              card.Icon;
-
-            return (
-              <Paper
-                key={
-                  card.title
-                }
-                elevation={0}
-                sx={{
-                  minHeight:
-                    '168px',
-
-                  padding:
-                    '22px',
-
-                  position:
-                    'relative',
-
-                  backgroundColor:
-                    card.backgroundColor,
-
-                  border:
-                    `1px solid ${card.borderColor}`,
-
-                  borderRadius:
-                    '14px',
-
-                  overflow:
-                    'hidden',
-
-                  transition:
-                    'transform 0.2s ease, box-shadow 0.2s ease',
-
-                  '&:hover': {
-                    transform:
-                      'translateY(-2px)',
-
-                    boxShadow:
-                      `0 12px 26px ${card.accentColor}18`,
-                  },
-
-                  '&::after': {
-                    content:
-                      '""',
-
-                    width:
-                      '86px',
-
-                    height:
-                      '86px',
-
-                    position:
-                      'absolute',
-
-                    right:
-                      '-22px',
-
-                    bottom:
-                      '-28px',
-
-                    backgroundColor:
-                      card.accentColor,
-
-                    borderRadius:
-                      '50%',
-
-                    opacity:
-                      0.08,
-                  },
-                }}
-              >
-                <Box
-                  sx={{
-                    display:
-                      'flex',
-
-                    alignItems:
-                      'center',
-
-                    justifyContent:
-                      'space-between',
-
-                    gap:
-                      '12px',
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      color:
-                        '#475569',
-
-                      fontSize:
-                        '14px',
-
-                      fontWeight:
-                        700,
-                    }}
-                  >
-                    {card.title}
-                  </Typography>
-
-                  <Box
-                    sx={{
-                      width:
-                        '42px',
-
-                      height:
-                        '42px',
-
-                      flexShrink:
-                        0,
-
-                      display:
-                        'flex',
-
-                      alignItems:
-                        'center',
-
-                      justifyContent:
-                        'center',
-
-                      backgroundColor:
-                        '#FFFFFF',
-
-                      color:
-                        card.accentColor,
-
-                      border:
-                        `1px solid ${card.borderColor}`,
-
-                      borderRadius:
-                        '12px',
-
-                      boxShadow:
-                        '0 6px 16px rgba(15, 23, 42, 0.05)',
-                    }}
-                  >
-                    <CardIcon
-                      sx={{
-                        fontSize:
-                          '22px',
-                      }}
-                    />
-                  </Box>
-                </Box>
-
-                <Typography
-                  sx={{
-                    color:
-                      '#0F172A',
-
-                    fontSize:
-                      '30px',
-
-                    fontWeight:
-                      800,
-
-                    lineHeight:
-                      1.15,
-
-                    marginTop:
-                      '16px',
-                  }}
-                >
-                  {card.value}
-                </Typography>
-
-                <Typography
-                  sx={{
-                    color:
-                      card.accentColor,
-
-                    fontSize:
-                      '13px',
-
-                    fontWeight:
-                      600,
-
-                    marginTop:
-                      '7px',
-                  }}
-                >
-                  {card.description}
-                </Typography>
-              </Paper>
-            );
-          },
-        )}
+        {summaryCards.map((card) => (
+          <CompactSummaryCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            color={card.valueColor}
+            background={card.background}
+            glowColor={card.glowColor}
+          />
+        ))}
       </Box>
+
+      <DashboardLeaveBalance />
 
       <Paper
         elevation={0}
@@ -978,7 +1084,7 @@ function EmployeeDashboardPage() {
             '1px solid #E5E7EB',
 
           borderRadius:
-            '12px',
+            '14px',
 
           overflow:
             'hidden',
@@ -1018,7 +1124,7 @@ function EmployeeDashboardPage() {
             },
 
             gap:
-              '16px',
+              '14px',
           }}
         >
           <Box>
@@ -1031,25 +1137,10 @@ function EmployeeDashboardPage() {
                   '18px',
 
                 fontWeight:
-                  800,
+                  600,
               }}
             >
-              Recent Leave Requests
-            </Typography>
-
-            <Typography
-              sx={{
-                color:
-                  '#6B7280',
-
-                fontSize:
-                  '14px',
-
-                marginTop:
-                  '4px',
-              }}
-            >
-              Your latest submitted leave requests
+              คำขอล่าสุด
             </Typography>
           </Box>
 
@@ -1074,86 +1165,49 @@ function EmployeeDashboardPage() {
                 )
               }
               sx={{
+                display: 'none',
                 height:
-                  '42px',
+                  '40px',
 
                 padding:
-                  '0 18px',
+                  '0 16px',
 
                 color:
                   '#2563EB',
 
                 borderColor:
-                  '#2563EB',
+                  '#BFDBFE',
 
                 borderRadius:
-                  '8px',
+                  '9px',
 
                 fontSize:
-                  '14px',
+                  '13px',
 
                 fontWeight:
                   700,
 
                 textTransform:
-                  'none',
-              }}
-            >
-              View All
-            </Button>
-
-            <Button
-              type="button"
-              variant="contained"
-              onClick={() =>
-                navigate(
-                  '/employee/leave-request',
-                )
-              }
-              sx={{
-                height:
-                  '42px',
-
-                padding:
-                  '0 18px',
-
-                backgroundColor:
-                  '#2563EB',
-
-                color:
-                  '#FFFFFF',
-
-                borderRadius:
-                  '8px',
-
-                fontSize:
-                  '14px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
-
-                boxShadow:
                   'none',
 
                 '&:hover': {
                   backgroundColor:
-                    '#1D4ED8',
+                    '#EFF6FF',
 
-                  boxShadow:
-                    'none',
+                  borderColor:
+                    '#2563EB',
                 },
               }}
             >
-              New Leave Request
+              ดูทั้งหมด
             </Button>
+
           </Box>
         </Box>
 
         {recentRequests.length >
         0 ? (
+          <>
           <Box
             sx={{
               overflowX:
@@ -1163,7 +1217,7 @@ function EmployeeDashboardPage() {
             <Box
               sx={{
                 minWidth:
-                  '800px',
+                  '850px',
               }}
             >
               <Box
@@ -1172,73 +1226,90 @@ function EmployeeDashboardPage() {
                     'grid',
 
                   gridTemplateColumns:
-                    '1.1fr 1.2fr 2fr 1fr 1fr 0.8fr',
+                    '1.2fr 1.1fr 2fr 0.9fr 1fr',
 
                   padding:
-                    '14px 24px',
+                    '13px 24px',
 
                   backgroundColor:
-                    '#F9FAFB',
+                    '#F8FAFC',
 
                   borderBottom:
                     '1px solid #E5E7EB',
                 }}
               >
                 {[
-                  'Request ID',
-                  'Leave Type',
-                  'Date',
-                  'Total',
-                  'Status',
-                  'Action',
+                  'เลขที่คำขอ',
+                  'ประเภทการลา',
+                  'ช่วงวันที่',
+                  'จำนวนวัน',
+                  'สถานะ',
                 ].map(
-                  (heading) => (
+                  (
+                    heading,
+                  ) => (
                     <Typography
                       key={
                         heading
                       }
                       sx={{
                         color:
-                          '#6B7280',
+                          '#64748B',
 
                         fontSize:
-                          '13px',
+                          '12px',
 
                         fontWeight:
                           700,
                       }}
                     >
-                      {heading}
+                      {
+                        heading
+                      }
                     </Typography>
                   ),
                 )}
               </Box>
 
               {recentRequests.map(
-                (request) => {
+                (
+                  request,
+                ) => {
                   const status =
-                    request.statusLabel;
+                    normalizeStatus(
+                      request.status,
+                    );
 
                   return (
                     <Box
                       key={
                         request.id
                       }
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleOpenRequest(request.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          handleOpenRequest(request.id);
+                        }
+                      }}
                       sx={{
+                        cursor: 'pointer',
                         display:
                           'grid',
 
                         gridTemplateColumns:
-                          '1.1fr 1.2fr 2fr 1fr 1fr 0.8fr',
+                          '1.2fr 1.1fr 2fr 0.9fr 1fr',
 
                         alignItems:
                           'center',
 
                         padding:
-                          '16px 24px',
+                          '15px 24px',
 
                         borderBottom:
-                          '1px solid #E5E7EB',
+                          '1px solid #EEF0F3',
 
                         '&:last-child':
                           {
@@ -1246,9 +1317,14 @@ function EmployeeDashboardPage() {
                               0,
                           },
 
-                        '&:hover': {
-                          backgroundColor:
-                            '#F9FAFB',
+                        '&:hover':
+                          {
+                            backgroundColor:
+                              '#FAFBFD',
+                          },
+                        '&:focus-visible': {
+                          outline: '2px solid #2563EB',
+                          outlineOffset: -2,
                         },
                       }}
                     >
@@ -1258,14 +1334,18 @@ function EmployeeDashboardPage() {
                             '#2563EB',
 
                           fontSize:
-                            '14px',
+                            '13px',
 
                           fontWeight:
                             700,
+
+                          whiteSpace:
+                            'nowrap',
                         }}
                       >
-                        {request.requestNo ||
-                          `#${request.id}`}
+                        <RequestNumberText>
+                          {request.requestNo || `#${request.id}`}
+                        </RequestNumberText>
                       </Typography>
 
                       <Typography
@@ -1274,20 +1354,27 @@ function EmployeeDashboardPage() {
                             '#111827',
 
                           fontSize:
-                            '14px',
+                            '13px',
+
+                          fontWeight:
+                            600,
                         }}
                       >
-                        {request.leaveType ||
-                          '-'}
+                        {getLeaveTypeLabel(
+                          request.leaveType,
+                        )}
                       </Typography>
 
                       <Typography
                         sx={{
                           color:
-                            '#374151',
+                            '#4B5563',
 
                           fontSize:
-                            '14px',
+                            '12px',
+
+                          whiteSpace:
+                            'nowrap',
                         }}
                       >
                         {formatDateRange(
@@ -1302,23 +1389,24 @@ function EmployeeDashboardPage() {
                             '#374151',
 
                           fontSize:
-                            '14px',
+                            '13px',
+
+                          fontWeight:
+                            600,
                         }}
                       >
-                        {toNumber(
+                        {formatDays(
                           request.leaveDays,
                         )}{' '}
-                        {toNumber(
-                          request.leaveDays,
-                        ) === 1
-                          ? 'Day'
-                          : 'Days'}
+                        วัน
                       </Typography>
 
                       <Box>
                         <Chip
                           label={
-                            status
+                            getStatusLabel(
+                              status,
+                            )
                           }
                           size="small"
                           sx={{
@@ -1327,13 +1415,16 @@ function EmployeeDashboardPage() {
                             ),
 
                             minWidth:
-                              '82px',
+                              '86px',
+
+                            height:
+                              '28px',
 
                             borderRadius:
                               '999px',
 
                             fontSize:
-                              '12px',
+                              '11px',
 
                             fontWeight:
                               700,
@@ -1341,60 +1432,26 @@ function EmployeeDashboardPage() {
                         />
                       </Box>
 
-                      <Button
-                        type="button"
-                        onClick={() =>
-                          handleOpenRequest(
-                            request.id,
-                          )
-                        }
-                        sx={{
-                          width:
-                            'fit-content',
-
-                          minWidth:
-                            0,
-
-                          padding:
-                            0,
-
-                          color:
-                            '#2563EB',
-
-                          fontSize:
-                            '14px',
-
-                          fontWeight:
-                            700,
-
-                          textTransform:
-                            'none',
-
-                          '&:hover': {
-                            backgroundColor:
-                              'transparent',
-
-                            textDecoration:
-                              'underline',
-                          },
-                        }}
-                      >
-                        View
-                      </Button>
                     </Box>
                   );
                 },
               )}
             </Box>
           </Box>
+          <DashboardTablePagination
+            count={dashboardRequests.length}
+            page={requestPage}
+            onPageChange={(_, nextPage) => setRequestPage(nextPage)}
+          />
+          </>
         ) : (
           <Box
             sx={{
               minHeight:
-                '220px',
+                '210px',
 
               padding:
-                '36px 24px',
+                '34px 24px',
 
               display:
                 'flex',
@@ -1415,10 +1472,10 @@ function EmployeeDashboardPage() {
             <Box
               sx={{
                 width:
-                  '58px',
+                  '56px',
 
                 height:
-                  '58px',
+                  '56px',
 
                 display:
                   'flex',
@@ -1439,7 +1496,7 @@ function EmployeeDashboardPage() {
                   '50%',
 
                 fontSize:
-                  '22px',
+                  '20px',
 
                 fontWeight:
                   800,
@@ -1463,7 +1520,7 @@ function EmployeeDashboardPage() {
                   '14px',
               }}
             >
-              No leave requests yet
+              ยังไม่มีคำขอลา
             </Typography>
 
             <Typography
@@ -1472,24 +1529,27 @@ function EmployeeDashboardPage() {
                   '#6B7280',
 
                 fontSize:
-                  '14px',
+                  '13px',
 
                 marginTop:
                   '5px',
               }}
             >
-              Create your first leave request to get started.
+              คำขอลาที่ส่งแล้วจะแสดงที่นี่
             </Typography>
 
             <Button
               type="button"
               variant="contained"
+              startIcon={<AddRoundedIcon sx={{ fontSize: 19 }} />}
               onClick={() =>
                 navigate(
                   '/employee/leave-request',
+                  { state: { returnTo: '/employee/dashboard' } },
                 )
               }
               sx={{
+                display: 'none',
                 height:
                   '40px',
 
@@ -1506,10 +1566,10 @@ function EmployeeDashboardPage() {
                   '#FFFFFF',
 
                 borderRadius:
-                  '8px',
+                  '9px',
 
                 fontSize:
-                  '14px',
+                  '13px',
 
                 fontWeight:
                   700,
@@ -1519,9 +1579,17 @@ function EmployeeDashboardPage() {
 
                 boxShadow:
                   'none',
+
+                '&:hover': {
+                  backgroundColor:
+                    '#1D4ED8',
+
+                  boxShadow:
+                    'none',
+                },
               }}
             >
-              New Leave Request
+              สร้างคำขอลา
             </Button>
           </Box>
         )}
@@ -1537,10 +1605,13 @@ function EmployeeDashboardPage() {
             '1px solid #E5E7EB',
 
           borderRadius:
-            '12px',
+            '14px',
 
           overflow:
             'hidden',
+
+          display:
+            'none',
         }}
       >
         <Box
@@ -1602,16 +1673,16 @@ function EmployeeDashboardPage() {
                     '18px',
 
                   fontWeight:
-                    800,
+                    600,
                 }}
               >
-                Recent Notifications
+                การแจ้งเตือนล่าสุด
               </Typography>
 
               {unreadNotificationCount >
                 0 && (
                 <Chip
-                  label={`${unreadNotificationCount} unread`}
+                  label={`ยังไม่ได้อ่าน ${unreadNotificationCount} รายการ`}
                   size="small"
                   sx={{
                     backgroundColor:
@@ -1624,7 +1695,7 @@ function EmployeeDashboardPage() {
                       '999px',
 
                     fontSize:
-                      '11px',
+                      '10px',
 
                     fontWeight:
                       700,
@@ -1639,13 +1710,13 @@ function EmployeeDashboardPage() {
                   '#6B7280',
 
                 fontSize:
-                  '14px',
+                  '13px',
 
                 marginTop:
-                  '4px',
+                  '3px',
               }}
             >
-              Updates related to your leave requests
+              อัปเดตเกี่ยวกับคำขอลาของคุณ
             </Typography>
           </Box>
 
@@ -1668,10 +1739,10 @@ function EmployeeDashboardPage() {
                 '#2563EB',
 
               borderColor:
-                '#2563EB',
+                '#BFDBFE',
 
               borderRadius:
-                '8px',
+                '9px',
 
               fontSize:
                 '13px',
@@ -1681,9 +1752,17 @@ function EmployeeDashboardPage() {
 
               textTransform:
                 'none',
+
+              '&:hover': {
+                backgroundColor:
+                  '#EFF6FF',
+
+                borderColor:
+                  '#2563EB',
+              },
             }}
           >
-            View All
+            ดูทั้งหมด
           </Button>
         </Box>
 
@@ -1706,7 +1785,7 @@ function EmployeeDashboardPage() {
                   }
                   sx={{
                     padding:
-                      '18px 24px',
+                      '17px 24px',
 
                     display:
                       'flex',
@@ -1737,27 +1816,28 @@ function EmployeeDashboardPage() {
                         ? 'none'
                         : '1px solid #E5E7EB',
 
-                    '&:hover': {
-                      backgroundColor:
-                        notification.isRead
-                          ? '#F9FAFB'
-                          : '#DBEAFE',
-                    },
+                    '&:hover':
+                      {
+                        backgroundColor:
+                          notification.isRead
+                            ? '#F9FAFB'
+                            : '#DBEAFE',
+                      },
                   }}
                 >
                   <Box
                     sx={{
                       width:
-                        '10px',
+                        '9px',
 
                       height:
-                        '10px',
+                        '9px',
 
                       flexShrink:
                         0,
 
                       marginTop:
-                        '6px',
+                        '7px',
 
                       backgroundColor:
                         notification.isRead
@@ -1792,8 +1872,9 @@ function EmployeeDashboardPage() {
                             : 800,
                       }}
                     >
-                      {notification.title ||
-                        'Notification'}
+                      <RequestNumberText>
+                        {formatNotificationTitle(notification.title)}
+                      </RequestNumberText>
                     </Typography>
 
                     <Typography
@@ -1808,11 +1889,12 @@ function EmployeeDashboardPage() {
                           1.6,
 
                         marginTop:
-                          '5px',
+                          '4px',
                       }}
                     >
-                      {notification.message ||
-                        '-'}
+                      <RequestNumberText>
+                        {formatNotificationMessage(notification.message)}
+                      </RequestNumberText>
                     </Typography>
 
                     <Typography
@@ -1835,7 +1917,7 @@ function EmployeeDashboardPage() {
 
                   {!notification.isRead && (
                     <Chip
-                      label="New"
+                      label="ใหม่"
                       size="small"
                       sx={{
                         flexShrink:
@@ -1866,10 +1948,10 @@ function EmployeeDashboardPage() {
           <Box
             sx={{
               minHeight:
-                '180px',
+                '170px',
 
               padding:
-                '32px 24px',
+                '30px 24px',
 
               display:
                 'flex',
@@ -1938,7 +2020,7 @@ function EmployeeDashboardPage() {
                   '12px',
               }}
             >
-              No notifications
+              ยังไม่มีการแจ้งเตือน
             </Typography>
 
             <Typography
@@ -1953,7 +2035,7 @@ function EmployeeDashboardPage() {
                   '4px',
               }}
             >
-              New leave updates will appear here.
+              การอัปเดตเกี่ยวกับคำขอลาจะแสดงที่นี่
             </Typography>
           </Box>
         )}

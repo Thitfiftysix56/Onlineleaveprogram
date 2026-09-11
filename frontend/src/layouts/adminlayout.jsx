@@ -1,4 +1,5 @@
 import RoleLayout from '../components/rolelayout.jsx';
+import { PageContainer } from '../components/sharedvisualfoundation.jsx';
 
 function AdminLayout({
   children,
@@ -6,32 +7,22 @@ function AdminLayout({
 }) {
   const adminMenuItems = [
     'Dashboard',
-    'Leave Request',
     'My Requests',
-    'Leave Balance',
     'User Management',
     'Department Management',
     'Position Management',
     'Audit Log',
-    'Notification',
-    'Profile',
+    'Edit Personal Information',
     'Change Password',
     'Logout',
   ];
-
-  const adminTheme = {
-    primary: '#EA580C',
-    dark: '#C2410C',
-    soft: '#FFF7ED',
-  };
 
   return (
     <RoleLayout
       activeMenu={activeMenu}
       menuItems={adminMenuItems}
-      theme={adminTheme}
     >
-      {children}
+      <PageContainer>{children}</PageContainer>
     </RoleLayout>
   );
 }

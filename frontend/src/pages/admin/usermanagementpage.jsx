@@ -15,29 +15,31 @@ import {
   DialogTitle,
   FormControl,
   InputLabel,
+  Menu,
   MenuItem,
   Paper,
   Select,
   Table,
-  TableBody,
   TableCell,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
 } from '@mui/material';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
 
-import {
-  useNavigate,
-} from 'react-router-dom';
 
 import AdminLayout from '../../layouts/adminlayout.jsx';
 import api from '../../api/axios.js';
 import TemporaryPasswordDialog from '../../components/temporarypassworddialog.jsx';
+import UserFormPage from './userformpage.jsx';
+import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
+import { InlineListSummary } from '../../components/sharedvisualfoundation.jsx';
 
-import {
-  updateAuthUserRole,
-} from '../../utils/authstorage.js';
+/* =========================
+   Options
+========================= */
 
 const roleOptions = [
   'Employee',
@@ -51,6 +53,10 @@ const statusOptions = [
   'Inactive',
   'Locked',
 ];
+
+/* =========================
+   Helpers
+========================= */
 
 const normalizeValue = (value) =>
   String(value || '')
@@ -68,8 +74,22 @@ const formatRole = (role) => {
   return (
     roleLabels[
       normalizeValue(role)
-    ] ||
-    'Employee'
+    ] || 'Employee'
+  );
+};
+
+const translateRole = (role) => {
+  const roleLabels = {
+    Employee: 'พนักงาน',
+    Supervisor: 'หัวหน้างาน',
+    HR: 'HR',
+    Admin: 'ผู้ดูแลระบบ',
+  };
+
+  return (
+    roleLabels[role] ||
+    role ||
+    '-'
   );
 };
 
@@ -105,13 +125,31 @@ const formatStatus = (status) => {
   return 'Active';
 };
 
+const translateStatus = (status) => {
+  const statusLabels = {
+    Active: 'ใช้งานอยู่',
+    Inactive: 'ไม่ใช้งาน',
+    Locked: 'ถูกล็อก',
+  };
+
+  return (
+    statusLabels[status] ||
+    status ||
+    '-'
+  );
+};
+
+/* =========================
+   Date
+========================= */
+
 const formatDateTime = (value) => {
   if (
     !value ||
     normalizeValue(value) ===
       'never'
   ) {
-    return 'Never';
+    return 'ยังไม่เคยเข้าสู่ระบบ';
   }
 
   const date =
@@ -125,45 +163,64 @@ const formatDateTime = (value) => {
     return String(value);
   }
 
-  return date.toLocaleString(
-    'en-GB',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    },
-  );
+  const pad = (number) =>
+    String(number).padStart(
+      2,
+      '0',
+    );
+
+  return `${pad(
+    date.getDate(),
+  )}/${pad(
+    date.getMonth() + 1,
+  )}/${date.getFullYear()} ${pad(
+    date.getHours(),
+  )}:${pad(
+    date.getMinutes(),
+  )}`;
 };
+
+/* =========================
+   Styles
+========================= */
 
 const getRoleStyle = (role) => {
   const roleStyles = {
     Employee: {
-      backgroundColor: '#EFF6FF',
-      color: '#1D4ED8',
+      backgroundColor:
+        '#EFF6FF',
+      color:
+        '#1D4ED8',
     },
 
     Supervisor: {
-      backgroundColor: '#F5F3FF',
-      color: '#6D28D9',
+      backgroundColor:
+        '#F5F3FF',
+      color:
+        '#6D28D9',
     },
 
     HR: {
-      backgroundColor: '#ECFDF5',
-      color: '#047857',
+      backgroundColor:
+        '#ECFDF5',
+      color:
+        '#047857',
     },
 
     Admin: {
-      backgroundColor: '#FFF7ED',
-      color: '#C2410C',
+      backgroundColor:
+        '#FFF7ED',
+      color:
+        '#C2410C',
     },
   };
 
   return (
     roleStyles[role] || {
-      backgroundColor: '#F3F4F6',
-      color: '#4B5563',
+      backgroundColor:
+        '#F3F4F6',
+      color:
+        '#4B5563',
     }
   );
 };
@@ -173,33 +230,42 @@ const getStatusStyle = (
 ) => {
   const statusStyles = {
     Active: {
-      backgroundColor: '#DCFCE7',
-      color: '#15803D',
+      backgroundColor:
+        '#DCFCE7',
+      color:
+        '#15803D',
     },
 
     Inactive: {
-      backgroundColor: '#FEF3C7',
-      color: '#B45309',
+      backgroundColor:
+        '#FEF3C7',
+      color:
+        '#B45309',
     },
 
     Locked: {
-      backgroundColor: '#FEE2E2',
-      color: '#B91C1C',
+      backgroundColor:
+        '#FEE2E2',
+      color:
+        '#B91C1C',
     },
   };
 
   return (
     statusStyles[status] || {
-      backgroundColor: '#F3F4F6',
-      color: '#4B5563',
+      backgroundColor:
+        '#F3F4F6',
+      color:
+        '#4B5563',
     }
   );
 };
 
-function UserManagementPage() {
-  const navigate =
-    useNavigate();
+/* =========================
+   Component
+========================= */
 
+function UserManagementPage({ initialFormMode, initialUserId }) {
   const [
     users,
     setUsers,
@@ -216,11 +282,6 @@ function UserManagementPage() {
   ] = useState('');
 
   const [
-    updatingStatusUserId,
-    setUpdatingStatusUserId,
-  ] = useState(null);
-
-  const [
     resettingPasswordUserId,
     setResettingPasswordUserId,
   ] = useState(null);
@@ -228,6 +289,16 @@ function UserManagementPage() {
   const [
     resetConfirmationUser,
     setResetConfirmationUser,
+  ] = useState(null);
+
+  const [
+    deletingUserId,
+    setDeletingUserId,
+  ] = useState(null);
+
+  const [
+    deleteConfirmationUser,
+    setDeleteConfirmationUser,
   ] = useState(null);
 
   const [
@@ -250,6 +321,14 @@ function UserManagementPage() {
     setStatusFilter,
   ] = useState('All');
 
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 5;
+  const [formDialog, setFormDialog] = useState({
+    open: Boolean(initialFormMode),
+    mode: initialFormMode || 'add',
+    userId: initialUserId ? String(initialUserId) : '',
+  });
+
   const [
     actionMessage,
     setActionMessage,
@@ -259,6 +338,20 @@ function UserManagementPage() {
     actionSeverity,
     setActionSeverity,
   ] = useState('info');
+
+  const [
+    actionMenuAnchor,
+    setActionMenuAnchor,
+  ] = useState(null);
+
+  const [
+    actionMenuUser,
+    setActionMenuUser,
+  ] = useState(null);
+
+  /* =========================
+     Message
+  ========================= */
 
   const showMessage = (
     message,
@@ -278,6 +371,10 @@ function UserManagementPage() {
     });
   };
 
+  /* =========================
+     Load Users
+  ========================= */
+
   const loadUsers = async () => {
     setIsLoadingUsers(true);
     setLoadError('');
@@ -287,6 +384,7 @@ function UserManagementPage() {
         await api.get(
           '/admin/users',
         );
+
       const responseUsers =
         response.data?.users;
 
@@ -299,41 +397,56 @@ function UserManagementPage() {
       ) {
         throw new Error(
           response.data?.message ||
-            'Unable to load user accounts.',
+            'ไม่สามารถโหลดข้อมูลผู้ใช้งานได้',
         );
       }
 
       setUsers(
         responseUsers.map(
           (user) => ({
-            id: user.userId,
+            id:
+              user.userId,
+
             employeeId:
               user.employeeId,
+
             employeeCode:
               user.employeeCode ||
-              'Not specified',
+              'ไม่ระบุ',
+
             username:
-              user.username || '',
+              user.username ||
+              '',
+
             employeeName:
               user.fullName ||
-              'Not specified',
+              'ไม่ระบุ',
+
             email:
               user.email ||
-              'Not specified',
-            roleId: user.roleId,
-            role: formatRole(
-              user.roleName,
-            ),
+              'ไม่ระบุ',
+
+            roleId:
+              user.roleId,
+
+            role:
+              formatRole(
+                user.roleName,
+              ),
+
             status:
               formatStatus(
                 user.status,
               ),
+
             lastLogin:
               formatDateTime(
                 user.lastLoginAt,
               ),
+
             createdAt:
               user.createdAt,
+
             updatedAt:
               user.updatedAt,
           }),
@@ -344,12 +457,14 @@ function UserManagementPage() {
         'Unable to load user accounts.',
         error,
       );
+
       setUsers([]);
+
       setLoadError(
         error.response?.data
           ?.message ||
           error.message ||
-          'Unable to load user accounts.',
+          'ไม่สามารถโหลดข้อมูลผู้ใช้งานได้',
       );
     } finally {
       setIsLoadingUsers(false);
@@ -359,6 +474,10 @@ function UserManagementPage() {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  /* =========================
+     Filter
+  ========================= */
 
   const filteredUsers =
     useMemo(() => {
@@ -390,7 +509,17 @@ function UserManagementPage() {
               user.email,
             ).includes(
               keyword,
-            );
+            ) ||
+            normalizeValue(
+              translateRole(
+                user.role,
+              ),
+            ).includes(keyword) ||
+            normalizeValue(
+              translateStatus(
+                user.status,
+              ),
+            ).includes(keyword);
 
           const matchesRole =
             roleFilter ===
@@ -417,6 +546,19 @@ function UserManagementPage() {
       roleFilter,
       statusFilter,
     ]);
+
+  const paginatedUsers = useMemo(
+    () => filteredUsers.slice(page * rowsPerPage, (page + 1) * rowsPerPage),
+    [filteredUsers, page],
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [searchText, roleFilter, statusFilter]);
+
+  /* =========================
+     Summary
+  ========================= */
 
   const userSummary =
     useMemo(
@@ -448,6 +590,56 @@ function UserManagementPage() {
       [users],
     );
 
+  const summaryCards = [
+    {
+      title:
+        'ผู้ใช้งานทั้งหมด',
+
+      value:
+        userSummary.total,
+
+      color:
+        '#2563EB',
+    },
+
+    {
+      title:
+        'ใช้งานอยู่',
+
+      value:
+        userSummary.active,
+
+      color:
+        '#059669',
+    },
+
+    {
+      title:
+        'ไม่ใช้งาน',
+
+      value:
+        userSummary.inactive,
+
+      color:
+        '#64748B',
+    },
+
+    {
+      title:
+        'ถูกล็อก',
+
+      value:
+        userSummary.locked,
+
+      color:
+        '#DC2626',
+    },
+  ];
+
+  /* =========================
+     Filter Actions
+  ========================= */
+
   const handleClearFilters =
     () => {
       setSearchText('');
@@ -455,275 +647,285 @@ function UserManagementPage() {
       setStatusFilter('All');
     };
 
-  const handleRoleChange = (
-    selectedUser,
-    nextRole,
-  ) => {
-    const result =
-      updateAuthUserRole({
-        userId:
-          selectedUser.id,
+  /* =========================
+     Action Menu
+  ========================= */
 
-        username:
-          selectedUser.username,
-
-        role:
-          normalizeValue(
-            nextRole,
-          ),
-      });
-
-    if (!result.success) {
-      showMessage(
-        result.error ||
-          'Unable to update the user role.',
-        'error',
+  const handleCloseActionMenu =
+    () => {
+      setActionMenuAnchor(
+        null,
       );
 
+      setActionMenuUser(
+        null,
+      );
+    };
+
+  const handleEditFromMenu = () => {
+    if (!actionMenuUser) {
       return;
     }
 
-    loadUsers();
+    const userId =
+      actionMenuUser.id;
 
-    showMessage(
-      `${selectedUser.username} role was changed to ${nextRole}.`,
-      'success',
-    );
+    handleCloseActionMenu();
+
+    setFormDialog({ open: true, mode: 'edit', userId: String(userId) });
   };
 
-  const handleStatusChange = async (
-    selectedUser,
-    nextStatus,
-  ) => {
-    setUpdatingStatusUserId(
-      selectedUser.id,
-    );
-    setActionMessage('');
-
-    try {
-      const response =
-        await api.patch(
-          `/admin/users/${selectedUser.id}/status`,
-          {
-            status: nextStatus,
-          },
-        );
-
-      if (
-        response.data?.status !==
-        'ok'
-      ) {
-        throw new Error(
-          response.data?.message ||
-            'Unable to update the account status.',
-        );
-      }
-
-      await loadUsers();
-
-      showMessage(
-        response.data?.message ||
-          `${selectedUser.username} status was changed to ${nextStatus}.`,
-        'success',
-      );
-    } catch (error) {
-      showMessage(
-        error.response?.data
-          ?.message ||
-          error.message ||
-          'Unable to update the account status.',
-        'error',
-      );
-    } finally {
-      setUpdatingStatusUserId(
-        null,
-      );
+  const handleResetFromMenu = () => {
+    if (!actionMenuUser) {
+      return;
     }
+
+    const selectedUser =
+      actionMenuUser;
+
+    handleCloseActionMenu();
+
+    handleOpenResetConfirmation(
+      selectedUser,
+    );
   };
+
+  /* =========================
+     Reset Password
+  ========================= */
 
   const handleOpenResetConfirmation = (
     selectedUser,
   ) => {
-    if (resettingPasswordUserId !== null) return;
+    if (
+      resettingPasswordUserId !==
+      null
+    ) {
+      return;
+    }
 
     setActionMessage('');
-    setResetConfirmationUser(selectedUser);
+
+    setResetConfirmationUser(
+      selectedUser,
+    );
   };
 
-  const handleResetPassword = async () => {
-    const selectedUser = resetConfirmationUser;
-
-    if (
-      !selectedUser ||
-      resettingPasswordUserId !== null
-    ) return;
-
-    setResettingPasswordUserId(
-      selectedUser.id,
-    );
-
-    try {
-      const response = await api.post(
-        `/admin/users/${selectedUser.id}/reset-password`,
-      );
+  const handleResetPassword =
+    async () => {
+      const selectedUser =
+        resetConfirmationUser;
 
       if (
-        response.data?.status !==
-          'ok' ||
-        !response.data
-          ?.temporaryPassword
+        !selectedUser ||
+        resettingPasswordUserId !==
+          null
       ) {
-        throw new Error(
-          response.data?.message ||
-            'Password reset response did not include a temporary password.',
-        );
+        return;
       }
 
-      setResetConfirmationUser(null);
-      setTemporaryPasswordResult({
-        username:
-          response.data.username ||
-          selectedUser.username,
-        temporaryPassword:
-          response.data.temporaryPassword,
-      });
-
-      showMessage(
-        response.data?.message ||
-          'Password reset successfully.',
-        'success',
+      setResettingPasswordUserId(
+        selectedUser.id,
       );
+
+      try {
+        const response =
+          await api.post(
+            `/admin/users/${selectedUser.id}/reset-password`,
+          );
+
+        if (
+          response.data?.status !==
+            'ok' ||
+          !response.data
+            ?.temporaryPassword
+        ) {
+          throw new Error(
+            response.data?.message ||
+              'ระบบไม่ได้ส่งรหัสผ่านชั่วคราวกลับมา',
+          );
+        }
+
+        setResetConfirmationUser(
+          null,
+        );
+
+        setTemporaryPasswordResult({
+          username:
+            response.data
+              .username ||
+            selectedUser.username,
+
+          temporaryPassword:
+            response.data
+              .temporaryPassword,
+        });
+
+        showMessage(
+          'รีเซ็ตรหัสผ่านสำเร็จแล้ว',
+          'success',
+        );
+      } catch (error) {
+        showMessage(
+          error.response?.data
+            ?.message ||
+            error.message ||
+            'ไม่สามารถรีเซ็ตรหัสผ่านได้',
+          'error',
+        );
+      } finally {
+        setResettingPasswordUserId(
+          null,
+        );
+      }
+    };
+
+  const handleCloseTemporaryPassword =
+    () => {
+      setTemporaryPasswordResult(
+        null,
+      );
+    };
+
+  const handleDeleteUser = async () => {
+    const selectedUser = deleteConfirmationUser;
+    if (!selectedUser || deletingUserId !== null) return;
+
+    setDeletingUserId(selectedUser.id);
+    try {
+      const response = await api.delete(`/admin/users/${selectedUser.id}`);
+      if (response.data?.status !== 'ok') {
+        throw new Error(response.data?.message || 'ไม่สามารถลบบัญชีผู้ใช้ได้');
+      }
+      setDeleteConfirmationUser(null);
+      showMessage('ลบบัญชีผู้ใช้เรียบร้อยแล้ว', 'success');
+      await loadUsers();
     } catch (error) {
       showMessage(
-        error.response?.data
-          ?.message ||
-          error.message ||
-          'Unable to reset the password.',
+        error.response?.data?.message || error.message || 'ไม่สามารถลบบัญชีผู้ใช้ได้',
         'error',
       );
     } finally {
-      setResettingPasswordUserId(
-        null,
-      );
+      setDeletingUserId(null);
     }
   };
 
-  const handleCloseTemporaryPassword = () => {
-    setTemporaryPasswordResult(null);
-  };
-
-  const summaryCards = [
-    {
-      title: 'Total Users',
-      value: userSummary.total,
-      color: '#EA580C',
-      backgroundColor: '#FFF7ED',
-    },
-
-    {
-      title: 'Active Users',
-      value: userSummary.active,
-      color: '#059669',
-      backgroundColor: '#ECFDF5',
-    },
-
-    {
-      title: 'Inactive Users',
-      value: userSummary.inactive,
-      color: '#D97706',
-      backgroundColor: '#FFFBEB',
-    },
-
-    {
-      title: 'Locked Users',
-      value: userSummary.locked,
-      color: '#DC2626',
-      backgroundColor: '#FEF2F2',
-    },
-  ];
+  /* =========================
+     UI
+  ========================= */
 
   return (
-    <AdminLayout activeMenu="User Management">
+    <AdminLayout
+      activeMenu="User Management"
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <Button type="button" variant="contained" onClick={() => setFormDialog({ open: true, mode: 'add', userId: '' })}>+ เพิ่มผู้ใช้งาน</Button>
+      </Box>
+      {/* Header */}
+
       <Box
         sx={{
-          display: 'flex',
+          display:
+            'none',
 
           alignItems: {
-            xs: 'flex-start',
-            sm: 'center',
+            xs:
+              'flex-start',
+
+            sm:
+              'center',
           },
 
           justifyContent:
             'space-between',
 
           flexDirection: {
-            xs: 'column',
-            sm: 'row',
+            xs:
+              'column',
+
+            sm:
+              'row',
           },
 
-          gap: '16px',
+          gap:
+            '16px',
 
           marginBottom:
-            '28px',
+            '16px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color: '#111827',
+        <Typography
+          component="h1"
+          sx={{
+            color:
+              '#111827',
 
-              fontSize: {
-                xs: '26px',
-                sm: '30px',
-              },
+            fontSize: {
+              xs:
+                '26px',
 
-              fontWeight: 800,
-            }}
-          >
-            User Management
-          </Typography>
+              sm:
+                '30px',
+            },
 
-          <Typography
-            sx={{
-              color: '#6B7280',
-              fontSize: '15px',
-              marginTop: '6px',
-            }}
-          >
-            Create, review and manage system user accounts.
-          </Typography>
-        </Box>
+            fontWeight:
+              800,
+          }}
+        >
+          จัดการผู้ใช้งาน
+        </Typography>
 
+        <Box sx={{ width: { xs: '100%', sm: 'auto' }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: '10px' }}>
         <Button
           type="button"
           variant="contained"
-          onClick={() =>
-            navigate(
-              '/admin/user-management/add',
-            )
-          }
+          onClick={() => setFormDialog({ open: true, mode: 'add', userId: '' })}
           sx={{
-            minWidth: '130px',
-            height: '44px',
-            padding: '0 20px',
-            backgroundColor: '#EA580C',
-            color: '#FFFFFF',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: 700,
-            textTransform: 'none',
-            boxShadow: 'none',
+            minWidth:
+              '145px',
+
+            height:
+              '40px',
+
+            padding:
+              '0 18px',
+
+            backgroundColor:
+              '#2563EB',
+
+            color:
+              '#FFFFFF',
+
+            borderRadius:
+              '9px',
+
+            fontSize:
+              '13px',
+
+            fontWeight:
+              700,
+
+            textTransform:
+              'none',
+
+            boxShadow:
+              'none',
 
             '&:hover': {
-              backgroundColor: '#C2410C',
-              boxShadow: 'none',
+              backgroundColor:
+                '#1D4ED8',
+
+              boxShadow:
+                'none',
             },
           }}
         >
-          + Add User
+          + เพิ่มผู้ใช้งาน
         </Button>
+        </Box>
       </Box>
+
+      {/* Message */}
 
       {actionMessage && (
         <Alert
@@ -734,13 +936,18 @@ function UserManagementPage() {
             setActionMessage('')
           }
           sx={{
-            marginBottom: '24px',
-            borderRadius: '8px',
+            marginBottom:
+              '20px',
+
+            borderRadius:
+              '10px',
           }}
         >
           {actionMessage}
         </Alert>
       )}
+
+      {/* Error */}
 
       {loadError && (
         <Alert
@@ -749,106 +956,67 @@ function UserManagementPage() {
             <Button
               color="inherit"
               size="small"
-              onClick={loadUsers}
+              onClick={
+                loadUsers
+              }
             >
-              Retry
+              ลองอีกครั้ง
             </Button>
           }
           sx={{
-            marginBottom: '24px',
-            borderRadius: '8px',
+            marginBottom:
+              '20px',
+
+            borderRadius:
+              '10px',
           }}
         >
           {loadError}
         </Alert>
       )}
 
+      {/* Summary Cards */}
+
       <Box
         sx={{
-          display: 'grid',
+          display:
+            'grid',
 
           gridTemplateColumns: {
-            xs: '1fr',
+            xs:
+              '1fr',
 
             sm:
               'repeat(2, minmax(0, 1fr))',
 
-            xl:
+            md:
               'repeat(4, minmax(0, 1fr))',
           },
 
-          gap: '20px',
-          marginBottom: '24px',
+          gap:
+            '16px',
+
+          marginBottom:
+            '16px',
         }}
       >
-        {summaryCards.map(
-          (card) => (
-            <Paper
-              key={card.title}
-              elevation={0}
-              sx={{
-                padding: '20px',
-
-                backgroundColor:
-                  '#FFFFFF',
-
-                border:
-                  '1px solid #E5E7EB',
-
-                borderRadius:
-                  '12px',
-              }}
-            >
-              <Box
-                sx={{
-                  width: '44px',
-                  height: '44px',
-
-                  display: 'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'center',
-
-                  backgroundColor:
-                    card.backgroundColor,
-
-                  color:
-                    card.color,
-
-                  borderRadius:
-                    '12px',
-
-                  fontSize:
-                    '18px',
-
-                  fontWeight:
-                    800,
-                }}
-              >
-                {card.value}
-              </Box>
-
-              <Typography
-                sx={{
-                  color: '#111827',
-                  fontSize: '15px',
-                  fontWeight: 800,
-                  marginTop: '14px',
-                }}
-              >
-                {card.title}
-              </Typography>
-            </Paper>
-          ),
-        )}
+        <InlineListSummary items={summaryCards} sx={{ gridColumn: '1 / -1', marginBottom: 0 }} />
       </Box>
+
+      {/* User List */}
 
       <Paper
         elevation={0}
         sx={{
+          width:
+            '100%',
+
+          maxWidth:
+            '100%',
+
+          boxSizing:
+            'border-box',
+
           backgroundColor:
             '#FFFFFF',
 
@@ -856,100 +1024,87 @@ function UserManagementPage() {
             '1px solid #E5E7EB',
 
           borderRadius:
-            '12px',
+            '20px',
+
+          boxShadow:
+            '0 4px 16px rgba(15, 23, 42, 0.04)',
 
           overflow:
             'hidden',
         }}
       >
+        {/* Filters */}
+
         <Box
           sx={{
-            padding: {
-              xs: '20px',
-              sm: '24px',
-            },
-
-            borderBottom:
-              '1px solid #E5E7EB',
+            padding:
+              '20px 22px',
           }}
         >
           <Typography
             sx={{
-              color: '#111827',
-              fontSize: '18px',
-              fontWeight: 800,
+              color:
+                '#111827',
+
+              fontSize:
+                '17px',
+
+              fontWeight:
+                600,
             }}
           >
-            User Account List
+            รายการผู้ใช้งาน
           </Typography>
 
-          <Typography
-            sx={{
-              color: '#6B7280',
-              fontSize: '14px',
-              marginTop: '4px',
-            }}
-          >
-            Showing {filteredUsers.length} of {users.length}{' '}
-            accounts
-          </Typography>
+          <DataListToolbar
+            searchValue={searchText}
+            onSearchChange={setSearchText}
+            searchPlaceholder="ค้นหาชื่อ ชื่อผู้ใช้ หรืออีเมล"
+            resultLabel=""
+            activeFilters={[
+              ...(roleFilter !== 'All' ? [{ key: 'role', label: `บทบาท: ${translateRole(roleFilter)}`, onDelete: () => setRoleFilter('All') }] : []),
+              ...(statusFilter !== 'All' ? [{ key: 'status', label: `สถานะ: ${translateStatus(statusFilter)}`, onDelete: () => setStatusFilter('All') }] : []),
+            ]}
+            onClearFilters={handleClearFilters}
+            filters={<><FormControl size="small"><Select value={roleFilter === 'All' ? '' : roleFilter} displayEmpty renderValue={(value) => value ? translateRole(value) : 'บทบาท'} inputProps={{ 'aria-label': 'บทบาท' }} onChange={(event) => setRoleFilter(event.target.value || 'All')}>{roleOptions.map((role) => <MenuItem key={role} value={role}>{translateRole(role)}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={statusFilter === 'All' ? '' : statusFilter} displayEmpty renderValue={(value) => value ? translateStatus(value) : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'All')}>{statusOptions.map((status) => <MenuItem key={status} value={status}>{translateStatus(status)}</MenuItem>)}</Select></FormControl></>}
+            sx={{ marginTop: '16px' }}
+          />
 
           <Box
             sx={{
-              display: 'grid',
+              display:
+                'none',
 
               gridTemplateColumns: {
-                xs: '1fr',
+                xs:
+                  '1fr',
 
-                lg:
-                  'minmax(300px, 2fr) minmax(180px, 1fr) minmax(180px, 1fr) auto',
+                md:
+                  'minmax(220px, 1.5fr) minmax(130px, 0.7fr) minmax(130px, 0.7fr) auto',
               },
 
-              gap: '16px',
-              marginTop: '22px',
+              gap:
+                '12px',
+
+              marginTop:
+                '18px',
             }}
           >
-            <TextField
-              fullWidth
-              label="Search User"
-              placeholder="Username, employee, code or email"
-              value={searchText}
-              onChange={(
-                event,
-              ) =>
-                setSearchText(
-                  event.target.value,
-                )
-              }
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    height: '48px',
-                    borderRadius: '8px',
-
-                    '&.Mui-focused fieldset':
-                      {
-                        borderColor:
-                          '#EA580C',
-                      },
-                  },
-
-                '& .MuiInputLabel-root.Mui-focused':
-                  {
-                    color: '#EA580C',
-                  },
-              }}
-            />
+            <TextField fullWidth label="ค้นหาผู้ใช้งาน" placeholder="ชื่อผู้ใช้ ชื่อพนักงาน รหัส หรืออีเมล" value={searchText} onChange={(event) => setSearchText(event.target.value)} sx={{ '& .MuiOutlinedInput-root': { height: '44px', borderRadius: '11px', '&.Mui-focused fieldset': { borderColor: '#EA580C' } }, '& .MuiInputLabel-root.Mui-focused': { color: '#EA580C' } }} />
 
             <FormControl fullWidth>
-              <InputLabel id="user-role-filter-label">
-                Role
+              <InputLabel
+                id="user-role-filter-label"
+              >
+                บทบาท
               </InputLabel>
 
               <Select
                 labelId="user-role-filter-label"
-                value={roleFilter}
-                label="Role"
+                value={
+                  roleFilter
+                }
+                label="บทบาท"
                 onChange={(
                   event,
                 ) =>
@@ -958,21 +1113,30 @@ function UserManagementPage() {
                   )
                 }
                 sx={{
-                  height: '48px',
-                  borderRadius: '8px',
+                  height:
+                    '46px',
+
+                  borderRadius:
+                    '9px',
                 }}
               >
                 <MenuItem value="All">
-                  All Roles
+                  ทุกบทบาท
                 </MenuItem>
 
                 {roleOptions.map(
                   (role) => (
                     <MenuItem
-                      key={role}
-                      value={role}
+                      key={
+                        role
+                      }
+                      value={
+                        role
+                      }
                     >
-                      {role}
+                      {translateRole(
+                        role,
+                      )}
                     </MenuItem>
                   ),
                 )}
@@ -980,14 +1144,18 @@ function UserManagementPage() {
             </FormControl>
 
             <FormControl fullWidth>
-              <InputLabel id="user-status-filter-label">
-                Status
+              <InputLabel
+                id="user-status-filter-label"
+              >
+                สถานะ
               </InputLabel>
 
               <Select
                 labelId="user-status-filter-label"
-                value={statusFilter}
-                label="Status"
+                value={
+                  statusFilter
+                }
+                label="สถานะ"
                 onChange={(
                   event,
                 ) =>
@@ -996,21 +1164,30 @@ function UserManagementPage() {
                   )
                 }
                 sx={{
-                  height: '48px',
-                  borderRadius: '8px',
+                  height:
+                    '46px',
+
+                  borderRadius:
+                    '9px',
                 }}
               >
                 <MenuItem value="All">
-                  All Statuses
+                  ทุกสถานะ
                 </MenuItem>
 
                 {statusOptions.map(
                   (status) => (
                     <MenuItem
-                      key={status}
-                      value={status}
+                      key={
+                        status
+                      }
+                      value={
+                        status
+                      }
                     >
-                      {status}
+                      {translateStatus(
+                        status,
+                      )}
                     </MenuItem>
                   ),
                 )}
@@ -1024,117 +1201,224 @@ function UserManagementPage() {
                 handleClearFilters
               }
               sx={{
-                minWidth: '110px',
-                height: '48px',
-                padding: '0 18px',
-                color: '#374151',
-                borderColor: '#D1D5DB',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 700,
-                textTransform: 'none',
+                minWidth:
+                  '100px',
+
+                height:
+                  '46px',
+
+                padding:
+                  '0 14px',
+
+                color:
+                  '#475569',
+
+                borderColor:
+                  '#CBD5E1',
+
+                borderRadius:
+                  '9px',
+
+                fontSize:
+                  '11px',
+
+                fontWeight:
+                  700,
+
+                whiteSpace:
+                  'nowrap',
+
+                textTransform:
+                  'none',
 
                 '&:hover': {
                   backgroundColor:
-                    '#F9FAFB',
+                    '#F8FAFC',
 
                   borderColor:
-                    '#9CA3AF',
+                    '#94A3B8',
                 },
               }}
             >
-              Clear
+              ล้างตัวกรอง
             </Button>
           </Box>
         </Box>
 
+        {/* Loading */}
+
         {isLoadingUsers ? (
           <Box
             sx={{
-              minHeight: '300px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '14px',
-              color: '#6B7280',
+              minHeight:
+                '300px',
+
+              display:
+                'flex',
+
+              flexDirection:
+                'column',
+
+              alignItems:
+                'center',
+
+              justifyContent:
+                'center',
+
+              gap:
+                '14px',
+
+              color:
+                '#64748B',
             }}
           >
             <CircularProgress
               size={32}
               sx={{
-                color: '#EA580C',
+                color:
+                  '#EA580C',
               }}
             />
 
             <Typography
               sx={{
-                fontSize: '14px',
-                fontWeight: 700,
+                fontSize:
+                  '13px',
+
+                fontWeight:
+                  700,
               }}
             >
-              Loading user accounts...
+              กำลังโหลดข้อมูลผู้ใช้งาน...
             </Typography>
           </Box>
         ) : filteredUsers.length >
-        0 ? (
+          0 ? (
           <Box
             sx={{
-              width: '100%',
-              overflowX: 'auto',
+              width:
+                '100%',
+
+              maxWidth:
+                '100%',
+
+              overflowX:
+                'auto',
             }}
           >
             <Table
+              size="small"
               sx={{
-                minWidth:
-                  '1450px',
+                width:
+                  '100%',
+
+                minWidth: '920px',
+
+                tableLayout:
+                  'auto',
+
+                '& .MuiTableCell-head': { fontSize: '12px !important', padding: '13px 14px !important', whiteSpace: 'nowrap' },
+                '& .MuiTableCell-body': { fontSize: '12px !important', padding: '14px !important' },
               }}
             >
+              <colgroup>
+                <col
+                  style={{
+                    width:
+                      '13%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '17%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '22%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '13%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '13%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '16%',
+                  }}
+                />
+
+                <col
+                  style={{
+                    width:
+                      '6%',
+                  }}
+                />
+              </colgroup>
+
               <TableHead>
                 <TableRow
                   sx={{
                     backgroundColor:
-                      '#F9FAFB',
+                      '#F8FAFC',
                   }}
                 >
                   {[
-                    'Username',
-                    'Employee',
-                    'Email',
-                    'Role',
-                    'Status',
-                    'Last Login',
-                    'Actions',
+                    'ชื่อผู้ใช้',
+                    'พนักงาน',
+                    'อีเมล',
+                    'บทบาท',
+                    'สถานะ',
+                    'เข้าสู่ระบบล่าสุด',
+                    'จัดการ',
                   ].map(
-                    (heading) => (
+                    (
+                      heading,
+                    ) => (
                       <TableCell
                         key={
                           heading
                         }
                         align={
                           heading ===
-                          'Actions'
-                            ? 'right'
+                          'จัดการ'
+                            ? 'center'
                             : 'left'
                         }
                         sx={{
+                          padding:
+                            '12px 10px',
+
                           color:
-                            '#6B7280',
+                            '#64748B',
 
                           fontSize:
-                            '12px',
+                            '10.5px',
 
                           fontWeight:
                             800,
 
-                          textTransform:
-                            'uppercase',
-
-                          letterSpacing:
-                            '0.4px',
+                          lineHeight:
+                            1.4,
 
                           whiteSpace:
-                            'nowrap',
+                            'normal',
 
                           borderBottom:
                             '1px solid #E5E7EB',
@@ -1147,8 +1431,8 @@ function UserManagementPage() {
                 </TableRow>
               </TableHead>
 
-              <TableBody>
-                {filteredUsers.map(
+              <FixedTableBody>
+                {paginatedUsers.map(
                   (user) => {
                     const roleStyle =
                       getRoleStyle(
@@ -1162,9 +1446,16 @@ function UserManagementPage() {
 
                     return (
                       <TableRow
-                        key={user.id}
+                        key={
+                          user.id
+                        }
                         hover
+                        onClick={(event) => {
+                          if (event.target.closest('button, input, [role="combobox"]')) return;
+                          setFormDialog({ open: true, mode: 'edit', userId: String(user.id) });
+                        }}
                         sx={{
+                          cursor: 'pointer',
                           '&:last-child td':
                             {
                               borderBottom:
@@ -1172,16 +1463,27 @@ function UserManagementPage() {
                             },
                         }}
                       >
+                        {/* Username */}
+
                         <TableCell
                           sx={{
+                            padding:
+                              '13px 10px',
+
                             color:
                               '#111827',
 
                             fontSize:
-                              '14px',
+                              '11.5px',
 
                             fontWeight:
                               800,
+
+                            wordBreak:
+                              'break-word',
+
+                            overflowWrap:
+                              'anywhere',
 
                             borderBottom:
                               '1px solid #E5E7EB',
@@ -1190,8 +1492,13 @@ function UserManagementPage() {
                           {user.username}
                         </TableCell>
 
+                        {/* Employee */}
+
                         <TableCell
                           sx={{
+                            padding:
+                              '13px 10px',
+
                             borderBottom:
                               '1px solid #E5E7EB',
                           }}
@@ -1202,10 +1509,16 @@ function UserManagementPage() {
                                 '#111827',
 
                               fontSize:
-                                '14px',
+                                '11.5px',
 
                               fontWeight:
                                 700,
+
+                              lineHeight:
+                                1.4,
+
+                              wordBreak:
+                                'break-word',
                             }}
                           >
                             {user.employeeName}
@@ -1214,10 +1527,10 @@ function UserManagementPage() {
                           <Typography
                             sx={{
                               color:
-                                '#9CA3AF',
+                                '#94A3B8',
 
                               fontSize:
-                                '12px',
+                                '10px',
 
                               marginTop:
                                 '3px',
@@ -1227,13 +1540,27 @@ function UserManagementPage() {
                           </Typography>
                         </TableCell>
 
+                        {/* Email */}
+
                         <TableCell
                           sx={{
+                            padding:
+                              '13px 10px',
+
                             color:
-                              '#4B5563',
+                              '#475569',
 
                             fontSize:
-                              '13px',
+                              '10.5px',
+
+                            lineHeight:
+                              1.45,
+
+                            wordBreak:
+                              'break-word',
+
+                            overflowWrap:
+                              'anywhere',
 
                             borderBottom:
                               '1px solid #E5E7EB',
@@ -1242,176 +1569,88 @@ function UserManagementPage() {
                           {user.email}
                         </TableCell>
 
+                        {/* Role */}
+
                         <TableCell
                           sx={{
+                            padding:
+                              '13px 8px',
+
                             borderBottom:
                               '1px solid #E5E7EB',
                           }}
                         >
-                          <FormControl
-                            size="small"
+                          <Box
                             sx={{
-                              minWidth:
-                                '130px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '92px',
+                              minHeight: '32px',
+                              padding: '5px 12px',
+                              backgroundColor: roleStyle.backgroundColor,
+                              color: roleStyle.color,
+                              borderRadius: '999px',
+                              fontSize: '10.5px',
+                              fontWeight: 700,
+                              lineHeight: 1.35,
+                              textAlign: 'center',
                             }}
                           >
-                            <Select
-                              value={
-                                user.role
-                              }
-                              onChange={(
-                                event,
-                              ) =>
-                                handleRoleChange(
-                                  user,
-                                  event
-                                    .target
-                                    .value,
-                                )
-                              }
-                              sx={{
-                                height:
-                                  '36px',
-
-                                backgroundColor:
-                                  roleStyle
-                                    .backgroundColor,
-
-                                color:
-                                  roleStyle
-                                    .color,
-
-                                borderRadius:
-                                  '8px',
-
-                                fontSize:
-                                  '12px',
-
-                                fontWeight:
-                                  700,
-
-                                '& .MuiOutlinedInput-notchedOutline':
-                                  {
-                                    borderColor:
-                                      roleStyle
-                                        .color,
-                                  },
-                              }}
-                            >
-                              {roleOptions.map(
-                                (
-                                  role,
-                                ) => (
-                                  <MenuItem
-                                    key={
-                                      role
-                                    }
-                                    value={
-                                      role
-                                    }
-                                  >
-                                    {role}
-                                  </MenuItem>
-                                ),
-                              )}
-                            </Select>
-                          </FormControl>
+                            {translateRole(user.role)}
+                          </Box>
                         </TableCell>
+
+                        {/* Status */}
 
                         <TableCell
                           sx={{
+                            padding:
+                              '13px 8px',
+
                             borderBottom:
                               '1px solid #E5E7EB',
                           }}
                         >
-                          <FormControl
-                            size="small"
+                          <Box
                             sx={{
-                              minWidth:
-                                '120px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '92px',
+                              minHeight: '32px',
+                              padding: '5px 12px',
+                              backgroundColor: statusStyle.backgroundColor,
+                              color: statusStyle.color,
+                              borderRadius: '999px',
+                              fontSize: '10.5px',
+                              fontWeight: 700,
+                              lineHeight: 1.35,
+                              textAlign: 'center',
                             }}
                           >
-                            <Select
-                              disabled={
-                                Number(
-                                  updatingStatusUserId,
-                                ) ===
-                                Number(
-                                  user.id,
-                                )
-                              }
-                              value={
-                                user.status
-                              }
-                              onChange={(
-                                event,
-                              ) =>
-                                handleStatusChange(
-                                  user,
-                                  event
-                                    .target
-                                    .value,
-                                )
-                              }
-                              sx={{
-                                height:
-                                  '36px',
-
-                                backgroundColor:
-                                  statusStyle
-                                    .backgroundColor,
-
-                                color:
-                                  statusStyle
-                                    .color,
-
-                                borderRadius:
-                                  '8px',
-
-                                fontSize:
-                                  '12px',
-
-                                fontWeight:
-                                  700,
-
-                                '& .MuiOutlinedInput-notchedOutline':
-                                  {
-                                    borderColor:
-                                      statusStyle
-                                        .color,
-                                  },
-                              }}
-                            >
-                              {statusOptions.map(
-                                (
-                                  status,
-                                ) => (
-                                  <MenuItem
-                                    key={
-                                      status
-                                    }
-                                    value={
-                                      status
-                                    }
-                                  >
-                                    {status}
-                                  </MenuItem>
-                                ),
-                              )}
-                            </Select>
-                          </FormControl>
+                            {translateStatus(user.status)}
+                          </Box>
                         </TableCell>
+
+                        {/* Last Login */}
 
                         <TableCell
                           sx={{
+                            padding:
+                              '13px 10px',
+
                             color:
-                              '#6B7280',
+                              '#64748B',
 
                             fontSize:
-                              '13px',
+                              '10.5px',
+
+                            lineHeight:
+                              1.45,
 
                             whiteSpace:
-                              'nowrap',
+                              'normal',
 
                             borderBottom:
                               '1px solid #E5E7EB',
@@ -1420,150 +1659,71 @@ function UserManagementPage() {
                           {user.lastLogin}
                         </TableCell>
 
+                        {/* Action */}
+
                         <TableCell
-                          align="right"
+                          align="center"
                           sx={{
-                            whiteSpace:
-                              'nowrap',
+                            padding:
+                              '10px 4px',
 
                             borderBottom:
                               '1px solid #E5E7EB',
                           }}
                         >
-                          <Box
-                            sx={{
-                              display:
-                                'flex',
-
-                              justifyContent:
-                                'flex-end',
-
-                              gap:
-                                '8px',
-                            }}
-                          >
+                          <Box sx={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
                             <Button
                               type="button"
+                              size="small"
                               variant="outlined"
-                              disabled={
-                                Number(
-                                  resettingPasswordUserId,
-                                ) ===
-                                Number(
-                                  user.id,
-                                )
-                              }
-                              onClick={() =>
-                                navigate(
-                                  `/admin/user-management/${user.id}/edit`,
-                                )
-                              }
+                              onClick={(event) => { event.stopPropagation(); handleOpenResetConfirmation(user); }}
+                              disabled={resettingPasswordUserId !== null || user.status === 'Inactive'}
                               sx={{
-                                minWidth:
-                                  '68px',
-
-                                height:
-                                  '36px',
-
-                                padding:
-                                  '0 12px',
-
-                                color:
-                                  '#EA580C',
-
-                                borderColor:
-                                  '#EA580C',
-
-                                borderRadius:
-                                  '8px',
-
-                                fontSize:
-                                  '12px',
-
-                                fontWeight:
-                                  700,
-
-                                textTransform:
-                                  'none',
-
-                                '&:hover':
-                                  {
-                                    backgroundColor:
-                                      '#FFF7ED',
-
-                                    borderColor:
-                                      '#C2410C',
-                                  },
+                                minWidth: '118px',
+                                height: '34px',
+                                color: '#1D4ED8',
+                                borderColor: '#BFDBFE',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                whiteSpace: 'nowrap',
+                                textTransform: 'none',
+                                '&:hover': { backgroundColor: '#EFF6FF', borderColor: '#93C5FD' },
                               }}
                             >
-                              Edit
+                              รีเซ็ตรหัสผ่าน
                             </Button>
-
-                            <Button
-                              type="button"
-                              variant="outlined"
-                              disabled={
-                                resettingPasswordUserId !== null
-                              }
-                              onClick={() =>
-                                handleOpenResetConfirmation(
-                                  user,
-                                )
-                              }
-                              sx={{
-                                minWidth:
-                                  '118px',
-
-                                height:
-                                  '36px',
-
-                                padding:
-                                  '0 12px',
-
-                                color:
-                                  '#7C3AED',
-
-                                borderColor:
-                                  '#7C3AED',
-
-                                borderRadius:
-                                  '8px',
-
-                                fontSize:
-                                  '12px',
-
-                                fontWeight:
-                                  700,
-
-                                textTransform:
-                                  'none',
-
-                                '&:hover':
-                                  {
-                                    backgroundColor:
-                                      '#F5F3FF',
-
-                                    borderColor:
-                                      '#6D28D9',
-                                  },
-                              }}
-                            >
-                              {Number(
-                                resettingPasswordUserId,
-                              ) === Number(user.id)
-                                ? 'Resetting...'
-                                : 'Reset Password'}
-                            </Button>
+                            {user.status === 'Inactive' ? (
+                              <Button
+                                type="button"
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setDeleteConfirmationUser(user);
+                                }}
+                                disabled={deletingUserId !== null}
+                                sx={{ minWidth: '64px', height: '34px', borderRadius: '8px', fontWeight: 700 }}
+                              >
+                                ลบ
+                              </Button>
+                            ) : null}
                           </Box>
                         </TableCell>
                       </TableRow>
                     );
                   },
                 )}
-              </TableBody>
+              </FixedTableBody>
             </Table>
+            {filteredUsers.length > rowsPerPage ? (
+              <TablePagination component="div" count={filteredUsers.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredUsers.length / rowsPerPage)}`} />
+            ) : null}
           </Box>
         ) : (
+          /* Empty */
+
           <Box
             sx={{
               minHeight:
@@ -1591,10 +1751,10 @@ function UserManagementPage() {
             <Box
               sx={{
                 width:
-                  '64px',
+                  '56px',
 
                 height:
-                  '64px',
+                  '56px',
 
                 display:
                   'flex',
@@ -1615,7 +1775,7 @@ function UserManagementPage() {
                   '50%',
 
                 fontSize:
-                  '24px',
+                  '20px',
 
                 fontWeight:
                   800,
@@ -1630,178 +1790,456 @@ function UserManagementPage() {
                   '#111827',
 
                 fontSize:
-                  '18px',
+                  '15px',
 
                 fontWeight:
                   800,
 
                 marginTop:
-                  '16px',
+                  '14px',
               }}
             >
-              No user accounts found
+              ไม่พบข้อมูลผู้ใช้งาน
             </Typography>
 
             <Typography
               sx={{
                 color:
-                  '#6B7280',
+                  '#64748B',
 
                 fontSize:
-                  '14px',
+                  '12px',
 
                 marginTop:
-                  '6px',
+                  '5px',
               }}
             >
-              {users.length === 0
-                ? 'No user accounts are available in the database.'
-                : 'Try changing or clearing the selected filters.'}
+              {users.length ===
+              0
+                ? 'ยังไม่มีบัญชีผู้ใช้งานในระบบ'
+                : 'ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่า'}
             </Typography>
+          </Box>
+        )}
+      </Paper>
 
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={
-                handleClearFilters
-              }
+      {/* Action Menu */}
+
+      <Menu
+        anchorEl={
+          actionMenuAnchor
+        }
+        open={Boolean(
+          actionMenuAnchor,
+        )}
+        onClose={
+          handleCloseActionMenu
+        }
+        anchorOrigin={{
+          vertical:
+            'bottom',
+          horizontal:
+            'right',
+        }}
+        transformOrigin={{
+          vertical:
+            'top',
+          horizontal:
+            'right',
+        }}
+        slotProps={{
+          paper: {
+            sx: {
+              minWidth:
+                '175px',
+
+              marginTop:
+                '4px',
+
+              padding:
+                '5px',
+
+              border:
+                '1px solid #E5E7EB',
+
+              borderRadius:
+                '10px',
+
+              boxShadow:
+                '0 12px 30px rgba(15, 23, 42, 0.12)',
+            },
+          },
+        }}
+      >
+        <MenuItem
+          onClick={
+            handleEditFromMenu
+          }
+          sx={{
+            minHeight:
+              '40px',
+
+            borderRadius:
+              '7px',
+
+            color:
+              '#374151',
+
+            fontSize:
+              '12px',
+
+            fontWeight:
+              700,
+
+            '&:hover': {
+              color:
+                '#1E293B',
+
+              backgroundColor:
+                '#F1F5F9',
+            },
+          }}
+        >
+          แก้ไข
+        </MenuItem>
+
+        <MenuItem
+          onClick={
+            handleResetFromMenu
+          }
+          sx={{
+            minHeight:
+              '40px',
+
+            borderRadius:
+              '7px',
+
+            color:
+              '#374151',
+
+            fontSize:
+              '12px',
+
+            fontWeight:
+              700,
+
+            '&:hover': {
+              color:
+                '#7C3AED',
+
+              backgroundColor:
+                '#F5F3FF',
+            },
+          }}
+        >
+          รีเซ็ตรหัสผ่าน
+        </MenuItem>
+      </Menu>
+
+      {formDialog.open ? (
+        <UserFormPage
+          mode={formDialog.mode}
+          dialogOnly
+          open={formDialog.open}
+          userId={formDialog.userId}
+          onClose={() => setFormDialog((current) => ({ ...current, open: false }))}
+          onSaved={() => {
+            setFormDialog((current) => ({ ...current, open: false }));
+            loadUsers();
+          }}
+        />
+      ) : null}
+
+      <Dialog
+        open={Boolean(deleteConfirmationUser)}
+        fullWidth
+        maxWidth="xs"
+        onClose={() => {
+          if (deletingUserId === null) setDeleteConfirmationUser(null);
+        }}
+        PaperProps={{ sx: { borderRadius: '14px' } }}
+      >
+        <DialogTitle sx={{ color: '#B91C1C', fontSize: '20px', fontWeight: 800 }}>
+          ยืนยันการลบบัญชีผู้ใช้
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: '#475569', fontSize: '14px', lineHeight: 1.7 }}>
+            ต้องการลบบัญชี <strong>{deleteConfirmationUser?.username}</strong> ใช่หรือไม่
+            หลังลบแล้วพนักงานจะไม่สามารถเข้าสู่ระบบด้วยบัญชีนี้ได้
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ padding: '16px 24px', gap: '8px' }}>
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={() => setDeleteConfirmationUser(null)}
+            disabled={deletingUserId !== null}
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            type="button"
+            variant="contained"
+            color="error"
+            onClick={handleDeleteUser}
+            disabled={deletingUserId !== null}
+          >
+            {deletingUserId !== null ? 'กำลังลบ...' : 'ยืนยันการลบ'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Reset Password Confirmation */}
+
+      <Dialog
+        open={Boolean(
+          resetConfirmationUser,
+        )}
+        fullWidth
+        maxWidth="sm"
+        onClose={() => {
+          if (
+            resettingPasswordUserId ===
+            null
+          ) {
+            setResetConfirmationUser(
+              null,
+            );
+          }
+        }}
+        PaperProps={{
+          sx: {
+            borderRadius:
+              '14px',
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            color:
+              '#111827',
+
+            fontSize:
+              '20px',
+
+            fontWeight:
+              800,
+          }}
+        >
+          ยืนยันการรีเซ็ตรหัสผ่าน
+        </DialogTitle>
+
+        <DialogContent
+          dividers
+        >
+          <Typography
+            sx={{
+              color:
+                '#475569',
+
+              fontSize:
+                '13px',
+
+              lineHeight:
+                1.7,
+            }}
+          >
+            กำลังรีเซ็ตรหัสผ่านของบัญชีต่อไปนี้
+          </Typography>
+
+          <Box
+            sx={{
+              padding:
+                '16px',
+
+              marginTop:
+                '14px',
+
+              backgroundColor:
+                '#F8FAFC',
+
+              border:
+                '1px solid #E5E7EB',
+
+              borderRadius:
+                '10px',
+            }}
+          >
+            <Typography
               sx={{
-                height:
-                  '42px',
-
-                marginTop:
-                  '20px',
-
-                padding:
-                  '0 18px',
-
                 color:
-                  '#EA580C',
-
-                borderColor:
-                  '#EA580C',
-
-                borderRadius:
-                  '8px',
+                  '#111827',
 
                 fontSize:
                   '14px',
 
                 fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
-
-                '&:hover': {
-                  backgroundColor:
-                    '#FFF7ED',
-
-                  borderColor:
-                    '#C2410C',
-                },
+                  800,
               }}
             >
-              Clear Filters
-            </Button>
-          </Box>
-        )}
-      </Paper>
-
-      <Dialog
-        open={Boolean(resetConfirmationUser)}
-        fullWidth
-        maxWidth="sm"
-        onClose={() => {
-          if (resettingPasswordUserId === null) {
-            setResetConfirmationUser(null);
-          }
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 800 }}>
-          Confirm Password Reset
-        </DialogTitle>
-        <DialogContent dividers>
-          <Typography
-            sx={{
-              color: '#374151',
-              fontSize: '14px',
-              lineHeight: 1.7,
-            }}
-          >
-            You are resetting the password for:
-          </Typography>
-          <Box
-            sx={{
-              padding: '16px',
-              marginTop: '14px',
-              backgroundColor: '#F9FAFB',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-            }}
-          >
-            <Typography sx={{ fontWeight: 800 }}>
-              {resetConfirmationUser?.username}
+              {
+                resetConfirmationUser
+                  ?.username
+              }
             </Typography>
+
             <Typography
               sx={{
-                color: '#6B7280',
-                fontSize: '13px',
-                marginTop: '4px',
+                color:
+                  '#64748B',
+
+                fontSize:
+                  '12px',
+
+                marginTop:
+                  '5px',
               }}
             >
-              {resetConfirmationUser?.employeeName}
+              {
+                resetConfirmationUser
+                  ?.employeeName
+              }
             </Typography>
+
             <Typography
               sx={{
-                color: '#6B7280',
-                fontSize: '13px',
-                marginTop: '4px',
+                color:
+                  '#64748B',
+
+                fontSize:
+                  '12px',
+
+                marginTop:
+                  '4px',
               }}
             >
-              Role: {resetConfirmationUser?.role || '-'}
+              บทบาท:{' '}
+              {translateRole(
+                resetConfirmationUser
+                  ?.role,
+              )}
             </Typography>
           </Box>
+
           <Alert
             severity="warning"
-            sx={{ marginTop: '18px' }}
+            sx={{
+              marginTop:
+                '18px',
+
+              borderRadius:
+                '10px',
+            }}
           >
-            The current password will stop working immediately. The user must sign in with the new temporary password and change it before accessing the system.
+            รหัสผ่านเดิมจะไม่สามารถใช้งานได้ทันที
+            ผู้ใช้งานต้องเข้าสู่ระบบด้วยรหัสผ่านชั่วคราวใหม่
+            และเปลี่ยนรหัสผ่านก่อนเข้าใช้งานระบบ
           </Alert>
         </DialogContent>
-        <DialogActions sx={{ padding: '16px 24px' }}>
+
+        <DialogActions
+          sx={{
+            padding:
+              '16px 24px',
+          }}
+        >
           <Button
             type="button"
+            variant="outlined"
             onClick={() =>
-              setResetConfirmationUser(null)
+              setResetConfirmationUser(
+                null,
+              )
             }
-            disabled={resettingPasswordUserId !== null}
+            disabled={
+              resettingPasswordUserId !==
+              null
+            }
+            sx={{
+              minWidth: '96px',
+              height: '40px',
+              color: '#475569',
+              borderColor: '#CBD5E1',
+              borderRadius: '9px',
+              fontSize: '13px',
+              fontWeight: 600,
+              textTransform: 'none',
+            }}
           >
-            Cancel
+            ยกเลิก
           </Button>
+
           <Button
             type="button"
             variant="contained"
-            onClick={handleResetPassword}
-            disabled={resettingPasswordUserId !== null}
+            onClick={
+              handleResetPassword
+            }
+            disabled={
+              resettingPasswordUserId !==
+              null
+            }
             sx={{
-              backgroundColor: '#7C3AED',
-              textTransform: 'none',
-              fontWeight: 700,
+              minWidth:
+                '130px',
+
+              height:
+                '40px',
+
+              backgroundColor:
+                '#2563EB',
+
+              borderRadius:
+                '9px',
+
+              fontSize:
+                '13px',
+
+              fontWeight:
+                600,
+
+              textTransform:
+                'none',
+
+              boxShadow:
+                'none',
+
+              '&:hover': {
+                backgroundColor:
+                  '#1D4ED8',
+
+                boxShadow:
+                  'none',
+              },
             }}
           >
-            {resettingPasswordUserId !== null
-              ? 'Resetting...'
-              : 'Confirm Reset'}
+            {resettingPasswordUserId !==
+            null
+              ? 'กำลังรีเซ็ต...'
+              : 'ยืนยันการรีเซ็ต'}
           </Button>
         </DialogActions>
       </Dialog>
 
+      {/* Temporary Password */}
+
       <TemporaryPasswordDialog
-        open={Boolean(temporaryPasswordResult)}
-        username={temporaryPasswordResult?.username || ''}
-        temporaryPassword={temporaryPasswordResult?.temporaryPassword || ''}
-        onClose={handleCloseTemporaryPassword}
+        open={Boolean(
+          temporaryPasswordResult,
+        )}
+        username={
+          temporaryPasswordResult
+            ?.username ||
+          ''
+        }
+        temporaryPassword={
+          temporaryPasswordResult
+            ?.temporaryPassword ||
+          ''
+        }
+        onClose={
+          handleCloseTemporaryPassword
+        }
       />
     </AdminLayout>
   );

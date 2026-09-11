@@ -7,6 +7,7 @@ import {
   Navigate,
   Route,
   Routes,
+  useParams,
 } from 'react-router-dom';
 
 import ProtectedRoute from './components/protectedroute.jsx';
@@ -18,6 +19,7 @@ const LoginPage = lazy(() =>
 const ForgotPasswordPage = lazy(() => import('./pages/forgotpasswordpage.jsx'));
 const VerifyOtpPage = lazy(() => import('./pages/verifyotppage.jsx'));
 const ResetPasswordPage = lazy(() => import('./pages/resetpasswordpage.jsx'));
+const NotFoundPage = lazy(() => import('./pages/notfoundpage.jsx'));
 
 import {
   getCurrentUser,
@@ -32,9 +34,8 @@ const EmployeeDashboardPage = lazy(() => import('./pages/employee/employeedashbo
 const EmployeeCreateLeaveRequestPage = lazy(() => import('./pages/employee/createleaverequestpage.jsx'));
 const EmployeeMyRequestsPage = lazy(() => import('./pages/employee/myrequestspage.jsx'));
 const EmployeeLeaveRequestDetailPage = lazy(() => import('./pages/employee/leaverequestdetailpage.jsx'));
-const EmployeeLeaveBalancePage = lazy(() => import('./pages/employee/leavebalancepage.jsx'));
-const EmployeeNotificationPage = lazy(() => import('./pages/employee/employeenotificationpage.jsx'));
 const EmployeeProfilePage = lazy(() => import('./pages/employee/employeeprofilepage.jsx'));
+const EmployeeNotificationPage = lazy(() => import('./pages/employee/employeenotificationpage.jsx'));
 const EmployeeChangePasswordPage = lazy(() => import('./pages/employee/employeechangepasswordpage.jsx'));
 
 /* =========================
@@ -45,12 +46,11 @@ const SupervisorDashboardPage = lazy(() => import('./pages/supervisor/supervisor
 const SupervisorCreateLeaveRequestPage = lazy(() => import('./pages/supervisor/createleaverequestpage.jsx'));
 const SupervisorMyRequestsPage = lazy(() => import('./pages/supervisor/myrequestspage.jsx'));
 const SupervisorOwnLeaveRequestDetailPage = lazy(() => import('./pages/supervisor/leaverequestdetailpage.jsx'));
-const SupervisorLeaveBalancePage = lazy(() => import('./pages/supervisor/leavebalancepage.jsx'));
 const ApprovalPendingListPage = lazy(() => import('./pages/supervisor/approvalpendinglistpage.jsx'));
 const SupervisorLeaveRequestDetailPage = lazy(() => import('./pages/supervisor/supervisorleaverequestdetailpage.jsx'));
 const SupervisorReportsPage = lazy(() => import('./pages/supervisor/supervisorreportspage.jsx'));
-const SupervisorNotificationPage = lazy(() => import('./pages/supervisor/supervisornotificationpage.jsx'));
 const SupervisorProfilePage = lazy(() => import('./pages/supervisor/supervisorprofilepage.jsx'));
+const SupervisorNotificationPage = lazy(() => import('./pages/supervisor/supervisornotificationpage.jsx'));
 const SupervisorChangePasswordPage = lazy(() => import('./pages/supervisor/supervisorchangepasswordpage.jsx'));
 
 /* =========================
@@ -61,18 +61,21 @@ const HRDashboardPage = lazy(() => import('./pages/hr/hrdashboardpage.jsx'));
 const HRCreateLeaveRequestPage = lazy(() => import('./pages/hr/createleaverequestpage.jsx'));
 const HRMyRequestsPage = lazy(() => import('./pages/hr/myrequestspage.jsx'));
 const HROwnLeaveRequestDetailPage = lazy(() => import('./pages/hr/leaverequestdetailpage.jsx'));
-const HRLeaveBalancePage = lazy(() => import('./pages/hr/leavebalancepage.jsx'));
 const EmployeeManagementPage = lazy(() => import('./pages/hr/employeemanagementpage.jsx'));
 const EmployeeFormPage = lazy(() => import('./pages/hr/employeeformpage.jsx'));
+const HRDepartmentManagementPage = lazy(() => import('./pages/hr/departmentmanagementpage.jsx'));
+const HRPositionManagementPage = lazy(() => import('./pages/hr/positionmanagementpage.jsx'));
 const LeaveEntitlementManagementPage = lazy(() => import('./pages/hr/leaveentitlementmanagementpage.jsx'));
 const LeaveTypeManagementPage = lazy(() => import('./pages/hr/leavetypemanagementpage.jsx'));
 const LeaveTypeFormPage = lazy(() => import('./pages/hr/leavetypeformpage.jsx'));
 const HolidayManagementPage = lazy(() => import('./pages/hr/holidaymanagementpage.jsx'));
 const HRReportsPage = lazy(() => import('./pages/hr/hrreportspage.jsx'));
 const HRLeaveRequestDetailPage = lazy(() => import('./pages/hr/hrleaverequestdetailpage.jsx'));
-const HRNotificationPage = lazy(() => import('./pages/hr/hrnotificationpage.jsx'));
 const HRProfilePage = lazy(() => import('./pages/hr/hrprofilepage.jsx'));
+const HRNotificationPage = lazy(() => import('./pages/hr/hrnotificationpage.jsx'));
 const HRChangePasswordPage = lazy(() => import('./pages/hr/hrchangepasswordpage.jsx'));
+const HRApprovalPendingListPage = lazy(() => import('./pages/hr/hrapprovalpendinglistpage.jsx'));
+const HRApprovalDetailPage = lazy(() => import('./pages/hr/hrapprovaldetailpage.jsx'));
 
 /* =========================
    Admin
@@ -82,16 +85,14 @@ const AdminDashboardPage = lazy(() => import('./pages/admin/admindashboardpage.j
 const AdminCreateLeaveRequestPage = lazy(() => import('./pages/admin/createleaverequestpage.jsx'));
 const AdminMyRequestsPage = lazy(() => import('./pages/admin/myrequestspage.jsx'));
 const AdminLeaveRequestDetailPage = lazy(() => import('./pages/admin/leaverequestdetailpage.jsx'));
-const AdminLeaveBalancePage = lazy(() => import('./pages/admin/leavebalancepage.jsx'));
 const UserManagementPage = lazy(() => import('./pages/admin/usermanagementpage.jsx'));
-const UserFormPage = lazy(() => import('./pages/admin/userformpage.jsx'));
 const DepartmentManagementPage = lazy(() => import('./pages/admin/departmentmanagementpage.jsx'));
 const DepartmentFormPage = lazy(() => import('./pages/admin/departmentformpage.jsx'));
 const PositionManagementPage = lazy(() => import('./pages/admin/positionmanagementpage.jsx'));
 const PositionFormPage = lazy(() => import('./pages/admin/positionformpage.jsx'));
 const AuditLogPage = lazy(() => import('./pages/admin/auditlogpage.jsx'));
-const AdminNotificationPage = lazy(() => import('./pages/admin/adminnotificationpage.jsx'));
 const AdminProfilePage = lazy(() => import('./pages/admin/adminprofilepage.jsx'));
+const AdminNotificationPage = lazy(() => import('./pages/admin/adminnotificationpage.jsx'));
 const AdminChangePasswordPage = lazy(() => import('./pages/admin/adminchangepasswordpage.jsx'));
 
 function RootRedirect() {
@@ -115,6 +116,11 @@ function RootRedirect() {
       replace
     />
   );
+}
+
+function UserManagementRouteForm({ mode }) {
+  const { userId } = useParams();
+  return <UserManagementPage initialFormMode={mode} initialUserId={userId} />;
 }
 
 function App() {
@@ -198,16 +204,12 @@ function App() {
 
         <Route
           path="/employee/leave-balance"
-          element={
-            <EmployeeLeaveBalancePage />
-          }
+          element={<Navigate to="/employee/dashboard" replace />}
         />
 
         <Route
           path="/employee/notifications"
-          element={
-            <EmployeeNotificationPage />
-          }
+          element={<EmployeeNotificationPage />}
         />
 
         <Route
@@ -217,11 +219,11 @@ function App() {
           }
         />
 
+        <Route path="/employee/edit-personal-information" element={<EmployeeProfilePage editMode />} />
+
         <Route
           path="/employee/change-password"
-          element={
-            <EmployeeChangePasswordPage />
-          }
+          element={<EmployeeChangePasswordPage />}
         />
       </Route>
 
@@ -268,9 +270,7 @@ function App() {
 
         <Route
           path="/supervisor/leave-balance"
-          element={
-            <SupervisorLeaveBalancePage />
-          }
+          element={<Navigate to="/supervisor/dashboard" replace />}
         />
 
         <Route
@@ -296,9 +296,7 @@ function App() {
 
         <Route
           path="/supervisor/notifications"
-          element={
-            <SupervisorNotificationPage />
-          }
+          element={<SupervisorNotificationPage />}
         />
 
         <Route
@@ -308,11 +306,11 @@ function App() {
           }
         />
 
+        <Route path="/supervisor/edit-personal-information" element={<SupervisorProfilePage editMode />} />
+
         <Route
           path="/supervisor/change-password"
-          element={
-            <SupervisorChangePasswordPage />
-          }
+          element={<SupervisorChangePasswordPage />}
         />
       </Route>
 
@@ -359,10 +357,11 @@ function App() {
 
         <Route
           path="/hr/leave-balance"
-          element={
-            <HRLeaveBalancePage />
-          }
+          element={<Navigate to="/hr/dashboard" replace />}
         />
+
+        <Route path="/hr/approval" element={<HRApprovalPendingListPage />} />
+        <Route path="/hr/approval/:requestId" element={<HRApprovalDetailPage />} />
 
         <Route
           path="/hr/employee-management"
@@ -388,6 +387,9 @@ function App() {
             />
           }
         />
+
+        <Route path="/hr/department-management" element={<HRDepartmentManagementPage />} />
+        <Route path="/hr/position-management" element={<HRPositionManagementPage />} />
 
         <Route
           path="/hr/leave-entitlement"
@@ -444,9 +446,7 @@ function App() {
 
         <Route
           path="/hr/notifications"
-          element={
-            <HRNotificationPage />
-          }
+          element={<HRNotificationPage />}
         />
 
         <Route
@@ -456,11 +456,11 @@ function App() {
           }
         />
 
+        <Route path="/hr/edit-personal-information" element={<HRProfilePage editMode />} />
+
         <Route
           path="/hr/change-password"
-          element={
-            <HRChangePasswordPage />
-          }
+          element={<HRChangePasswordPage />}
         />
       </Route>
 
@@ -507,9 +507,7 @@ function App() {
 
         <Route
           path="/admin/leave-balance"
-          element={
-            <AdminLeaveBalancePage />
-          }
+          element={<Navigate to="/admin/dashboard" replace />}
         />
 
         <Route
@@ -522,18 +520,14 @@ function App() {
         <Route
           path="/admin/user-management/add"
           element={
-            <UserFormPage
-              mode="add"
-            />
+            <UserManagementPage initialFormMode="add" />
           }
         />
 
         <Route
           path="/admin/user-management/:userId/edit"
           element={
-            <UserFormPage
-              mode="edit"
-            />
+            <UserManagementRouteForm mode="edit" />
           }
         />
 
@@ -596,9 +590,7 @@ function App() {
 
         <Route
           path="/admin/notifications"
-          element={
-            <AdminNotificationPage />
-          }
+          element={<AdminNotificationPage />}
         />
 
         <Route
@@ -608,19 +600,17 @@ function App() {
           }
         />
 
+        <Route path="/admin/edit-personal-information" element={<AdminProfilePage editMode />} />
+
         <Route
           path="/admin/change-password"
-          element={
-            <AdminChangePasswordPage />
-          }
+          element={<AdminChangePasswordPage />}
         />
       </Route>
 
       <Route
         path="*"
-        element={
-          <RootRedirect />
-        }
+        element={<NotFoundPage />}
       />
       </Routes>
       </PasswordResetFlowProvider>

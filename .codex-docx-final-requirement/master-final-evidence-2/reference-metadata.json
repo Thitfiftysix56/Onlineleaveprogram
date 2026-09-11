@@ -1,0 +1,851 @@
+{
+  "source": "C:\\Users\\User\\Desktop\\online-leavesystem\\ระบบอนุมัติใบลาออนไลน์ Final Requirement.docx",
+  "sha256": "e0a9485670b62b47261d7bd41138afb3a6330c0511d38cae1f50f4225bbfb4a4",
+  "paragraph_count": 911,
+  "table_count": 45,
+  "section_count": 1,
+  "block_count": 956,
+  "styles": [
+    [
+      "Normal",
+      1860
+    ],
+    [
+      "List Paragraph",
+      485
+    ]
+  ],
+  "fonts_by_characters": [
+    [
+      "TH Sarabun New",
+      46713
+    ],
+    [
+      "Segoe UI Symbol",
+      100
+    ],
+    [
+      "Arial",
+      70
+    ],
+    [
+      "<inherited>",
+      7
+    ]
+  ],
+  "sizes_by_characters": [
+    [
+      "16.0",
+      26795
+    ],
+    [
+      "12.0",
+      18926
+    ],
+    [
+      "14.0",
+      1104
+    ],
+    [
+      "10.0",
+      36
+    ],
+    [
+      "18.0",
+      22
+    ],
+    [
+      "<inherited>",
+      7
+    ]
+  ],
+  "tables": [
+    {
+      "table_index": 0,
+      "block_index": 19,
+      "style": "Table Grid",
+      "row_count": 19,
+      "column_count": 2,
+      "grid_dxa": [
+        4675,
+        4675
+      ],
+      "first_row": [
+        "Module",
+        "รายละเอียด"
+      ]
+    },
+    {
+      "table_index": 1,
+      "block_index": 22,
+      "style": "Table Grid",
+      "row_count": 14,
+      "column_count": 3,
+      "grid_dxa": [
+        3116,
+        3117,
+        3117
+      ],
+      "first_row": [
+        "Feature",
+        "รายละเอียด",
+        "สถานะ"
+      ]
+    },
+    {
+      "table_index": 2,
+      "block_index": 26,
+      "style": "Table Grid",
+      "row_count": 5,
+      "column_count": 2,
+      "grid_dxa": [
+        4675,
+        4675
+      ],
+      "first_row": [
+        "Role",
+        "หน้าที่หลัก"
+      ]
+    },
+    {
+      "table_index": 3,
+      "block_index": 50,
+      "style": "Table Grid",
+      "row_count": 13,
+      "column_count": 2,
+      "grid_dxa": [
+        4675,
+        4675
+      ],
+      "first_row": [
+        "Function",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 4,
+      "block_index": 127,
+      "style": "Table Grid",
+      "row_count": 30,
+      "column_count": 5,
+      "grid_dxa": [
+        1870,
+        1870,
+        1870,
+        1870,
+        1870
+      ],
+      "first_row": [
+        "Function / Permission",
+        "Employee",
+        "Supervisor",
+        "HR",
+        "Admin"
+      ]
+    },
+    {
+      "table_index": 5,
+      "block_index": 132,
+      "style": "Table Grid",
+      "row_count": 6,
+      "column_count": 2,
+      "grid_dxa": [
+        4675,
+        4675
+      ],
+      "first_row": [
+        "Status",
+        "ความหมาย"
+      ]
+    },
+    {
+      "table_index": 6,
+      "block_index": 162,
+      "style": "Table Grid",
+      "row_count": 10,
+      "column_count": 4,
+      "grid_dxa": [
+        2337,
+        2337,
+        2338,
+        2338
+      ],
+      "first_row": [
+        "Current Status",
+        "Action",
+        "Next Status",
+        "Responsible Actor"
+      ]
+    },
+    {
+      "table_index": 7,
+      "block_index": 355,
+      "style": "Table Grid",
+      "row_count": 12,
+      "column_count": 2,
+      "grid_dxa": [
+        4675,
+        4675
+      ],
+      "first_row": [
+        "Validation",
+        "เงื่อนไข"
+      ]
+    },
+    {
+      "table_index": 8,
+      "block_index": 382,
+      "style": "Table Grid",
+      "row_count": 6,
+      "column_count": 3,
+      "grid_dxa": [
+        3116,
+        3117,
+        3117
+      ],
+      "first_row": [
+        "Current Status",
+        "Action",
+        "Result"
+      ]
+    },
+    {
+      "table_index": 9,
+      "block_index": 427,
+      "style": "Table Grid",
+      "row_count": 7,
+      "column_count": 2,
+      "grid_dxa": [
+        4675,
+        4675
+      ],
+      "first_row": [
+        "Report",
+        "ผู้ใช้งานที่เข้าถึงได้"
+      ]
+    },
+    {
+      "table_index": 10,
+      "block_index": 548,
+      "style": "Table Grid",
+      "row_count": 41,
+      "column_count": 2,
+      "grid_dxa": [
+        4675,
+        4675
+      ],
+      "first_row": [
+        "Code",
+        "Rule"
+      ]
+    },
+    {
+      "table_index": 11,
+      "block_index": 551,
+      "style": "Table Grid",
+      "row_count": 17,
+      "column_count": 2,
+      "grid_dxa": [
+        4675,
+        4675
+      ],
+      "first_row": [
+        "Code",
+        "Rule"
+      ]
+    },
+    {
+      "table_index": 12,
+      "block_index": 589,
+      "style": "Table Grid",
+      "row_count": 5,
+      "column_count": 4,
+      "grid_dxa": [
+        2337,
+        2337,
+        2338,
+        2338
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 13,
+      "block_index": 594,
+      "style": "Table Grid",
+      "row_count": 13,
+      "column_count": 4,
+      "grid_dxa": [
+        2337,
+        2337,
+        2338,
+        2338
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 14,
+      "block_index": 599,
+      "style": "Table Grid",
+      "row_count": 15,
+      "column_count": 4,
+      "grid_dxa": [
+        2337,
+        2337,
+        2338,
+        2338
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 15,
+      "block_index": 605,
+      "style": "Table Grid",
+      "row_count": 7,
+      "column_count": 4,
+      "grid_dxa": [
+        2337,
+        2337,
+        2338,
+        2338
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 16,
+      "block_index": 609,
+      "style": "Table Grid",
+      "row_count": 6,
+      "column_count": 4,
+      "grid_dxa": [
+        2337,
+        2337,
+        2338,
+        2338
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 17,
+      "block_index": 613,
+      "style": "Table Grid",
+      "row_count": 13,
+      "column_count": 4,
+      "grid_dxa": [
+        2569,
+        2273,
+        2244,
+        2264
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 18,
+      "block_index": 617,
+      "style": "Table Grid",
+      "row_count": 9,
+      "column_count": 4,
+      "grid_dxa": [
+        2337,
+        2337,
+        2338,
+        2338
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 19,
+      "block_index": 629,
+      "style": "Table Grid",
+      "row_count": 17,
+      "column_count": 4,
+      "grid_dxa": [
+        2337,
+        2337,
+        2338,
+        2338
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 20,
+      "block_index": 633,
+      "style": "Table Grid",
+      "row_count": 7,
+      "column_count": 4,
+      "grid_dxa": [
+        2276,
+        2240,
+        2583,
+        2251
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 21,
+      "block_index": 637,
+      "style": "Table Grid",
+      "row_count": 8,
+      "column_count": 4,
+      "grid_dxa": [
+        2270,
+        2254,
+        2583,
+        2243
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 22,
+      "block_index": 641,
+      "style": "Table Grid",
+      "row_count": 8,
+      "column_count": 4,
+      "grid_dxa": [
+        2337,
+        2337,
+        2338,
+        2338
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 23,
+      "block_index": 645,
+      "style": "Table Grid",
+      "row_count": 9,
+      "column_count": 4,
+      "grid_dxa": [
+        2270,
+        2254,
+        2583,
+        2243
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 24,
+      "block_index": 649,
+      "style": "Table Grid",
+      "row_count": 9,
+      "column_count": 4,
+      "grid_dxa": [
+        2337,
+        2337,
+        2338,
+        2338
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 25,
+      "block_index": 653,
+      "style": "Table Grid",
+      "row_count": 9,
+      "column_count": 4,
+      "grid_dxa": [
+        2337,
+        2337,
+        2338,
+        2338
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 26,
+      "block_index": 656,
+      "style": "Table Grid",
+      "row_count": 8,
+      "column_count": 4,
+      "grid_dxa": [
+        2337,
+        2337,
+        2338,
+        2338
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Key",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 27,
+      "block_index": 660,
+      "style": "Table Grid",
+      "row_count": 10,
+      "column_count": 3,
+      "grid_dxa": [
+        3116,
+        3117,
+        3117
+      ],
+      "first_row": [
+        "Method",
+        "Endpoint",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 28,
+      "block_index": 663,
+      "style": "Table Grid",
+      "row_count": 8,
+      "column_count": 3,
+      "grid_dxa": [
+        3116,
+        3117,
+        3117
+      ],
+      "first_row": [
+        "Method",
+        "Endpoint",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 29,
+      "block_index": 666,
+      "style": "Table Grid",
+      "row_count": 6,
+      "column_count": 3,
+      "grid_dxa": [
+        3036,
+        3270,
+        3044
+      ],
+      "first_row": [
+        "Method",
+        "Endpoint",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 30,
+      "block_index": 669,
+      "style": "Table Grid",
+      "row_count": 6,
+      "column_count": 3,
+      "grid_dxa": [
+        3116,
+        3117,
+        3117
+      ],
+      "first_row": [
+        "Method",
+        "Endpoint",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 31,
+      "block_index": 672,
+      "style": "Table Grid",
+      "row_count": 6,
+      "column_count": 3,
+      "grid_dxa": [
+        3116,
+        3117,
+        3117
+      ],
+      "first_row": [
+        "Method",
+        "Endpoint",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 32,
+      "block_index": 675,
+      "style": "Table Grid",
+      "row_count": 6,
+      "column_count": 3,
+      "grid_dxa": [
+        3116,
+        3117,
+        3117
+      ],
+      "first_row": [
+        "Method",
+        "Endpoint",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 33,
+      "block_index": 678,
+      "style": "Table Grid",
+      "row_count": 6,
+      "column_count": 3,
+      "grid_dxa": [
+        3116,
+        3117,
+        3117
+      ],
+      "first_row": [
+        "Method",
+        "Endpoint",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 34,
+      "block_index": 681,
+      "style": "Table Grid",
+      "row_count": 10,
+      "column_count": 3,
+      "grid_dxa": [
+        3116,
+        3117,
+        3117
+      ],
+      "first_row": [
+        "Method",
+        "Endpoint",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 35,
+      "block_index": 684,
+      "style": "Table Grid",
+      "row_count": 4,
+      "column_count": 3,
+      "grid_dxa": [
+        3008,
+        3323,
+        3019
+      ],
+      "first_row": [
+        "Method",
+        "Endpoint",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 36,
+      "block_index": 687,
+      "style": "Table Grid",
+      "row_count": 3,
+      "column_count": 3,
+      "grid_dxa": [
+        3116,
+        3117,
+        3117
+      ],
+      "first_row": [
+        "Method",
+        "Endpoint",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 37,
+      "block_index": 689,
+      "style": "Table Grid",
+      "row_count": 6,
+      "column_count": 3,
+      "grid_dxa": [
+        3116,
+        3117,
+        3117
+      ],
+      "first_row": [
+        "Method",
+        "Endpoint",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 38,
+      "block_index": 692,
+      "style": "Table Grid",
+      "row_count": 5,
+      "column_count": 3,
+      "grid_dxa": [
+        3116,
+        3117,
+        3117
+      ],
+      "first_row": [
+        "Method",
+        "Endpoint",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 39,
+      "block_index": 695,
+      "style": "Table Grid",
+      "row_count": 3,
+      "column_count": 3,
+      "grid_dxa": [
+        3116,
+        3117,
+        3117
+      ],
+      "first_row": [
+        "Method",
+        "Endpoint",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 40,
+      "block_index": 698,
+      "style": "Table Grid",
+      "row_count": 2,
+      "column_count": 3,
+      "grid_dxa": [
+        3116,
+        3117,
+        3117
+      ],
+      "first_row": [
+        "Method",
+        "Endpoint",
+        "Permission"
+      ]
+    },
+    {
+      "table_index": 41,
+      "block_index": 822,
+      "style": "Table Grid",
+      "row_count": 20,
+      "column_count": 2,
+      "grid_dxa": [
+        4675,
+        4675
+      ],
+      "first_row": [
+        "Screen",
+        "Role"
+      ]
+    },
+    {
+      "table_index": 42,
+      "block_index": 844,
+      "style": "Table Grid",
+      "row_count": 9,
+      "column_count": 4,
+      "grid_dxa": [
+        2337,
+        2337,
+        2338,
+        2338
+      ],
+      "first_row": [
+        "Field",
+        "Type",
+        "Required",
+        "หมายเหตุ"
+      ]
+    },
+    {
+      "table_index": 43,
+      "block_index": 853,
+      "style": "Table Grid",
+      "row_count": 9,
+      "column_count": 2,
+      "grid_dxa": [
+        4675,
+        4675
+      ],
+      "first_row": [
+        "Field",
+        "Description"
+      ]
+    },
+    {
+      "table_index": 44,
+      "block_index": 861,
+      "style": "Table Grid",
+      "row_count": 7,
+      "column_count": 5,
+      "grid_dxa": [
+        1870,
+        1870,
+        1870,
+        1870,
+        1870
+      ],
+      "first_row": [
+        "Report",
+        "Role",
+        "Filter",
+        "ข้อมูลที่แสดง",
+        "Export"
+      ]
+    }
+  ]
+}

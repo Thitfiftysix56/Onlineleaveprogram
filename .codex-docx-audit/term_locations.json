@@ -1,0 +1,1145 @@
+{
+  "approver_employee_id": [
+    {
+      "kind": "paragraph",
+      "paragraph": 33,
+      "style": "List Paragraph",
+      "text": "การตรวจสอบสิทธิ์ผู้อนุมัติให้ยึด Direct Supervisor / Direct Team จาก employees.supervisor_id ตามความสัมพันธ์ปัจจุบัน โดยไม่ใช้ leave_requests.approver_employee_id เป็น Source of Truth"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 144,
+      "style": "Normal",
+      "text": "เมื่อ Validation ผ่าน ระบบสร้าง request_no เปลี่ยน status เป็น pending ตรวจ Direct Supervisor จาก employees.supervisor_id และสร้าง Notification ให้ Supervisor โดยไม่บันทึก approver_employee_id ตอน Submit"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 152,
+      "style": "Normal",
+      "text": "บันทึก approver_employee_id และ approved_at"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 162,
+      "style": "Normal",
+      "text": "บันทึก rejection_reason, approver_employee_id และ rejected_at"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 347,
+      "style": "List Paragraph",
+      "text": "ระบบตรวจสอบ Direct Supervisor จาก employees.supervisor_id ณ เวลาที่ Submit และไม่บันทึก approver_employee_id ในขั้นตอน Submit"
+    },
+    {
+      "kind": "table_row",
+      "table": 10,
+      "row": 17,
+      "text": "BR-17 | การ Submit ต้องสร้าง request_no และตรวจ Direct Supervisor จาก employees.supervisor_id ใน Transaction เดียวกัน โดยไม่บันทึก approver_employee_id",
+      "cells": [
+        "BR-17",
+        "การ Submit ต้องสร้าง request_no และตรวจ Direct Supervisor จาก employees.supervisor_id ใน Transaction เดียวกัน โดยไม่บันทึก approver_employee_id"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 19,
+      "row": 5,
+      "text": "approver_employee_id | INT | FK, NULL | ผู้ตัดสินคำขอ บันทึกเมื่อ Approve หรือ Reject; ไม่บันทึกตอน Submit และไม่ใช้ตรวจสิทธิ์",
+      "cells": [
+        "approver_employee_id",
+        "INT",
+        "FK, NULL",
+        "ผู้ตัดสินคำขอ บันทึกเมื่อ Approve หรือ Reject; ไม่บันทึกตอน Submit และไม่ใช้ตรวจสิทธิ์"
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 739,
+      "style": "Normal",
+      "text": "approver_employee_id = current_employee_id, approved_at = now()"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 759,
+      "style": "Normal",
+      "text": "approver_employee_id = current_employee_id, rejected_at = now()"
+    },
+    {
+      "kind": "table_row",
+      "table": 42,
+      "row": 8,
+      "text": "direct_supervisor | Derived / Read-only | No | อ่านจาก employees.supervisor_id เพื่อใช้ตรวจสอบและแจ้งเตือน; ไม่บันทึก approver_employee_id ตอน Submit",
+      "cells": [
+        "direct_supervisor",
+        "Derived / Read-only",
+        "No",
+        "อ่านจาก employees.supervisor_id เพื่อใช้ตรวจสอบและแจ้งเตือน; ไม่บันทึก approver_employee_id ตอน Submit"
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 839,
+      "style": "List Paragraph",
+      "text": "And ใช้ employees.supervisor_id เพื่อระบุและตรวจสอบ Direct Supervisor โดยไม่บันทึก approver_employee_id ตอน Submit"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 858,
+      "style": "List Paragraph",
+      "text": "And บันทึก approver_employee_id เป็นผู้ตัดสิน ณ เวลา Approve โดยไม่ INSERT leave_approval_logs"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 868,
+      "style": "List Paragraph",
+      "text": "And บันทึก approver_employee_id เป็นผู้ตัดสิน ณ เวลา Reject โดยไม่ INSERT leave_approval_logs"
+    },
+    {
+      "kind": "table_row",
+      "table": 55,
+      "row": 8,
+      "text": "Main Flow | ระบบตรวจ Required Field และ Reason 5–500 ตัวอักษร ตรวจ end_date >= start_date และอยู่ปีเดียวกัน คำนวณ Working Day โดยไม่นับ Weekend และ Active Holiday ตรวจ Leave Type Active และ Minimum/Maximum Days ตรวจ Leave Entitlement, pending_days และ available_days ตรวจ Overlap กับ Pending/Approved ตรวจ Attachment Policy และ Threshold ตรวจ User/Employee Active และ Direct Supervisor จาก employees.supervisor_id เมื่อผ่านทั้งหมด ระบบสร้าง request_no และเปลี่ยน status = pending ระบบไม่บันทึก approver_employee_id ตอน Submit ระบบสร้าง Notification ให้ Direct Supervisor และ Commit Transaction",
+      "cells": [
+        "Main Flow",
+        "ระบบตรวจ Required Field และ Reason 5–500 ตัวอักษร ตรวจ end_date >= start_date และอยู่ปีเดียวกัน คำนวณ Working Day โดยไม่นับ Weekend และ Active Holiday ตรวจ Leave Type Active และ Minimum/Maximum Days ตรวจ Leave Entitlement, pending_days และ available_days ตรวจ Overlap กับ Pending/Approved ตรวจ Attachment Policy และ Threshold ตรวจ User/Employee Active และ Direct Supervisor จาก employees.supervisor_id เมื่อผ่านทั้งหมด ระบบสร้าง request_no และเปลี่ยน status = pending ระบบไม่บันทึก approver_employee_id ตอน Submit ระบบสร้าง Notification ให้ Direct Supervisor และ Commit Transaction"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 60,
+      "row": 8,
+      "text": "Main Flow | ระบบ Lock คำขอและตรวจ status ซ้ำ ตรวจ Direct Team จาก employees.supervisor_id และป้องกัน Self Approval Lock Entitlement และตรวจ Balance ซ้ำ ณ เวลาตัดสิน เพิ่ม used_days เปลี่ยน status = approved บันทึก approver_employee_id และ approved_at สร้าง Notification ให้เจ้าของคำขอ บันทึก Audit Log action = leave_approved Commit Transaction โดยไม่ INSERT leave_approval_logs",
+      "cells": [
+        "Main Flow",
+        "ระบบ Lock คำขอและตรวจ status ซ้ำ ตรวจ Direct Team จาก employees.supervisor_id และป้องกัน Self Approval Lock Entitlement และตรวจ Balance ซ้ำ ณ เวลาตัดสิน เพิ่ม used_days เปลี่ยน status = approved บันทึก approver_employee_id และ approved_at สร้าง Notification ให้เจ้าของคำขอ บันทึก Audit Log action = leave_approved Commit Transaction โดยไม่ INSERT leave_approval_logs"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 61,
+      "row": 8,
+      "text": "Main Flow | ระบบ Lock คำขอและตรวจ status ซ้ำ ตรวจ Direct Team จาก employees.supervisor_id และป้องกัน Self Decision ตรวจ Rejection Reason เปลี่ยน status = rejected บันทึก rejection_reason, approver_employee_id และ rejected_at สร้าง Notification ให้เจ้าของคำขอ บันทึก Audit Log action = leave_rejected Commit Transaction โดยไม่ INSERT leave_approval_logs",
+      "cells": [
+        "Main Flow",
+        "ระบบ Lock คำขอและตรวจ status ซ้ำ ตรวจ Direct Team จาก employees.supervisor_id และป้องกัน Self Decision ตรวจ Rejection Reason เปลี่ยน status = rejected บันทึก rejection_reason, approver_employee_id และ rejected_at สร้าง Notification ให้เจ้าของคำขอ บันทึก Audit Log action = leave_rejected Commit Transaction โดยไม่ INSERT leave_approval_logs"
+      ]
+    }
+  ],
+  "leave_approval_logs": [
+    {
+      "kind": "paragraph",
+      "paragraph": 155,
+      "style": "Normal",
+      "text": "Commit โดยไม่ INSERT leave_approval_logs"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 165,
+      "style": "Normal",
+      "text": "Commit โดยไม่ INSERT leave_approval_logs"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 377,
+      "style": "List Paragraph",
+      "text": "ไม่ INSERT leave_approval_logs ใน Current Approval Flow"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 387,
+      "style": "List Paragraph",
+      "text": "ไม่ INSERT leave_approval_logs ใน Current Approval Flow"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 548,
+      "style": "List Paragraph",
+      "text": "leave_approval_logs"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 567,
+      "style": "Normal",
+      "text": "leave_requests 1 ──── * leave_approval_logs"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 608,
+      "style": "Normal",
+      "text": "9.10 ตาราง leave_approval_logs"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 609,
+      "style": "Normal",
+      "text": "ตาราง leave_approval_logs มีอยู่ใน Schema เดิมสำหรับประวัติการตัดสิน แต่ Current Approval Controller ไม่ INSERT ข้อมูลลงตารางนี้ และไม่ใช้เป็น Business Workflow หลัก"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 742,
+      "style": "Normal",
+      "text": "ไม่ INSERT leave_approval_logs ใน Current Approval Flow"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 760,
+      "style": "Normal",
+      "text": "ไม่ INSERT leave_approval_logs ใน Current Approval Flow; เหตุผลเก็บใน leave_requests.rejection_reason"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 858,
+      "style": "List Paragraph",
+      "text": "And บันทึก approver_employee_id เป็นผู้ตัดสิน ณ เวลา Approve โดยไม่ INSERT leave_approval_logs"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 868,
+      "style": "List Paragraph",
+      "text": "And บันทึก approver_employee_id เป็นผู้ตัดสิน ณ เวลา Reject โดยไม่ INSERT leave_approval_logs"
+    },
+    {
+      "kind": "table_row",
+      "table": 60,
+      "row": 8,
+      "text": "Main Flow | ระบบ Lock คำขอและตรวจ status ซ้ำ ตรวจ Direct Team จาก employees.supervisor_id และป้องกัน Self Approval Lock Entitlement และตรวจ Balance ซ้ำ ณ เวลาตัดสิน เพิ่ม used_days เปลี่ยน status = approved บันทึก approver_employee_id และ approved_at สร้าง Notification ให้เจ้าของคำขอ บันทึก Audit Log action = leave_approved Commit Transaction โดยไม่ INSERT leave_approval_logs",
+      "cells": [
+        "Main Flow",
+        "ระบบ Lock คำขอและตรวจ status ซ้ำ ตรวจ Direct Team จาก employees.supervisor_id และป้องกัน Self Approval Lock Entitlement และตรวจ Balance ซ้ำ ณ เวลาตัดสิน เพิ่ม used_days เปลี่ยน status = approved บันทึก approver_employee_id และ approved_at สร้าง Notification ให้เจ้าของคำขอ บันทึก Audit Log action = leave_approved Commit Transaction โดยไม่ INSERT leave_approval_logs"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 61,
+      "row": 8,
+      "text": "Main Flow | ระบบ Lock คำขอและตรวจ status ซ้ำ ตรวจ Direct Team จาก employees.supervisor_id และป้องกัน Self Decision ตรวจ Rejection Reason เปลี่ยน status = rejected บันทึก rejection_reason, approver_employee_id และ rejected_at สร้าง Notification ให้เจ้าของคำขอ บันทึก Audit Log action = leave_rejected Commit Transaction โดยไม่ INSERT leave_approval_logs",
+      "cells": [
+        "Main Flow",
+        "ระบบ Lock คำขอและตรวจ status ซ้ำ ตรวจ Direct Team จาก employees.supervisor_id และป้องกัน Self Decision ตรวจ Rejection Reason เปลี่ยน status = rejected บันทึก rejection_reason, approver_employee_id และ rejected_at สร้าง Notification ให้เจ้าของคำขอ บันทึก Audit Log action = leave_rejected Commit Transaction โดยไม่ INSERT leave_approval_logs"
+      ]
+    }
+  ],
+  "leave_attachments": [],
+  "leave_request_attachments": [
+    {
+      "kind": "paragraph",
+      "paragraph": 549,
+      "style": "List Paragraph",
+      "text": "leave_request_attachments"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 568,
+      "style": "Normal",
+      "text": "leave_requests 1 ──── * leave_request_attachments"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 611,
+      "style": "Normal",
+      "text": "9.11 ตาราง leave_request_attachments"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 612,
+      "style": "Normal",
+      "text": "ตาราง leave_request_attachments ใช้สำหรับจัดเก็บ Metadata ของเอกสารแนบประกอบคำขอลา"
+    }
+  ],
+  "remaining_days": [
+    {
+      "kind": "paragraph",
+      "paragraph": 322,
+      "style": "List Paragraph",
+      "text": "remaining_days = total_days - used_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 328,
+      "style": "List Paragraph",
+      "text": "remaining_days >= 0"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 332,
+      "style": "Normal",
+      "text": "หมายเหตุสำคัญ ระบบไม่ให้ผู้ใช้แก้ไข remaining_days หรือ available_days โดยตรง เพราะเป็นค่าที่คำนวณจากข้อมูลอื่น"
+    },
+    {
+      "kind": "table_row",
+      "table": 10,
+      "row": 31,
+      "text": "BR-31 | remaining_days และ available_days เป็นค่าคำนวณ ไม่ให้ผู้ใช้แก้ไขโดยตรง",
+      "cells": [
+        "BR-31",
+        "remaining_days และ available_days เป็นค่าคำนวณ ไม่ให้ผู้ใช้แก้ไขโดยตรง"
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 602,
+      "style": "List Paragraph",
+      "text": "remaining_days = total_days - used_days"
+    },
+    {
+      "kind": "table_row",
+      "table": 44,
+      "row": 4,
+      "text": "วันลาคงเหลือ | HR | ปี, แผนก, พนักงาน | total_days, used_days, pending_days, remaining_days, available_days | Excel",
+      "cells": [
+        "วันลาคงเหลือ",
+        "HR",
+        "ปี, แผนก, พนักงาน",
+        "total_days, used_days, pending_days, remaining_days, available_days",
+        "Excel"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 58,
+      "row": 8,
+      "text": "Main Flow | ระบบอ่าน Entitlement ของพนักงานและปี คำนวณ pending_days จากคำขอ pending คำนวณ remaining_days และ available_days แสดงผลแยกตาม Leave Type",
+      "cells": [
+        "Main Flow",
+        "ระบบอ่าน Entitlement ของพนักงานและปี คำนวณ pending_days จากคำขอ pending คำนวณ remaining_days และ available_days แสดงผลแยกตาม Leave Type"
+      ]
+    }
+  ],
+  "available_days": [
+    {
+      "kind": "paragraph",
+      "paragraph": 143,
+      "style": "Normal",
+      "text": "ระบบตรวจ Required Field, วันที่และปี, Reason 5–500 ตัวอักษร, Leave Type Active, Working Day, Minimum/Maximum Days, Entitlement, available_days ที่รวม pending_days, Overlap, Attachment Policy/Threshold, Direct Supervisor และสถานะ User/Employee"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 323,
+      "style": "List Paragraph",
+      "text": "available_days = total_days - used_days - pending_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 329,
+      "style": "List Paragraph",
+      "text": "available_days >= 0"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 332,
+      "style": "Normal",
+      "text": "หมายเหตุสำคัญ ระบบไม่ให้ผู้ใช้แก้ไข remaining_days หรือ available_days โดยตรง เพราะเป็นค่าที่คำนวณจากข้อมูลอื่น"
+    },
+    {
+      "kind": "table_row",
+      "table": 7,
+      "row": 4,
+      "text": "สิทธิ์วันลา | available_days ต้องเพียงพอ",
+      "cells": [
+        "สิทธิ์วันลา",
+        "available_days ต้องเพียงพอ"
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 374,
+      "style": "List Paragraph",
+      "text": "ตรวจสอบว่า available_days เพียงพอ"
+    },
+    {
+      "kind": "table_row",
+      "table": 10,
+      "row": 1,
+      "text": "BR-01 | พนักงานต้องมี available_days เพียงพอก่อนส่งคำขอ",
+      "cells": [
+        "BR-01",
+        "พนักงานต้องมี available_days เพียงพอก่อนส่งคำขอ"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 10,
+      "row": 30,
+      "text": "BR-30 | pending_days ต้องถูกนำไปคำนวณ available_days",
+      "cells": [
+        "BR-30",
+        "pending_days ต้องถูกนำไปคำนวณ available_days"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 10,
+      "row": 31,
+      "text": "BR-31 | remaining_days และ available_days เป็นค่าคำนวณ ไม่ให้ผู้ใช้แก้ไขโดยตรง",
+      "cells": [
+        "BR-31",
+        "remaining_days และ available_days เป็นค่าคำนวณ ไม่ให้ผู้ใช้แก้ไขโดยตรง"
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 604,
+      "style": "List Paragraph",
+      "text": "available_days = total_days - used_days - pending_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 687,
+      "style": "Normal",
+      "text": "available_days = entitlement.total_days - entitlement.used_days - pending_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 688,
+      "style": "Normal",
+      "text": "IF available_days < leave_days:"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 713,
+      "style": "Normal",
+      "text": "validate available_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 734,
+      "style": "Normal",
+      "text": "available_days = entitlement.total_days - entitlement.used_days - pending_days_excluding_current_request"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 735,
+      "style": "Normal",
+      "text": "IF available_days < leave_request.leave_days:"
+    },
+    {
+      "kind": "table_row",
+      "table": 42,
+      "row": 7,
+      "text": "available_days | Display | No | แสดงสิทธิ์วันที่สามารถใช้ได้หลังหัก pending_days",
+      "cells": [
+        "available_days",
+        "Display",
+        "No",
+        "แสดงสิทธิ์วันที่สามารถใช้ได้หลังหัก pending_days"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 44,
+      "row": 4,
+      "text": "วันลาคงเหลือ | HR | ปี, แผนก, พนักงาน | total_days, used_days, pending_days, remaining_days, available_days | Excel",
+      "cells": [
+        "วันลาคงเหลือ",
+        "HR",
+        "ปี, แผนก, พนักงาน",
+        "total_days, used_days, pending_days, remaining_days, available_days",
+        "Excel"
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 833,
+      "style": "List Paragraph",
+      "text": "And มี available_days เพียงพอ"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 842,
+      "style": "List Paragraph",
+      "text": "Given ผู้ใช้มี available_days ไม่เพียงพอ"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 854,
+      "style": "List Paragraph",
+      "text": "And available_days ยังเพียงพอ"
+    },
+    {
+      "kind": "table_row",
+      "table": 55,
+      "row": 8,
+      "text": "Main Flow | ระบบตรวจ Required Field และ Reason 5–500 ตัวอักษร ตรวจ end_date >= start_date และอยู่ปีเดียวกัน คำนวณ Working Day โดยไม่นับ Weekend และ Active Holiday ตรวจ Leave Type Active และ Minimum/Maximum Days ตรวจ Leave Entitlement, pending_days และ available_days ตรวจ Overlap กับ Pending/Approved ตรวจ Attachment Policy และ Threshold ตรวจ User/Employee Active และ Direct Supervisor จาก employees.supervisor_id เมื่อผ่านทั้งหมด ระบบสร้าง request_no และเปลี่ยน status = pending ระบบไม่บันทึก approver_employee_id ตอน Submit ระบบสร้าง Notification ให้ Direct Supervisor และ Commit Transaction",
+      "cells": [
+        "Main Flow",
+        "ระบบตรวจ Required Field และ Reason 5–500 ตัวอักษร ตรวจ end_date >= start_date และอยู่ปีเดียวกัน คำนวณ Working Day โดยไม่นับ Weekend และ Active Holiday ตรวจ Leave Type Active และ Minimum/Maximum Days ตรวจ Leave Entitlement, pending_days และ available_days ตรวจ Overlap กับ Pending/Approved ตรวจ Attachment Policy และ Threshold ตรวจ User/Employee Active และ Direct Supervisor จาก employees.supervisor_id เมื่อผ่านทั้งหมด ระบบสร้าง request_no และเปลี่ยน status = pending ระบบไม่บันทึก approver_employee_id ตอน Submit ระบบสร้าง Notification ให้ Direct Supervisor และ Commit Transaction"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 58,
+      "row": 8,
+      "text": "Main Flow | ระบบอ่าน Entitlement ของพนักงานและปี คำนวณ pending_days จากคำขอ pending คำนวณ remaining_days และ available_days แสดงผลแยกตาม Leave Type",
+      "cells": [
+        "Main Flow",
+        "ระบบอ่าน Entitlement ของพนักงานและปี คำนวณ pending_days จากคำขอ pending คำนวณ remaining_days และ available_days แสดงผลแยกตาม Leave Type"
+      ]
+    }
+  ],
+  "pending_days": [
+    {
+      "kind": "paragraph",
+      "paragraph": 143,
+      "style": "Normal",
+      "text": "ระบบตรวจ Required Field, วันที่และปี, Reason 5–500 ตัวอักษร, Leave Type Active, Working Day, Minimum/Maximum Days, Entitlement, available_days ที่รวม pending_days, Overlap, Attachment Policy/Threshold, Direct Supervisor และสถานะ User/Employee"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 167,
+      "style": "Normal",
+      "text": "เจ้าของคำขอสามารถ Cancel ได้เฉพาะ status = pending ระบบเปลี่ยนสถานะเป็น cancelled และบันทึก cancelled_at โดยไม่สร้าง Notification และไม่บันทึก Audit Log การ Cancel ไม่คืนสิทธิ์เพราะ pending_days เป็นค่าคำนวณและ used_days ยังไม่ถูกเพิ่ม"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 179,
+      "style": "List Paragraph",
+      "text": "คำขอ Pending ต้องถูกนำไปคิดเป็น pending_days เพื่อป้องกันการส่งคำขอเกินสิทธิ์"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 321,
+      "style": "List Paragraph",
+      "text": "pending_days = จำนวนวันที่อยู่ระหว่างรออนุมัติ"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 323,
+      "style": "List Paragraph",
+      "text": "available_days = total_days - used_days - pending_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 327,
+      "style": "List Paragraph",
+      "text": "pending_days >= 0"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 331,
+      "style": "List Paragraph",
+      "text": "pending_days ใช้จากคำขอ status = pending"
+    },
+    {
+      "kind": "table_row",
+      "table": 10,
+      "row": 30,
+      "text": "BR-30 | pending_days ต้องถูกนำไปคำนวณ available_days",
+      "cells": [
+        "BR-30",
+        "pending_days ต้องถูกนำไปคำนวณ available_days"
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 603,
+      "style": "List Paragraph",
+      "text": "pending_days = SUM leave_days จาก leave_requests ที่ status = pending"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 604,
+      "style": "List Paragraph",
+      "text": "available_days = total_days - used_days - pending_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 682,
+      "style": "Normal",
+      "text": "pending_days = SUM leave_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 687,
+      "style": "Normal",
+      "text": "available_days = entitlement.total_days - entitlement.used_days - pending_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 734,
+      "style": "Normal",
+      "text": "available_days = entitlement.total_days - entitlement.used_days - pending_days_excluding_current_request"
+    },
+    {
+      "kind": "table_row",
+      "table": 42,
+      "row": 7,
+      "text": "available_days | Display | No | แสดงสิทธิ์วันที่สามารถใช้ได้หลังหัก pending_days",
+      "cells": [
+        "available_days",
+        "Display",
+        "No",
+        "แสดงสิทธิ์วันที่สามารถใช้ได้หลังหัก pending_days"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 44,
+      "row": 4,
+      "text": "วันลาคงเหลือ | HR | ปี, แผนก, พนักงาน | total_days, used_days, pending_days, remaining_days, available_days | Excel",
+      "cells": [
+        "วันลาคงเหลือ",
+        "HR",
+        "ปี, แผนก, พนักงาน",
+        "total_days, used_days, pending_days, remaining_days, available_days",
+        "Excel"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 55,
+      "row": 8,
+      "text": "Main Flow | ระบบตรวจ Required Field และ Reason 5–500 ตัวอักษร ตรวจ end_date >= start_date และอยู่ปีเดียวกัน คำนวณ Working Day โดยไม่นับ Weekend และ Active Holiday ตรวจ Leave Type Active และ Minimum/Maximum Days ตรวจ Leave Entitlement, pending_days และ available_days ตรวจ Overlap กับ Pending/Approved ตรวจ Attachment Policy และ Threshold ตรวจ User/Employee Active และ Direct Supervisor จาก employees.supervisor_id เมื่อผ่านทั้งหมด ระบบสร้าง request_no และเปลี่ยน status = pending ระบบไม่บันทึก approver_employee_id ตอน Submit ระบบสร้าง Notification ให้ Direct Supervisor และ Commit Transaction",
+      "cells": [
+        "Main Flow",
+        "ระบบตรวจ Required Field และ Reason 5–500 ตัวอักษร ตรวจ end_date >= start_date และอยู่ปีเดียวกัน คำนวณ Working Day โดยไม่นับ Weekend และ Active Holiday ตรวจ Leave Type Active และ Minimum/Maximum Days ตรวจ Leave Entitlement, pending_days และ available_days ตรวจ Overlap กับ Pending/Approved ตรวจ Attachment Policy และ Threshold ตรวจ User/Employee Active และ Direct Supervisor จาก employees.supervisor_id เมื่อผ่านทั้งหมด ระบบสร้าง request_no และเปลี่ยน status = pending ระบบไม่บันทึก approver_employee_id ตอน Submit ระบบสร้าง Notification ให้ Direct Supervisor และ Commit Transaction"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 58,
+      "row": 8,
+      "text": "Main Flow | ระบบอ่าน Entitlement ของพนักงานและปี คำนวณ pending_days จากคำขอ pending คำนวณ remaining_days และ available_days แสดงผลแยกตาม Leave Type",
+      "cells": [
+        "Main Flow",
+        "ระบบอ่าน Entitlement ของพนักงานและปี คำนวณ pending_days จากคำขอ pending คำนวณ remaining_days และ available_days แสดงผลแยกตาม Leave Type"
+      ]
+    }
+  ],
+  "used_days": [
+    {
+      "kind": "paragraph",
+      "paragraph": 150,
+      "style": "Normal",
+      "text": "เพิ่ม used_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 167,
+      "style": "Normal",
+      "text": "เจ้าของคำขอสามารถ Cancel ได้เฉพาะ status = pending ระบบเปลี่ยนสถานะเป็น cancelled และบันทึก cancelled_at โดยไม่สร้าง Notification และไม่บันทึก Audit Log การ Cancel ไม่คืนสิทธิ์เพราะ pending_days เป็นค่าคำนวณและ used_days ยังไม่ถูกเพิ่ม"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 320,
+      "style": "List Paragraph",
+      "text": "used_days = จำนวนวันที่ถูกอนุมัติแล้ว"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 322,
+      "style": "List Paragraph",
+      "text": "remaining_days = total_days - used_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 323,
+      "style": "List Paragraph",
+      "text": "available_days = total_days - used_days - pending_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 326,
+      "style": "List Paragraph",
+      "text": "used_days >= 0"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 330,
+      "style": "List Paragraph",
+      "text": "used_days <= total_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 376,
+      "style": "List Paragraph",
+      "text": "หักวันลาโดยเพิ่ม used_days"
+    },
+    {
+      "kind": "table_row",
+      "table": 18,
+      "row": 6,
+      "text": "used_days | DECIMAL(5,2) |  | จำนวนวันที่ใช้ไปแล้ว",
+      "cells": [
+        "used_days",
+        "DECIMAL(5,2)",
+        "",
+        "จำนวนวันที่ใช้ไปแล้ว"
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 599,
+      "style": "List Paragraph",
+      "text": "used_days >= 0"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 600,
+      "style": "List Paragraph",
+      "text": "used_days <= total_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 602,
+      "style": "List Paragraph",
+      "text": "remaining_days = total_days - used_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 604,
+      "style": "List Paragraph",
+      "text": "available_days = total_days - used_days - pending_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 687,
+      "style": "Normal",
+      "text": "available_days = entitlement.total_days - entitlement.used_days - pending_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 734,
+      "style": "Normal",
+      "text": "available_days = entitlement.total_days - entitlement.used_days - pending_days_excluding_current_request"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 741,
+      "style": "Normal",
+      "text": "SET used_days = used_days + leave_request.leave_days"
+    },
+    {
+      "kind": "table_row",
+      "table": 44,
+      "row": 4,
+      "text": "วันลาคงเหลือ | HR | ปี, แผนก, พนักงาน | total_days, used_days, pending_days, remaining_days, available_days | Excel",
+      "cells": [
+        "วันลาคงเหลือ",
+        "HR",
+        "ปี, แผนก, พนักงาน",
+        "total_days, used_days, pending_days, remaining_days, available_days",
+        "Excel"
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 857,
+      "style": "List Paragraph",
+      "text": "And เพิ่ม used_days"
+    },
+    {
+      "kind": "table_row",
+      "table": 60,
+      "row": 8,
+      "text": "Main Flow | ระบบ Lock คำขอและตรวจ status ซ้ำ ตรวจ Direct Team จาก employees.supervisor_id และป้องกัน Self Approval Lock Entitlement และตรวจ Balance ซ้ำ ณ เวลาตัดสิน เพิ่ม used_days เปลี่ยน status = approved บันทึก approver_employee_id และ approved_at สร้าง Notification ให้เจ้าของคำขอ บันทึก Audit Log action = leave_approved Commit Transaction โดยไม่ INSERT leave_approval_logs",
+      "cells": [
+        "Main Flow",
+        "ระบบ Lock คำขอและตรวจ status ซ้ำ ตรวจ Direct Team จาก employees.supervisor_id และป้องกัน Self Approval Lock Entitlement และตรวจ Balance ซ้ำ ณ เวลาตัดสิน เพิ่ม used_days เปลี่ยน status = approved บันทึก approver_employee_id และ approved_at สร้าง Notification ให้เจ้าของคำขอ บันทึก Audit Log action = leave_approved Commit Transaction โดยไม่ INSERT leave_approval_logs"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 60,
+      "row": 11,
+      "text": "Postconditions | คำขอเป็น approved, used_days เพิ่ม และเจ้าของได้รับ Notification",
+      "cells": [
+        "Postconditions",
+        "คำขอเป็น approved, used_days เพิ่ม และเจ้าของได้รับ Notification"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 65,
+      "row": 8,
+      "text": "Main Flow | เลือกพนักงาน ประเภทลา และปี ระบุ total_days และ used_days ตามขอบเขตที่อนุญาต ระบบตรวจค่าต้องไม่ติดลบและ used_days ไม่เกิน total_days ระบบบันทึกและคำนวณค่าที่แสดง",
+      "cells": [
+        "Main Flow",
+        "เลือกพนักงาน ประเภทลา และปี ระบุ total_days และ used_days ตามขอบเขตที่อนุญาต ระบบตรวจค่าต้องไม่ติดลบและ used_days ไม่เกิน total_days ระบบบันทึกและคำนวณค่าที่แสดง"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 65,
+      "row": 10,
+      "text": "Exception Flow | Entitlement ซ้ำต่อพนักงาน/ประเภท/ปี ค่าติดลบหรือ used_days เกิน total_days",
+      "cells": [
+        "Exception Flow",
+        "Entitlement ซ้ำต่อพนักงาน/ประเภท/ปี ค่าติดลบหรือ used_days เกิน total_days"
+      ]
+    }
+  ],
+  "total_days": [
+    {
+      "kind": "paragraph",
+      "paragraph": 309,
+      "style": "Normal",
+      "text": "annual_quota_days เป็นค่า default สำหรับสร้างสิทธิ์วันลา ส่วนสิทธิ์จริงของพนักงานแต่ละคนให้ยึดจาก leave_entitlements.total_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 322,
+      "style": "List Paragraph",
+      "text": "remaining_days = total_days - used_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 323,
+      "style": "List Paragraph",
+      "text": "available_days = total_days - used_days - pending_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 325,
+      "style": "List Paragraph",
+      "text": "total_days >= 0"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 330,
+      "style": "List Paragraph",
+      "text": "used_days <= total_days"
+    },
+    {
+      "kind": "table_row",
+      "table": 18,
+      "row": 5,
+      "text": "total_days | DECIMAL(5,2) |  | จำนวนวันลาทั้งหมด",
+      "cells": [
+        "total_days",
+        "DECIMAL(5,2)",
+        "",
+        "จำนวนวันลาทั้งหมด"
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 598,
+      "style": "List Paragraph",
+      "text": "total_days >= 0"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 600,
+      "style": "List Paragraph",
+      "text": "used_days <= total_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 602,
+      "style": "List Paragraph",
+      "text": "remaining_days = total_days - used_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 604,
+      "style": "List Paragraph",
+      "text": "available_days = total_days - used_days - pending_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 687,
+      "style": "Normal",
+      "text": "available_days = entitlement.total_days - entitlement.used_days - pending_days"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 734,
+      "style": "Normal",
+      "text": "available_days = entitlement.total_days - entitlement.used_days - pending_days_excluding_current_request"
+    },
+    {
+      "kind": "table_row",
+      "table": 44,
+      "row": 4,
+      "text": "วันลาคงเหลือ | HR | ปี, แผนก, พนักงาน | total_days, used_days, pending_days, remaining_days, available_days | Excel",
+      "cells": [
+        "วันลาคงเหลือ",
+        "HR",
+        "ปี, แผนก, พนักงาน",
+        "total_days, used_days, pending_days, remaining_days, available_days",
+        "Excel"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 65,
+      "row": 8,
+      "text": "Main Flow | เลือกพนักงาน ประเภทลา และปี ระบุ total_days และ used_days ตามขอบเขตที่อนุญาต ระบบตรวจค่าต้องไม่ติดลบและ used_days ไม่เกิน total_days ระบบบันทึกและคำนวณค่าที่แสดง",
+      "cells": [
+        "Main Flow",
+        "เลือกพนักงาน ประเภทลา และปี ระบุ total_days และ used_days ตามขอบเขตที่อนุญาต ระบบตรวจค่าต้องไม่ติดลบและ used_days ไม่เกิน total_days ระบบบันทึกและคำนวณค่าที่แสดง"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 65,
+      "row": 10,
+      "text": "Exception Flow | Entitlement ซ้ำต่อพนักงาน/ประเภท/ปี ค่าติดลบหรือ used_days เกิน total_days",
+      "cells": [
+        "Exception Flow",
+        "Entitlement ซ้ำต่อพนักงาน/ประเภท/ปี ค่าติดลบหรือ used_days เกิน total_days"
+      ]
+    }
+  ],
+  "ลาป่วยเกิน 3 วัน": [],
+  "ทุก Action": [
+    {
+      "kind": "paragraph",
+      "paragraph": 462,
+      "style": "Normal",
+      "text": "ระบบต้องบันทึก Event สำคัญที่กำหนด และไม่อ้างว่าครอบคลุมทุก Action"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 474,
+      "style": "List Paragraph",
+      "text": "หมายเหตุ: Backend ปัจจุบันบันทึกเฉพาะ Event สำคัญข้างต้น ไม่อ้างว่าบันทึกทุก Action ของระบบ"
+    },
+    {
+      "kind": "table_row",
+      "table": 10,
+      "row": 40,
+      "text": "BR-40 | ระบบบันทึกเฉพาะ Event สำคัญที่กำหนดใน Audit Log ไม่รับประกันการบันทึกทุก Action",
+      "cells": [
+        "BR-40",
+        "ระบบบันทึกเฉพาะ Event สำคัญที่กำหนดใน Audit Log ไม่รับประกันการบันทึกทุก Action"
+      ]
+    }
+  ],
+  "ทุก action": [
+    {
+      "kind": "paragraph",
+      "paragraph": 462,
+      "style": "Normal",
+      "text": "ระบบต้องบันทึก Event สำคัญที่กำหนด และไม่อ้างว่าครอบคลุมทุก Action"
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 474,
+      "style": "List Paragraph",
+      "text": "หมายเหตุ: Backend ปัจจุบันบันทึกเฉพาะ Event สำคัญข้างต้น ไม่อ้างว่าบันทึกทุก Action ของระบบ"
+    },
+    {
+      "kind": "table_row",
+      "table": 10,
+      "row": 40,
+      "text": "BR-40 | ระบบบันทึกเฉพาะ Event สำคัญที่กำหนดใน Audit Log ไม่รับประกันการบันทึกทุก Action",
+      "cells": [
+        "BR-40",
+        "ระบบบันทึกเฉพาะ Event สำคัญที่กำหนดใน Audit Log ไม่รับประกันการบันทึกทุก Action"
+      ]
+    }
+  ],
+  "ทุกครั้ง": [
+    {
+      "kind": "paragraph",
+      "paragraph": 895,
+      "style": "Normal",
+      "text": "<<include>>: ไม่กำหนด Use Case เพิ่มสำหรับ Validation เพราะเป็น Internal Behavior ที่เกิดทุกครั้งภายใน UC-07 ไม่ใช่เป้าหมายการใช้งานแยกของ Actor"
+    }
+  ],
+  "Future Scope": [
+    {
+      "kind": "paragraph",
+      "paragraph": 20,
+      "style": "Normal",
+      "text": "2.2 ขอบเขตในอนาคต (Future Scope)"
+    },
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 1,
+      "text": "Multi-role User | ผู้ใช้หนึ่งคนมีหลาย Role | Future Scope",
+      "cells": [
+        "Multi-role User",
+        "ผู้ใช้หนึ่งคนมีหลาย Role",
+        "Future Scope"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 2,
+      "text": "Half-day Leave | ลาครึ่งวันช่วงเช้าหรือบ่าย | Future Scope",
+      "cells": [
+        "Half-day Leave",
+        "ลาครึ่งวันช่วงเช้าหรือบ่าย",
+        "Future Scope"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 3,
+      "text": "Cross-year Leave Request | ยื่นคำขอลาคร่อมปี | Future Scope",
+      "cells": [
+        "Cross-year Leave Request",
+        "ยื่นคำขอลาคร่อมปี",
+        "Future Scope"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 4,
+      "text": "Cancel After Approval | ยกเลิกหลังอนุมัติพร้อมคืนสิทธิ์วันลา | Future Scope",
+      "cells": [
+        "Cancel After Approval",
+        "ยกเลิกหลังอนุมัติพร้อมคืนสิทธิ์วันลา",
+        "Future Scope"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 5,
+      "text": "Backup Assignee | ระบุผู้รับผิดชอบงานแทนระหว่างลา | Future Scope",
+      "cells": [
+        "Backup Assignee",
+        "ระบุผู้รับผิดชอบงานแทนระหว่างลา",
+        "Future Scope"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 6,
+      "text": "Multi-step Approval | Department Manager, HR หรือ Final Approver อนุมัติหลายระดับ | Future Scope",
+      "cells": [
+        "Multi-step Approval",
+        "Department Manager, HR หรือ Final Approver อนุมัติหลายระดับ",
+        "Future Scope"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 7,
+      "text": "Backup / Delegate Approver | มอบหมายผู้อนุมัติแทนตามช่วงเวลา | Future Scope",
+      "cells": [
+        "Backup / Delegate Approver",
+        "มอบหมายผู้อนุมัติแทนตามช่วงเวลา",
+        "Future Scope"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 8,
+      "text": "Push / Real-time Notification | แจ้งเตือนทันทีหรือส่งเข้ามือถือ | Future Scope",
+      "cells": [
+        "Push / Real-time Notification",
+        "แจ้งเตือนทันทีหรือส่งเข้ามือถือ",
+        "Future Scope"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 9,
+      "text": "Native Mobile Application | แอปพลิเคชันสำหรับอุปกรณ์เคลื่อนที่ | Future Scope",
+      "cells": [
+        "Native Mobile Application",
+        "แอปพลิเคชันสำหรับอุปกรณ์เคลื่อนที่",
+        "Future Scope"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 10,
+      "text": "PDF Export | ส่งออกรายงานเป็น PDF | Future Scope",
+      "cells": [
+        "PDF Export",
+        "ส่งออกรายงานเป็น PDF",
+        "Future Scope"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 11,
+      "text": "Advanced Analytics | Dashboard และรายงานเชิงวิเคราะห์หลายมิติ | Future Scope",
+      "cells": [
+        "Advanced Analytics",
+        "Dashboard และรายงานเชิงวิเคราะห์หลายมิติ",
+        "Future Scope"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 12,
+      "text": "Backup / Restore | สำรองและกู้คืนระบบระดับโครงสร้างพื้นฐาน | Future Scope",
+      "cells": [
+        "Backup / Restore",
+        "สำรองและกู้คืนระบบระดับโครงสร้างพื้นฐาน",
+        "Future Scope"
+      ]
+    },
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 13,
+      "text": "Large-scale Load Test | ทดสอบภาระงานผู้ใช้พร้อมกันจำนวนมาก | Future Scope",
+      "cells": [
+        "Large-scale Load Test",
+        "ทดสอบภาระงานผู้ใช้พร้อมกันจำนวนมาก",
+        "Future Scope"
+      ]
+    }
+  ],
+  "Multi-step": [
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 6,
+      "text": "Multi-step Approval | Department Manager, HR หรือ Final Approver อนุมัติหลายระดับ | Future Scope",
+      "cells": [
+        "Multi-step Approval",
+        "Department Manager, HR หรือ Final Approver อนุมัติหลายระดับ",
+        "Future Scope"
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 820,
+      "style": "List Paragraph",
+      "text": "ข้อจำกัดและฟังก์ชันในอนาคต เช่น Half-day, Cross-year, Cancel After Approval, Multi-step/Delegate Approval, PDF Export, Advanced Analytics, Backup Assignee และ Multi-role สรุปไว้ที่หัวข้อ 2.2"
+    }
+  ],
+  "HR Approval": [],
+  "Push Notification": [],
+  "Real-time": [
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 8,
+      "text": "Push / Real-time Notification | แจ้งเตือนทันทีหรือส่งเข้ามือถือ | Future Scope",
+      "cells": [
+        "Push / Real-time Notification",
+        "แจ้งเตือนทันทีหรือส่งเข้ามือถือ",
+        "Future Scope"
+      ]
+    }
+  ],
+  "PDF Export": [
+    {
+      "kind": "table_row",
+      "table": 1,
+      "row": 10,
+      "text": "PDF Export | ส่งออกรายงานเป็น PDF | Future Scope",
+      "cells": [
+        "PDF Export",
+        "ส่งออกรายงานเป็น PDF",
+        "Future Scope"
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "paragraph": 820,
+      "style": "List Paragraph",
+      "text": "ข้อจำกัดและฟังก์ชันในอนาคต เช่น Half-day, Cross-year, Cancel After Approval, Multi-step/Delegate Approval, PDF Export, Advanced Analytics, Backup Assignee และ Multi-role สรุปไว้ที่หัวข้อ 2.2"
+    }
+  ]
+}

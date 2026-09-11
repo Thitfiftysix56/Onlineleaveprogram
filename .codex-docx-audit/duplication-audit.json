@@ -1,0 +1,440 @@
+{
+  "summary": {
+    "paragraphs": 888,
+    "headings": 142,
+    "tables": 74,
+    "exact_duplicate_heading_groups": 0,
+    "semantic_duplicate_heading_groups": 9,
+    "exact_duplicate_long_paragraph_groups": 7,
+    "exact_duplicate_table_groups": 0,
+    "exact_duplicate_two_paragraph_blocks": 2,
+    "near_duplicate_same_section_pairs": 5,
+    "near_duplicate_cross_section_pairs": 0
+  },
+  "exact_duplicate_headings": [],
+  "semantic_duplicate_headings": [
+    [
+      {
+        "record_index": 286,
+        "paragraph": 187,
+        "section": "7",
+        "style": "Normal",
+        "text": "FR-01 Authentication",
+        "normalized": "fr01 authentication",
+        "heading_key": "authentication"
+      },
+      {
+        "record_index": 955,
+        "paragraph": 629,
+        "section": "10",
+        "style": "Normal",
+        "text": "10.1 Authentication",
+        "normalized": "101 authentication",
+        "heading_key": "authentication"
+      }
+    ],
+    [
+      {
+        "record_index": 305,
+        "paragraph": 206,
+        "section": "7",
+        "style": "Normal",
+        "text": "FR-02 User Management",
+        "normalized": "fr02 user management",
+        "heading_key": "user management"
+      },
+      {
+        "record_index": 967,
+        "paragraph": 631,
+        "section": "10",
+        "style": "Normal",
+        "text": "10.2 User Management",
+        "normalized": "102 user management",
+        "heading_key": "user management"
+      }
+    ],
+    [
+      {
+        "record_index": 327,
+        "paragraph": 228,
+        "section": "7",
+        "style": "Normal",
+        "text": "FR-03 Employee Management",
+        "normalized": "fr03 employee management",
+        "heading_key": "employee management"
+      },
+      {
+        "record_index": 977,
+        "paragraph": 633,
+        "section": "10",
+        "style": "Normal",
+        "text": "10.3 Employee Management",
+        "normalized": "103 employee management",
+        "heading_key": "employee management"
+      }
+    ],
+    [
+      {
+        "record_index": 352,
+        "paragraph": 253,
+        "section": "7",
+        "style": "Normal",
+        "text": "FR-04 Department Management",
+        "normalized": "fr04 department management",
+        "heading_key": "department management"
+      },
+      {
+        "record_index": 985,
+        "paragraph": 635,
+        "section": "10",
+        "style": "Normal",
+        "text": "10.4 Department Management",
+        "normalized": "104 department management",
+        "heading_key": "department management"
+      }
+    ],
+    [
+      {
+        "record_index": 366,
+        "paragraph": 267,
+        "section": "7",
+        "style": "Normal",
+        "text": "FR-05 Position Management",
+        "normalized": "fr05 position management",
+        "heading_key": "position management"
+      },
+      {
+        "record_index": 993,
+        "paragraph": 637,
+        "section": "10",
+        "style": "Normal",
+        "text": "10.5 Position Management",
+        "normalized": "105 position management",
+        "heading_key": "position management"
+      }
+    ],
+    [
+      {
+        "record_index": 382,
+        "paragraph": 283,
+        "section": "7",
+        "style": "Normal",
+        "text": "FR-06 Leave Type Management",
+        "normalized": "fr06 leave type management",
+        "heading_key": "leave type management"
+      },
+      {
+        "record_index": 1001,
+        "paragraph": 639,
+        "section": "10",
+        "style": "Normal",
+        "text": "10.6 Leave Type Management",
+        "normalized": "106 leave type management",
+        "heading_key": "leave type management"
+      }
+    ],
+    [
+      {
+        "record_index": 409,
+        "paragraph": 310,
+        "section": "7",
+        "style": "Normal",
+        "text": "FR-07 Leave Entitlement Management",
+        "normalized": "fr07 leave entitlement management",
+        "heading_key": "leave entitlement management"
+      },
+      {
+        "record_index": 1009,
+        "paragraph": 641,
+        "section": "10",
+        "style": "Normal",
+        "text": "10.7 Leave Entitlement Management",
+        "normalized": "107 leave entitlement management",
+        "heading_key": "leave entitlement management"
+      }
+    ],
+    [
+      {
+        "record_index": 540,
+        "paragraph": 423,
+        "section": "7",
+        "style": "Normal",
+        "text": "FR-13 Holiday Management",
+        "normalized": "fr13 holiday management",
+        "heading_key": "holiday management"
+      },
+      {
+        "record_index": 1039,
+        "paragraph": 648,
+        "section": "10",
+        "style": "Normal",
+        "text": "10.11 Holiday Management",
+        "normalized": "1011 holiday management",
+        "heading_key": "holiday management"
+      }
+    ],
+    [
+      {
+        "record_index": 585,
+        "paragraph": 461,
+        "section": "7",
+        "style": "Normal",
+        "text": "FR-16 Audit Log",
+        "normalized": "fr16 audit log",
+        "heading_key": "audit log"
+      },
+      {
+        "record_index": 1059,
+        "paragraph": 654,
+        "section": "10",
+        "style": "Normal",
+        "text": "10.14 Audit Log",
+        "normalized": "1014 audit log",
+        "heading_key": "audit log"
+      }
+    ]
+  ],
+  "exact_duplicate_long_paragraphs": [
+    [
+      {
+        "record_index": 244,
+        "paragraph": 155,
+        "section": "6",
+        "style": "Normal",
+        "text": "Commit โดยไม่ INSERT leave_approval_logs",
+        "normalized": "commit โดยไม่ insert leave_approval_logs"
+      },
+      {
+        "record_index": 254,
+        "paragraph": 165,
+        "section": "6",
+        "style": "Normal",
+        "text": "Commit โดยไม่ INSERT leave_approval_logs",
+        "normalized": "commit โดยไม่ insert leave_approval_logs"
+      }
+    ],
+    [
+      {
+        "record_index": 422,
+        "paragraph": 323,
+        "section": "7",
+        "style": "List Paragraph",
+        "text": "available_days = total_days - used_days - pending_days",
+        "normalized": "available_days  total_days  used_days  pending_days"
+      },
+      {
+        "record_index": 854,
+        "paragraph": 604,
+        "section": "9",
+        "style": "List Paragraph",
+        "text": "available_days = total_days - used_days - pending_days",
+        "normalized": "available_days  total_days  used_days  pending_days"
+      }
+    ],
+    [
+      {
+        "record_index": 488,
+        "paragraph": 377,
+        "section": "7",
+        "style": "List Paragraph",
+        "text": "ไม่ INSERT leave_approval_logs ใน Current Approval Flow",
+        "normalized": "ไม่ insert leave_approval_logs ใน current approval flow"
+      },
+      {
+        "record_index": 498,
+        "paragraph": 387,
+        "section": "7",
+        "style": "List Paragraph",
+        "text": "ไม่ INSERT leave_approval_logs ใน Current Approval Flow",
+        "normalized": "ไม่ insert leave_approval_logs ใน current approval flow"
+      },
+      {
+        "record_index": 1149,
+        "paragraph": 742,
+        "section": "11",
+        "style": "Normal",
+        "text": "ไม่ INSERT leave_approval_logs ใน Current Approval Flow",
+        "normalized": "ไม่ insert leave_approval_logs ใน current approval flow"
+      }
+    ],
+    [
+      {
+        "record_index": 1115,
+        "paragraph": 708,
+        "section": "11",
+        "style": "Normal",
+        "text": "IF leave_request.employee_id != current_employee_id:",
+        "normalized": "if leave_requestemployee_id  current_employee_id"
+      },
+      {
+        "record_index": 1176,
+        "paragraph": 769,
+        "section": "11",
+        "style": "Normal",
+        "text": "IF leave_request.employee_id != current_employee_id:",
+        "normalized": "if leave_requestemployee_id  current_employee_id"
+      }
+    ],
+    [
+      {
+        "record_index": 1136,
+        "paragraph": 729,
+        "section": "11",
+        "style": "Normal",
+        "text": "IF leave_request.employee_id ไม่อยู่ใน Direct Team ของ current_employee_id ตาม employees.supervisor_id:",
+        "normalized": "if leave_requestemployee_id ไม่อยู่ใน direct team ของ current_employee_id ตาม employeessupervisor_id"
+      },
+      {
+        "record_index": 1158,
+        "paragraph": 751,
+        "section": "11",
+        "style": "Normal",
+        "text": "IF leave_request.employee_id ไม่อยู่ใน Direct Team ของ current_employee_id ตาม employees.supervisor_id:",
+        "normalized": "if leave_requestemployee_id ไม่อยู่ใน direct team ของ current_employee_id ตาม employeessupervisor_id"
+      }
+    ],
+    [
+      {
+        "record_index": 1138,
+        "paragraph": 731,
+        "section": "11",
+        "style": "Normal",
+        "text": "IF current_employee_id == leave_request.employee_id:",
+        "normalized": "if current_employee_id  leave_requestemployee_id"
+      },
+      {
+        "record_index": 1160,
+        "paragraph": 753,
+        "section": "11",
+        "style": "Normal",
+        "text": "IF current_employee_id == leave_request.employee_id:",
+        "normalized": "if current_employee_id  leave_requestemployee_id"
+      }
+    ],
+    [
+      {
+        "record_index": 1305,
+        "paragraph": 853,
+        "section": "15",
+        "style": "List Paragraph",
+        "text": "And current user เป็น Direct Supervisor ของผู้ยื่นลาตาม employees.supervisor_id",
+        "normalized": "and current user เป็น direct supervisor ของผู้ยื่นลาตาม employeessupervisor_id"
+      },
+      {
+        "record_index": 1315,
+        "paragraph": 863,
+        "section": "15",
+        "style": "List Paragraph",
+        "text": "And current user เป็น Direct Supervisor ของผู้ยื่นลาตาม employees.supervisor_id",
+        "normalized": "and current user เป็น direct supervisor ของผู้ยื่นลาตาม employeessupervisor_id"
+      }
+    ]
+  ],
+  "exact_duplicate_tables": [],
+  "exact_duplicate_two_paragraph_blocks": [
+    [
+      {
+        "paragraph": 726,
+        "section": "11",
+        "texts": [
+          "leave_request = get leave_request by id",
+          "IF leave_request.status != 'pending':"
+        ]
+      },
+      {
+        "paragraph": 748,
+        "section": "11",
+        "texts": [
+          "leave_request = get leave_request by id",
+          "IF leave_request.status != 'pending':"
+        ]
+      }
+    ],
+    [
+      {
+        "paragraph": 852,
+        "section": "15",
+        "texts": [
+          "Given คำขออยู่ในสถานะ pending",
+          "And current user เป็น Direct Supervisor ของผู้ยื่นลาตาม employees.supervisor_id"
+        ]
+      },
+      {
+        "paragraph": 862,
+        "section": "15",
+        "texts": [
+          "Given คำขออยู่ในสถานะ pending",
+          "And current user เป็น Direct Supervisor ของผู้ยื่นลาตาม employees.supervisor_id"
+        ]
+      }
+    ]
+  ],
+  "near_duplicate_same_section": [
+    {
+      "ratio": 1.0,
+      "first": {
+        "paragraph": 729,
+        "section": "11",
+        "text": "IF leave_request.employee_id ไม่อยู่ใน Direct Team ของ current_employee_id ตาม employees.supervisor_id:"
+      },
+      "second": {
+        "paragraph": 751,
+        "section": "11",
+        "text": "IF leave_request.employee_id ไม่อยู่ใน Direct Team ของ current_employee_id ตาม employees.supervisor_id:"
+      }
+    },
+    {
+      "ratio": 1.0,
+      "first": {
+        "paragraph": 853,
+        "section": "15",
+        "text": "And current user เป็น Direct Supervisor ของผู้ยื่นลาตาม employees.supervisor_id"
+      },
+      "second": {
+        "paragraph": 863,
+        "section": "15",
+        "text": "And current user เป็น Direct Supervisor ของผู้ยื่นลาตาม employees.supervisor_id"
+      }
+    },
+    {
+      "ratio": 0.952,
+      "first": {
+        "paragraph": 858,
+        "section": "15",
+        "text": "And บันทึก approver_employee_id เป็นผู้ตัดสิน ณ เวลา Approve โดยไม่ INSERT leave_approval_logs"
+      },
+      "second": {
+        "paragraph": 868,
+        "section": "15",
+        "text": "And บันทึก approver_employee_id เป็นผู้ตัดสิน ณ เวลา Reject โดยไม่ INSERT leave_approval_logs"
+      }
+    },
+    {
+      "ratio": 0.938,
+      "first": {
+        "paragraph": 118,
+        "section": "5",
+        "text": "Admin UI ปัจจุบันไม่มีหน้าจอ Leave Entitlement Management แต่ Backend API อนุญาต Admin ตาม Role Authorization"
+      },
+      "second": {
+        "paragraph": 119,
+        "section": "5",
+        "text": "Admin UI ปัจจุบันไม่มีหน้าจอ Leave Type Management แต่ Backend API อนุญาต Admin ตาม Role Authorization"
+      }
+    },
+    {
+      "ratio": 0.932,
+      "first": {
+        "paragraph": 371,
+        "section": "7",
+        "text": "ตรวจสอบว่าผู้อนุมัติเป็น Direct Supervisor ของผู้ยื่นลาตาม employees.supervisor_id"
+      },
+      "second": {
+        "paragraph": 383,
+        "section": "7",
+        "text": "ตรวจสอบว่าผู้ปฏิเสธเป็น Direct Supervisor ของผู้ยื่นลาตาม employees.supervisor_id"
+      }
+    }
+  ],
+  "near_duplicate_cross_section": []
+}

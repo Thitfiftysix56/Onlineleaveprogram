@@ -1,1390 +1,957 @@
 import {
-  useCallback,
   useEffect,
   useMemo,
   useState,
 } from 'react';
 
 import {
+  Alert,
   Box,
   Button,
   Chip,
+  CircularProgress,
   Paper,
+  Table,
+  TableCell,
+  TableHead,
+  TableRow,
   Typography,
 } from '@mui/material';
-
-import { useNavigate } from 'react-router-dom';
-
-import HRLayout from '../../layouts/hrlayout.jsx';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
 
 import {
-  getLeaveRequests,
-  leaveRequestStorageKey,
-} from '../../utils/leaverequeststorage.js';
+  useNavigate,
+} from 'react-router-dom';
+import AddRounded from '@mui/icons-material/AddRounded';
 
-const employeeStorageKeys = [
-  'online_leave_approval_employees',
-  'online_leave_approval_employee_management',
-  'online_leave_approval_system_employees',
-  'employees',
-];
+import HRLayout from '../../layouts/hrlayout.jsx';
+import { DashboardTablePagination } from '../../components/shareduiprimitives.jsx';
+import DashboardLeaveBalance from '../../components/dashboardleavebalance.jsx';
+import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
+import api from '../../api/axios.js';
 
-const holidayStorageKeys = [
-  'online_leave_approval_holidays',
-  'online_leave_approval_holiday_management',
-  'online_leave_approval_system_holidays',
-  'holidays',
-];
-
-const defaultUpcomingHolidays = [
-  {
-    id: 1,
-    name: 'Asarnha Bucha Day',
-    date: '2026-07-29',
-    type: 'Public Holiday',
-    isActive: true,
-  },
-  {
-    id: 2,
-    name: 'Buddhist Lent Day',
-    date: '2026-07-30',
-    type: 'Public Holiday',
-    isActive: true,
-  },
-  {
-    id: 3,
-    name: 'H.M. Queen Sirikit Birthday',
-    date: '2026-08-12',
-    type: 'Public Holiday',
-    isActive: true,
-  },
-];
-
-const employeeProfiles = {
-  employee: {
-    employeeId: 'EMP001',
-    employeeName: 'Employee User',
-    department: 'Information Technology',
-  },
-  supervisor: {
-    employeeId: 'SUP001',
-    employeeName: 'Supervisor User',
-    department: 'Information Technology',
-  },
-  hr: {
-    employeeId: 'HR001',
-    employeeName: 'HR User',
-    department: 'Human Resources',
-  },
-  admin: {
-    employeeId: 'ADM001',
-    employeeName: 'Admin User',
-    department: 'Information Technology',
-  },
+const theme = {
+  primary: '#059669',
+  dark: '#047857',
+  soft: '#ECFDF5',
+  border: '#A7F3D0',
 };
 
-const extractArrayFromValue = (value, preferredFields = []) => {
-  if (Array.isArray(value)) {
-    return value;
+/* =========================
+   Helpers
+========================= */
+
+const getArray = (
+  response,
+  key,
+) => {
+  const data =
+    response?.data?.data;
+
+  if (Array.isArray(data?.[key])) {
+    return data[key];
   }
 
-  if (!value || typeof value !== 'object') {
-    return [];
-  }
-
-  for (const field of preferredFields) {
-    if (Array.isArray(value[field])) {
-      return value[field];
-    }
-  }
-
-  const arrayValue = Object.values(value).find(
-    (item) => Array.isArray(item),
-  );
-
-  return Array.isArray(arrayValue) ? arrayValue : [];
-};
-
-const readStorageArray = (keys, preferredFields = []) => {
-  for (const key of keys) {
-    try {
-      const storedValue = localStorage.getItem(key);
-
-      if (!storedValue) {
-        continue;
-      }
-
-      const parsedValue = JSON.parse(storedValue);
-
-      const extractedValue = extractArrayFromValue(
-        parsedValue,
-        preferredFields,
-      );
-
-      if (extractedValue.length > 0) {
-        return extractedValue;
-      }
-    } catch (error) {
-      console.error(
-        `Unable to read localStorage key "${key}".`,
-        error,
-      );
-    }
+  if (Array.isArray(data)) {
+    return data;
   }
 
   return [];
 };
 
-const capitalizeStatus = (status) => {
-  const normalizedStatus = String(status || '')
+const getEmployeeName = (
+  employee,
+) => {
+  if (employee.fullName) {
+    return employee.fullName;
+  }
+
+  if (employee.employeeName) {
+    return employee.employeeName;
+  }
+
+  const name = [
+    employee.firstName ||
+      employee.first_name,
+    employee.lastName ||
+      employee.last_name,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  return name || '-';
+};
+
+const getEmployeeCode = (
+  employee,
+) =>
+  employee.employeeCode ||
+  employee.employee_code ||
+  employee.code ||
+  '-';
+
+const getDepartment = (
+  employee,
+) =>
+  employee.departmentName ||
+  employee.department_name ||
+  employee.department ||
+  '-';
+
+const getPosition = (
+  employee,
+) =>
+  employee.positionName ||
+  employee.position_name ||
+  employee.position ||
+  '-';
+
+const getEmployeeStatus = (
+  employee,
+) =>
+  String(
+    employee.status ||
+      employee.employeeStatus ||
+      'active',
+  )
     .trim()
     .toLowerCase();
 
-  if (!normalizedStatus) {
-    return 'Pending';
-  }
+const translateEmployeeStatus = (
+  status,
+) => {
+  const labels = {
+    active: 'ใช้งานอยู่',
+    inactive: 'ไม่ใช้งาน',
+    resigned: 'ลาออก',
+  };
+
+  return labels[status] || status || '-';
+};
+
+const getStatusStyle = (
+  status,
+) => {
+  const styles = {
+    active: {
+      backgroundColor: '#DCFCE7',
+      color: '#15803D',
+    },
+
+    inactive: {
+      backgroundColor: '#FEE2E2',
+      color: '#B91C1C',
+    },
+
+    resigned: {
+      backgroundColor: '#F1F5F9',
+      color: '#64748B',
+    },
+  };
 
   return (
-    normalizedStatus.charAt(0).toUpperCase() +
-    normalizedStatus.slice(1)
+    styles[status] || {
+      backgroundColor: '#F1F5F9',
+      color: '#64748B',
+    }
   );
 };
 
-const parseDate = (dateValue) => {
-  if (!dateValue) {
-    return null;
+const isLeaveTypeActive = (
+  leaveType,
+) => {
+  if (
+    leaveType.isActive !== undefined
+  ) {
+    return Boolean(
+      leaveType.isActive,
+    );
   }
 
-  const normalizedValue = String(dateValue);
-
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(
-    normalizedValue,
-  )
-    ? new Date(`${normalizedValue}T00:00:00`)
-    : new Date(normalizedValue);
-
-  if (Number.isNaN(date.getTime())) {
-    return null;
+  if (
+    leaveType.is_active !== undefined
+  ) {
+    return Boolean(
+      leaveType.is_active,
+    );
   }
 
-  return date;
+  return (
+    String(
+      leaveType.status || '',
+    ).toLowerCase() === 'active'
+  );
 };
 
-const getStartOfToday = () => {
-  const today = new Date();
+const getHolidayDate = (
+  holiday,
+) =>
+  holiday.date ||
+  holiday.holidayDate ||
+  holiday.holiday_date ||
+  '';
 
-  today.setHours(0, 0, 0, 0);
+const getCreatedAt = (
+  employee,
+) =>
+  employee.createdAt ||
+  employee.created_at ||
+  employee.updatedAt ||
+  employee.updated_at ||
+  '';
 
-  return today;
-};
-
-const getRequestDateValue = (request) => {
-  const date =
-    parseDate(request.updatedAt) ||
-    parseDate(request.approvedAt) ||
-    parseDate(request.rejectedAt) ||
-    parseDate(request.submittedAt) ||
-    parseDate(request.createdAt) ||
-    parseDate(request.startDate);
-
-  return date ? date.getTime() : 0;
-};
-
-const normalizeRequest = (request) => {
-  const requestRole = String(
-    request.role || 'employee',
-  ).toLowerCase();
-
-  const profile =
-    employeeProfiles[requestRole] ||
-    employeeProfiles.employee;
-
-  return {
-    ...request,
-
-    id: request.id,
-
-    requestNo:
-      request.requestNo ||
-      request.request_no ||
-      `Request #${request.id}`,
-
-    employeeId:
-      request.employeeId ||
-      request.employeeCode ||
-      request.employee_code ||
-      profile.employeeId,
-
-    employeeName:
-      request.employeeName ||
-      request.employee_name ||
-      profile.employeeName,
-
-    department:
-      request.department ||
-      request.departmentName ||
-      request.department_name ||
-      profile.department,
-
-    leaveType:
-      request.leaveType ||
-      request.leave_type ||
-      request.leaveTypeName ||
-      'Not specified',
-
-    startDate:
-      request.startDate ||
-      request.start_date ||
-      '',
-
-    endDate:
-      request.endDate ||
-      request.end_date ||
-      '',
-
-    leaveDays:
-      Number(
-        request.leaveDays ??
-          request.leave_days ??
-          0,
-      ),
-
-    statusLabel: capitalizeStatus(request.status),
-  };
-};
-
-const normalizeEmployee = (employee, index) => {
-  const firstName =
-    employee.firstName ||
-    employee.first_name ||
-    '';
-
-  const lastName =
-    employee.lastName ||
-    employee.last_name ||
-    '';
-
-  const combinedName = `${firstName} ${lastName}`.trim();
-
-  return {
-    id:
-      employee.id ||
-      employee.employeeId ||
-      employee.employee_id ||
-      index + 1,
-
-    employeeId:
-      employee.employeeCode ||
-      employee.employee_code ||
-      employee.employeeId ||
-      employee.employee_id ||
-      `EMP${String(index + 1).padStart(3, '0')}`,
-
-    employeeName:
-      employee.employeeName ||
-      employee.employee_name ||
-      employee.fullName ||
-      employee.full_name ||
-      combinedName ||
-      'Employee',
-
-    department:
-      employee.department ||
-      employee.departmentName ||
-      employee.department_name ||
-      'Not specified',
-
-    status: String(
-      employee.status ??
-        employee.employeeStatus ??
-        employee.isActive ??
-        employee.is_active ??
-        'active',
-    ).toLowerCase(),
-  };
-};
-
-const normalizeHoliday = (holiday, index) => {
-  const activeValue =
-    holiday.isActive ??
-    holiday.is_active ??
-    holiday.status ??
-    true;
-
-  const normalizedActiveValue =
-    typeof activeValue === 'string'
-      ? ![
-          'inactive',
-          'disabled',
-          'false',
-          '0',
-        ].includes(activeValue.toLowerCase())
-      : Boolean(activeValue);
-
-  return {
-    id:
-      holiday.id ||
-      holiday.holidayId ||
-      holiday.holiday_id ||
-      index + 1,
-
-    name:
-      holiday.name ||
-      holiday.holidayName ||
-      holiday.holiday_name ||
-      'Organization Holiday',
-
-    date:
-      holiday.date ||
-      holiday.holidayDate ||
-      holiday.holiday_date ||
-      '',
-
-    type:
-      holiday.type ||
-      holiday.holidayType ||
-      holiday.holiday_type ||
-      'Public Holiday',
-
-    isActive: normalizedActiveValue,
-  };
-};
+/* =========================
+   Component
+========================= */
 
 function HRDashboardPage() {
   const navigate = useNavigate();
 
-  const [leaveRequests, setLeaveRequests] = useState([]);
-  const [employees, setEmployees] = useState([]);
-  const [holidays, setHolidays] = useState([]);
+  const [
+    employees,
+    setEmployees,
+  ] = useState([]);
 
-  const loadDashboardData = useCallback(() => {
-    const storedRequests = getLeaveRequests()
-      .filter(
-        (request) =>
-          String(request.status || '').toLowerCase() !==
-          'draft',
-      )
-      .map(normalizeRequest)
-      .sort(
-        (firstRequest, secondRequest) =>
-          getRequestDateValue(secondRequest) -
-          getRequestDateValue(firstRequest),
-      );
+  const [
+    leaveTypes,
+    setLeaveTypes,
+  ] = useState([]);
 
-    const storedEmployees = readStorageArray(
-      employeeStorageKeys,
-      ['employees', 'items', 'data', 'records'],
-    ).map(normalizeEmployee);
+  const [
+    holidays,
+    setHolidays,
+  ] = useState([]);
 
-    const storedHolidays = readStorageArray(
-      holidayStorageKeys,
-      ['holidays', 'items', 'data', 'records'],
-    ).map(normalizeHoliday);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-    setLeaveRequests(storedRequests);
-    setEmployees(storedEmployees);
+  const [
+    error,
+    setError,
+  ] = useState('');
 
-    setHolidays(
-      storedHolidays.length > 0
-        ? storedHolidays
-        : defaultUpcomingHolidays,
-    );
-  }, []);
+  const [employeePage, setEmployeePage] = useState(0);
+
+  /* =========================
+     Load Data
+  ========================= */
 
   useEffect(() => {
-    loadDashboardData();
+    const loadDashboard = async () => {
+      setLoading(true);
+      setError('');
 
-    const handleStorageChange = (event) => {
-      const watchedKeys = [
-        leaveRequestStorageKey,
-        ...employeeStorageKeys,
-        ...holidayStorageKeys,
-      ];
+      try {
+        const [
+          employeeResponse,
+          leaveTypeResponse,
+          holidayResponse,
+        ] = await Promise.all([
+          api.get(
+            '/hr/employees',
+          ),
 
-      if (!event.key || watchedKeys.includes(event.key)) {
-        loadDashboardData();
-      }
-    };
+          api.get(
+            '/hr/leave-types',
+          ),
 
-    const handleWindowFocus = () => {
-      loadDashboardData();
-    };
+          api.get(
+            '/hr/holidays',
+          ),
+        ]);
 
-    window.addEventListener(
-      'storage',
-      handleStorageChange,
-    );
-
-    window.addEventListener(
-      'focus',
-      handleWindowFocus,
-    );
-
-    return () => {
-      window.removeEventListener(
-        'storage',
-        handleStorageChange,
-      );
-
-      window.removeEventListener(
-        'focus',
-        handleWindowFocus,
-      );
-    };
-  }, [loadDashboardData]);
-
-  const derivedEmployees = useMemo(() => {
-    const employeeMap = new Map();
-
-    leaveRequests.forEach((request) => {
-      const employeeKey =
-        request.employeeId ||
-        request.employeeName;
-
-      if (!employeeKey) {
-        return;
-      }
-
-      if (!employeeMap.has(employeeKey)) {
-        employeeMap.set(employeeKey, {
-          id: employeeKey,
-          employeeId: request.employeeId,
-          employeeName: request.employeeName,
-          department: request.department,
-          status: 'active',
-        });
-      }
-    });
-
-    return Array.from(employeeMap.values());
-  }, [leaveRequests]);
-
-  const dashboardEmployees =
-    employees.length > 0
-      ? employees
-      : derivedEmployees;
-
-  const activeEmployees = dashboardEmployees.filter(
-    (employee) =>
-      ![
-        'inactive',
-        'resigned',
-        'locked',
-        'disabled',
-        'false',
-        '0',
-      ].includes(employee.status),
-  );
-
-  const pendingRequests = leaveRequests.filter(
-    (request) =>
-      String(request.status || '').toLowerCase() ===
-      'pending',
-  );
-
-  const currentDate = new Date();
-
-  const approvedThisMonth = leaveRequests.filter(
-    (request) => {
-      if (
-        String(request.status || '').toLowerCase() !==
-        'approved'
-      ) {
-        return false;
-      }
-
-      const approvalDate =
-        parseDate(request.approvedAt) ||
-        parseDate(request.updatedAt) ||
-        parseDate(request.startDate);
-
-      if (!approvalDate) {
-        return false;
-      }
-
-      return (
-        approvalDate.getFullYear() ===
-          currentDate.getFullYear() &&
-        approvalDate.getMonth() ===
-          currentDate.getMonth()
-      );
-    },
-  ).length;
-
-  const employeesOnLeave = useMemo(() => {
-    const today = getStartOfToday();
-
-    const employeeIds = new Set();
-
-    leaveRequests.forEach((request) => {
-      if (
-        String(request.status || '').toLowerCase() !==
-        'approved'
-      ) {
-        return;
-      }
-
-      const startDate = parseDate(request.startDate);
-      const endDate = parseDate(request.endDate);
-
-      if (!startDate || !endDate) {
-        return;
-      }
-
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(0, 0, 0, 0);
-
-      if (startDate <= today && endDate >= today) {
-        employeeIds.add(
-          request.employeeId ||
-            request.employeeName ||
-            request.id,
+        setEmployees(
+          getArray(
+            employeeResponse,
+            'employees',
+          ),
         );
+
+        setLeaveTypes(
+          getArray(
+            leaveTypeResponse,
+            'leaveTypes',
+          ),
+        );
+
+        setHolidays(
+          getArray(
+            holidayResponse,
+            'holidays',
+          ),
+        );
+      } catch (loadError) {
+        setError(
+          loadError.response?.data
+            ?.message ||
+            'ไม่สามารถโหลดข้อมูล Dashboard ได้',
+        );
+      } finally {
+        setLoading(false);
       }
-    });
+    };
 
-    return employeeIds.size;
-  }, [leaveRequests]);
+    loadDashboard();
+  }, []);
 
-  const recentRequests = leaveRequests.slice(0, 5);
+  /* =========================
+     Summary
+  ========================= */
 
-  const upcomingHolidays = useMemo(() => {
-    const today = getStartOfToday();
+  const currentYear =
+    new Date().getFullYear();
 
-    return holidays
-      .filter((holiday) => {
-        if (!holiday.isActive) {
-          return false;
-        }
+  const activeEmployees =
+    useMemo(
+      () =>
+        employees.filter(
+          (employee) =>
+            getEmployeeStatus(
+              employee,
+            ) === 'active',
+        ),
+      [employees],
+    );
 
-        const holidayDate = parseDate(holiday.date);
+  const activeLeaveTypes =
+    useMemo(
+      () =>
+        leaveTypes.filter(
+          isLeaveTypeActive,
+        ),
+      [leaveTypes],
+    );
 
-        if (!holidayDate) {
-          return false;
-        }
+  const currentYearHolidays =
+    useMemo(
+      () =>
+        holidays.filter(
+          (holiday) => {
+            const holidayDate =
+              getHolidayDate(
+                holiday,
+              );
 
-        holidayDate.setHours(0, 0, 0, 0);
+            if (!holidayDate) {
+              return false;
+            }
 
-        return holidayDate >= today;
-      })
-      .sort((firstHoliday, secondHoliday) => {
-        const firstDate =
-          parseDate(firstHoliday.date)?.getTime() || 0;
+            return (
+              Number(
+                String(
+                  holidayDate,
+                ).slice(0, 4),
+              ) === currentYear
+            );
+          },
+        ),
+      [
+        holidays,
+        currentYear,
+      ],
+    );
 
-        const secondDate =
-          parseDate(secondHoliday.date)?.getTime() || 0;
+  const sortedEmployees =
+    useMemo(() => {
+      return [...employees]
+        .sort(
+          (
+            firstEmployee,
+            secondEmployee,
+          ) => {
+            const firstDate =
+              new Date(
+                getCreatedAt(
+                  firstEmployee,
+                ) || 0,
+              ).getTime();
 
-        return firstDate - secondDate;
-      })
-      .slice(0, 3);
-  }, [holidays]);
+            const secondDate =
+              new Date(
+                getCreatedAt(
+                  secondEmployee,
+                ) || 0,
+              ).getTime();
+
+            return (
+              secondDate -
+              firstDate
+            );
+          },
+        );
+    }, [employees]);
+
+  const recentEmployees = useMemo(
+    () => sortedEmployees.slice(employeePage * 5, employeePage * 5 + 5),
+    [employeePage, sortedEmployees],
+  );
 
   const summaryCards = [
     {
-      title: 'Total Employees',
+      title: 'พนักงานทั้งหมด',
+      value: employees.length,
+      unit: 'คน',
+      color: '#2563EB',
+      background: 'linear-gradient(135deg, #EAF3FF 0%, #FFFFFF 78%)',
+      borderColor: '#C9DDFB',
+      glowColor: 'rgba(59, 130, 246, 0.10)',
+    },
+    {
+      title: 'พนักงานสถานะปฏิบัติงาน',
       value: activeEmployees.length,
-      description:
-        employees.length > 0
-          ? 'Active employees'
-          : 'Employees found in leave records',
-      backgroundColor: '#EFF6FF',
-      textColor: '#2563EB',
-      symbol: 'E',
+      unit: 'คน',
+      color: '#15803D',
+      background: 'linear-gradient(135deg, #E5F9EE 0%, #FFFFFF 78%)',
+      borderColor: '#A7E8C3',
+      glowColor: 'rgba(34, 197, 94, 0.10)',
     },
     {
-      title: 'Pending Requests',
-      value: pendingRequests.length,
-      description: 'Waiting for approval',
-      backgroundColor: '#FEF3C7',
-      textColor: '#B45309',
-      symbol: 'P',
+      title: 'ประเภทการลา',
+      value: activeLeaveTypes.length,
+      unit: 'ประเภท',
+      color: '#7C3AED',
+      background: 'linear-gradient(135deg, #F3E8FF 0%, #FFFFFF 78%)',
+      borderColor: '#DDD6FE',
+      glowColor: 'rgba(124, 58, 237, 0.10)',
     },
     {
-      title: 'Approved This Month',
-      value: approvedThisMonth,
-      description: 'Approved leave requests',
-      backgroundColor: '#DCFCE7',
-      textColor: '#15803D',
-      symbol: '✓',
-    },
-    {
-      title: 'Employees on Leave',
-      value: employeesOnLeave,
-      description: 'Currently on leave',
-      backgroundColor: '#F5F3FF',
-      textColor: '#7C3AED',
-      symbol: 'L',
+      title: 'วันหยุดปีนี้',
+      value: currentYearHolidays.length,
+      unit: 'วัน',
+      color: '#D97706',
+      background: 'linear-gradient(135deg, #FFF6D8 0%, #FFFFFF 78%)',
+      borderColor: '#F6D66B',
+      glowColor: 'rgba(245, 158, 11, 0.11)',
     },
   ];
 
-  const formatDate = (dateValue) => {
-    const date = parseDate(dateValue);
-
-    if (!date) {
-      return '-';
-    }
-
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-  };
-
-  const formatDateRange = (startDate, endDate) => {
-    if (!startDate && !endDate) {
-      return '-';
-    }
-
-    if (!endDate || startDate === endDate) {
-      return formatDate(startDate);
-    }
-
-    return `${formatDate(startDate)} - ${formatDate(
-      endDate,
-    )}`;
-  };
-
-  const getStatusStyle = (status) => {
-    const styles = {
-      Approved: {
-        backgroundColor: '#DCFCE7',
-        color: '#15803D',
-      },
-      Rejected: {
-        backgroundColor: '#FEE2E2',
-        color: '#B91C1C',
-      },
-      Pending: {
-        backgroundColor: '#FEF3C7',
-        color: '#B45309',
-      },
-      Cancelled: {
-        backgroundColor: '#F3F4F6',
-        color: '#6B7280',
-      },
-    };
-
-    return styles[status] || styles.Cancelled;
-  };
+  /* =========================
+     UI
+  ========================= */
 
   return (
     <HRLayout activeMenu="Dashboard">
-      <Box
+      {/* Header */}
+      <Typography
+        component="h1"
         sx={{
-          display: 'flex',
-          alignItems: {
-            xs: 'flex-start',
-            sm: 'center',
+          display: 'none',
+          color: '#111827',
+
+          fontSize: {
+            xs: '26px',
+            sm: '30px',
           },
-          justifyContent: 'space-between',
-          flexDirection: {
-            xs: 'column',
-            sm: 'row',
-          },
-          gap: '16px',
-          marginBottom: '28px',
+
+          fontWeight: 800,
+
+          marginBottom: '22px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color: '#111827',
-              fontSize: {
-                xs: '26px',
-                sm: '30px',
-              },
-              fontWeight: 800,
-            }}
-          >
-            HR Dashboard
-          </Typography>
+        Dashboard
+      </Typography>
 
-          <Typography
-            sx={{
-              color: '#6B7280',
-              fontSize: '15px',
-              marginTop: '6px',
-            }}
-          >
-            Overview of employees, leave requests and
-            holidays.
-          </Typography>
-        </Box>
+      <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/hr/leave-request', { state: { returnTo: '/hr/dashboard' } })} sx={{ display: 'none' }}>สร้างคำขอลา</Button>
 
-        <Box
+      {error && (
+        <Alert
+          severity="error"
           sx={{
-            display: 'flex',
-            gap: '10px',
-            flexWrap: 'wrap',
+            marginBottom: '20px',
+
+            borderRadius: '10px',
           }}
         >
- 
+          {error}
+        </Alert>
+      )}
 
-          <Button
-            type="button"
-            variant="contained"
-            onClick={() =>
-              navigate('/hr/employee-management')
-            }
+      {loading ? (
+        <Box
+          sx={{
+            minHeight: '420px',
+
+            display: 'flex',
+
+            alignItems: 'center',
+
+            justifyContent:
+              'center',
+          }}
+        >
+          <CircularProgress
             sx={{
-              minWidth: '150px',
-              height: '44px',
-              padding: '0 20px',
-              backgroundColor: '#059669',
-              color: '#FFFFFF',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 700,
-              textTransform: 'none',
-              boxShadow: 'none',
+              color:
+                theme.primary,
+            }}
+          />
+        </Box>
+      ) : (
+        <>
+          {/* =====================
+              Summary Cards
+          ====================== */}
 
-              '&:hover': {
-                backgroundColor: '#047857',
-                boxShadow: 'none',
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2, minmax(0, 1fr))',
+                md: 'repeat(4, minmax(0, 1fr))',
               },
+              gap: '16px',
+              marginBottom: '16px',
             }}
           >
-            Add Employee
-          </Button>
-        </Box>
-      </Box>
+            {summaryCards.map((card) => (
+              <CompactSummaryCard
+                key={card.title}
+                title={card.title}
+                value={card.value}
+                color={card.color}
+              />
+            ))}
+          </Box>
 
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr',
-            sm: 'repeat(2, minmax(0, 1fr))',
-            xl: 'repeat(4, minmax(0, 1fr))',
-          },
-          gap: '20px',
-          marginBottom: '24px',
-        }}
-      >
-        {summaryCards.map((card) => (
+          <DashboardLeaveBalance />
+
+          {/* =====================
+              Recent Employees
+          ====================== */}
+
           <Paper
-            key={card.title}
             elevation={0}
             sx={{
-              padding: '22px',
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #E5E7EB',
-              borderRadius: '12px',
+              width: '100%',
+
+              backgroundColor:
+                '#FFFFFF',
+
+              border:
+                '1px solid #E5E7EB',
+
+              borderRadius:
+                '14px',
+
+              overflow:
+                'hidden',
             }}
           >
             <Box
               sx={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                gap: '16px',
+                minHeight:
+                  '72px',
+
+                padding: {
+                  xs: '18px',
+                  sm: '20px 22px',
+                },
+
+                display:
+                  'flex',
+
+                alignItems: {
+                  xs:
+                    'flex-start',
+
+                  sm:
+                    'center',
+                },
+
+                justifyContent:
+                  'space-between',
+
+                flexDirection: {
+                  xs:
+                    'column',
+
+                  sm:
+                    'row',
+                },
+
+                gap: '14px',
+
+                borderBottom:
+                  '1px solid #E5E7EB',
               }}
             >
               <Box>
                 <Typography
                   sx={{
-                    color: '#6B7280',
-                    fontSize: '14px',
-                    fontWeight: 600,
+                    color:
+                      '#111827',
+
+                    fontSize:
+                      '18px',
+
+                    fontWeight:
+                      600,
                   }}
                 >
-                  {card.title}
+                  พนักงานล่าสุด
                 </Typography>
 
-                <Typography
-                  sx={{
-                    color: '#111827',
-                    fontSize: '30px',
-                    fontWeight: 800,
-                    marginTop: '8px',
-                  }}
-                >
-                  {card.value}
-                </Typography>
               </Box>
 
-              <Box
-                sx={{
-                  width: '44px',
-                  height: '44px',
-                  minWidth: '44px',
-                  backgroundColor: card.backgroundColor,
-                  color: card.textColor,
-                  borderRadius: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '17px',
-                  fontWeight: 800,
-                }}
-              >
-                {card.symbol}
-              </Box>
-            </Box>
-
-            <Typography
-              sx={{
-                color: '#9CA3AF',
-                fontSize: '13px',
-                marginTop: '10px',
-              }}
-            >
-              {card.description}
-            </Typography>
-          </Paper>
-        ))}
-      </Box>
-
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr',
-            xl: 'minmax(0, 2fr) minmax(300px, 1fr)',
-          },
-          gap: '24px',
-          alignItems: 'start',
-        }}
-      >
-        <Paper
-          elevation={0}
-          sx={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E5E7EB',
-            borderRadius: '12px',
-            overflow: 'hidden',
-          }}
-        >
-          <Box
-            sx={{
-              padding: {
-                xs: '20px',
-                sm: '24px',
-              },
-              borderBottom: '1px solid #E5E7EB',
-              display: 'flex',
-              alignItems: {
-                xs: 'flex-start',
-                sm: 'center',
-              },
-              justifyContent: 'space-between',
-              flexDirection: {
-                xs: 'column',
-                sm: 'row',
-              },
-              gap: '12px',
-            }}
-          >
-            <Box>
-              <Typography
-                sx={{
-                  color: '#111827',
-                  fontSize: '18px',
-                  fontWeight: 800,
-                }}
-              >
-                Recent Leave Requests
-              </Typography>
-
-              <Typography
-                sx={{
-                  color: '#6B7280',
-                  fontSize: '14px',
-                  marginTop: '4px',
-                }}
-              >
-                Latest employee leave requests.
-              </Typography>
-            </Box>
-
-            <Button
-              type="button"
-              onClick={() => navigate('/hr/reports')}
-              sx={{
-                minWidth: 0,
-                padding: 0,
-                color: '#059669',
-                fontSize: '14px',
-                fontWeight: 700,
-                textTransform: 'none',
-
-                '&:hover': {
-                  backgroundColor: 'transparent',
-                  textDecoration: 'underline',
-                },
-              }}
-            >
-              View All Requests
-            </Button>
-          </Box>
-
-          {recentRequests.length > 0 ? (
-            <Box sx={{ overflowX: 'auto' }}>
-              <Box
-                component="table"
-                sx={{
-                  width: '100%',
-                  minWidth: '900px',
-                  borderCollapse: 'collapse',
-                }}
-              >
-                <Box component="thead">
-                  <Box
-                    component="tr"
-                    sx={{
-                      backgroundColor: '#F9FAFB',
-                    }}
-                  >
-                    {[
-                      'Request ID',
-                      'Employee',
-                      'Leave Type',
-                      'Period',
-                      'Days',
-                      'Status',
-                      'Action',
-                    ].map((heading) => (
-                      <Box
-                        key={heading}
-                        component="th"
-                        sx={{
-                          padding: '14px 18px',
-                          color: '#6B7280',
-                          borderBottom:
-                            '1px solid #E5E7EB',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          textAlign: 'left',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {heading}
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-
-                <Box component="tbody">
-                  {recentRequests.map((request) => {
-                    const statusStyle = getStatusStyle(
-                      request.statusLabel,
-                    );
-
-                    return (
-                      <Box
-                        key={request.id}
-                        component="tr"
-                        sx={{
-                          '&:hover': {
-                            backgroundColor: '#F9FAFB',
-                          },
-                        }}
-                      >
-                        <Box
-                          component="td"
-                          sx={{
-                            padding: '16px 18px',
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                            color: '#059669',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {request.requestNo}
-                        </Box>
-
-                        <Box
-                          component="td"
-                          sx={{
-                            padding: '16px 18px',
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                            color: '#111827',
-                            fontSize: '14px',
-                            fontWeight: 700,
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {request.employeeName}
-                        </Box>
-
-                        <Box
-                          component="td"
-                          sx={{
-                            padding: '16px 18px',
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                            color: '#4B5563',
-                            fontSize: '13px',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {request.leaveType}
-                        </Box>
-
-                        <Box
-                          component="td"
-                          sx={{
-                            padding: '16px 18px',
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                            color: '#4B5563',
-                            fontSize: '13px',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {formatDateRange(
-                            request.startDate,
-                            request.endDate,
-                          )}
-                        </Box>
-
-                        <Box
-                          component="td"
-                          sx={{
-                            padding: '16px 18px',
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                            color: '#4B5563',
-                            fontSize: '13px',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {request.leaveDays}{' '}
-                          {request.leaveDays === 1
-                            ? 'Day'
-                            : 'Days'}
-                        </Box>
-
-                        <Box
-                          component="td"
-                          sx={{
-                            padding: '16px 18px',
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          <Chip
-                            label={request.statusLabel}
-                            size="small"
-                            sx={{
-                              minWidth: '82px',
-                              backgroundColor:
-                                statusStyle.backgroundColor,
-                              color: statusStyle.color,
-                              borderRadius: '999px',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                            }}
-                          />
-                        </Box>
-
-                        <Box
-                          component="td"
-                          sx={{
-                            padding: '16px 18px',
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          <Button
-                            type="button"
-                            onClick={() =>
-                              navigate(
-                                `/hr/leave-requests/${request.id}`,
-                              )
-                            }
-                            sx={{
-                              minWidth: 0,
-                              padding: 0,
-                              color: '#059669',
-                              fontSize: '13px',
-                              fontWeight: 700,
-                              textTransform: 'none',
-
-                              '&:hover': {
-                                backgroundColor:
-                                  'transparent',
-                                textDecoration:
-                                  'underline',
-                              },
-                            }}
-                          >
-                            View Detail
-                          </Button>
-                        </Box>
-                      </Box>
-                    );
-                  })}
-                </Box>
-              </Box>
-            </Box>
-          ) : (
-            <Box
-              sx={{
-                minHeight: '250px',
-                padding: '40px 24px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                textAlign: 'center',
-              }}
-            >
-              <Box
-                sx={{
-                  width: '60px',
-                  height: '60px',
-                  backgroundColor: '#ECFDF5',
-                  color: '#059669',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '22px',
-                  fontWeight: 800,
-                }}
-              >
-                0
-              </Box>
-
-              <Typography
-                sx={{
-                  color: '#111827',
-                  fontSize: '17px',
-                  fontWeight: 800,
-                  marginTop: '14px',
-                }}
-              >
-                No leave requests
-              </Typography>
-
-              <Typography
-                sx={{
-                  color: '#6B7280',
-                  fontSize: '14px',
-                  marginTop: '5px',
-                }}
-              >
-                Submitted leave requests will appear here.
-              </Typography>
-            </Box>
-          )}
-        </Paper>
-
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '24px',
-          }}
-        >
-          <Paper
-            elevation={0}
-            sx={{
-              backgroundColor: '#FFFFFF',
-              border: '1px solid #E5E7EB',
-              borderRadius: '12px',
-              overflow: 'hidden',
-            }}
-          >
-            <Box
-              sx={{
-                padding: '22px 24px',
-                borderBottom: '1px solid #E5E7EB',
-              }}
-            >
-              <Typography
-                sx={{
-                  color: '#111827',
-                  fontSize: '18px',
-                  fontWeight: 800,
-                }}
-              >
-                Upcoming Holidays
-              </Typography>
-
-              <Typography
-                sx={{
-                  color: '#6B7280',
-                  fontSize: '14px',
-                  marginTop: '4px',
-                }}
-              >
-                Upcoming organization holidays.
-              </Typography>
-            </Box>
-
-            {upcomingHolidays.length > 0 ? (
-              <Box sx={{ padding: '8px 24px' }}>
-                {upcomingHolidays.map((holiday, index) => (
-                  <Box
-                    key={holiday.id}
-                    sx={{
-                      padding: '18px 0',
-                      borderBottom:
-                        index <
-                        upcomingHolidays.length - 1
-                          ? '1px solid #E5E7EB'
-                          : 'none',
-                    }}
-                  >
-                    <Typography
-                      sx={{
-                        color: '#111827',
-                        fontSize: '14px',
-                        fontWeight: 700,
-                      }}
-                    >
-                      {holiday.name}
-                    </Typography>
-
-                    <Typography
-                      sx={{
-                        color: '#059669',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        marginTop: '5px',
-                      }}
-                    >
-                      {formatDate(holiday.date)}
-                    </Typography>
-
-                    <Typography
-                      sx={{
-                        color: '#9CA3AF',
-                        fontSize: '12px',
-                        marginTop: '3px',
-                      }}
-                    >
-                      {holiday.type}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            ) : (
-              <Box
-                sx={{
-                  minHeight: '150px',
-                  padding: '30px 24px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                }}
-              >
-                <Typography
-                  sx={{
-                    color: '#6B7280',
-                    fontSize: '14px',
-                  }}
-                >
-                  No upcoming holidays.
-                </Typography>
-              </Box>
-            )}
-
-            <Box
-              sx={{
-                padding: '16px 24px 22px',
-              }}
-            >
               <Button
                 type="button"
                 variant="outlined"
-                fullWidth
                 onClick={() =>
-                  navigate('/hr/holiday-management')
+                  navigate(
+                    '/hr/employee-management',
+                  )
                 }
                 sx={{
-                  height: '42px',
-                  color: '#059669',
-                  borderColor: '#6EE7B7',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  textTransform: 'none',
+                  display:
+                    'none',
+                  height:
+                    '38px',
 
-                  '&:hover': {
-                    borderColor: '#059669',
-                    backgroundColor: '#ECFDF5',
-                  },
+                  padding:
+                    '0 15px',
+
+                  color:
+                    theme.primary,
+
+                  borderColor:
+                    theme.border,
+
+                  borderRadius:
+                    '8px',
+
+                  fontSize:
+                    '11px',
+
+                  fontWeight:
+                    700,
+
+                  textTransform:
+                    'none',
+
+                  '&:hover':
+                    {
+                      backgroundColor:
+                        theme.soft,
+
+                      borderColor:
+                        theme.primary,
+                    },
                 }}
               >
-                Manage Holidays
+                ดูทั้งหมด
               </Button>
             </Box>
+
+            {recentEmployees.length >
+            0 ? (
+              <>
+              <Box
+                sx={{
+                  overflowX:
+                    'auto',
+                }}
+              >
+                <Table
+                  sx={{
+                    minWidth:
+                      '760px',
+                  }}
+                >
+                  <TableHead>
+                    <TableRow
+                      sx={{
+                        backgroundColor:
+                          '#F8FAFC',
+                      }}
+                    >
+                      {[
+                        'รหัสพนักงาน',
+                        'ชื่อพนักงาน',
+                        'แผนก',
+                        'ตำแหน่ง',
+                        'สถานะ',
+                      ].map(
+                        (
+                          heading,
+                        ) => (
+                          <TableCell
+                            key={
+                              heading
+                            }
+                            sx={{
+                              padding:
+                                '13px 18px',
+
+                              color:
+                                '#64748B',
+
+                              fontSize:
+                                '12px',
+
+                              fontWeight:
+                                700,
+
+                              whiteSpace:
+                                'nowrap',
+
+                              borderBottom:
+                                '1px solid #E5E7EB',
+                            }}
+                          >
+                            {
+                              heading
+                            }
+                          </TableCell>
+                        ),
+                      )}
+                    </TableRow>
+                  </TableHead>
+
+                  <FixedTableBody>
+                    {recentEmployees.map(
+                      (
+                        employee,
+                        index,
+                      ) => {
+                        const status =
+                          getEmployeeStatus(
+                            employee,
+                          );
+
+                        const statusStyle =
+                          getStatusStyle(
+                            status,
+                          );
+
+                        return (
+                          <TableRow
+                            key={
+                              employee.employeeId ||
+                              employee.employee_id ||
+                              employee.id ||
+                              index
+                            }
+                            hover
+                            sx={{
+                              '&:hover': {
+                                backgroundColor: '#FAFBFD',
+                              },
+                              '&:last-child td': {
+                                borderBottom: 'none',
+                              },
+                            }}
+                          >
+                            <TableCell
+                              sx={{
+                                padding:
+                                  '16px 18px',
+
+                                color:
+                                  '#111827',
+
+                                fontSize:
+                                  '13px',
+
+                                borderBottom:
+                                  '1px solid #EEF0F3',
+
+                                fontWeight:
+                                  800,
+
+                                whiteSpace:
+                                  'nowrap',
+                              }}
+                            >
+                              {getEmployeeCode(
+                                employee,
+                              )}
+                            </TableCell>
+
+                            <TableCell
+                              sx={{
+                                padding: '16px 18px',
+                                borderBottom: '1px solid #EEF0F3',
+                              }}
+                            >
+                              <Typography
+                                sx={{
+                                  color:
+                                    '#111827',
+
+                                  fontSize:
+                                    '13px',
+
+                                  fontWeight:
+                                    700,
+
+                                  whiteSpace:
+                                    'nowrap',
+                                }}
+                              >
+                                {getEmployeeName(
+                                  employee,
+                                )}
+                              </Typography>
+                            </TableCell>
+
+                            <TableCell
+                              sx={{
+                                padding: '16px 18px',
+                                color: '#475569',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                whiteSpace: 'nowrap',
+                                borderBottom: '1px solid #EEF0F3',
+                              }}
+                            >
+                              {getDepartment(
+                                employee,
+                              )}
+                            </TableCell>
+
+                            <TableCell
+                              sx={{
+                                padding: '16px 18px',
+                                color: '#475569',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                                whiteSpace: 'nowrap',
+                                borderBottom: '1px solid #EEF0F3',
+                              }}
+                            >
+                              {getPosition(
+                                employee,
+                              )}
+                            </TableCell>
+
+                            <TableCell
+                              sx={{
+                                padding: '16px 18px',
+                                borderBottom: '1px solid #EEF0F3',
+                              }}
+                            >
+                              <Chip
+                                label={translateEmployeeStatus(
+                                  status,
+                                )}
+                                size="small"
+                                sx={{
+                                  backgroundColor:
+                                    statusStyle.backgroundColor,
+
+                                  color:
+                                    statusStyle.color,
+
+                                  borderRadius:
+                                    '999px',
+
+                                  minWidth: '86px',
+                                  height: '28px',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  '& .MuiChip-label': {
+                                    padding: '0 12px',
+                                  },
+                                }}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      },
+                    )}
+                  </FixedTableBody>
+                </Table>
+              </Box>
+              <DashboardTablePagination
+                count={sortedEmployees.length}
+                page={employeePage}
+                onPageChange={(_, nextPage) => setEmployeePage(nextPage)}
+              />
+              </>
+            ) : (
+              <Box
+                sx={{
+                  minHeight:
+                    '250px',
+
+                  display:
+                    'flex',
+
+                  flexDirection:
+                    'column',
+
+                  alignItems:
+                    'center',
+
+                  justifyContent:
+                    'center',
+
+                  textAlign:
+                    'center',
+                }}
+              >
+                <Box
+                  sx={{
+                    width:
+                      '58px',
+
+                    height:
+                      '58px',
+
+                    display:
+                      'flex',
+
+                    alignItems:
+                      'center',
+
+                    justifyContent:
+                      'center',
+
+                    backgroundColor:
+                      theme.soft,
+
+                    color:
+                      theme.primary,
+
+                    borderRadius:
+                      '50%',
+
+                    fontSize:
+                      '20px',
+
+                    fontWeight:
+                      800,
+                  }}
+                >
+                  0
+                </Box>
+
+                <Typography
+                  sx={{
+                    color:
+                      '#111827',
+
+                    fontSize:
+                      '15px',
+
+                    fontWeight:
+                      800,
+
+                    marginTop:
+                      '14px',
+                  }}
+                >
+                  ยังไม่มีข้อมูลพนักงาน
+                </Typography>
+              </Box>
+            )}
           </Paper>
-
-          <Paper
-            elevation={0}
-            sx={{
-              padding: '22px',
-              backgroundColor: '#ECFDF5',
-              border: '1px solid #A7F3D0',
-              borderRadius: '12px',
-            }}
-          >
-            <Typography
-              sx={{
-                color: '#047857',
-                fontSize: '16px',
-                fontWeight: 800,
-              }}
-            >
-              HR Summary
-            </Typography>
-
-            <Typography
-              sx={{
-                color: '#065F46',
-                fontSize: '13px',
-                lineHeight: 1.7,
-                marginTop: '8px',
-              }}
-            >
-              There are currently {pendingRequests.length}{' '}
-              pending leave request
-              {pendingRequests.length === 1 ? '' : 's'} and{' '}
-              {employeesOnLeave} employee
-              {employeesOnLeave === 1 ? '' : 's'} on leave.
-              Review employee information and leave balances
-              regularly.
-            </Typography>
-
-            <Button
-              type="button"
-              variant="contained"
-              fullWidth
-              onClick={() => navigate('/hr/reports')}
-              sx={{
-                height: '42px',
-                marginTop: '18px',
-                backgroundColor: '#059669',
-                color: '#FFFFFF',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 700,
-                textTransform: 'none',
-                boxShadow: 'none',
-
-                '&:hover': {
-                  backgroundColor: '#047857',
-                  boxShadow: 'none',
-                },
-              }}
-            >
-              Open HR Reports
-            </Button>
-          </Paper>
-        </Box>
-      </Box>
+        </>
+      )}
     </HRLayout>
   );
 }

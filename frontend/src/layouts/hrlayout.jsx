@@ -1,4 +1,5 @@
 import RoleLayout from '../components/rolelayout.jsx';
+import { PageContainer } from '../components/sharedvisualfoundation.jsx';
 
 function HRLayout({
   children,
@@ -6,33 +7,26 @@ function HRLayout({
 }) {
   const hrMenuItems = [
     'Dashboard',
-    'Leave Request',
     'My Requests',
-    'Leave Balance',
+    'Approval',
     'Employee Management',
+    'Department Management',
+    'Position Management',
     'Leave Entitlement',
     'Leave Type',
     'Holiday Management',
     'Reports',
-    'Notification',
-    'Profile',
+    'Edit Personal Information',
     'Change Password',
     'Logout',
   ];
-
-  const hrTheme = {
-    primary: '#059669',
-    dark: '#047857',
-    soft: '#ECFDF5',
-  };
 
   return (
     <RoleLayout
       activeMenu={activeMenu}
       menuItems={hrMenuItems}
-      theme={hrTheme}
     >
-      {children}
+      <PageContainer>{children}</PageContainer>
     </RoleLayout>
   );
 }

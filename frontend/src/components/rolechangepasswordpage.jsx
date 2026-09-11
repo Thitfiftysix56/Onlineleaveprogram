@@ -1,4 +1,5 @@
 import {
+  useMemo,
   useState,
 } from 'react';
 
@@ -6,28 +7,231 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
+  IconButton,
+  InputAdornment,
   Paper,
   TextField,
   Typography,
 } from '@mui/material';
-import { IconButton, InputAdornment } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
 
-import { clearAuthSession, getCurrentUser } from '../utils/authstorage.js';
-import PasswordPolicyList from './passwordpolicylist.jsx';
-import { passwordMeetsPolicy } from '../utils/passwordpolicy.js';
+import {
+  CheckRounded,
+  VisibilityOffRounded,
+  VisibilityRounded,
+} from '@mui/icons-material';
 
 import {
   useNavigate,
 } from 'react-router-dom';
 
 import api from '../api/axios.js';
+import { PageHeader } from './sharedvisualfoundation.jsx';
+import { roleDashboardCardSurfaceSx } from '../theme/rolecardsurface.js';
+
+import {
+  getCurrentUser,
+  getDashboardPathByRole,
+  saveBackendAuthSession,
+} from '../utils/authstorage.js';
 
 const emptyFormData = {
   currentPassword: '',
   newPassword: '',
   confirmPassword: '',
 };
+
+const translatePasswordMessage = (
+  message,
+  fallback,
+) => {
+  const text =
+    String(
+      message || '',
+    ).trim();
+
+  const messageMap = {
+    'The current password is incorrect.':
+      'รหัสผ่านปัจจุบันไม่ถูกต้อง',
+
+    'Current password is incorrect.':
+      'รหัสผ่านปัจจุบันไม่ถูกต้อง',
+
+    'The new password must be different from the current password.':
+      'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านปัจจุบัน',
+
+    'The confirmation password does not match.':
+      'ยืนยันรหัสผ่านใหม่ไม่ตรงกัน',
+
+    'The confirmation password does not match the new password.':
+      'ยืนยันรหัสผ่านใหม่ไม่ตรงกัน',
+
+    'The new password must contain at least 8 characters.':
+      'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร',
+
+    'The new password must contain at least one lowercase letter.':
+      'รหัสผ่านใหม่ต้องมีตัวพิมพ์เล็กอย่างน้อย 1 ตัว',
+
+    'The new password must contain at least one uppercase letter.':
+      'รหัสผ่านใหม่ต้องมีตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว',
+
+    'The new password must contain at least one number.':
+      'รหัสผ่านใหม่ต้องมีตัวเลขอย่างน้อย 1 ตัว',
+
+    'The new password must contain at least one special character.':
+      'รหัสผ่านใหม่ต้องมีอักขระพิเศษอย่างน้อย 1 ตัว',
+
+    'Your password was changed successfully.':
+      'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว',
+
+    'Password changed successfully.':
+      'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว',
+
+    'Password changed successfully':
+      'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว',
+
+    'Unable to change password.':
+      'ไม่สามารถเปลี่ยนรหัสผ่านได้',
+
+    'Please sign in to continue.':
+      'กรุณาเข้าสู่ระบบอีกครั้ง',
+  };
+
+  return (
+    messageMap[text] ||
+    text ||
+    fallback
+  );
+};
+
+function PasswordField({
+  id,
+  label,
+  value,
+  onChange,
+  visible,
+  onToggleVisibility,
+  disabled,
+  autoComplete,
+  theme,
+}) {
+  return (
+    <Box>
+      <Typography
+        component="label"
+        htmlFor={id}
+        sx={{
+          display: 'block',
+          color: '#374151',
+          fontSize: '13px',
+          fontWeight: 700,
+          marginBottom: '7px',
+        }}
+      >
+        {label}
+      </Typography>
+
+      <TextField
+        id={id}
+        fullWidth
+        required
+        type={
+          visible
+            ? 'text'
+            : 'password'
+        }
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        autoComplete={autoComplete}
+        slotProps={{
+          input: {
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  edge="end"
+                  type="button"
+                  aria-label={
+                    visible
+                      ? 'ซ่อนรหัสผ่าน'
+                      : 'แสดงรหัสผ่าน'
+                  }
+                  onClick={
+                    onToggleVisibility
+                  }
+                  disabled={
+                    disabled
+                  }
+                  sx={{
+                    color: '#64748B',
+                  }}
+                >
+                  {visible ? (
+                    <VisibilityOffRounded
+                      sx={{
+                        fontSize: '20px',
+                      }}
+                    />
+                  ) : (
+                    <VisibilityRounded
+                      sx={{
+                        fontSize: '20px',
+                      }}
+                    />
+                  )}
+                </IconButton>
+              </InputAdornment>
+            ),
+          },
+
+          htmlInput: {
+            maxLength: 128,
+          },
+        }}
+        sx={{
+          '& .MuiOutlinedInput-root':
+            {
+              height: '44px',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '11px',
+
+              '& fieldset': {
+                borderColor: '#E2E8F0',
+              },
+
+              '&:hover fieldset':
+                {
+                  borderColor:
+                    '#CBD5E1',
+                },
+
+              '&.Mui-focused fieldset':
+                {
+                  borderColor:
+                    theme.primary,
+                  borderWidth:
+                    '1.5px',
+                },
+            },
+
+          '& input': {
+            fontSize: '14px',
+          },
+
+          '& input::-ms-reveal':
+            {
+              display: 'none',
+            },
+
+          '& input::-ms-clear':
+            {
+              display: 'none',
+            },
+        }}
+      />
+    </Box>
+  );
+}
 
 function RoleChangePasswordPage({
   LayoutComponent,
@@ -38,6 +242,43 @@ function RoleChangePasswordPage({
 
   const currentUser =
     getCurrentUser();
+
+  const [
+    formData,
+    setFormData,
+  ] = useState(
+    emptyFormData,
+  );
+
+  const [
+    showCurrentPassword,
+    setShowCurrentPassword,
+  ] = useState(false);
+
+  const [
+    showNewPassword,
+    setShowNewPassword,
+  ] = useState(false);
+
+  const [
+    showConfirmPassword,
+    setShowConfirmPassword,
+  ] = useState(false);
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState('');
+
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] = useState('');
+
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
 
   const resolvedTheme = {
     primary:
@@ -61,36 +302,97 @@ function RoleChangePasswordPage({
       '#1E3A8A',
   };
 
-  const [
-    formData,
-    setFormData,
-  ] = useState({
-    ...emptyFormData,
-  });
+  const passwordChecks =
+    useMemo(
+      () => [
+        {
+          label:
+            'อย่างน้อย 8 ตัวอักษร',
 
-  const [
-    errors,
-    setErrors,
-  ] = useState({});
+          passed:
+            formData
+              .newPassword
+              .length >= 8,
+        },
 
-  const [
-    message,
-    setMessage,
-  ] = useState(null);
+        {
+          label:
+            'ตัวพิมพ์เล็กอย่างน้อย 1 ตัว',
 
-  const [
-    isSubmitting,
-    setIsSubmitting,
-  ] = useState(false);
+          passed:
+            /[a-z]/.test(
+              formData
+                .newPassword,
+            ),
+        },
 
-  const [showPasswords, setShowPasswords] = useState(false);
+        {
+          label:
+            'ตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว',
+
+          passed:
+            /[A-Z]/.test(
+              formData
+                .newPassword,
+            ),
+        },
+
+        {
+          label:
+            'ตัวเลขอย่างน้อย 1 ตัว',
+
+          passed:
+            /[0-9]/.test(
+              formData
+                .newPassword,
+            ),
+        },
+
+        {
+          label:
+            'อักขระพิเศษอย่างน้อย 1 ตัว',
+
+          passed:
+            /[^A-Za-z0-9]/.test(
+              formData
+                .newPassword,
+            ),
+        },
+      ],
+      [
+        formData
+          .newPassword,
+      ],
+    );
+
+  const allRequirementsPassed =
+    passwordChecks.every(
+      (
+        requirement,
+      ) =>
+        requirement.passed,
+    );
+
+  const passwordsMatch =
+    Boolean(
+      formData
+        .newPassword,
+    ) &&
+    Boolean(
+      formData
+        .confirmPassword,
+    ) &&
+    formData.newPassword ===
+      formData.confirmPassword;
 
   const handleInputChange = (
     fieldName,
     value,
   ) => {
     setFormData(
-      (previousData) => ({
+      (
+        previousData,
+      ) => ({
         ...previousData,
 
         [fieldName]:
@@ -98,705 +400,529 @@ function RoleChangePasswordPage({
       }),
     );
 
-    setErrors(
-      (previousErrors) => ({
-        ...previousErrors,
-
-        [fieldName]:
-          '',
-      }),
-    );
-
-    setMessage(null);
+    setErrorMessage('');
+    setSuccessMessage('');
   };
 
-  const validateForm = () => {
-    const nextErrors = {};
+  const handleSubmit =
+    async (event) => {
+      event.preventDefault();
 
-    if (
-      !formData.currentPassword
-    ) {
-      nextErrors.currentPassword =
-        'Please enter your current password.';
-    }
+      setErrorMessage('');
+      setSuccessMessage('');
 
-    if (
-      !formData.newPassword
-    ) {
-      nextErrors.newPassword =
-        'Please enter a new password.';
-    } else if (!passwordMeetsPolicy(formData.newPassword, currentUser || {})) {
-      nextErrors.newPassword =
-        'The new password does not meet the password policy.';
-    }
+      const currentPassword =
+        String(
+          formData.currentPassword ||
+            '',
+        );
 
-    if (
-      !formData.confirmPassword
-    ) {
-      nextErrors.confirmPassword =
-        'Please confirm your new password.';
-    } else if (
-      formData.confirmPassword !==
-      formData.newPassword
-    ) {
-      nextErrors.confirmPassword =
-        'The confirmation password does not match.';
-    }
+      const newPassword =
+        String(
+          formData.newPassword ||
+            '',
+        );
 
-    if (
-      formData.currentPassword &&
-      formData.newPassword &&
-      formData.currentPassword ===
-        formData.newPassword
-    ) {
-      nextErrors.newPassword =
-        'The new password must be different from the current password.';
-    }
-
-    setErrors(
-      nextErrors,
-    );
-
-    return (
-      Object.keys(
-        nextErrors,
-      ).length === 0
-    );
-  };
-
-  const handleSubmit = async (
-    event,
-  ) => {
-    event.preventDefault();
-
-    setMessage(null);
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const response =
-        await api.post(
-          '/auth/change-password',
-          {
-            currentPassword:
-              formData.currentPassword,
-
-            newPassword:
-              formData.newPassword,
-          },
+      const confirmPassword =
+        String(
+          formData.confirmPassword ||
+            '',
         );
 
       if (
-        response.data?.status !==
-        'ok'
+        !currentPassword
       ) {
-        throw new Error(
-          response.data?.message ||
-            'Unable to change the password.',
+        setErrorMessage(
+          'กรุณากรอกรหัสผ่านปัจจุบัน',
         );
+
+        return;
       }
 
-      setFormData({
-        ...emptyFormData,
-      });
+      if (!newPassword) {
+        setErrorMessage(
+          'กรุณากรอกรหัสผ่านใหม่',
+        );
 
-      setErrors({});
+        return;
+      }
 
-      setMessage({
-        severity:
-          'success',
+      if (
+        !confirmPassword
+      ) {
+        setErrorMessage(
+          'กรุณายืนยันรหัสผ่านใหม่',
+        );
 
-        text:
-          response.data?.message ||
-          'Your password was changed successfully.',
-      });
+        return;
+      }
 
-      clearAuthSession();
-      navigate('/login', {
-        replace: true,
-        state: {
-          successMessage: response.data?.message || 'Your password was changed successfully. Please sign in again.',
-        },
-      });
-    } catch (error) {
-      setMessage({
-        severity:
-          'error',
+      if (
+        newPassword ===
+        currentPassword
+      ) {
+        setErrorMessage(
+          'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านปัจจุบัน',
+        );
 
-        text:
-          error.response?.data
-            ?.message ||
-          error.message ||
-          'Unable to change the password.',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+        return;
+      }
 
-  const handleReset = () => {
-    setFormData({
-      ...emptyFormData,
-    });
+      if (
+        !allRequirementsPassed
+      ) {
+        setErrorMessage(
+          'รหัสผ่านใหม่ยังไม่ครบตามเงื่อนไขที่กำหนด',
+        );
 
-    setErrors({});
+        return;
+      }
 
-    setMessage(null);
-  };
+      if (
+        newPassword !==
+        confirmPassword
+      ) {
+        setErrorMessage(
+          'ยืนยันรหัสผ่านใหม่ไม่ตรงกัน',
+        );
+
+        return;
+      }
+
+      const wasForcedChange =
+        Boolean(
+          currentUser
+            ?.mustChangePassword,
+        );
+
+      setIsSubmitting(
+        true,
+      );
+
+      try {
+        const response =
+          await api.post(
+            '/auth/change-password',
+            {
+              currentPassword,
+              newPassword,
+              confirmPassword,
+            },
+          );
+
+        if (
+          response.data?.user
+        ) {
+          saveBackendAuthSession(
+            response.data
+              .user,
+          );
+        }
+
+        setFormData(
+          emptyFormData,
+        );
+
+        setShowCurrentPassword(
+          false,
+        );
+
+        setShowNewPassword(
+          false,
+        );
+
+        setShowConfirmPassword(
+          false,
+        );
+
+        setSuccessMessage(
+          translatePasswordMessage(
+            response.data
+              ?.message,
+            'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว',
+          ),
+        );
+
+        if (
+          wasForcedChange
+        ) {
+          const role =
+            response.data
+              ?.user?.role ||
+            currentUser?.role ||
+            'employee';
+
+          navigate(
+            getDashboardPathByRole(
+              role,
+            ),
+            {
+              replace: true,
+            },
+          );
+        }
+      } catch (error) {
+        setErrorMessage(
+          translatePasswordMessage(
+            error.response
+              ?.data
+              ?.message ||
+              error.message,
+            'ไม่สามารถเปลี่ยนรหัสผ่านได้ กรุณาลองอีกครั้ง',
+          ),
+        );
+      } finally {
+        setIsSubmitting(
+          false,
+        );
+      }
+    };
 
   return (
-    <LayoutComponent activeMenu="Change Password">
-      <Box
-        sx={{
-          marginBottom:
-            '28px',
-        }}
-      >
-        <Typography
-          component="h1"
-          sx={{
-            color:
-              '#111827',
+    <LayoutComponent
+      activeMenu="Change Password"
+    >
+      <PageHeader
+        title="เปลี่ยนรหัสผ่าน"
+        sx={{ maxWidth: '620px', marginInline: 'auto' }}
+      />
 
-            fontSize: {
-              xs:
-                '26px',
-
-              sm:
-                '30px',
-            },
-
-            fontWeight:
-              800,
-          }}
-        >
-          Change Password
-        </Typography>
-
-        <Typography
-          sx={{
-            color:
-              '#6B7280',
-
-            fontSize:
-              '15px',
-
-            marginTop:
-              '6px',
-          }}
-        >
-          Update the password used to sign in to your account.
-        </Typography>
-      </Box>
-
-      {message && (
+      {(errorMessage ||
+        successMessage) && (
         <Alert
           severity={
-            message.severity
+            errorMessage
+              ? 'error'
+              : 'success'
           }
-          onClose={() =>
-            setMessage(null)
-          }
+          onClose={() => {
+            setErrorMessage('');
+            setSuccessMessage('');
+          }}
           sx={{
-            marginBottom:
-              '24px',
-
-            borderRadius:
-              '8px',
+            width: '100%',
+            maxWidth: '620px',
+            margin: '0 auto 16px',
           }}
         >
-          {message.text}
+          {errorMessage ||
+            successMessage}
         </Alert>
       )}
 
       <Box
+        component="form"
+        onSubmit={handleSubmit}
+        noValidate
         sx={{
-          display:
-            'grid',
-
-          gridTemplateColumns: {
-            xs:
-              '1fr',
-
-            lg:
-              'minmax(0, 1.5fr) minmax(300px, 0.8fr)',
-          },
-
-          gap:
-            '24px',
-
-          alignItems:
-            'start',
+          width: '100%',
+          maxWidth: '620px',
+          margin: '0 auto',
         }}
       >
         <Paper
-          component="form"
-          onSubmit={
-            handleSubmit
-          }
           elevation={0}
           sx={{
-            padding: {
-              xs:
-                '22px',
-
-              sm:
-                '28px',
-            },
-
-            backgroundColor:
-              '#FFFFFF',
-
-            border:
-              '1px solid #E5E7EB',
-
-            borderRadius:
-              '12px',
+            ...roleDashboardCardSurfaceSx,
+            borderColor: '#E2E8F0',
           }}
         >
-          <Typography
+          <Box
             sx={{
-              color:
-                '#111827',
-
-              fontSize:
-                '18px',
-
-              fontWeight:
-                800,
-            }}
-          >
-            Password Information
-          </Typography>
-
-          <Typography
-            sx={{
-              color:
-                '#6B7280',
-
-              fontSize:
-                '14px',
-
-              lineHeight:
-                1.7,
-
-              marginTop:
-                '6px',
-
-              marginBottom:
-                '24px',
-            }}
-          >
-            Enter your current password before creating a new one.
-          </Typography>
-
-          <TextField
-            fullWidth
-            required
-            type={showPasswords ? 'text' : 'password'}
-            label="Current Password"
-            value={
-              formData.currentPassword
-            }
-            onChange={(
-              event,
-            ) =>
-              handleInputChange(
-                'currentPassword',
-                event.target.value,
-              )
-            }
-            error={
-              Boolean(
-                errors.currentPassword,
-              )
-            }
-            helperText={
-              errors.currentPassword
-            }
-            autoComplete="current-password"
-            slotProps={{
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton aria-label={showPasswords ? 'Hide passwords' : 'Show passwords'} onClick={() => setShowPasswords((value) => !value)} edge="end">
-                      {showPasswords ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
+              padding: {
+                xs: '20px',
+                sm: '24px 28px',
               },
+              background: `linear-gradient(180deg, ${resolvedTheme.soft} 0%, #FFFFFF 150px)`,
             }}
-            sx={{
-              '& .MuiOutlinedInput-root':
-                {
-                  borderRadius:
-                    '8px',
-                },
-            }}
-          />
+          >
+            <Box
+              sx={{
+                width: '100%',
+                maxWidth: '480px',
+                margin: '0 auto 20px',
+              }}
+            >
+              <Typography
+                sx={{
+                  color: '#0F172A',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                }}
+              >
+                ตั้งรหัสผ่านใหม่
+              </Typography>
 
-          <TextField
-            fullWidth
-            required
-            type={showPasswords ? 'text' : 'password'}
-            label="New Password"
-            value={
-              formData.newPassword
-            }
-            onChange={(
-              event,
-            ) =>
-              handleInputChange(
-                'newPassword',
-                event.target.value,
-              )
-            }
-            error={
-              Boolean(
-                errors.newPassword,
-              )
-            }
-            helperText={
-              errors.newPassword
-            }
-            autoComplete="new-password"
-            sx={{
-              marginTop:
-                '20px',
+            </Box>
 
-              '& .MuiOutlinedInput-root':
-                {
-                  borderRadius:
-                    '8px',
-                },
-            }}
-          />
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+                width: '100%',
+                maxWidth: '480px',
+                margin: '0 auto',
+              }}
+            >
+              <PasswordField
+                id="current-password"
+                label="รหัสผ่านปัจจุบัน"
+                value={
+                  formData.currentPassword
+                }
+                onChange={(event) =>
+                  handleInputChange(
+                    'currentPassword',
+                    event.target.value,
+                  )
+                }
+                visible={
+                  showCurrentPassword
+                }
+                onToggleVisibility={() =>
+                  setShowCurrentPassword(
+                    (previous) =>
+                      !previous,
+                  )
+                }
+                disabled={
+                  isSubmitting
+                }
+                autoComplete="current-password"
+                theme={
+                  resolvedTheme
+                }
+              />
 
-          <TextField
-            fullWidth
-            required
-            type={showPasswords ? 'text' : 'password'}
-            label="Confirm New Password"
-            value={
-              formData.confirmPassword
-            }
-            onChange={(
-              event,
-            ) =>
-              handleInputChange(
-                'confirmPassword',
-                event.target.value,
-              )
-            }
-            error={
-              Boolean(
-                errors.confirmPassword,
-              )
-            }
-            helperText={
-              errors.confirmPassword
-            }
-            autoComplete="new-password"
-            sx={{
-              marginTop:
-                '20px',
+              <Box>
+                <PasswordField
+                  id="new-password"
+                  label="รหัสผ่านใหม่"
+                  value={
+                    formData.newPassword
+                  }
+                  onChange={(event) =>
+                    handleInputChange(
+                      'newPassword',
+                      event.target.value,
+                    )
+                  }
+                  visible={
+                    showNewPassword
+                  }
+                  onToggleVisibility={() =>
+                    setShowNewPassword(
+                      (previous) =>
+                        !previous,
+                    )
+                  }
+                  disabled={
+                    isSubmitting
+                  }
+                  autoComplete="new-password"
+                  theme={
+                    resolvedTheme
+                  }
+                />
 
-              '& .MuiOutlinedInput-root':
-                {
-                  borderRadius:
-                    '8px',
-                },
-            }}
-          />
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '7px',
+                    marginTop: '8px',
+                  }}
+                >
+                  {passwordChecks.map(
+                    (requirement) => (
+                      <Box
+                        key={
+                          requirement.label
+                        }
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          minHeight: '28px',
+                          padding: '5px 9px',
+                          backgroundColor:
+                            requirement.passed
+                              ? '#F0FDF4'
+                              : 'rgba(255,255,255,0.78)',
+                          border: 'none',
+                          borderRadius: '8px',
+                        }}
+                      >
+                        <CheckRounded
+                          sx={{
+                            fontSize: '14px',
+                            color:
+                              requirement.passed
+                                ? '#16A34A'
+                                : '#CBD5E1',
+                          }}
+                        />
+
+                        <Typography
+                          sx={{
+                            color:
+                              requirement.passed
+                                ? '#166534'
+                                : '#64748B',
+                            fontSize: '11.5px',
+                            fontWeight: 500,
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {
+                            requirement.label
+                          }
+                        </Typography>
+                      </Box>
+                    ),
+                  )}
+                </Box>
+              </Box>
+
+              <Box>
+                <PasswordField
+                  id="confirm-password"
+                  label="ยืนยันรหัสผ่านใหม่"
+                  value={
+                    formData.confirmPassword
+                  }
+                  onChange={(event) =>
+                    handleInputChange(
+                      'confirmPassword',
+                      event.target.value,
+                    )
+                  }
+                  visible={
+                    showConfirmPassword
+                  }
+                  onToggleVisibility={() =>
+                    setShowConfirmPassword(
+                      (previous) =>
+                        !previous,
+                    )
+                  }
+                  disabled={
+                    isSubmitting
+                  }
+                  autoComplete="new-password"
+                  theme={
+                    resolvedTheme
+                  }
+                />
+
+                {formData.confirmPassword &&
+                  formData.newPassword && (
+                    <Typography
+                      sx={{
+                        marginTop: '7px',
+                        color:
+                          passwordsMatch
+                            ? '#15803D'
+                            : '#DC2626',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {passwordsMatch
+                        ? 'รหัสผ่านใหม่ตรงกัน'
+                        : 'ยืนยันรหัสผ่านใหม่ไม่ตรงกัน'}
+                    </Typography>
+                  )}
+              </Box>
+            </Box>
+          </Box>
 
           <Box
             sx={{
-              display:
-                'flex',
-
-              justifyContent:
-                'flex-end',
-
-              gap:
-                '12px',
-
-              flexWrap:
-                'wrap',
-
-              marginTop:
-                '28px',
+              padding: {
+                xs: '16px 20px 20px',
+                sm: '18px 28px 24px',
+              },
+              borderTop: 0,
+              backgroundColor: 'transparent',
             }}
           >
-            <Button
-              type="button"
-              variant="outlined"
-              disabled={
-                isSubmitting
-              }
-              onClick={
-                handleReset
-              }
+            <Box
               sx={{
-                minWidth:
-                  '100px',
-
-                height:
-                  '44px',
-
-                color:
-                  '#4B5563',
-
-                borderColor:
-                  '#D1D5DB',
-
-                borderRadius:
-                  '8px',
-
-                fontSize:
-                  '14px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
-
-                '&:hover': {
-                  backgroundColor:
-                    '#F9FAFB',
-
-                  borderColor:
-                    '#9CA3AF',
-                },
+                width: '100%',
+                maxWidth: '480px',
+                margin: '0 auto',
+                display: 'flex',
+                justifyContent:
+                  'flex-end',
               }}
             >
-              Clear
-            </Button>
-
-            <Button
+              <Button
               type="submit"
               variant="contained"
               disabled={
                 isSubmitting
               }
               sx={{
-                minWidth:
-                  '160px',
-
-                height:
-                  '44px',
-
+                minWidth: '142px',
+                height: '44px',
+                padding: '0 20px',
                 backgroundColor:
-                  resolvedTheme.primary,
-
-                borderRadius:
-                  '8px',
-
-                fontSize:
-                  '14px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
-
+                  '#2563EB',
+                color: '#FFFFFF',
+                borderRadius: '11px',
+                fontSize: '13px',
+                fontWeight: 500,
+                textTransform: 'none',
                 boxShadow:
-                  'none',
+                  '0 5px 12px rgba(37, 99, 235, 0.16)',
 
                 '&:hover': {
                   backgroundColor:
-                    resolvedTheme.dark,
-
+                    '#1D4ED8',
                   boxShadow:
-                    'none',
+                    '0 6px 14px rgba(37, 99, 235, 0.22)',
+                },
+
+                '&.Mui-disabled': {
+                  backgroundColor:
+                    '#CBD5E1',
+                  color: '#FFFFFF',
                 },
               }}
             >
-              {isSubmitting
-                ? 'Changing Password...'
-                : 'Change Password'}
-            </Button>
+              {isSubmitting ? (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems:
+                      'center',
+                    justifyContent:
+                      'center',
+                    gap: '8px',
+                  }}
+                >
+                  <CircularProgress
+                    size={16}
+                    thickness={5}
+                    sx={{
+                      color:
+                        '#FFFFFF',
+                    }}
+                  />
+                  กำลังเปลี่ยน...
+                </Box>
+              ) : (
+                'เปลี่ยนรหัสผ่าน'
+              )}
+              </Button>
+            </Box>
           </Box>
         </Paper>
-
-        <Box
-          sx={{
-            display:
-              'flex',
-
-            flexDirection:
-              'column',
-
-            gap:
-              '20px',
-          }}
-        >
-          <Paper
-            elevation={0}
-            sx={{
-              padding:
-                '22px',
-
-              backgroundColor:
-                '#FFFFFF',
-
-              border:
-                '1px solid #E5E7EB',
-
-              borderRadius:
-                '12px',
-            }}
-          >
-            <Typography
-              sx={{
-                color:
-                  '#111827',
-
-                fontSize:
-                  '16px',
-
-                fontWeight:
-                  800,
-              }}
-            >
-              Signed-in Account
-            </Typography>
-
-            <Typography
-              sx={{
-                color:
-                  '#6B7280',
-
-                fontSize:
-                  '12px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'uppercase',
-
-                letterSpacing:
-                  '0.5px',
-
-                marginTop:
-                  '18px',
-              }}
-            >
-              Username
-            </Typography>
-
-            <Typography
-              sx={{
-                color:
-                  '#111827',
-
-                fontSize:
-                  '14px',
-
-                fontWeight:
-                  700,
-
-                marginTop:
-                  '4px',
-              }}
-            >
-              {currentUser?.username ||
-                '-'}
-            </Typography>
-
-            <Typography
-              sx={{
-                color:
-                  '#6B7280',
-
-                fontSize:
-                  '12px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'uppercase',
-
-                letterSpacing:
-                  '0.5px',
-
-                marginTop:
-                  '18px',
-              }}
-            >
-              Role
-            </Typography>
-
-            <Typography
-              sx={{
-                color:
-                  '#111827',
-
-                fontSize:
-                  '14px',
-
-                fontWeight:
-                  700,
-
-                marginTop:
-                  '4px',
-
-                textTransform:
-                  'capitalize',
-              }}
-            >
-              {currentUser?.role ||
-                '-'}
-            </Typography>
-          </Paper>
-
-          <Paper
-            elevation={0}
-            sx={{
-              padding:
-                '22px',
-
-              backgroundColor:
-                resolvedTheme.soft,
-
-              border:
-                `1px solid ${resolvedTheme.border}`,
-
-              borderRadius:
-                '12px',
-            }}
-          >
-            <Typography
-              sx={{
-                color:
-                  resolvedTheme.dark,
-
-                fontSize:
-                  '16px',
-
-                fontWeight:
-                  800,
-              }}
-            >
-              Password Requirements
-            </Typography>
-
-            <PasswordPolicyList
-              password={formData.newPassword}
-              username={currentUser?.username || ''}
-              email={currentUser?.email || ''}
-            />
-          </Paper>
-        </Box>
       </Box>
     </LayoutComponent>
+
   );
 }
 

@@ -1,0 +1,182 @@
+{
+  "paragraphs": 923,
+  "tables": 74,
+  "sections": 1,
+  "section6_headings": [
+    "6. Workflow คำขอลา",
+    "6.1 ภาพรวม Workflow",
+    "6.2 สถานะคำขอลา",
+    "6.3 การสร้างและส่งคำขอลา",
+    "6.3.1 กรณี Save Draft",
+    "6.3.2 กรณี Submit",
+    "6.4 Approval Workflow",
+    "6.5 Reject Workflow",
+    "6.6 Cancel Workflow",
+    "6.7 State Transition",
+    "6.8 State Rules",
+    "6.9 Workflow การใช้งานแยกตาม Role"
+  ],
+  "section16_headings": [
+    "16. Use Case",
+    "16.1 Actor Definition",
+    "16.2 Use Case Inventory",
+    "16.3 Actor และ Use Case Mapping",
+    "16.4 Use Case Diagram Specification",
+    "16.5 Use Case Specification",
+    "16.6 Requirement และ Use Case Mapping"
+  ],
+  "referenced_heading_numbers": [
+    "2.2",
+    "3"
+  ],
+  "broken_heading_references": [],
+  "use_case_count": 24,
+  "main_flow_all_start_at_1": true,
+  "main_flow_distinct_num_ids": 24,
+  "use_cases": [
+    {
+      "uc": "UC-01",
+      "steps": 5,
+      "num_id": "99",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-02",
+      "steps": 3,
+      "num_id": "100",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-03",
+      "steps": 6,
+      "num_id": "101",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-04",
+      "steps": 8,
+      "num_id": "102",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-05",
+      "steps": 5,
+      "num_id": "103",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-06",
+      "steps": 6,
+      "num_id": "104",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-07",
+      "steps": 11,
+      "num_id": "105",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-08",
+      "steps": 4,
+      "num_id": "106",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-09",
+      "steps": 3,
+      "num_id": "107",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-10",
+      "steps": 4,
+      "num_id": "108",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-11",
+      "steps": 4,
+      "num_id": "109",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-12",
+      "steps": 9,
+      "num_id": "110",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-13",
+      "steps": 8,
+      "num_id": "111",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-14",
+      "steps": 3,
+      "num_id": "112",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-15",
+      "steps": 5,
+      "num_id": "113",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-16",
+      "steps": 4,
+      "num_id": "114",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-17",
+      "steps": 4,
+      "num_id": "115",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-18",
+      "steps": 4,
+      "num_id": "116",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-19",
+      "steps": 4,
+      "num_id": "117",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-20",
+      "steps": 5,
+      "num_id": "118",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-21",
+      "steps": 4,
+      "num_id": "119",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-22",
+      "steps": 4,
+      "num_id": "120",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-23",
+      "steps": 3,
+      "num_id": "121",
+      "starts_at": 1
+    },
+    {
+      "uc": "UC-24",
+      "steps": 5,
+      "num_id": "122",
+      "starts_at": 1
+    }
+  ]
+}

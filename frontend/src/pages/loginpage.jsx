@@ -17,8 +17,6 @@ import {
 
 import {
   CalendarMonthRounded,
-  CheckCircleRounded,
-  DescriptionRounded,
   VisibilityOffRounded,
   VisibilityRounded,
 } from '@mui/icons-material'
@@ -29,17 +27,55 @@ import {
 } from 'react-router-dom'
 
 import {
+  keyframes,
+} from '@emotion/react'
+
+import {
   clearAuthSession,
   getDashboardPathByRole,
   saveBackendAuthSession,
 } from '../utils/authstorage.js'
 
 import api from '../api/axios.js'
+import AuthenticationBrand from '../components/authenticationbrand.jsx'
+import { appPageBackground } from '../theme/tokens.js'
+
 
 const emptyFormData = {
   username: '',
   password: '',
 }
+
+
+/* =========================
+   ANIMATIONS
+========================= */
+
+const floatingCircle = keyframes`
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+`
+
+
+const buttonShine = keyframes`
+  0% {
+    transform: translateX(-180%) skewX(-22deg);
+  }
+
+  100% {
+    transform: translateX(280%) skewX(-22deg);
+  }
+`
+
 
 function LoginPage() {
   const navigate = useNavigate()
@@ -57,12 +93,17 @@ function LoginPage() {
     location.state?.successMessage || '',
   )
 
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
+  const [isSubmitting, setIsSubmitting] =
+    useState(false)
+
+  const [showPassword, setShowPassword] =
+    useState(false)
+
 
   useEffect(() => {
     clearAuthSession()
   }, [])
+
 
   const handleInputChange = (
     fieldName,
@@ -75,6 +116,7 @@ function LoginPage() {
 
     setErrorMessage('')
   }
+
 
   const handleSubmit = async (
     event,
@@ -98,7 +140,7 @@ function LoginPage() {
       !enteredPassword
     ) {
       setErrorMessage(
-        'กรุณากรอก Username และ Password',
+        'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน',
       )
 
       return
@@ -118,7 +160,7 @@ function LoginPage() {
       if (response.data.status !== 'ok') {
         setErrorMessage(
           response.data.message ||
-            'Unable to sign in.',
+            'ไม่สามารถเข้าสู่ระบบได้',
         )
 
         return
@@ -179,496 +221,893 @@ function LoginPage() {
     }
   }
 
+
+  const inputStyle = {
+    '& .MuiOutlinedInput-root': {
+      height: '48px',
+
+      borderRadius: '10px',
+
+      backgroundColor: '#F8FAFC',
+
+      transition:
+        'box-shadow 180ms ease, background-color 180ms ease',
+
+      '& fieldset': {
+        borderColor: '#CBD5E1',
+
+        transition:
+          'border-color 180ms ease',
+      },
+
+      '&:hover fieldset': {
+        borderColor: '#A78BFA',
+      },
+
+      '&.Mui-focused': {
+        backgroundColor: '#FFFFFF',
+
+        boxShadow:
+          '0 0 0 4px rgba(37, 99, 235, 0.10), 0 8px 20px rgba(37, 99, 235, 0.08)',
+      },
+
+      '&.Mui-focused fieldset': {
+        borderColor: '#2563EB',
+
+        borderWidth: '1.5px',
+      },
+    },
+
+    '& input': {
+      fontSize: '14px',
+    },
+  }
+
+
   return (
     <Box
       sx={{
         minHeight: '100vh',
+
+        width: '100%',
+
         boxSizing: 'border-box',
+
+        display: 'flex',
+
+        alignItems: 'center',
+
+        justifyContent: 'center',
+
         padding: {
-          xs: '24px 16px',
+          xs: '20px 14px',
           sm: '32px 24px',
         },
+
         overflowX: 'hidden',
+
         overflowY: 'auto',
-        background:
-          'linear-gradient(180deg, #EAF5FF 0%, #F4F7FC 46%, #FFF1F4 100%)',
-        position: 'relative',
 
-        '&::before': {
-          content: '""',
-          position: 'fixed',
-          width: '420px',
-          height: '420px',
-          top: '-180px',
-          left: '-130px',
-          borderRadius: '50%',
-          background:
-            'rgba(37, 99, 235, 0.08)',
-          pointerEvents: 'none',
-        },
-
-        '&::after': {
-          content: '""',
-          position: 'fixed',
-          width: '460px',
-          height: '460px',
-          right: '-170px',
-          bottom: '-210px',
-          borderRadius: '50%',
-          background:
-            'rgba(244, 114, 182, 0.08)',
-          pointerEvents: 'none',
-        },
+        background: appPageBackground,
       }}
     >
       <Paper
         component="form"
-        onSubmit={handleSubmit}
+
+        onSubmit={
+          handleSubmit
+        }
+
         elevation={0}
+
         sx={{
           width: '100%',
-          maxWidth: '470px',
-          margin: '0 auto',
-          position: 'relative',
-          zIndex: 1,
+
+          maxWidth: '520px',
+
+          display: 'grid',
+
+          gridTemplateColumns: '1fr',
+
           overflow: 'hidden',
-          borderRadius: {
-            xs: '22px',
-            sm: '26px',
-          },
-          backgroundColor: '#FFFFFF',
+
+          borderRadius: '20px',
+
+          backgroundColor:
+            '#FFFFFF',
+
           border:
-            '1px solid rgba(148, 163, 184, 0.22)',
+            '1px solid #D8E0EA',
+
           boxShadow:
-            '0 28px 70px rgba(51, 65, 85, 0.16)',
+            '0 20px 55px rgba(15, 23, 42, 0.11)',
+
+          position: 'relative',
+
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            left: 0,
+            height: '5px',
+            zIndex: 3,
+            background: 'linear-gradient(90deg, #60A5FA 0%, #A78BFA 34%, #34D399 67%, #FBBF24 100%)',
+          },
         }}
       >
+
+        {/* =========================
+            SYSTEM BRANDING
+        ========================== */}
+
         <Box
           sx={{
-            padding: {
-              xs: '24px 24px 22px',
-              sm: '26px 36px 24px',
+            display: 'none',
+
+            position: 'relative',
+
+            minHeight: {
+              xs: 'auto',
+              sm: '560px',
             },
-            textAlign: 'center',
-            color: '#FFFFFF',
+
+            padding: {
+              xs: '30px 24px',
+              sm: '40px 30px',
+              md: '48px 42px',
+            },
+
+            flexDirection:
+              'column',
+
+            alignItems:
+              'center',
+
+            justifyContent:
+              'center',
+
+            textAlign:
+              'center',
+
+            overflow:
+              'hidden',
+
             background:
-              'linear-gradient(135deg, #2563EB 0%, #3B82F6 55%, #60A5FA 100%)',
+              'linear-gradient(155deg, #1D4ED8 0%, #2563EB 58%, #0EA5E9 100%)',
+
+            backgroundSize:
+              '100% 100%',
+
+            animation:
+              'none',
+
+            borderRight: {
+              xs: 'none',
+              sm:
+                '1px solid rgba(99, 102, 241, 0.22)',
+            },
+
+            borderBottom: {
+              xs:
+                '1px solid rgba(99, 102, 241, 0.22)',
+
+              sm: 'none',
+            },
+
+            '@media (prefers-reduced-motion: reduce)': {
+              animation: 'none',
+            },
           }}
         >
+
+          {/* =========================
+              DECORATION
+          ========================== */}
+
+          <Box
+            aria-hidden="true"
+
+            sx={{
+              position:
+                'absolute',
+
+              width:
+                '300px',
+
+              height:
+                '300px',
+
+              top:
+                '-165px',
+
+              left:
+                '-145px',
+
+              borderRadius:
+                '50%',
+
+              backgroundColor:
+                'rgba(255,255,255,0.11)',
+
+              animation:
+                `${floatingCircle} 8s ease-in-out infinite`,
+
+              pointerEvents:
+                'none',
+
+              '@media (prefers-reduced-motion: reduce)': {
+                animation: 'none',
+              },
+            }}
+          />
+
+
+          <Box
+            aria-hidden="true"
+
+            sx={{
+              position:
+                'absolute',
+
+              width:
+                '270px',
+
+              height:
+                '270px',
+
+              right:
+                '-135px',
+
+              bottom:
+                '-135px',
+
+              borderRadius:
+                '50%',
+
+              backgroundColor:
+                'rgba(255,255,255,0.085)',
+
+              animation:
+                `${floatingCircle} 10s ease-in-out infinite 1s`,
+
+              pointerEvents:
+                'none',
+
+              '@media (prefers-reduced-motion: reduce)': {
+                animation: 'none',
+              },
+            }}
+          />
+
+
+          <Box
+            aria-hidden="true"
+
+            sx={{
+              position:
+                'absolute',
+
+              width:
+                '90px',
+
+              height:
+                '90px',
+
+              right:
+                '34px',
+
+              top:
+                '50px',
+
+              borderRadius:
+                '50%',
+
+              border:
+                '1px solid rgba(255,255,255,0.12)',
+
+              backgroundColor:
+                'rgba(255,255,255,0.035)',
+
+              pointerEvents:
+                'none',
+            }}
+          />
+
+
+          <Box
+            aria-hidden="true"
+
+            sx={{
+              position:
+                'absolute',
+
+              width:
+                '190px',
+
+              height:
+                '650px',
+
+              top:
+                '-110px',
+
+              left:
+                '125px',
+
+              transform:
+                'rotate(24deg)',
+
+              background:
+                'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.085) 50%, transparent 100%)',
+
+              pointerEvents:
+                'none',
+            }}
+          />
+
+
+          {/* =========================
+              SYSTEM ICON
+          ========================== */}
+
           <Box
             sx={{
-              width: '52px',
-              height: '52px',
-              margin: '0 auto 14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '16px',
+              position:
+                'relative',
+
+              zIndex:
+                2,
+
+              width: {
+                xs: '60px',
+                sm: '68px',
+                md: '72px',
+              },
+
+              height: {
+                xs: '60px',
+                sm: '68px',
+                md: '72px',
+              },
+
+              display:
+                'flex',
+
+              alignItems:
+                'center',
+
+              justifyContent:
+                'center',
+
+              borderRadius: {
+                xs: '17px',
+                md: '20px',
+              },
+
+              color:
+                '#2563EB',
+
               backgroundColor:
-                'rgba(255, 255, 255, 0.18)',
+                'rgba(255,255,255,0.95)',
+
               border:
-                '1px solid rgba(255, 255, 255, 0.28)',
-              backdropFilter: 'blur(8px)',
+                '1px solid rgba(255,255,255,0.80)',
+
+              boxShadow:
+                '0 18px 38px rgba(15,23,42,0.19)',
+
+              backdropFilter:
+                'blur(10px)',
+
+              transition:
+                'transform 200ms ease, box-shadow 200ms ease',
+
+              '&:hover': {
+                transform:
+                  'translateY(-2px) rotate(-2deg)',
+
+                boxShadow:
+                  '0 22px 44px rgba(15,23,42,0.24)',
+              },
             }}
           >
             <CalendarMonthRounded
               sx={{
-                fontSize: '29px',
+                fontSize: {
+                  xs: '33px',
+                  sm: '37px',
+                  md: '40px',
+                },
               }}
             />
           </Box>
 
+
+          {/* =========================
+              SYSTEM NAME
+          ========================== */}
+
           <Typography
             component="h1"
+
             sx={{
+              position:
+                'relative',
+
+              zIndex:
+                2,
+
+              maxWidth:
+                '330px',
+
+              marginTop: {
+                xs: '20px',
+                sm: '24px',
+              },
+
+              color:
+                '#FFFFFF',
+
               fontSize: {
                 xs: '21px',
                 sm: '24px',
+                md: '28px',
               },
-              fontWeight: 900,
-              lineHeight: 1.25,
-              letterSpacing: '-0.3px',
+
+              fontWeight:
+                900,
+
+              lineHeight:
+                1.3,
+
+              letterSpacing:
+                '-0.35px',
+
+              textShadow:
+                '0 2px 10px rgba(15,23,42,0.16)',
             }}
           >
             Online Leave Approval System
           </Typography>
 
+
           <Typography
             sx={{
-              marginTop: '8px',
-              fontSize: '13px',
-              lineHeight: 1.6,
+              position:
+                'relative',
+
+              zIndex:
+                2,
+
+              marginTop:
+                '10px',
+
               color:
-                'rgba(255, 255, 255, 0.88)',
+                'rgba(255,255,255,0.90)',
+
+              fontSize: {
+                xs: '13px',
+                sm: '14px',
+              },
+
+              fontWeight:
+                600,
+
+              lineHeight:
+                1.7,
             }}
           >
             ระบบอนุมัติใบลาออนไลน์
           </Typography>
-        </Box>
 
-        <Box
-          sx={{
-            position: 'relative',
-            height: {
-              xs: '160px',
-              sm: '180px',
-            },
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            background:
-              'linear-gradient(180deg, #EFF7FF 0%, #F8FBFF 100%)',
-            borderBottom:
-              '1px solid #E7EEF7',
-          }}
-        >
-          <Box
-            sx={{
-              position: 'absolute',
-              width: '230px',
-              height: '230px',
-              borderRadius: '50%',
-              background:
-                'rgba(96, 165, 250, 0.11)',
-            }}
-          />
+
+          {/* =========================
+              ROLE COLOR DOTS
+          ========================== */}
 
           <Box
-            sx={{
-              position: 'absolute',
-              width: '155px',
-              height: '155px',
-              borderRadius: '50%',
-              background:
-                'rgba(37, 99, 235, 0.08)',
-            }}
-          />
+            aria-hidden="true"
 
-          <Box
             sx={{
-              position: 'relative',
-              width: '170px',
-              height: '118px',
-              borderRadius: '18px',
-              backgroundColor: '#FFFFFF',
+              position:
+                'relative',
+
+              zIndex:
+                2,
+
+              display:
+                'flex',
+
+              alignItems:
+                'center',
+
+              gap:
+                '8px',
+
+              marginTop:
+                '22px',
+
+              padding:
+                '7px 11px',
+
+              borderRadius:
+                '999px',
+
+              backgroundColor:
+                'rgba(255,255,255,0.13)',
+
               border:
-                '1px solid #D8E7FA',
+                '1px solid rgba(255,255,255,0.18)',
+
+              backdropFilter:
+                'blur(9px)',
+
               boxShadow:
-                '0 18px 35px rgba(37, 99, 235, 0.14)',
-              transform: 'rotate(-2deg)',
+                '0 6px 16px rgba(15,23,42,0.07)',
             }}
           >
             <Box
               sx={{
-                height: '30px',
-                display: 'flex',
-                alignItems: 'center',
-                padding: '0 14px',
+                width: '8px',
+
+                height: '8px',
+
                 borderRadius:
-                  '17px 17px 0 0',
-                background:
-                  'linear-gradient(90deg, #2563EB, #60A5FA)',
-              }}
-            >
-              <Box
-                sx={{
-                  width: '7px',
-                  height: '7px',
-                  marginRight: '6px',
-                  borderRadius: '50%',
-                  backgroundColor:
-                    'rgba(255,255,255,0.85)',
-                }}
-              />
+                  '50%',
 
-              <Box
-                sx={{
-                  width: '7px',
-                  height: '7px',
-                  borderRadius: '50%',
-                  backgroundColor:
-                    'rgba(255,255,255,0.55)',
-                }}
-              />
-            </Box>
+                backgroundColor:
+                  '#93C5FD',
+              }}
+            />
+
 
             <Box
               sx={{
-                display: 'grid',
-                gridTemplateColumns:
-                  'repeat(4, 1fr)',
-                gap: '8px',
-                padding: '15px',
-              }}
-            >
-              {Array.from({
-                length: 12,
-              }).map((_, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    height: '9px',
-                    borderRadius: '4px',
-                    backgroundColor:
-                      index === 5 ||
-                      index === 6
-                        ? '#60A5FA'
-                        : '#E5EDF8',
-                  }}
-                />
-              ))}
-            </Box>
-          </Box>
+                width: '8px',
 
-          <Box
-            sx={{
-              position: 'absolute',
-              right: {
-                xs: '38px',
-                sm: '66px',
-              },
-              bottom: '24px',
-              width: '54px',
-              height: '54px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '17px',
-              color: '#FFFFFF',
-              background:
-                'linear-gradient(135deg, #10B981, #34D399)',
-              boxShadow:
-                '0 12px 24px rgba(16, 185, 129, 0.25)',
-              transform: 'rotate(6deg)',
-            }}
-          >
-            <CheckCircleRounded
-              sx={{
-                fontSize: '32px',
+                height: '8px',
+
+                borderRadius:
+                  '50%',
+
+                backgroundColor:
+                  '#C4B5FD',
               }}
             />
-          </Box>
 
-          <Box
-            sx={{
-              position: 'absolute',
-              left: {
-                xs: '38px',
-                sm: '66px',
-              },
-              top: '28px',
-              width: '46px',
-              height: '46px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '14px',
-              color: '#2563EB',
-              backgroundColor: '#FFFFFF',
-              border:
-                '1px solid #DBEAFE',
-              boxShadow:
-                '0 10px 22px rgba(37, 99, 235, 0.14)',
-              transform: 'rotate(-7deg)',
-            }}
-          >
-            <DescriptionRounded
+
+            <Box
               sx={{
-                fontSize: '26px',
+                width: '8px',
+
+                height: '8px',
+
+                borderRadius:
+                  '50%',
+
+                backgroundColor:
+                  '#6EE7B7',
+              }}
+            />
+
+
+            <Box
+              sx={{
+                width: '8px',
+
+                height: '8px',
+
+                borderRadius:
+                  '50%',
+
+                backgroundColor:
+                  '#FDBA74',
               }}
             />
           </Box>
         </Box>
+
+
+        {/* =========================
+            LOGIN FORM
+        ========================== */}
 
         <Box
           sx={{
             padding: {
-              xs: '26px 24px 30px',
-              sm: '30px 38px 34px',
+              xs:
+                '34px 24px 32px',
+
+              sm:
+                '42px 44px 40px',
+
+              md:
+                '46px 48px 44px',
             },
+
+            display:
+              'flex',
+
+            flexDirection:
+              'column',
+
+            justifyContent:
+              'center',
+
+            minWidth:
+              0,
+
+            backgroundColor:
+              '#FFFFFF',
           }}
         >
-          <Typography
-            component="h2"
-            sx={{
-              color: '#111827',
-              fontSize: '25px',
-              fontWeight: 900,
-              textAlign: 'center',
-              letterSpacing: '-0.3px',
-            }}
-          >
-            Login
-          </Typography>
+
+          <AuthenticationBrand />
 
           <Typography
+            component="h1"
+
             sx={{
-              color: '#6B7280',
-              fontSize: '13px',
-              lineHeight: 1.7,
-              textAlign: 'center',
-              marginTop: '6px',
-              marginBottom: '24px',
+              color:
+                '#0F172A',
+
+              fontSize: {
+                xs: '20px',
+                sm: '22px',
+              },
+
+              fontWeight:
+                700,
+
+              lineHeight:
+                1.3,
+
+              letterSpacing:
+                '-0.3px',
+
+              textAlign:
+                'left',
+
+              marginBottom:
+                '18px',
             }}
           >
-            กรุณากรอก Username และ Password เพื่อเข้าใช้งานระบบ
+            เข้าสู่ระบบ
           </Typography>
+
+
+          {/* =========================
+              ERROR
+          ========================== */}
 
           {errorMessage && (
             <Alert
               severity="error"
+
               onClose={() =>
                 setErrorMessage('')
               }
+
               sx={{
-                marginBottom: '18px',
-                borderRadius: '10px',
-                fontSize: '13px',
+                marginBottom:
+                  '18px',
+
+                borderRadius:
+                  '10px',
+
+                fontSize:
+                  '13px',
               }}
             >
               {errorMessage}
             </Alert>
           )}
 
+
+          {/* =========================
+              SUCCESS
+          ========================== */}
+
           {successMessage &&
             !errorMessage && (
               <Alert
                 severity="success"
+
                 sx={{
-                  marginBottom: '18px',
-                  borderRadius: '10px',
-                  fontSize: '13px',
+                  marginBottom:
+                    '18px',
+
+                  borderRadius:
+                    '10px',
+
+                  fontSize:
+                    '13px',
                 }}
               >
                 {successMessage}
               </Alert>
             )}
 
+
+          {/* =========================
+              USERNAME
+          ========================== */}
+
           <Typography
             component="label"
+
             htmlFor="username"
+
             sx={{
-              display: 'block',
-              color: '#374151',
-              fontSize: '13px',
-              fontWeight: 800,
-              marginBottom: '7px',
+              display:
+                'block',
+
+              color:
+                '#334155',
+
+              fontSize:
+                '13px',
+
+              fontWeight:
+                800,
+
+              marginBottom:
+                '7px',
             }}
           >
-            Username
+            ชื่อผู้ใช้
           </Typography>
+
 
           <TextField
             id="username"
+
             fullWidth
+
             required
-            placeholder="Enter Username"
-            value={formData.username}
+
+            placeholder="กรอกชื่อผู้ใช้"
+
+            value={
+              formData.username
+            }
+
             onChange={(event) =>
               handleInputChange(
                 'username',
+
                 event.target.value.toLowerCase(),
               )
             }
-            disabled={isSubmitting}
+
+            disabled={
+              isSubmitting
+            }
+
             autoComplete="username"
+
             autoFocus
+
             slotProps={{
               htmlInput: {
                 maxLength: 50,
               },
             }}
-            sx={{
-              '& .MuiOutlinedInput-root':
-                {
-                  height: '48px',
-                  borderRadius: '10px',
-                  backgroundColor:
-                    '#FAFCFF',
 
-                  '& fieldset': {
-                    borderColor:
-                      '#DCE3ED',
-                  },
-
-                  '&:hover fieldset': {
-                    borderColor:
-                      '#93B4E8',
-                  },
-
-                  '&.Mui-focused fieldset':
-                    {
-                      borderColor:
-                        '#2563EB',
-                      borderWidth: '1.5px',
-                    },
-                },
-
-              '& input': {
-                fontSize: '14px',
-              },
-            }}
+            sx={
+              inputStyle
+            }
           />
+
+
+          {/* =========================
+              PASSWORD
+          ========================== */}
 
           <Typography
             component="label"
+
             htmlFor="password"
+
             sx={{
-              display: 'block',
-              color: '#374151',
-              fontSize: '13px',
-              fontWeight: 800,
-              marginTop: '18px',
-              marginBottom: '7px',
+              display:
+                'block',
+
+              color:
+                '#334155',
+
+              fontSize:
+                '13px',
+
+              fontWeight:
+                800,
+
+              marginTop:
+                '18px',
+
+              marginBottom:
+                '7px',
             }}
           >
-            Password
+            รหัสผ่าน
           </Typography>
+
 
           <TextField
             id="password"
+
             fullWidth
+
             required
+
             type={
               showPassword
                 ? 'text'
                 : 'password'
             }
-            placeholder="Enter Password"
-            value={formData.password}
+
+            placeholder="กรอกรหัสผ่าน"
+
+            value={
+              formData.password
+            }
+
             onChange={(event) =>
               handleInputChange(
                 'password',
+
                 event.target.value,
               )
             }
-            disabled={isSubmitting}
+
+            disabled={
+              isSubmitting
+            }
+
             autoComplete="current-password"
+
             slotProps={{
               input: {
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
                       edge="end"
+
                       type="button"
+
                       aria-label={
                         showPassword
-                          ? 'Hide password'
-                          : 'Show password'
+                          ? 'ซ่อนรหัสผ่าน'
+                          : 'แสดงรหัสผ่าน'
                       }
+
                       onClick={() =>
                         setShowPassword(
-                          (previousValue) =>
+                          (
+                            previousValue,
+                          ) =>
                             !previousValue,
                         )
                       }
+
                       disabled={
                         isSubmitting
                       }
+
                       sx={{
                         color:
                           '#64748B',
+
+                        transition:
+                          'color 180ms ease, background-color 180ms ease',
+
+                        '&:hover': {
+                          color:
+                            '#6366F1',
+
+                          backgroundColor:
+                            'rgba(99,102,241,0.08)',
+                        },
                       }}
                     >
                       {showPassword ? (
@@ -692,181 +1131,273 @@ function LoginPage() {
               },
 
               htmlInput: {
-                maxLength: 128,
+                maxLength:
+                  128,
               },
             }}
+
             sx={{
-              '& .MuiOutlinedInput-root':
-                {
-                  height: '48px',
-                  borderRadius: '10px',
-                  backgroundColor:
-                    '#FAFCFF',
-
-                  '& fieldset': {
-                    borderColor:
-                      '#DCE3ED',
-                  },
-
-                  '&:hover fieldset': {
-                    borderColor:
-                      '#93B4E8',
-                  },
-
-                  '&.Mui-focused fieldset':
-                    {
-                      borderColor:
-                        '#2563EB',
-                      borderWidth: '1.5px',
-                    },
-                },
-
-              '& input': {
-                fontSize: '14px',
-              },
+              ...inputStyle,
 
               '& input::-ms-reveal': {
-                display: 'none',
+                display:
+                  'none',
               },
 
               '& input::-ms-clear': {
-                display: 'none',
+                display:
+                  'none',
               },
             }}
           />
 
+
+          {/* =========================
+              FORGOT PASSWORD
+          ========================== */}
+
           <Button
             type="button"
-            disabled={isSubmitting}
-            onClick={() =>
-              navigate('/forgot-password')
+
+            disabled={
+              isSubmitting
             }
+
+            onClick={() =>
+              navigate(
+                '/forgot-password',
+              )
+            }
+
             sx={{
-              display: 'block',
-              width: 'fit-content',
-              minWidth: 0,
-              marginTop: '9px',
-              marginLeft: 'auto',
-              padding: 0,
-              color: '#2563EB',
-              fontSize: '12px',
-              fontWeight: 800,
-              textTransform: 'none',
+              display:
+                'block',
+
+              width:
+                'fit-content',
+
+              minWidth:
+                0,
+
+              marginTop:
+                '9px',
+
+              marginLeft:
+                'auto',
+
+              padding:
+                0,
+
+              color:
+                '#6366F1',
+
+              fontSize:
+                '12px',
+
+              fontWeight:
+                800,
+
+              textTransform:
+                'none',
 
               '&:hover': {
                 backgroundColor:
                   'transparent',
+
+                color:
+                  '#1D4ED8',
+
                 textDecoration:
                   'underline',
               },
             }}
           >
-            Forgot Password?
+            ลืมรหัสผ่าน?
           </Button>
+
+
+          {/* =========================
+              SIGN IN
+          ========================== */}
 
           <Button
             fullWidth
+
             type="submit"
+
             variant="contained"
-            disabled={isSubmitting}
+
+            disabled={
+              isSubmitting
+            }
+
             sx={{
-              height: '50px',
-              marginTop: '24px',
-              borderRadius: '11px',
-              background:
-                'linear-gradient(90deg, #2563EB 0%, #3B82F6 100%)',
-              color: '#FFFFFF',
-              fontSize: '14px',
-              fontWeight: 900,
-              textTransform: 'none',
+              position:
+                'relative',
+
+              overflow:
+                'hidden',
+
+              height:
+                '50px',
+
+              marginTop:
+                '24px',
+
+              borderRadius:
+                '11px',
+
+              backgroundColor:
+                '#2563EB',
+
+              color:
+                '#FFFFFF',
+
+              fontSize:
+                '14px',
+
+              fontWeight:
+                900,
+
+              textTransform:
+                'none',
+
               boxShadow:
-                '0 12px 22px rgba(37, 99, 235, 0.22)',
+                '0 12px 27px rgba(99,102,241,0.28)',
+
+              transition:
+                'transform 180ms ease, box-shadow 180ms ease',
+
+              '&::after': {
+                content:
+                  '""',
+
+                position:
+                  'absolute',
+
+                top:
+                  '-30%',
+
+                left:
+                  0,
+
+                width:
+                  '36%',
+
+                height:
+                  '160%',
+
+                background:
+                  'linear-gradient(90deg, transparent, rgba(255,255,255,0.34), transparent)',
+
+                transform:
+                  'translateX(-180%) skewX(-22deg)',
+
+                pointerEvents:
+                  'none',
+              },
 
               '&:hover': {
-                background:
-                  'linear-gradient(90deg, #1D4ED8 0%, #2563EB 100%)',
+                backgroundColor:
+                  '#1D4ED8',
+
                 boxShadow:
-                  '0 14px 26px rgba(37, 99, 235, 0.28)',
+                  '0 15px 32px rgba(99,102,241,0.34)',
+
+                transform:
+                  'translateY(-1px)',
+              },
+
+              '&:hover::after': {
+                animation:
+                  `${buttonShine} 850ms ease`,
+              },
+
+              '&:active': {
+                transform:
+                  'translateY(0px)',
               },
 
               '&.Mui-disabled': {
-                color: '#FFFFFF',
-                background: '#AFCBF5',
+                color:
+                  '#FFFFFF',
+
+                background:
+                  '#A5B4FC',
+
+                boxShadow:
+                  'none',
+              },
+
+              '@media (prefers-reduced-motion: reduce)': {
+                transition:
+                  'none',
+
+                '&:hover': {
+                  transform:
+                    'none',
+                },
+
+                '&:hover::after': {
+                  animation:
+                    'none',
+                },
               },
             }}
           >
             {isSubmitting ? (
               <Box
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
+                  position:
+                    'relative',
+
+                  zIndex:
+                    2,
+
+                  display:
+                    'flex',
+
+                  alignItems:
+                    'center',
+
+                  gap:
+                    '10px',
                 }}
               >
                 <CircularProgress
                   size={19}
+
                   thickness={5}
+
                   sx={{
-                    color: '#FFFFFF',
+                    color:
+                      '#FFFFFF',
                   }}
                 />
 
-                Signing In...
+                กำลังเข้าสู่ระบบ...
               </Box>
             ) : (
-              'Sign In'
+              <Box
+                component="span"
+
+                sx={{
+                  position:
+                    'relative',
+
+                  zIndex:
+                    2,
+                }}
+              >
+                เข้าสู่ระบบ
+              </Box>
             )}
           </Button>
-
-          <Box
-            sx={{
-              marginTop: '20px',
-              padding: '13px 15px',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '10px',
-              borderRadius: '10px',
-              border:
-                '1px solid #E1EAF6',
-              backgroundColor:
-                '#F7FAFE',
-            }}
-          >
-            <CheckCircleRounded
-              sx={{
-                flexShrink: 0,
-                marginTop: '1px',
-                color: '#2563EB',
-                fontSize: '18px',
-              }}
-            />
-
-            <Typography
-              sx={{
-                color: '#64748B',
-                fontSize: '11.5px',
-                lineHeight: 1.7,
-              }}
-            >
-              ระบบจะตรวจสอบ Role จากบัญชีผู้ใช้โดยอัตโนมัติ
-              โดยไม่ต้องเลือก Role ด้วยตนเอง
-            </Typography>
-          </Box>
-
-          <Typography
-            sx={{
-              marginTop: '22px',
-              color: '#94A3B8',
-              fontSize: '11px',
-              textAlign: 'center',
-            }}
-          >
-            เข้าใช้งานอย่างปลอดภัยตาม Role สำหรับ Employee, Supervisor, HR และ Admin
-          </Typography>
         </Box>
       </Paper>
     </Box>
   )
 }
+
 
 export default LoginPage

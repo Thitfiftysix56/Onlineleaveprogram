@@ -1,0 +1,739 @@
+[
+  {
+    "text": "available_days = total_days - used_days - pending_days",
+    "locations": [
+      {
+        "kind": "paragraph",
+        "paragraph": 323,
+        "style": "List Paragraph",
+        "text": "available_days = total_days - used_days - pending_days"
+      },
+      {
+        "kind": "paragraph",
+        "paragraph": 604,
+        "style": "List Paragraph",
+        "text": "available_days = total_days - used_days - pending_days"
+      }
+    ]
+  },
+  {
+    "text": "ไม่ INSERT leave_approval_logs ใน Current Approval Flow",
+    "locations": [
+      {
+        "kind": "paragraph",
+        "paragraph": 377,
+        "style": "List Paragraph",
+        "text": "ไม่ INSERT leave_approval_logs ใน Current Approval Flow"
+      },
+      {
+        "kind": "paragraph",
+        "paragraph": 387,
+        "style": "List Paragraph",
+        "text": "ไม่ INSERT leave_approval_logs ใน Current Approval Flow"
+      },
+      {
+        "kind": "paragraph",
+        "paragraph": 742,
+        "style": "Normal",
+        "text": "ไม่ INSERT leave_approval_logs ใน Current Approval Flow"
+      }
+    ]
+  },
+  {
+    "text": "updated_at | DATETIME |  | วันที่แก้ไขข้อมูลล่าสุด",
+    "locations": [
+      {
+        "kind": "table_row",
+        "table": 13,
+        "row": 9,
+        "text": "updated_at | DATETIME |  | วันที่แก้ไขข้อมูลล่าสุด",
+        "cells": [
+          "updated_at",
+          "DATETIME",
+          "",
+          "วันที่แก้ไขข้อมูลล่าสุด"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 14,
+        "row": 13,
+        "text": "updated_at | DATETIME |  | วันที่แก้ไขข้อมูลล่าสุด",
+        "cells": [
+          "updated_at",
+          "DATETIME",
+          "",
+          "วันที่แก้ไขข้อมูลล่าสุด"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 17,
+        "row": 8,
+        "text": "updated_at | DATETIME |  | วันที่แก้ไขข้อมูลล่าสุด",
+        "cells": [
+          "updated_at",
+          "DATETIME",
+          "",
+          "วันที่แก้ไขข้อมูลล่าสุด"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 18,
+        "row": 8,
+        "text": "updated_at | DATETIME |  | วันที่แก้ไขข้อมูลล่าสุด",
+        "cells": [
+          "updated_at",
+          "DATETIME",
+          "",
+          "วันที่แก้ไขข้อมูลล่าสุด"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 19,
+        "row": 17,
+        "text": "updated_at | DATETIME |  | วันที่แก้ไขข้อมูลล่าสุด",
+        "cells": [
+          "updated_at",
+          "DATETIME",
+          "",
+          "วันที่แก้ไขข้อมูลล่าสุด"
+        ]
+      }
+    ]
+  },
+  {
+    "text": "leave_type_id | INT | FK leave_types.leave_type_id | อ้างอิงรหัสประเภทการลา",
+    "locations": [
+      {
+        "kind": "table_row",
+        "table": 18,
+        "row": 3,
+        "text": "leave_type_id | INT | FK leave_types.leave_type_id | อ้างอิงรหัสประเภทการลา",
+        "cells": [
+          "leave_type_id",
+          "INT",
+          "FK leave_types.leave_type_id",
+          "อ้างอิงรหัสประเภทการลา"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 19,
+        "row": 4,
+        "text": "leave_type_id | INT | FK leave_types.leave_type_id | อ้างอิงรหัสประเภทการลา",
+        "cells": [
+          "leave_type_id",
+          "INT",
+          "FK leave_types.leave_type_id",
+          "อ้างอิงรหัสประเภทการลา"
+        ]
+      }
+    ]
+  },
+  {
+    "text": "IF leave_request.employee_id != current_employee_id:",
+    "locations": [
+      {
+        "kind": "paragraph",
+        "paragraph": 708,
+        "style": "Normal",
+        "text": "IF leave_request.employee_id != current_employee_id:"
+      },
+      {
+        "kind": "paragraph",
+        "paragraph": 769,
+        "style": "Normal",
+        "text": "IF leave_request.employee_id != current_employee_id:"
+      }
+    ]
+  },
+  {
+    "text": "IF leave_request.employee_id ไม่อยู่ใน Direct Team ของ current_employee_id ตาม employees.supervisor_id:",
+    "locations": [
+      {
+        "kind": "paragraph",
+        "paragraph": 729,
+        "style": "Normal",
+        "text": "IF leave_request.employee_id ไม่อยู่ใน Direct Team ของ current_employee_id ตาม employees.supervisor_id:"
+      },
+      {
+        "kind": "paragraph",
+        "paragraph": 751,
+        "style": "Normal",
+        "text": "IF leave_request.employee_id ไม่อยู่ใน Direct Team ของ current_employee_id ตาม employees.supervisor_id:"
+      }
+    ]
+  },
+  {
+    "text": "IF current_employee_id == leave_request.employee_id:",
+    "locations": [
+      {
+        "kind": "paragraph",
+        "paragraph": 731,
+        "style": "Normal",
+        "text": "IF current_employee_id == leave_request.employee_id:"
+      },
+      {
+        "kind": "paragraph",
+        "paragraph": 753,
+        "style": "Normal",
+        "text": "IF current_employee_id == leave_request.employee_id:"
+      }
+    ]
+  },
+  {
+    "text": "And current user เป็น Direct Supervisor ของผู้ยื่นลาตาม employees.supervisor_id",
+    "locations": [
+      {
+        "kind": "paragraph",
+        "paragraph": 853,
+        "style": "List Paragraph",
+        "text": "And current user เป็น Direct Supervisor ของผู้ยื่นลาตาม employees.supervisor_id"
+      },
+      {
+        "kind": "paragraph",
+        "paragraph": 863,
+        "style": "List Paragraph",
+        "text": "And current user เป็น Direct Supervisor ของผู้ยื่นลาตาม employees.supervisor_id"
+      }
+    ]
+  },
+  {
+    "text": "Primary Actor | Employee, Supervisor, HR, Admin",
+    "locations": [
+      {
+        "kind": "table_row",
+        "table": 49,
+        "row": 3,
+        "text": "Primary Actor | Employee, Supervisor, HR, Admin",
+        "cells": [
+          "Primary Actor",
+          "Employee, Supervisor, HR, Admin"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 50,
+        "row": 3,
+        "text": "Primary Actor | Employee, Supervisor, HR, Admin",
+        "cells": [
+          "Primary Actor",
+          "Employee, Supervisor, HR, Admin"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 51,
+        "row": 3,
+        "text": "Primary Actor | Employee, Supervisor, HR, Admin",
+        "cells": [
+          "Primary Actor",
+          "Employee, Supervisor, HR, Admin"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 52,
+        "row": 3,
+        "text": "Primary Actor | Employee, Supervisor, HR, Admin",
+        "cells": [
+          "Primary Actor",
+          "Employee, Supervisor, HR, Admin"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 53,
+        "row": 3,
+        "text": "Primary Actor | Employee, Supervisor, HR, Admin",
+        "cells": [
+          "Primary Actor",
+          "Employee, Supervisor, HR, Admin"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 54,
+        "row": 3,
+        "text": "Primary Actor | Employee, Supervisor, HR, Admin",
+        "cells": [
+          "Primary Actor",
+          "Employee, Supervisor, HR, Admin"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 55,
+        "row": 3,
+        "text": "Primary Actor | Employee, Supervisor, HR, Admin",
+        "cells": [
+          "Primary Actor",
+          "Employee, Supervisor, HR, Admin"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 56,
+        "row": 3,
+        "text": "Primary Actor | Employee, Supervisor, HR, Admin",
+        "cells": [
+          "Primary Actor",
+          "Employee, Supervisor, HR, Admin"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 57,
+        "row": 3,
+        "text": "Primary Actor | Employee, Supervisor, HR, Admin",
+        "cells": [
+          "Primary Actor",
+          "Employee, Supervisor, HR, Admin"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 58,
+        "row": 3,
+        "text": "Primary Actor | Employee, Supervisor, HR, Admin",
+        "cells": [
+          "Primary Actor",
+          "Employee, Supervisor, HR, Admin"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 59,
+        "row": 3,
+        "text": "Primary Actor | Employee, Supervisor, HR, Admin",
+        "cells": [
+          "Primary Actor",
+          "Employee, Supervisor, HR, Admin"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 72,
+        "row": 3,
+        "text": "Primary Actor | Employee, Supervisor, HR, Admin",
+        "cells": [
+          "Primary Actor",
+          "Employee, Supervisor, HR, Admin"
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Related Functional Requirement | FR-01, FR-17",
+    "locations": [
+      {
+        "kind": "table_row",
+        "table": 49,
+        "row": 13,
+        "text": "Related Functional Requirement | FR-01, FR-17",
+        "cells": [
+          "Related Functional Requirement",
+          "FR-01, FR-17"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 51,
+        "row": 13,
+        "text": "Related Functional Requirement | FR-01, FR-17",
+        "cells": [
+          "Related Functional Requirement",
+          "FR-01, FR-17"
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+    "locations": [
+      {
+        "kind": "table_row",
+        "table": 50,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 51,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 53,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 56,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 57,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 58,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 59,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 60,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 61,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 62,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 63,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 64,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 65,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 66,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 67,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 68,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 69,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 70,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 71,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 72,
+        "row": 9,
+        "text": "Alternative Flow | ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement",
+        "cells": [
+          "Alternative Flow",
+          "ไม่มี Alternative Flow เพิ่มเติมใน Current Requirement"
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Related Functional Requirement | FR-10, FR-15, FR-16",
+    "locations": [
+      {
+        "kind": "table_row",
+        "table": 60,
+        "row": 13,
+        "text": "Related Functional Requirement | FR-10, FR-15, FR-16",
+        "cells": [
+          "Related Functional Requirement",
+          "FR-10, FR-15, FR-16"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 61,
+        "row": 13,
+        "text": "Related Functional Requirement | FR-10, FR-15, FR-16",
+        "cells": [
+          "Related Functional Requirement",
+          "FR-10, FR-15, FR-16"
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Related Functional Requirement | FR-14, FR-21",
+    "locations": [
+      {
+        "kind": "table_row",
+        "table": 62,
+        "row": 13,
+        "text": "Related Functional Requirement | FR-14, FR-21",
+        "cells": [
+          "Related Functional Requirement",
+          "FR-14, FR-21"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 67,
+        "row": 13,
+        "text": "Related Functional Requirement | FR-14, FR-21",
+        "cells": [
+          "Related Functional Requirement",
+          "FR-14, FR-21"
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Preconditions | ผู้ใช้ Login และมี HR UI Permission",
+    "locations": [
+      {
+        "kind": "table_row",
+        "table": 63,
+        "row": 6,
+        "text": "Preconditions | ผู้ใช้ Login และมี HR UI Permission",
+        "cells": [
+          "Preconditions",
+          "ผู้ใช้ Login และมี HR UI Permission"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 64,
+        "row": 6,
+        "text": "Preconditions | ผู้ใช้ Login และมี HR UI Permission",
+        "cells": [
+          "Preconditions",
+          "ผู้ใช้ Login และมี HR UI Permission"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 65,
+        "row": 6,
+        "text": "Preconditions | ผู้ใช้ Login และมี HR UI Permission",
+        "cells": [
+          "Preconditions",
+          "ผู้ใช้ Login และมี HR UI Permission"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 66,
+        "row": 6,
+        "text": "Preconditions | ผู้ใช้ Login และมี HR UI Permission",
+        "cells": [
+          "Preconditions",
+          "ผู้ใช้ Login และมี HR UI Permission"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 67,
+        "row": 6,
+        "text": "Preconditions | ผู้ใช้ Login และมี HR UI Permission",
+        "cells": [
+          "Preconditions",
+          "ผู้ใช้ Login และมี HR UI Permission"
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Preconditions | ผู้ใช้ Login และ Role = Admin",
+    "locations": [
+      {
+        "kind": "table_row",
+        "table": 68,
+        "row": 6,
+        "text": "Preconditions | ผู้ใช้ Login และ Role = Admin",
+        "cells": [
+          "Preconditions",
+          "ผู้ใช้ Login และ Role = Admin"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 71,
+        "row": 6,
+        "text": "Preconditions | ผู้ใช้ Login และ Role = Admin",
+        "cells": [
+          "Preconditions",
+          "ผู้ใช้ Login และ Role = Admin"
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Preconditions | ผู้ใช้ Login และมี Admin UI Permission",
+    "locations": [
+      {
+        "kind": "table_row",
+        "table": 69,
+        "row": 6,
+        "text": "Preconditions | ผู้ใช้ Login และมี Admin UI Permission",
+        "cells": [
+          "Preconditions",
+          "ผู้ใช้ Login และมี Admin UI Permission"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 70,
+        "row": 6,
+        "text": "Preconditions | ผู้ใช้ Login และมี Admin UI Permission",
+        "cells": [
+          "Preconditions",
+          "ผู้ใช้ Login และมี Admin UI Permission"
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Exception Flow | ชื่อซ้ำ พยายามลบข้อมูลที่เคยถูกใช้งาน",
+    "locations": [
+      {
+        "kind": "table_row",
+        "table": 69,
+        "row": 10,
+        "text": "Exception Flow | ชื่อซ้ำ พยายามลบข้อมูลที่เคยถูกใช้งาน",
+        "cells": [
+          "Exception Flow",
+          "ชื่อซ้ำ พยายามลบข้อมูลที่เคยถูกใช้งาน"
+        ]
+      },
+      {
+        "kind": "table_row",
+        "table": 70,
+        "row": 10,
+        "text": "Exception Flow | ชื่อซ้ำ พยายามลบข้อมูลที่เคยถูกใช้งาน",
+        "cells": [
+          "Exception Flow",
+          "ชื่อซ้ำ พยายามลบข้อมูลที่เคยถูกใช้งาน"
+        ]
+      }
+    ]
+  }
+]

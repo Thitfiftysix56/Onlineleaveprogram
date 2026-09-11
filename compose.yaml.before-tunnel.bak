@@ -1,0 +1,140 @@
+﻿name: online-leave-system
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+    container_name: online-leave-system-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:3000
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "8080:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:5173/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  backend:
+    build:
+      context: ./backend
+    container_name: online-leave-system-backend
+    restart: unless-stopped
+    command: npm run dev
+    environment:
+      NODE_ENV: development
+      TZ: Asia/Bangkok
+      PORT: 3000
+
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: online_leave_approval_system
+      DB_USER: leave_app
+      DB_PASSWORD: LeaveApp2026
+      DB_CONNECTION_LIMIT: 10
+
+      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in .env}"
+      JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-8h}"
+      COOKIE_SECURE: "${COOKIE_SECURE:-false}"
+
+      PASSWORD_RESET_OTP_SECRET: "${PASSWORD_RESET_OTP_SECRET:?Set PASSWORD_RESET_OTP_SECRET in .env}"
+      PASSWORD_RESET_OTP_TTL_MINUTES: "${PASSWORD_RESET_OTP_TTL_MINUTES:-5}"
+      PASSWORD_RESET_TOKEN_TTL_MINUTES: "${PASSWORD_RESET_TOKEN_TTL_MINUTES:-15}"
+      PASSWORD_RESET_RESEND_SECONDS: "${PASSWORD_RESET_RESEND_SECONDS:-60}"
+
+      SMTP_HOST: "${SMTP_HOST:-mailhog}"
+      SMTP_PORT: "${SMTP_PORT:-1025}"
+      SMTP_SECURE: "${SMTP_SECURE:-false}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
+      SMTP_FROM: "${SMTP_FROM:-Online Leave Approval System <no-reply@organization.local>}"
+
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:8080}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:8080,http://localhost:5173,http://127.0.0.1:5173}"
+
+    ports:
+      - "8082:3000"
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  db:
+    image: mariadb:10.6
+    container_name: online-leave-system-db
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Bangkok
+      MARIADB_ROOT_PASSWORD: RootLeave2026
+      MARIADB_DATABASE: online_leave_approval_system
+      MARIADB_USER: leave_app
+      MARIADB_PASSWORD: LeaveApp2026
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: online-leave-system-db-admin
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Bangkok
+      PMA_HOST: db
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 128M
+    ports:
+      - "8081:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 80) ? 0 : 1);"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: online-leave-system-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  mariadb_data:
+    external: true
+    name: online-leave-system_mariadb_data
+
+  frontend_node_modules:
+    name: online-leave-system_frontend_node_modules
+
+  backend_node_modules:
+    name: online-leave-system_backend_node_modules

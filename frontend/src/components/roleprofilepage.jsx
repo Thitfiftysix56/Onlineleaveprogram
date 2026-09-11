@@ -13,29 +13,38 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+
 import {
   useEffect,
   useRef,
   useState,
 } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import {
   getProfile,
   updateProfile,
 } from '../api/profile-service.js';
+
 import {
   getCurrentUser,
   updateCurrentUserProfileSession,
 } from '../utils/authstorage.js';
+import RoleChangePasswordPage from './rolechangepasswordpage.jsx';
+import { PageHeader } from './sharedvisualfoundation.jsx';
+import { roleDashboardCardSurfaceSx } from '../theme/rolecardsurface.js';
+
+const EmbeddedProfileSection = ({ children }) => children;
 
 const MAX_PROFILE_IMAGE_SIZE =
   2 * 1024 * 1024;
 
-const allowedImageTypes = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-]);
+const allowedImageTypes =
+  new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  ]);
 
 const emptyEditForm = {
   fullName: '',
@@ -43,60 +52,121 @@ const emptyEditForm = {
   phone: '',
 };
 
-const formatDateTime = (dateTime) => {
-  if (!dateTime) return 'Not available';
-
-  const date = new Date(dateTime);
-
-  if (Number.isNaN(date.getTime())) {
-    return 'Not available';
-  }
-
-  return date.toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+const roleLabels = {
+  employee: 'พนักงาน',
+  supervisor: 'หัวหน้างาน',
+  hr: 'ฝ่ายทรัพยากรบุคคล',
+  admin: 'ผู้ดูแลระบบ',
 };
 
-const getInitials = (displayName) =>
-  String(displayName || 'User')
+const getRoleLabel = (
+  role,
+) => {
+  const normalizedRole =
+    String(role || '')
+      .trim()
+      .toLowerCase();
+
+  return (
+    roleLabels[normalizedRole] ||
+    role ||
+    'ไม่ระบุบทบาท'
+  );
+};
+
+const getInitials = (
+  displayName,
+) =>
+  String(
+    displayName || 'ผู้ใช้',
+  )
     .trim()
     .split(/\s+/)
     .slice(0, 2)
-    .map((namePart) =>
-      namePart.charAt(0).toUpperCase(),
+    .map(
+      (namePart) =>
+        namePart.charAt(0),
     )
     .join('') || 'U';
+
+const translateProfileMessage = (
+  message,
+  fallback,
+) => {
+  const text =
+    String(
+      message || '',
+    ).trim();
+
+  const messageMap = {
+    'Profile updated successfully.':
+      'อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว',
+
+    'Profile updated successfully':
+      'อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว',
+
+    'Unable to update profile.':
+      'ไม่สามารถอัปเดตข้อมูลส่วนตัวได้',
+
+    'Unable to load profile.':
+      'ไม่สามารถโหลดข้อมูลส่วนตัวได้',
+
+    'Profile not found.':
+      'ไม่พบข้อมูลส่วนตัว',
+  };
+
+  return (
+    messageMap[text] ||
+    text ||
+    fallback
+  );
+};
 
 function RoleProfilePage({
   LayoutComponent,
   theme,
+  editMode = false,
 }) {
-  const fileInputRef = useRef(null);
-  const currentUser = getCurrentUser();
+  const navigate = useNavigate();
+  const fileInputRef =
+    useRef(null);
 
-  const [profile, setProfile] =
-    useState(null);
+  const currentUser =
+    getCurrentUser();
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    profile,
+    setProfile,
+  ] = useState(null);
 
-  const [loadError, setLoadError] =
-    useState('');
+  const [
+    loading,
+    setLoading,
+  ] = useState(editMode);
+
+  const [
+    loadError,
+    setLoadError,
+  ] = useState('');
 
   const [
     successMessage,
     setSuccessMessage,
   ] = useState('');
 
-  const [editOpen, setEditOpen] =
-    useState(false);
+  const [
+    editOpen,
+    setEditOpen,
+  ] = useState(editMode);
 
-  const [editForm, setEditForm] =
-    useState(emptyEditForm);
+  const [_passwordOpen, setPasswordOpen] = useState(false);
+
+  const [
+    editForm,
+    setEditForm,
+  ] = useState(
+    emptyEditForm,
+  );
 
   const [
     selectedImage,
@@ -108,354 +178,505 @@ function RoleProfilePage({
     setImagePreview,
   ] = useState('');
 
-  const [removeImage, setRemoveImage] =
-    useState(false);
+  const [
+    removeImage,
+    setRemoveImage,
+  ] = useState(false);
 
-  const [editError, setEditError] =
-    useState('');
+  const [
+    editError,
+    setEditError,
+  ] = useState('');
 
-  const [saving, setSaving] =
-    useState(false);
+  const [
+    saving,
+    setSaving,
+  ] = useState(false);
 
   const resolvedTheme = {
-    primary: theme?.primary || '#2563EB',
-    dark: theme?.dark || '#1D4ED8',
-    soft: theme?.soft || '#EFF6FF',
-    border: theme?.border || '#BFDBFE',
-    text: theme?.text || '#1E3A8A',
+    primary:
+      theme?.primary ||
+      '#2563EB',
+
+    dark:
+      theme?.dark ||
+      '#1D4ED8',
+
+    soft:
+      theme?.soft ||
+      '#EFF6FF',
+
+    border:
+      theme?.border ||
+      '#BFDBFE',
+
+    text:
+      theme?.text ||
+      theme?.dark ||
+      '#1E3A8A',
   };
 
-  const loadProfile = async () => {
-    setLoading(true);
-    setLoadError('');
+  const loadProfile =
+    async () => {
+      setLoading(true);
+      setLoadError('');
 
-    try {
-      const profileData =
-        await getProfile();
+      try {
+        const profileData =
+          await getProfile();
 
-      setProfile(profileData);
+        setProfile(
+          profileData,
+        );
 
-      updateCurrentUserProfileSession(
-        profileData,
-      );
-    } catch (error) {
-      setLoadError(
-        error.response?.data?.message ||
-          'Unable to load profile.',
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        updateCurrentUserProfileSession(
+          profileData,
+        );
+      } catch (error) {
+        setLoadError(
+          translateProfileMessage(
+            error.response
+              ?.data
+              ?.message,
+            'ไม่สามารถโหลดข้อมูลส่วนตัวได้',
+          ),
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
   useEffect(() => {
     loadProfile();
   }, []);
 
-  const displayName =
-    profile?.fullName ||
-    currentUser?.displayName ||
-    currentUser?.username ||
-    'User';
+  useEffect(() => {
+    if (!editMode) {
+      setEditOpen(false);
+      return;
+    }
 
-  const profileImageUrl =
-    profile?.profileImageUrl || '';
-
-  const openEditProfile = (
-    selectImage = false,
-  ) => {
-    if (!profile) return;
+    if (!profile) {
+      return;
+    }
 
     setEditForm({
-      fullName: profile.fullName || '',
-      email: profile.email || '',
-      phone: profile.phone || '',
+      fullName:
+        profile.fullName ||
+        '',
+      email:
+        profile.email ||
+        '',
+      phone:
+        profile.phone ||
+        '',
     });
 
     setSelectedImage(null);
-
     setImagePreview(
-      profile.profileImageUrl || '',
+      profile.profileImageUrl ||
+        '',
     );
-
     setRemoveImage(false);
     setEditError('');
     setEditOpen(true);
+  }, [editMode, profile]);
 
-    if (selectImage) {
-      window.setTimeout(
-        () =>
-          fileInputRef.current?.click(),
-        0,
+  const displayName =
+    profile?.fullName ||
+    currentUser
+      ?.displayName ||
+    currentUser
+      ?.username ||
+    'ผู้ใช้';
+
+  const profileImageUrl =
+    profile
+      ?.profileImageUrl ||
+    '';
+
+  const roleValue =
+    profile?.roleName ||
+    currentUser?.role ||
+    '';
+
+  const profilePath =
+    `/${String(
+      currentUser?.role ||
+        'employee',
+    )
+      .trim()
+      .toLowerCase()}/profile`;
+
+  const resetEditState = () => {
+    setSelectedImage(null);
+    setImagePreview(
+      profile?.profileImageUrl ||
+        '',
+    );
+    setRemoveImage(false);
+    setEditError('');
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value =
+        '';
+    }
+  };
+
+  const handleCloseEditProfile = () => {
+    if (saving) {
+      return;
+    }
+
+    resetEditState();
+    setEditOpen(false);
+
+    if (editMode) {
+      navigate(
+        profilePath,
+        { replace: true },
       );
     }
   };
 
-  const handleImageChange = (event) => {
-    const file =
-      event.target.files?.[0];
+  const handleImageChange =
+    (event) => {
+      const file =
+        event.target
+          .files?.[0];
 
-    event.target.value = '';
+      event.target.value =
+        '';
 
-    if (!file) return;
+      if (!file) {
+        return;
+      }
 
-    if (!allowedImageTypes.has(file.type)) {
-      setEditError(
-        'Profile image must be a JPEG, PNG or WebP file.',
+      if (
+        !allowedImageTypes.has(
+          file.type,
+        )
+      ) {
+        setEditError(
+          'รูปโปรไฟล์ต้องเป็นไฟล์ JPEG, PNG หรือ WebP เท่านั้น',
+        );
+
+        return;
+      }
+
+      if (
+        file.size >
+        MAX_PROFILE_IMAGE_SIZE
+      ) {
+        setEditError(
+          'รูปโปรไฟล์ต้องมีขนาดไม่เกิน 2 MB',
+        );
+
+        return;
+      }
+
+      const reader =
+        new FileReader();
+
+      reader.onload = () => {
+        setSelectedImage(
+          file,
+        );
+
+        setImagePreview(
+          String(
+            reader.result ||
+              '',
+          ),
+        );
+
+        setRemoveImage(
+          false,
+        );
+
+        setEditError('');
+      };
+
+      reader.onerror =
+        () => {
+          setEditError(
+            'ไม่สามารถแสดงตัวอย่างรูปที่เลือกได้',
+          );
+        };
+
+      reader.readAsDataURL(
+        file,
+      );
+    };
+
+  const handleRemoveImage =
+    () => {
+      setSelectedImage(
+        null,
       );
 
-      return;
-    }
+      setImagePreview('');
 
-    if (
-      file.size >
-      MAX_PROFILE_IMAGE_SIZE
-    ) {
-      setEditError(
-        'Profile image must not exceed 2 MB.',
+      setRemoveImage(
+        true,
       );
 
-      return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      setSelectedImage(file);
-
-      setImagePreview(
-        String(reader.result || ''),
-      );
-
-      setRemoveImage(false);
       setEditError('');
     };
 
-    reader.onerror = () => {
-      setEditError(
-        'Unable to preview the selected image.',
-      );
-    };
+  const handleSaveProfile =
+    async (event) => {
+      event.preventDefault();
 
-    reader.readAsDataURL(file);
-  };
+      setEditError('');
 
-  const handleRemoveImage = () => {
-    setSelectedImage(null);
-    setImagePreview('');
-    setRemoveImage(true);
-    setEditError('');
-  };
+      const fullName =
+        editForm.fullName
+          .trim()
+          .replace(
+            /\s+/g,
+            ' ',
+          );
 
-  const handleSaveProfile = async (
-    event,
-  ) => {
-    event.preventDefault();
-    setEditError('');
+      const email =
+        editForm.email
+          .trim()
+          .toLowerCase();
 
-    const fullName =
-      editForm.fullName
-        .trim()
-        .replace(/\s+/g, ' ');
+      if (
+        fullName.split(
+          ' ',
+        ).length < 2
+      ) {
+        setEditError(
+          'กรุณากรอกชื่อและนามสกุล',
+        );
 
-    const email =
-      editForm.email
-        .trim()
-        .toLowerCase();
+        return;
+      }
 
-    if (
-      fullName.split(' ').length < 2
-    ) {
-      setEditError(
-        'Please enter both first name and last name.',
-      );
+      if (
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+          email,
+        )
+      ) {
+        setEditError(
+          'กรุณากรอกอีเมลให้ถูกต้อง',
+        );
 
-      return;
-    }
+        return;
+      }
 
-    if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        email,
-      )
-    ) {
-      setEditError(
-        'Please enter a valid email address.',
-      );
+      if (!/^\d{10}$/.test(editForm.phone.trim())) {
+        setEditError('กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 10 หลัก');
+        return;
+      }
 
-      return;
-    }
+      const formData =
+        new FormData();
 
-    const formData = new FormData();
-
-    formData.set(
-      'fullName',
-      fullName,
-    );
-
-    formData.set(
-      'email',
-      email,
-    );
-
-    formData.set(
-      'phone',
-      editForm.phone.trim(),
-    );
-
-    formData.set(
-      'removeProfileImage',
-      String(removeImage),
-    );
-
-    if (selectedImage) {
       formData.set(
-        'profileImage',
-        selectedImage,
-      );
-    }
-
-    setSaving(true);
-
-    try {
-      const result =
-        await updateProfile(formData);
-
-      setProfile(result.profile);
-
-      updateCurrentUserProfileSession(
-        result.profile,
+        'fullName',
+        fullName,
       );
 
-      setSuccessMessage(
-        result.message ||
-          'Profile updated successfully.',
+      formData.set(
+        'email',
+        email,
       );
 
-      setEditOpen(false);
-    } catch (error) {
-      setEditError(
-        error.response?.data?.message ||
-          'Unable to update profile.',
+      formData.set(
+        'phone',
+        editForm.phone.trim(),
       );
-    } finally {
-      setSaving(false);
-    }
-  };
+
+      formData.set(
+        'removeProfileImage',
+        String(
+          removeImage,
+        ),
+      );
+
+      if (
+        selectedImage
+      ) {
+        formData.set(
+          'profileImage',
+          selectedImage,
+        );
+      }
+
+      setSaving(true);
+
+      try {
+        const result =
+          await updateProfile(
+            formData,
+          );
+
+        setProfile(
+          result.profile,
+        );
+
+        updateCurrentUserProfileSession(
+          result.profile,
+        );
+
+        if (
+          typeof window !==
+          'undefined'
+        ) {
+          window.dispatchEvent(
+            new CustomEvent(
+              'profile-updated',
+              {
+                detail:
+                  result.profile,
+              },
+            ),
+          );
+        }
+
+        setSuccessMessage(
+          translateProfileMessage(
+            result.message,
+            'อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว',
+          ),
+        );
+
+        setSelectedImage(null);
+        setRemoveImage(false);
+        setEditOpen(false);
+
+        if (editMode) {
+          navigate(
+            profilePath,
+            { replace: true },
+          );
+        }
+      } catch (error) {
+        setEditError(
+          translateProfileMessage(
+            error.response
+              ?.data
+              ?.message,
+            'ไม่สามารถอัปเดตข้อมูลส่วนตัวได้',
+          ),
+        );
+      } finally {
+        setSaving(false);
+      }
+    };
 
   const profileItems = [
     {
-      label: 'Employee ID',
+      label:
+        'รหัสพนักงาน',
+
       value:
-        profile?.employeeCode ||
-        'Not available',
+        profile
+          ?.employeeCode ||
+        'ไม่มีข้อมูล',
     },
+
     {
-      label: 'Username',
+      label:
+        'ชื่อผู้ใช้',
+
       value:
         profile?.username ||
-        currentUser?.username ||
-        'Not available',
+        currentUser
+          ?.username ||
+        'ไม่มีข้อมูล',
     },
+
     {
-      label: 'Full Name',
-      value: displayName,
+      label:
+        'ชื่อ-นามสกุล',
+
+      value:
+        displayName,
     },
+
     {
-      label: 'Email',
+      label:
+        'อีเมล',
+
       value:
         profile?.email ||
-        'Not available',
+        'ไม่มีข้อมูล',
     },
+
     {
-      label: 'Phone Number',
+      label:
+        'เบอร์โทรศัพท์',
+
       value:
         profile?.phone ||
-        'Not available',
+        'ไม่มีข้อมูล',
     },
-    {
-      label: 'Role',
-      value:
-        profile?.roleName ||
-        currentUser?.role ||
-        'Not available',
-      capitalize: true,
-    },
-    {
-      label: 'Department',
-      value:
-        profile?.department ||
-        'Not available',
-    },
-    {
-      label: 'Position',
-      value:
-        profile?.position ||
-        'Not available',
-    },
-  ];
 
-  const sessionItems = [
     {
-      label: 'Last Login',
-      value: formatDateTime(
-        profile?.lastLoginAt ||
-          currentUser?.loginAt,
-      ),
+      label:
+        'บทบาท',
+
+      value:
+        getRoleLabel(
+          roleValue,
+        ),
     },
+
     {
-      label: 'Password Changed',
-      value: formatDateTime(
-        profile?.passwordChangedAt ||
-          currentUser?.passwordChangedAt,
-      ),
+      label:
+        'แผนก',
+
+      value:
+        profile
+          ?.department ||
+        'ไม่มีข้อมูล',
+    },
+
+    {
+      label:
+        'ตำแหน่ง',
+
+      value:
+        profile
+          ?.position ||
+        'ไม่มีข้อมูล',
     },
   ];
 
   return (
-    <LayoutComponent activeMenu="Profile">
+    <LayoutComponent
+      activeMenu={editMode ? 'Edit Personal Information' : ''}
+    >
+      <Box sx={{ width: '100%', maxWidth: '760px', marginInline: 'auto' }}>
+      <PageHeader title={editMode ? 'แก้ไขข้อมูลส่วนตัว' : 'ข้อมูลส่วนตัว'} />
       <Box
         sx={{
-          display: 'flex',
-          alignItems: {
-            xs: 'flex-start',
-            md: 'center',
-          },
-          justifyContent:
-            'space-between',
-          flexDirection: {
-            xs: 'column',
-            md: 'row',
-          },
-          gap: '16px',
-          marginBottom: '28px',
+          display: 'none',
+          marginBottom:
+            '22px',
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{
-              color: '#111827',
-              fontSize: {
-                xs: '26px',
-                sm: '30px',
-              },
-              fontWeight: 800,
-            }}
-          >
-            Profile
-          </Typography>
+        <Typography
+          component="h1"
+          sx={{
+            color:
+              '#111827',
 
-          <Typography
-            sx={{
-              color: '#6B7280',
-              fontSize: '15px',
-              marginTop: '6px',
-            }}
-          >
-            View and update your profile
-            information.
-          </Typography>
-        </Box>
+            fontSize: {
+              xs: '26px',
+              sm: '30px',
+            },
+
+            fontWeight:
+              800,
+          }}
+        >
+          ข้อมูลส่วนตัว
+        </Typography>
       </Box>
 
       {(loadError ||
@@ -469,20 +690,35 @@ function RoleProfilePage({
           action={
             loadError ? (
               <Button
-                onClick={loadProfile}
+                onClick={
+                  loadProfile
+                }
+                sx={{
+                  color:
+                    'inherit',
+
+                  fontWeight:
+                    700,
+                }}
               >
-                Retry
+                ลองอีกครั้ง
               </Button>
             ) : null
           }
           onClose={
             successMessage
               ? () =>
-                  setSuccessMessage('')
+                  setSuccessMessage(
+                    '',
+                  )
               : undefined
           }
           sx={{
-            marginBottom: '24px',
+            marginBottom:
+              '20px',
+
+            borderRadius:
+              '10px',
           }}
         >
           {loadError ||
@@ -494,12 +730,26 @@ function RoleProfilePage({
         <Paper
           elevation={0}
           sx={{
-            minHeight: '360px',
-            display: 'grid',
-            placeItems: 'center',
+            minHeight:
+              '360px',
+
+            display:
+              'grid',
+
+            placeItems:
+              'center',
+
+            backgroundColor:
+              '#FFFFFF',
+
             border:
-              '1px solid #E5E7EB',
-            borderRadius: '12px',
+              '1px solid #E8EEF5',
+
+            borderRadius:
+              '18px',
+
+            boxShadow:
+              '0 8px 24px rgba(15, 23, 42, 0.05)',
           }}
         >
           <CircularProgress
@@ -510,376 +760,516 @@ function RoleProfilePage({
           />
         </Paper>
       ) : (
-        <Box
+        <Paper
+          elevation={0}
           sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              lg:
-                'minmax(280px, 0.75fr) minmax(0, 1.5fr)',
-            },
-            gap: '24px',
-            alignItems: 'start',
+            ...roleDashboardCardSurfaceSx,
+            borderColor: '#E2E8F0',
           }}
         >
-          <Paper
-            elevation={0}
+          <Box
             sx={{
-              padding: '28px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              backgroundColor:
-                '#FFFFFF',
-              border:
-                '1px solid #E5E7EB',
-              borderRadius: '12px',
-              textAlign: 'center',
+              display:
+                'flex',
+
+              alignItems: {
+                xs:
+                  'flex-start',
+
+                sm:
+                  'center',
+              },
+
+              justifyContent:
+                'space-between',
+
+              flexDirection: {
+                xs:
+                  'column',
+
+                sm:
+                  'row',
+              },
+
+              gap:
+                '18px',
+
+              padding: {
+                xs:
+                  '22px',
+
+                sm:
+                  '26px 28px',
+              },
+
+              background:
+                `linear-gradient(
+                  135deg,
+                  #FFFFFF 0%,
+                  ${resolvedTheme.soft} 100%
+                )`,
+
+              borderBottom:
+                '1px solid #EEF2F7',
             }}
           >
-            <Button
-              type="button"
-              aria-label={
-                'Select profile image'
-              }
-              onClick={() =>
-                openEditProfile(true)
-              }
+            <Box
               sx={{
-                minWidth: 0,
-                padding: 0,
-                borderRadius: '50%',
+                display:
+                  'flex',
+
+                alignItems:
+                  'center',
+
+                gap: {
+                  xs:
+                    '14px',
+
+                  sm:
+                    '18px',
+                },
               }}
             >
               <Avatar
-                src={
-                  profileImageUrl ||
-                  undefined
-                }
-                alt={displayName}
+                  src={
+                    profileImageUrl ||
+                    undefined
+                  }
+                  alt={
+                    displayName
+                  }
+                  sx={{
+                    width: {
+                      xs:
+                        '76px',
+
+                      sm:
+                        '88px',
+                    },
+
+                    height: {
+                      xs:
+                        '76px',
+
+                      sm:
+                        '88px',
+                    },
+
+                    backgroundColor:
+                      '#FFFFFF',
+
+                    color:
+                      resolvedTheme.primary,
+
+                    border:
+                      '3px solid #FFFFFF',
+
+                    boxShadow:
+                      '0 6px 18px rgba(15, 23, 42, 0.08)',
+
+                    fontSize:
+                      '26px',
+
+                    fontWeight:
+                      900,
+                  }}
+                >
+                  {getInitials(
+                    displayName,
+                  )}
+              </Avatar>
+
+              <Box
                 sx={{
-                  width: '96px',
-                  height: '96px',
-                  backgroundColor:
-                    resolvedTheme.soft,
-                  color:
-                    resolvedTheme.primary,
-                  border:
-                    `1px solid ${resolvedTheme.border}`,
-                  fontSize: '30px',
-                  fontWeight: 900,
+                  minWidth:
+                    0,
                 }}
               >
-                {getInitials(
-                  displayName,
-                )}
-              </Avatar>
-            </Button>
+                <Typography
+                  sx={{
+                    color:
+                      '#111827',
 
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '12px',
-                marginTop: '8px',
-              }}
-            >
-              Click the avatar to choose
-              a photo
-            </Typography>
+                    fontSize: {
+                      xs:
+                        '18px',
 
-            <Typography
-              sx={{
-                color: '#111827',
-                fontSize: '21px',
-                fontWeight: 800,
-                marginTop: '16px',
-              }}
-            >
-              {displayName}
-            </Typography>
+                      sm:
+                        '21px',
+                    },
 
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '5px',
-              }}
-            >
-              {profile?.username ||
-                currentUser?.username ||
-                'No username'}
-            </Typography>
+                    fontWeight:
+                      800,
 
-            <Chip
-              label={
-                profile?.roleName ||
-                currentUser?.role ||
-                'Unknown Role'
-              }
-              sx={{
-                marginTop: '16px',
-                backgroundColor:
-                  resolvedTheme.soft,
-                color:
-                  resolvedTheme.dark,
-                borderRadius: '999px',
-                fontSize: '12px',
-                fontWeight: 800,
-                textTransform:
-                  'capitalize',
-              }}
-            />
+                    lineHeight:
+                      1.4,
+
+                    wordBreak:
+                      'break-word',
+                  }}
+                >
+                  {
+                    displayName
+                  }
+                </Typography>
+
+                <Typography
+                  sx={{
+                    color:
+                      '#64748B',
+
+                    fontSize:
+                      '13px',
+
+                    marginTop:
+                      '2px',
+                  }}
+                >
+                  {profile
+                    ?.username ||
+                    currentUser
+                      ?.username ||
+                    'ไม่ระบุชื่อผู้ใช้'}
+                </Typography>
+
+                <Box
+                  sx={{
+                    display:
+                      'flex',
+
+                    alignItems:
+                      'center',
+
+                    flexWrap:
+                      'wrap',
+
+                    gap:
+                      '8px',
+
+                    marginTop:
+                      '9px',
+                  }}
+                >
+                  <Chip
+                    label={getRoleLabel(
+                      roleValue,
+                    )}
+                    size="small"
+                    sx={{
+                      height:
+                        '27px',
+
+                      backgroundColor:
+                        resolvedTheme.soft,
+
+                      color:
+                        resolvedTheme.dark,
+
+                      border:
+                        '1px solid transparent',
+
+                      borderRadius:
+                        '10px',
+
+                      fontSize:
+                        '10px',
+
+                      fontWeight:
+                        700,
+
+                      '& .MuiChip-label':
+                        {
+                          padding:
+                            '0 10px',
+                        },
+                    }}
+                  />
+
+                </Box>
+              </Box>
+            </Box>
 
             <Button
-              fullWidth
               type="button"
               variant="contained"
+              color="secondary"
               onClick={() =>
-                openEditProfile(false)
+                navigate(`/${String(currentUser?.role || 'employee').toLowerCase()}/edit-personal-information`)
               }
-              disabled={!profile}
+              disabled={
+                !profile
+              }
               sx={{
-                height: '44px',
-                marginTop: '28px',
+                width: {
+                  xs:
+                    '100%',
+
+                  sm:
+                    'auto',
+                },
+
+                minWidth: {
+                  sm:
+                    '150px',
+                },
+
+                height:
+                  '42px',
+
+                padding:
+                  '0 18px',
+
                 backgroundColor:
                   resolvedTheme.primary,
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 700,
-                textTransform: 'none',
-                boxShadow: 'none',
-                '&:hover': {
-                  backgroundColor:
-                    resolvedTheme.dark,
-                  boxShadow: 'none',
-                },
+
+                color:
+                  '#FFFFFF',
+
+                borderRadius:
+                  '10px',
+
+                fontSize:
+                  '13px',
+
+                fontWeight:
+                  700,
+
+                textTransform:
+                  'none',
+
+                boxShadow:
+                  '0 4px 12px rgba(15, 23, 42, 0.08)',
+
+                '&:hover':
+                  {
+                    backgroundColor:
+                      resolvedTheme.dark,
+
+                    boxShadow:
+                      '0 6px 16px rgba(15, 23, 42, 0.10)',
+                  },
               }}
             >
-              Edit Profile
+              แก้ไขข้อมูลส่วนตัว
             </Button>
-          </Paper>
+          </Box>
 
           <Box
             sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '24px',
+              padding: {
+                xs:
+                  '22px',
+
+                sm:
+                  '26px 28px 30px',
+              },
             }}
           >
-            <Paper
-              elevation={0}
+            <Typography
               sx={{
-                padding: {
-                  xs: '22px',
-                  sm: '28px',
-                },
-                backgroundColor:
-                  '#FFFFFF',
-                border:
-                  '1px solid #E5E7EB',
-                borderRadius: '12px',
+                color:
+                  '#111827',
+
+                fontSize:
+                  '17px',
+
+                fontWeight:
+                  600,
               }}
             >
-              <Typography
-                sx={{
-                  color: '#111827',
-                  fontSize: '18px',
-                  fontWeight: 800,
-                }}
-              >
-                Account Information
-              </Typography>
+              ข้อมูลบัญชี
+            </Typography>
 
-              <Typography
-                sx={{
-                  color: '#6B7280',
-                  fontSize: '14px',
-                  lineHeight: 1.7,
-                  marginTop: '5px',
-                }}
-              >
-                Employee ID, username,
-                role, department and
-                position are managed by
-                HR or Admin.
-              </Typography>
+            <Box
+              sx={{
+                display:
+                  'grid',
 
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: '1fr',
-                    sm:
-                      'repeat(2, minmax(0, 1fr))',
-                  },
-                  gap: '20px',
-                  marginTop: '24px',
-                }}
-              >
-                {profileItems.map(
-                  (item) => (
-                    <Box
-                      key={item.label}
+                gridTemplateColumns: {
+                  xs:
+                    '1fr',
+
+                  sm:
+                    'repeat(2, minmax(0, 1fr))',
+                },
+
+                columnGap: {
+                  sm:
+                    '14px',
+
+                  lg:
+                    '16px',
+                },
+
+                rowGap:
+                  '14px',
+
+                marginTop:
+                  '16px',
+              }}
+            >
+              {profileItems.map(
+                (item) => (
+                  <Box
+                    key={
+                      item.label
+                    }
+                    sx={{
+                      minHeight:
+                        '74px',
+
+                      display:
+                        'flex',
+
+                      flexDirection:
+                        'column',
+
+                      justifyContent:
+                        'center',
+
+                      padding:
+                        '14px 16px',
+
+                      backgroundColor:
+                        '#F8FAFC',
+
+                      border:
+                        '1px solid #EEF2F7',
+
+                      borderRadius:
+                        '12px',
+                    }}
+                  >
+                    <Typography
                       sx={{
-                        padding:
-                          '18px',
-                        backgroundColor:
-                          '#F9FAFB',
-                        border:
-                          '1px solid #E5E7EB',
-                        borderRadius:
-                          '8px',
+                        color:
+                          '#94A3B8',
+
+                        fontSize:
+                          '10px',
+
+                        fontWeight:
+                          700,
+
+                        marginBottom:
+                          '4px',
                       }}
                     >
-                      <Typography
-                        sx={{
-                          color:
-                            '#9CA3AF',
-                          fontSize:
-                            '11px',
-                          fontWeight:
-                            800,
-                          textTransform:
-                            'uppercase',
-                          letterSpacing:
-                            '0.5px',
-                        }}
-                      >
-                        {item.label}
-                      </Typography>
+                      {
+                        item.label
+                      }
+                    </Typography>
 
-                      <Typography
-                        sx={{
-                          color:
-                            '#111827',
-                          fontSize:
-                            '14px',
-                          fontWeight:
-                            700,
-                          lineHeight:
-                            1.5,
-                          marginTop:
-                            '6px',
-                          textTransform:
-                            item.capitalize
-                              ? 'capitalize'
-                              : 'none',
-                          wordBreak:
-                            'break-word',
-                        }}
-                      >
-                        {item.value}
-                      </Typography>
-                    </Box>
-                  ),
-                )}
-              </Box>
-            </Paper>
+                    <Typography
+                      sx={{
+                        color:
+                          '#111827',
 
-            <Paper
-              elevation={0}
-              sx={{
-                padding: {
-                  xs: '22px',
-                  sm: '28px',
-                },
-                backgroundColor:
-                  resolvedTheme.soft,
-                border:
-                  `1px solid ${resolvedTheme.border}`,
-                borderRadius: '12px',
-              }}
-            >
-              <Typography
-                sx={{
-                  color:
-                    resolvedTheme.dark,
-                  fontSize: '18px',
-                  fontWeight: 800,
-                }}
-              >
-                Security Information
-              </Typography>
+                        fontSize:
+                          '14px',
 
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: '1fr',
-                    sm:
-                      'repeat(2, minmax(0, 1fr))',
-                  },
-                  gap: '20px',
-                  marginTop: '20px',
-                }}
-              >
-                {sessionItems.map(
-                  (item) => (
-                    <Box
-                      key={item.label}
+                        fontWeight:
+                          700,
+
+                        lineHeight:
+                          1.5,
+
+                        wordBreak:
+                          'break-word',
+                      }}
                     >
-                      <Typography
-                        sx={{
-                          color:
-                            resolvedTheme.text,
-                          fontSize:
-                            '11px',
-                          fontWeight:
-                            800,
-                          textTransform:
-                            'uppercase',
-                          letterSpacing:
-                            '0.5px',
-                        }}
-                      >
-                        {item.label}
-                      </Typography>
-
-                      <Typography
-                        sx={{
-                          color:
-                            resolvedTheme.dark,
-                          fontSize:
-                            '14px',
-                          fontWeight:
-                            700,
-                          marginTop:
-                            '6px',
-                        }}
-                      >
-                        {item.value}
-                      </Typography>
-                    </Box>
-                  ),
-                )}
-              </Box>
-            </Paper>
+                      {
+                        item.value
+                      }
+                    </Typography>
+                  </Box>
+                ),
+              )}
+            </Box>
           </Box>
-        </Box>
+        </Paper>
       )}
+
+      <Box id="change-password" sx={{ display: 'none' }}>
+        <Button type="button" variant="outlined" onClick={() => setPasswordOpen(true)} sx={{ height: 40, borderRadius: '9px', color: '#2563EB', borderColor: '#BFDBFE', fontSize: '13px', fontWeight: 800 }}>เปลี่ยนรหัสผ่าน</Button>
+      </Box>
+
+      <Dialog open={false} onClose={() => setPasswordOpen(false)} fullWidth maxWidth="sm" slotProps={{ paper: { sx: { borderRadius: '14px' } } }}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', borderBottom: '1px solid #E5E7EB', fontSize: '18px', fontWeight: 800 }}>
+          เปลี่ยนรหัสผ่าน
+          <Button type="button" onClick={() => setPasswordOpen(false)} sx={{ color: '#64748B', fontSize: '12px', fontWeight: 700 }}>ยกเลิก</Button>
+        </DialogTitle>
+        <DialogContent sx={{ padding: '0 !important' }}>
+          <RoleChangePasswordPage LayoutComponent={EmbeddedProfileSection} theme={resolvedTheme} />
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={editOpen}
-        keepMounted
         fullWidth
         maxWidth="sm"
-        onClose={() =>
-          !saving &&
-          setEditOpen(false)
+        onClose={
+          handleCloseEditProfile
         }
         component="form"
-        onSubmit={handleSaveProfile}
+        onSubmit={
+          handleSaveProfile
+        }
+        slotProps={{
+          paper: {
+            sx: {
+              '--role-primary': resolvedTheme.primary,
+              '--role-soft': resolvedTheme.soft,
+              ...roleDashboardCardSurfaceSx,
+              width:
+                'min(600px, calc(100% - 24px))',
+              borderRadius:
+                '20px',
+              overflow:
+                'hidden',
+              border:
+                '1px solid #E2E8F0',
+              boxShadow:
+                '0 18px 50px rgba(15, 23, 42, 0.14)',
+            },
+          },
+        }}
       >
-        <DialogTitle>
-          Edit Profile
+        <DialogTitle
+          sx={{
+            padding:
+              '20px 24px',
+            color:
+              resolvedTheme.text,
+            fontSize:
+              '20px',
+            fontWeight:
+              700,
+            background:
+              'transparent',
+            borderBottom:
+              0,
+          }}
+        >
+          แก้ไขข้อมูลส่วนตัว
         </DialogTitle>
 
-        <DialogContent dividers>
+        <DialogContent
+          sx={{
+            padding:
+              '18px 24px 24px !important',
+            backgroundColor:
+              'transparent',
+          }}
+        >
           {editError && (
             <Alert
               severity="error"
               sx={{
-                marginBottom: '20px',
+                marginBottom:
+                  '18px',
+                borderRadius:
+                  '9px',
               }}
             >
               {editError}
@@ -888,241 +1278,380 @@ function RoleProfilePage({
 
           <Box
             sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              marginBottom: '24px',
+              display:
+                'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: '150px minmax(0, 1fr)',
+              },
+              gap: {
+                xs: '22px',
+                sm: '26px',
+              },
+              alignItems:
+                'start',
             }}
           >
-            <Avatar
-              src={
-                imagePreview ||
-                undefined
-              }
-              alt={editForm.fullName}
-              sx={{
-                width: '112px',
-                height: '112px',
-                backgroundColor:
-                  resolvedTheme.soft,
-                color:
-                  resolvedTheme.primary,
-                border:
-                  `1px solid ${resolvedTheme.border}`,
-                fontSize: '34px',
-                fontWeight: 900,
-              }}
-            >
-              {getInitials(
-                editForm.fullName,
-              )}
-            </Avatar>
-
-            <input
-              ref={fileInputRef}
-              hidden
-              type="file"
-              accept={
-                'image/jpeg,image/png,image/webp'
-              }
-              onChange={
-                handleImageChange
-              }
-            />
-
             <Box
               sx={{
-                display: 'flex',
-                gap: '10px',
-                marginTop: '14px',
+                display:
+                  'flex',
+                flexDirection:
+                  'column',
+                alignItems: {
+                  xs: 'center',
+                  sm: 'flex-start',
+                },
               }}
             >
+              <Avatar
+                src={
+                  imagePreview ||
+                  undefined
+                }
+                alt={
+                  editForm.fullName
+                }
+                sx={{
+                  width:
+                    '104px',
+                  height:
+                    '104px',
+                  backgroundColor:
+                    resolvedTheme.soft,
+                  color:
+                    resolvedTheme.primary,
+                  border:
+                    '3px solid #FFFFFF',
+                  boxShadow:
+                    '0 6px 18px rgba(15, 23, 42, 0.08)',
+                  fontSize:
+                    '30px',
+                  fontWeight:
+                    900,
+                }}
+              >
+                {getInitials(
+                  editForm.fullName,
+                )}
+              </Avatar>
+
+              <input
+                ref={
+                  fileInputRef
+                }
+                hidden
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={
+                  handleImageChange
+                }
+              />
+
               <Button
                 type="button"
                 variant="outlined"
                 onClick={() =>
-                  fileInputRef.current?.click()
+                  fileInputRef
+                    .current
+                    ?.click()
                 }
-                disabled={saving}
+                disabled={
+                  saving
+                }
+                sx={{
+                  minWidth:
+                    '104px',
+                  height:
+                    '35px',
+                  marginTop:
+                    '12px',
+                  backgroundColor:
+                    '#FFFFFF',
+                  borderRadius:
+                    '10px',
+                  fontSize:
+                    '12px',
+                  fontWeight:
+                    700,
+                  textTransform:
+                    'none',
+                }}
               >
-                Choose Photo
+                {imagePreview
+                  ? 'เปลี่ยนรูป'
+                  : 'เพิ่มรูป'}
               </Button>
 
-              {imagePreview && (
-                <Button
-                  type="button"
-                  color="error"
-                  onClick={
-                    handleRemoveImage
-                  }
-                  disabled={saving}
-                >
-                  Remove
-                </Button>
-              )}
+              {!removeImage &&
+                (imagePreview ||
+                  profileImageUrl) && (
+                  <Button
+                    type="button"
+                    variant="text"
+                    color="error"
+                    onClick={
+                      handleRemoveImage
+                    }
+                    disabled={
+                      saving
+                    }
+                    sx={{
+                      minWidth:
+                        '104px',
+                      height:
+                        '32px',
+                      marginTop:
+                        '4px',
+                      color:
+                        '#DC2626',
+                      borderRadius:
+                        '10px',
+                      fontSize:
+                        '11px',
+                      fontWeight:
+                        700,
+                      textTransform:
+                        'none',
+                    }}
+                  >
+                    ลบรูป
+                  </Button>
+                )}
+
+              {removeImage &&
+                profileImageUrl && (
+                  <Button
+                    type="button"
+                    variant="text"
+                    onClick={() => {
+                      setRemoveImage(
+                        false,
+                      );
+                      setImagePreview(
+                        profileImageUrl,
+                      );
+                      setEditError('');
+                    }}
+                    disabled={
+                      saving
+                    }
+                    sx={{
+                      minWidth:
+                        '104px',
+                      height:
+                        '32px',
+                      marginTop:
+                        '4px',
+                      color:
+                        '#475569',
+                      borderRadius:
+                        '10px',
+                      fontSize:
+                        '11px',
+                      fontWeight:
+                        700,
+                      textTransform:
+                        'none',
+                    }}
+                  >
+                    คืนรูปเดิม
+                  </Button>
+                )}
             </Box>
 
-            <Typography
+            <Box
               sx={{
-                color: '#6B7280',
-                fontSize: '12px',
-                marginTop: '8px',
+                display:
+                  'grid',
+                gridTemplateColumns:
+                  '1fr',
+                gap:
+                  '14px',
               }}
             >
-              JPEG, PNG or WebP,
-              maximum 2 MB
-            </Typography>
-          </Box>
+              <TextField
+                required
+                fullWidth
+                size="small"
+                label="ชื่อ-นามสกุล"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '10px',
+                    backgroundColor: '#FFFFFF',
+                  },
+                }}
+                value={
+                  editForm.fullName
+                }
+                onChange={(event) =>
+                  setEditForm(
+                    (previous) => ({
+                      ...previous,
+                      fullName:
+                        event.target.value,
+                    }),
+                  )
+                }
+                disabled={
+                  saving
+                }
+                slotProps={{
+                  htmlInput: {
+                    maxLength:
+                      201,
+                  },
+                }}
+              />
 
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: {
-                xs: '1fr',
-                sm:
-                  'repeat(2, minmax(0, 1fr))',
-              },
-              gap: '16px',
-            }}
-          >
-            <TextField
-              required
-              label="Full Name"
-              value={editForm.fullName}
-              onChange={(event) =>
-                setEditForm(
-                  (previous) => ({
-                    ...previous,
-                    fullName:
-                      event.target.value,
-                  }),
-                )
-              }
-              disabled={saving}
-              slotProps={{
-                htmlInput: {
-                  maxLength: 201,
-                },
-              }}
-            />
+              <TextField
+                required
+                fullWidth
+                size="small"
+                type="email"
+                label="อีเมล"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '10px',
+                    backgroundColor: '#FFFFFF',
+                  },
+                }}
+                value={
+                  editForm.email
+                }
+                onChange={(event) =>
+                  setEditForm(
+                    (previous) => ({
+                      ...previous,
+                      email:
+                        event.target.value,
+                    }),
+                  )
+                }
+                disabled={
+                  saving
+                }
+                slotProps={{
+                  htmlInput: {
+                    maxLength:
+                      100,
+                  },
+                }}
+              />
 
-            <TextField
-              required
-              type="email"
-              label="Email"
-              value={editForm.email}
-              onChange={(event) =>
-                setEditForm(
-                  (previous) => ({
-                    ...previous,
-                    email:
-                      event.target.value,
-                  }),
-                )
-              }
-              disabled={saving}
-              slotProps={{
-                htmlInput: {
-                  maxLength: 100,
-                },
-              }}
-            />
-
-            <TextField
-              label="Phone Number"
-              value={editForm.phone}
-              onChange={(event) =>
-                setEditForm(
-                  (previous) => ({
-                    ...previous,
-                    phone:
-                      event.target.value,
-                  }),
-                )
-              }
-              disabled={saving}
-              slotProps={{
-                htmlInput: {
-                  maxLength: 20,
-                },
-              }}
-            />
-
-            <TextField
-              label="Employee ID"
-              value={
-                profile?.employeeCode ||
-                ''
-              }
-              disabled
-            />
-
-            <TextField
-              label="Username"
-              value={
-                profile?.username || ''
-              }
-              disabled
-            />
-
-            <TextField
-              label="Role"
-              value={
-                profile?.roleName || ''
-              }
-              disabled
-            />
-
-            <TextField
-              label="Department"
-              value={
-                profile?.department ||
-                ''
-              }
-              disabled
-            />
-
-            <TextField
-              label="Position"
-              value={
-                profile?.position || ''
-              }
-              disabled
-            />
+              <TextField
+                fullWidth
+                required
+                size="small"
+                label="เบอร์โทรศัพท์"
+                placeholder="0812345678"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '10px',
+                    backgroundColor: '#FFFFFF',
+                  },
+                }}
+                value={
+                  editForm.phone
+                }
+                onChange={(event) =>
+                  setEditForm(
+                    (previous) => ({
+                      ...previous,
+                      phone:
+                        event.target.value.replace(/\D/g, '').slice(0, 10),
+                    }),
+                  )
+                }
+                disabled={
+                  saving
+                }
+                slotProps={{
+                  htmlInput: {
+                    maxLength:
+                      10,
+                    inputMode: 'numeric',
+                    pattern: '[0-9]*',
+                  },
+                }}
+              />
+            </Box>
           </Box>
         </DialogContent>
 
         <DialogActions
           sx={{
-            padding: '16px 24px',
+            padding:
+              '14px 24px 18px',
+            backgroundColor:
+              'transparent',
+            borderTop:
+              0,
           }}
         >
           <Button
             type="button"
-            onClick={() =>
-              setEditOpen(false)
+            variant="outlined"
+            color="secondary"
+            onClick={
+              handleCloseEditProfile
             }
-            disabled={saving}
+            disabled={
+              saving
+            }
+            sx={{
+              minWidth:
+                '84px',
+              height:
+                '40px',
+              borderRadius:
+                '10px',
+              backgroundColor:
+                '#FFFFFF',
+              fontSize:
+                '13px',
+              fontWeight:
+                700,
+              textTransform:
+                'none',
+            }}
           >
-            Cancel
+            ยกเลิก
           </Button>
 
           <Button
             type="submit"
             variant="contained"
-            disabled={saving}
+            disabled={
+              saving
+            }
             sx={{
-              backgroundColor:
-                resolvedTheme.primary,
-              textTransform: 'none',
+              minWidth:
+                '118px',
+              height:
+                '40px',
+              color:
+                '#FFFFFF',
+              borderRadius:
+                '10px',
+              fontSize:
+                '13px',
+              fontWeight:
+                700,
+              textTransform:
+                'none',
+              boxShadow:
+                'none',
+              '&:hover': { boxShadow: 'none' },
             }}
           >
             {saving
-              ? 'Saving...'
-              : 'Save Profile'}
+              ? 'กำลังบันทึก...'
+              : 'บันทึกข้อมูล'}
           </Button>
         </DialogActions>
       </Dialog>
+      </Box>
     </LayoutComponent>
   );
 }

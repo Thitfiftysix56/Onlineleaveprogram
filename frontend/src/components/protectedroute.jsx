@@ -85,10 +85,14 @@ function ProtectedRoute({
           if (isActive) {
             setSession(null);
 
+            // A missing session is the normal first-visit state. Redirect to
+            // the login page quietly instead of presenting it as an error.
             setAuthError(
-              error.response?.data
-                ?.message ||
-                'Please sign in to continue.',
+              error.response?.status === 401
+                ? ''
+                : error.response?.data
+                    ?.message ||
+                    'Unable to verify the current session.',
             );
           }
         } finally {
@@ -147,10 +151,9 @@ function ProtectedRoute({
         state={{
           from:
             location.pathname,
-
-          authError:
-            authError ||
-            'Please sign in to continue.',
+          ...(authError
+            ? { authError }
+            : {}),
         }}
       />
     );

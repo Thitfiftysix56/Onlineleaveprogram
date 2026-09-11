@@ -18,8 +18,11 @@ export const submitLeaveDraft = async (id, data, attachments) => (await api.post
 export const deleteLeaveDraft = async (id) => (await api.delete(`/leave/requests/${id}/draft`)).data
 export const cancelLeaveRequest = async (id) => (await api.patch(`/leave/requests/${id}/cancel`)).data
 export const getLeaveBalance = async (year) => (await api.get('/leave/balance', { params: { year } })).data?.data
+export const getLeaveReportRequests = async () => (await api.get('/reports/leave-requests')).data?.data?.leaveRequests || []
 export const deleteLeaveAttachment = async (id) => (await api.delete(`/leave-attachments/${id}`)).data
 export const getSupervisorApprovals = async () => (await api.get('/supervisor/approvals')).data?.data?.leaveRequests || []
 export const getSupervisorApproval = async (id) => (await api.get(`/supervisor/approvals/${id}`)).data?.data?.leaveRequest
 export const decideLeaveRequest = async (id, decision, reason = '') => (await api.post(`/supervisor/approvals/${id}/decision`, { decision, reason })).data
+export const getHrApproval = async (id) => (await api.get(`/hr/approvals/${id}`)).data?.data?.leaveRequest
+export const decideHrLeaveRequest = async (id, decision, reason = '') => (await api.post(`/hr/approvals/${id}/decision`, { decision, reason })).data
 export const getTeamReport = async (params) => (await api.get('/supervisor/team-report', { params })).data?.data

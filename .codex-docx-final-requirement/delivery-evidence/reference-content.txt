@@ -1,0 +1,1350 @@
+P0000 [Normal] ระบบอนุมัติใบลาออนไลน์
+P0001 [Normal] Online Leave Approval System Final Requirement
+P0002 [Normal] 1. วัตถุประสงค์ของระบบ
+P0003 [Normal] ระบบอนุมัติใบลาออนไลน์พัฒนาขึ้นเพื่อเพิ่มประสิทธิภาพในการบริหารจัดการการลาของพนักงานภายในองค์กร โดยเปลี่ยนกระบวนการยื่นคำขอลา การตรวจสอบสิทธิ์วันลา และการอนุมัติจากรูปแบบเอกสารกระดาษมาเป็นระบบออนไลน์
+P0004 [Normal] ระบบนี้ช่วยให้พนักงานสามารถยื่นคำขอลา ตรวจสอบวันลาคงเหลือ ติดตามสถานะคำขอ และดูประวัติการลาของตนเองได้ผ่านระบบ ขณะเดียวกันหัวหน้างานสามารถตรวจสอบ อนุมัติ หรือปฏิเสธคำขอลาของลูกทีมได้อย่างเป็นระบบ ส่วน HR สามารถจัดการข้อมูลพนักงาน ประเภทการลา สิทธิ์วันลา วันหยุด และรายงานที่เกี่ยวข้องได้
+P0005 [Normal] ระบบยังจัดเก็บข้อมูลคำขอลา ประวัติการอนุมัติ เอกสารประกอบการลา การแจ้งเตือน และ Audit Log ไว้ในฐานข้อมูลกลาง เพื่อรองรับการตรวจสอบย้อนหลังและลดความผิดพลาดจากการจัดการข้อมูลด้วยเอกสารหรือไฟล์กระจัดกระจาย
+P0006 [Normal] วัตถุประสงค์หลัก
+P0007 [List Paragraph] เพื่อให้พนักงานสามารถยื่นคำขอลาผ่านระบบออนไลน์ได้
+P0008 [List Paragraph] เพื่อให้พนักงานสามารถตรวจสอบสิทธิ์วันลาและติดตามสถานะคำขอได้ด้วยตนเอง
+P0009 [List Paragraph] เพื่อลดการใช้เอกสารกระดาษและลดขั้นตอนการทำงานแบบเดิม
+P0010 [List Paragraph] เพื่อให้ Supervisor สามารถอนุมัติหรือปฏิเสธคำขอลาได้อย่างรวดเร็ว
+P0011 [List Paragraph] เพื่อควบคุมการใช้สิทธิ์วันลาให้เป็นไปตามนโยบายขององค์กร
+P0012 [List Paragraph] เพื่อป้องกันความผิดพลาดในการคำนวณวันลาและวันลาคงเหลือ
+P0013 [List Paragraph] เพื่อจัดเก็บข้อมูลการลา ประวัติการอนุมัติ และเอกสารที่เกี่ยวข้องไว้ในระบบกลาง
+P0014 [List Paragraph] เพื่อรองรับรายงานพื้นฐานด้านการลาและการส่งออกข้อมูลเป็น Excel
+P0015 [List Paragraph] เพื่อเพิ่มความโปร่งใสในการตรวจสอบย้อนหลังผ่าน Audit Log
+P0016 [List Paragraph] เพื่อใช้เป็นแนวทางสำหรับนักศึกษาฝึกงานในการออกแบบและพัฒนาระบบจริงให้เสร็จภายในระยะเวลาที่กำหนด
+P0017 [Normal] 2. ขอบเขตระบบ
+P0018 [Normal] 2.1 ฟังก์ชันที่อยู่ในขอบเขตระบบเวอร์ชันปัจจุบัน
+T000 BLOCK=19 ROWS=19 GRID=[4675, 4675]
+  R000 | Module | รายละเอียด
+  R001 | Authentication | Login, Logout, Change Password, ตรวจสอบบัญชีผู้ใช้
+  R002 | User Management | Admin จัดการบัญชีผู้ใช้งานและ Role
+  R003 | Employee Management | HR จัดการข้อมูลพนักงาน
+  R004 | Department Management | Admin จัดการข้อมูลแผนก
+  R005 | Position Management | Admin จัดการข้อมูลตำแหน่ง
+  R006 | Leave Type Management | HR จัดการประเภทการลา
+  R007 | Leave Entitlement Management | HR จัดการสิทธิ์วันลารายปี
+  R008 | Leave Request Management | ผู้ใช้ทุก Role สามารถสร้าง Draft, แก้ไข Draft, ส่งคำขอลาของตนเอง
+  R009 | Leave Approval | Supervisor อนุมัติหรือปฏิเสธคำขอลาของลูกทีม
+  R010 | Leave Cancellation | ผู้ยื่นลายกเลิกคำขอที่ยังเป็น Pending
+  R011 | Attachment Management | แนบไฟล์ประกอบการลา
+  R012 | Holiday Management | HR จัดการวันหยุดองค์กร
+  R013 | In-App Notification | แจ้งเตือนภายในระบบ
+  R014 | Reporting | รายงานพื้นฐานและ Export Excel
+  R015 | Audit Log | บันทึกกิจกรรมสำคัญของระบบ
+  R016 | Password Recovery | Forgot Password ด้วย OTP ทาง Email และ Reset Token แบบใช้ครั้งเดียว
+  R017 | Profile Management | ผู้ใช้ทุก Role ดูและแก้ไข Profile รวมถึงรูปโปรไฟล์ของตนเอง
+  R018 | Role Dashboard | Dashboard แสดงข้อมูลสรุปและทางลัดตามสิทธิ์ของแต่ละ Role
+P0021 [Normal] 2.2 ขอบเขตในอนาคต (Future Scope)
+T001 BLOCK=22 ROWS=14 GRID=[3116, 3117, 3117]
+  R000 | Feature | รายละเอียด | สถานะ
+  R001 | Multi-role User | ผู้ใช้หนึ่งคนมีหลาย Role | Future Scope
+  R002 | Half-day Leave | ลาครึ่งวันช่วงเช้าหรือบ่าย | Future Scope
+  R003 | Cross-year Leave Request | ยื่นคำขอลาคร่อมปี | Future Scope
+  R004 | Cancel After Approval | ยกเลิกหลังอนุมัติพร้อมคืนสิทธิ์วันลา | Future Scope
+  R005 | Backup Assignee | ระบุผู้รับผิดชอบงานแทนระหว่างลา | Future Scope
+  R006 | Multi-step Approval | Department Manager, HR หรือ Final Approver อนุมัติหลายระดับ | Future Scope
+  R007 | Backup / Delegate Approver | มอบหมายผู้อนุมัติแทนตามช่วงเวลา | Future Scope
+  R008 | Push / Real-time Notification | แจ้งเตือนทันทีหรือส่งเข้ามือถือ | Future Scope
+  R009 | Native Mobile Application | แอปพลิเคชันสำหรับอุปกรณ์เคลื่อนที่ | Future Scope
+  R010 | PDF Export | ส่งออกรายงานเป็น PDF | Future Scope
+  R011 | Advanced Analytics | Dashboard และรายงานเชิงวิเคราะห์หลายมิติ | Future Scope
+  R012 | Backup / Restore | สำรองและกู้คืนระบบระดับโครงสร้างพื้นฐาน | Future Scope
+  R013 | Large-scale Load Test | ทดสอบภาระงานผู้ใช้พร้อมกันจำนวนมาก | Future Scope
+P0024 [Normal] 3. บทบาทผู้ใช้งาน
+P0025 [Normal] ระบบมี 4 Role หลัก ได้แก่ Employee, Supervisor, HR และ Admin
+T002 BLOCK=26 ROWS=5 GRID=[4675, 4675]
+  R000 | Role | หน้าที่หลัก
+  R001 | Employee | ยื่นลา ดูสถานะ ดูประวัติการลาของตนเอง
+  R002 | Supervisor | อนุมัติหรือปฏิเสธคำขอลาของลูกทีม
+  R003 | HR | จัดการพนักงาน ประเภทการลา สิทธิ์วันลา วันหยุด และรายงาน HR
+  R004 | Admin | จัดการบัญชีผู้ใช้ Role แผนก ตำแหน่ง และดู Audit Log
+P0028 [Normal] 4. หลักการควบคุมสิทธิ์
+P0029 [Normal] 4.1 หลักการ Role-Based Access Control
+P0030 [List Paragraph] ระบบใช้ Role-Based Access Control (RBAC)
+P0031 [List Paragraph] ผู้ใช้งานแต่ละคนมีหนึ่ง Role ในระบบเวอร์ชันปัจจุบัน
+P0032 [List Paragraph] ผู้ใช้งานทุก Role ยังถือเป็นพนักงานขององค์กรและสามารถยื่นคำขอลาของตนเองได้
+P0033 [List Paragraph] สิทธิ์พื้นฐานของ Employee ถูกให้กับทุก Role สำหรับการจัดการคำขอลาของตนเอง
+P0034 [List Paragraph] Supervisor, HR และ Admin ไม่สามารถใช้อำนาจของ Role ตนเองเพื่อจัดการคำขอลาของตนเองเกินกว่าสิทธิ์ Employee
+P0035 [List Paragraph] Supervisor อนุมัติได้เฉพาะคำขอลาของพนักงานที่ตนเองเป็นหัวหน้างานเท่านั้น
+P0036 [List Paragraph] การตรวจสอบผู้อนุมัติให้ยึดจาก leave_requests.approver_employee_id ซึ่งถูกบันทึกไว้ตอน Submit
+P0037 [List Paragraph] Admin เข้าถึงข้อมูลตาม Endpoint และ Data Scope ที่ Backend อนุญาต โดยต้องผ่าน Authentication และ Authorization
+P0038 [List Paragraph] Audit Log ต้องไม่สามารถแก้ไขหรือลบโดยผู้ใช้งานทั่วไป รวมถึง Admin
+P0039 [List Paragraph] HR ไม่สามารถอนุมัติคำขอแทน Supervisor ได้ในระบบเวอร์ชันปัจจุบัน
+P0040 [List Paragraph] Multi-role User ยังไม่รองรับในระบบเวอร์ชันปัจจุบัน
+P0041 [Normal] 4.2 เงื่อนไขสำคัญของ Supervisor
+P0042 [List Paragraph] เพื่อป้องกัน workflow ค้างหรืออนุมัติไม่ได้ ต้องกำหนด rule ดังนี้
+P0043 [List Paragraph] พนักงานที่ถูกกำหนดเป็น supervisor_id ต้องมีบัญชีผู้ใช้ในระบบ
+P0044 [List Paragraph] บัญชีผู้ใช้นั้นต้องมี status = active
+P0045 [List Paragraph] บัญชีผู้ใช้นั้นต้องมี Role = Supervisor
+P0046 [List Paragraph] Supervisor ไม่สามารถเป็นหัวหน้าของตนเองได้
+P0047 [List Paragraph] หาก HR กำหนดหัวหน้างานให้พนักงาน ระบบต้องตรวจสอบเงื่อนไขนี้ก่อนบันทึกข้อมูล
+P0048 [Normal] 4.3 สิทธิ์พื้นฐานของผู้ใช้งานทุก Role
+P0049 [Normal] ผู้ใช้งานทุกคนในระบบถือว่าเป็นพนักงานขององค์กร จึงมีสิทธิ์พื้นฐานดังนี้
+T003 BLOCK=50 ROWS=13 GRID=[4675, 4675]
+  R000 | Function | Permission
+  R001 | Login / Logout | ได้
+  R002 | ดูข้อมูลส่วนตัวของตนเอง | ได้
+  R003 | Change Password | ได้
+  R004 | สร้างคำขอลาของตนเอง | ได้
+  R005 | บันทึกคำขอเป็น Draft | ได้
+  R006 | แก้ไข Draft ของตนเอง | ได้
+  R007 | ลบ Draft ของตนเอง | ได้
+  R008 | ส่งคำขอของตนเอง | ได้
+  R009 | ดูสถานะคำขอของตนเอง | ได้
+  R010 | ดูประวัติการลาของตนเอง | ได้
+  R011 | ตรวจสอบวันลาคงเหลือของตนเอง | ได้
+  R012 | ยกเลิกคำขอ Pending ของตนเอง | ได้
+P0051 [Normal] 5. สิทธิ์เฉพาะตาม Role
+P0052 [Normal] 5.1 Employee
+P0053 [Normal] Employee ใช้งานระบบเพื่อยื่นคำขอลาและติดตามข้อมูลของตนเอง
+P0054 [Normal] สิทธิ์การใช้งาน
+P0055 [List Paragraph] สร้างคำขอลา
+P0056 [List Paragraph] บันทึก Draft
+P0057 [List Paragraph] แก้ไข Draft
+P0058 [List Paragraph] ลบ Draft
+P0059 [List Paragraph] ส่งคำขอเข้าสู่ Workflow
+P0060 [List Paragraph] แนบเอกสารประกอบ
+P0061 [List Paragraph] ดูสถานะคำขอ
+P0062 [List Paragraph] ดูประวัติการลา
+P0063 [List Paragraph] ตรวจสอบวันลาคงเหลือ
+P0064 [List Paragraph] ยกเลิกคำขอที่อยู่ในสถานะ Pending
+P0065 [Normal] ข้อจำกัด
+P0066 [List Paragraph] ไม่สามารถอนุมัติหรือปฏิเสธคำขอ
+P0067 [List Paragraph] ไม่สามารถดูคำขอของพนักงานคนอื่น
+P0068 [List Paragraph] ไม่สามารถแก้ไขสิทธิ์วันลา
+P0069 [List Paragraph] ไม่สามารถจัดการประเภทการลา
+P0070 [List Paragraph] ไม่สามารถจัดการบัญชีผู้ใช้
+P0071 [List Paragraph] ไม่สามารถดูรายงานระดับองค์กร
+P0072 [Normal] 5.2 Supervisor
+P0073 [Normal] Supervisor มีหน้าที่พิจารณาคำขอลาของพนักงานในทีม
+P0074 [Normal] สิทธิ์การใช้งาน
+P0075 [List Paragraph] ดูคำขอลาของลูกทีม
+P0076 [List Paragraph] ดูรายละเอียดคำขอลาของลูกทีม
+P0077 [List Paragraph] ดูเอกสารแนบของคำขอที่เกี่ยวข้อง
+P0078 [List Paragraph] อนุมัติคำขอลาของลูกทีม
+P0079 [List Paragraph] ปฏิเสธคำขอลาของลูกทีม
+P0080 [List Paragraph] ระบุเหตุผลการปฏิเสธ
+P0081 [List Paragraph] ดูรายงานการลาของลูกทีม
+P0082 [List Paragraph] Export Excel รายงานของลูกทีม
+P0083 [Normal] ข้อจำกัด
+P0084 [List Paragraph] ไม่สามารถอนุมัติคำขอของตนเอง
+P0085 [List Paragraph] ไม่สามารถอนุมัติคำขอของพนักงานนอกทีม
+P0086 [List Paragraph] ไม่สามารถแก้ไขคำขอของพนักงาน
+P0087 [List Paragraph] ไม่สามารถแก้ไขสิทธิ์วันลา
+P0088 [List Paragraph] ไม่สามารถจัดการข้อมูลพนักงานทั้งหมด
+P0089 [List Paragraph] ไม่สามารถจัดการบัญชีผู้ใช้
+P0090 [List Paragraph] ไม่สามารถอนุมัติคำขอที่ไม่ได้ระบุให้ตนเองเป็น approver
+P0091 [Normal] 5.3 HR
+P0092 [Normal] HR มีหน้าที่ดูแลข้อมูลบุคคลและข้อมูลที่ใช้คำนวณวันลา
+P0093 [Normal] สิทธิ์การใช้งาน
+P0094 [List Paragraph] เพิ่ม / แก้ไข / ค้นหาพนักงาน
+P0095 [List Paragraph] กำหนดหัวหน้างานให้พนักงาน
+P0096 [List Paragraph] เปลี่ยนสถานะพนักงาน
+P0097 [List Paragraph] จัดการประเภทการลา
+P0098 [List Paragraph] จัดการสิทธิ์วันลา
+P0099 [List Paragraph] ปรับยอดวันลา
+P0100 [List Paragraph] จัดการวันหยุดองค์กร
+P0101 [List Paragraph] ดูรายงานวันลาคงเหลือ
+P0102 [List Paragraph] ดูรายงานการลารายแผนก
+P0103 [List Paragraph] ดูรายงานคำขอตามสถานะ
+P0104 [List Paragraph] Export Excel รายงาน HR  ข้อจำกัด
+P0105 [List Paragraph] ไม่สามารถจัดการบัญชีผู้ใช้
+P0106 [List Paragraph] ไม่สามารถกำหนด Role
+P0107 [List Paragraph] ไม่สามารถอนุมัติคำขอแทน Supervisor
+P0108 [List Paragraph] ไม่สามารถแก้ไขผลการอนุมัติที่เสร็จสิ้นแล้ว
+P0109 [List Paragraph] ไม่สามารถลบ Audit Log
+P0110 [List Paragraph] ไม่สามารถแก้ไขคำขอลาของพนักงานแทนผู้ยื่นลา
+P0111 [Normal] 5.4 Admin
+P0112 [Normal] Admin มีหน้าที่ดูแลระบบและบัญชีผู้ใช้งาน
+P0113 [Normal] สิทธิ์การใช้งาน
+P0114 [List Paragraph] เพิ่ม / แก้ไข / ปิดบัญชีผู้ใช้
+P0115 [List Paragraph] กำหนด Role ให้ผู้ใช้
+P0116 [List Paragraph] จัดการสถานะบัญชี เช่น active, inactive, locked
+P0117 [List Paragraph] จัดการข้อมูลแผนก
+P0118 [List Paragraph] จัดการข้อมูลตำแหน่ง
+P0119 [List Paragraph] ดู Audit Log เชิงระบบ
+P0120 [Normal] ข้อจำกัด
+P0121 [List Paragraph] ไม่สามารถอนุมัติคำขอแทน Supervisor
+P0122 [List Paragraph] ไม่สามารถปรับสิทธิ์วันลาแทน HR
+P0123 [List Paragraph] ไม่สามารถจัดการประเภทการลา
+P0124 [List Paragraph] ไม่สามารถเปิดดูเหตุผลการลาหรือเอกสารส่วนตัวของพนักงานอื่น
+P0125 [List Paragraph] ไม่สามารถแก้ไขหรือลบ Audit Log
+P0126 [Normal] 5.5 Permission Matrix
+T004 BLOCK=127 ROWS=32 GRID=[1870, 1870, 1870, 1870, 1870]
+  R000 | Function / Permission | Employee | Supervisor | HR | Admin
+  R001 | Login / Logout | ✓ | ✓ | ✓ | ✓
+  R002 | Change Password | ✓ | ✓ | ✓ | ✓
+  R003 | ดูข้อมูลส่วนตัวของตนเอง | ✓ | ✓ | ✓ | ✓
+  R004 | สร้างคำขอลาของตนเอง | ✓ | ✓ | ✓ | ✓
+  R005 | แก้ไข/ลบ Draft ของตนเอง | ✓ | ✓ | ✓ | ✓
+  R006 | ส่งคำขอเข้าสู่ Workflow | ✓ | ✓ | ✓ | ✓
+  R007 | ดูสถานะ/ประวัติการลาของตนเอง | ✓ | ✓ | ✓ | ✓
+  R008 | ตรวจสอบวันลาคงเหลือของตนเอง | ✓ | ✓ | ✓ | ✓
+  R009 | ยกเลิกคำขอ Pending ของตนเอง | ✓ | ✓ | ✓ | ✓
+  R010 | ดูคำขอลาของลูกทีม | ✗ | ✓ | ✗ | ✗
+  R011 | อนุมัติคำขอลาของลูกทีม | ✗ | ✓ | ✗ | ✗
+  R012 | ปฏิเสธคำขอลาของลูกทีม | ✗ | ✓ | ✗ | ✗
+  R013 | ดูรายงานการลาของลูกทีม | ✗ | ✓ | ✗ | ✗
+  R014 | จัดการข้อมูลพนักงาน | ✗ | ✗ | ✓ | ✗
+  R015 | กำหนดหัวหน้างานของพนักงาน | ✗ | ✗ | ✓ | ✗
+  R016 | จัดการประเภทการลา | ✗ | ✗ | ✓ | ✗
+  R017 | จัดการสิทธิ์วันลาของพนักงาน | ✗ | ✗ | ✓ | ✗
+  R018 | จัดการวันหยุดองค์กร | ✗ | ✗ | ✓ | ✗
+  R019 | ดูและส่งออกรายงานด้าน HR | ✗ | ✗ | ✓ | ✗
+  R020 | จัดการบัญชีผู้ใช้งาน | ✗ | ✗ | ✗ | ✓
+  R021 | กำหนด Role ให้ผู้ใช้งาน | ✗ | ✗ | ✗ | ✓
+  R022 | จัดการข้อมูลแผนกและตำแหน่ง | ✗ | ✗ | ✗ | ✓
+  R023 | ดู Audit Log เชิงระบบ | ✗ | ✗ | ✗ | ✓
+  R024 | แก้ไขหรือลบ Audit Log | ✗ | ✗ | ✗ | ✗
+  R025 | อนุมัติคำขอของตนเอง | ✗ | ✗ | ✗ | ✗
+  R026 | Forgot Password / OTP / Reset Password | ✓ | ✓ | ✓ | ✓
+  R027 | แก้ไข Profile และรูปโปรไฟล์ของตนเอง | ✓ | ✓ | ✓ | ✓
+  R028 | ดู/อ่าน/อ่านทั้งหมด/ลบ Notification ของตนเอง | ✓ | ✓ | ✓ | ✓
+  R029 | Reset Password และออก Temporary Password ให้ผู้ใช้ | ✗ | ✗ | ✗ | ✓
+  R030 | เรียกใช้ API Employee และ Master Data ของ HR | ✗ | ✗ | ✓ | ✓
+  R031 | ดาวน์โหลด Attachment ตาม Data Scope | ✓ | ✓ | ✓ | ✓
+P0129 [Normal] 6. Workflow คำขอลา
+P0130 [Normal] 6.1 สถานะคำขอลา
+P0131 [Normal] ระบบใช้สถานะหลัก 5 สถานะสำหรับ Workflow การลาแบบ Supervisor อนุมัติขั้นเดียว
+T005 BLOCK=132 ROWS=6 GRID=[4675, 4675]
+  R000 | Status | ความหมาย
+  R001 | draft | แบบร่าง ยังไม่ส่งอนุมัติ
+  R002 | pending | ส่งคำขอแล้ว รอ Supervisor พิจารณา
+  R003 | approved | Supervisor อนุมัติแล้ว และระบบหักวันลาแล้ว
+  R004 | rejected | Supervisor ปฏิเสธคำขอ
+  R005 | cancelled | ผู้ยื่นลายกเลิกคำขอก่อนอนุมัติ
+P0134 [Normal] 6.2 Flow หลัก
+P0135 [Normal] Employee สร้างคำขอลา
+P0136 [Normal] ↓
+P0137 [Normal] Draft
+P0138 [Normal] ↓ Submit
+P0139 [Normal] Pre-validation
+P0140 [Normal] ↓
+P0141 [Normal] ระบบสร้าง request_no
+P0142 [Normal] ระบบบันทึก approver_employee_id
+P0143 [Normal] ↓
+P0144 [Normal] Pending
+P0145 [Normal] ↓
+P0146 [Normal] Supervisor Approve / Reject
+P0147 [Normal] ↓
+P0148 [Normal] Approved / Rejected
+P0149 [Normal] 6.3 Flow การยกเลิก
+P0150 [Normal] Draft
+P0151 [Normal] ↓
+P0152 [Normal] Employee Delete Draft
+P0153 [Normal] ↓
+P0154 [Normal] ลบ Draft
+P0155 [Normal] Pending
+P0156 [Normal] ↓
+P0157 [Normal] Employee Cancel
+P0158 [Normal] ↓
+P0159 [Normal] Cancelled
+P0160 [Normal] ระบบเวอร์ชันปัจจุบันยังไม่รองรับการยกเลิกคำขอที่ Approved แล้ว
+P0161 [Normal] 6.4 State Transition
+T006 BLOCK=162 ROWS=10 GRID=[2337, 2337, 2338, 2338]
+  R000 | Current Status | Action | Next Status | Responsible Actor
+  R001 | draft | edit | draft | Owner
+  R002 | draft | delete | - | Owner
+  R003 | draft | submit | pending | Owner
+  R004 | pending | approve | approved | Assigned Supervisor
+  R005 | pending | reject | rejected | Assigned Supervisor
+  R006 | pending | cancel | cancelled | Owner
+  R007 | approved | no action | approved | System
+  R008 | rejected | no action | rejected | System
+  R009 | cancelled | no action | cancelled | System
+P0164 [Normal] 6.5 State Rules
+P0165 [List Paragraph] Draft สามารถแก้ไขและลบได้โดยเจ้าของคำขอเท่านั้น
+P0166 [List Paragraph] เมื่อ Submit แล้วสถานะเปลี่ยนเป็น Pending และแก้ไขข้อมูลคำขอไม่ได้
+P0167 [List Paragraph] Pending สามารถ Approve / Reject โดย Supervisor ที่ถูกบันทึกไว้ใน approver_employee_id เท่านั้น
+P0168 [List Paragraph] Pending สามารถ Cancel โดยผู้ยื่นลาได้
+P0169 [List Paragraph] Approved, Rejected และ Cancelled เป็นสถานะสิ้นสุดในระบบเวอร์ชันปัจจุบัน
+P0170 [List Paragraph] Approved ต้องหักวันลาใน Transaction เดียวกับการเปลี่ยนสถานะ
+P0171 [List Paragraph] Rejected ต้องมีเหตุผลการปฏิเสธ
+P0172 [List Paragraph] ระบบบันทึก Event สำคัญที่กำหนดใน Audit Log ตามจุดที่ Backend รองรับ
+P0173 [List Paragraph] คำขอลาที่ Approved แล้วไม่สามารถแก้ไข ยกเลิก หรือลบได้ในระบบเวอร์ชันปัจจุบัน
+P0174 [List Paragraph] คำขอ Pending ต้องถูกนำไปคิดเป็น pending_days เพื่อป้องกันการส่งคำขอเกินสิทธิ์
+P0175 [Normal] 7. Functional Requirements
+P0176 [Normal] FR-01 Authentication
+P0177 [Normal] ระบบต้องรองรับการเข้าสู่ระบบ ออกจากระบบ และเปลี่ยนรหัสผ่าน
+P0178 [Normal] รายละเอียด
+P0179 [List Paragraph] ผู้ใช้ Login ด้วย username หรือ employees.email และ password
+P0180 [List Paragraph] ผู้ใช้ Logout ได้
+P0181 [List Paragraph] ระบบตรวจสอบสถานะบัญชี
+P0182 [List Paragraph] ระบบอนุญาตเฉพาะบัญชี active
+P0183 [List Paragraph] ระบบไม่อนุญาตบัญชี inactive หรือ locked
+P0184 [List Paragraph] ระบบจัดเก็บรหัสผ่านเป็น password_hash
+P0185 [List Paragraph] ระบบควบคุมสิทธิ์หลัง Login ตาม Role
+P0186 [List Paragraph] ผู้ใช้เปลี่ยนรหัสผ่านของตนเองได้
+P0187 [List Paragraph] ระบบต้องไม่ส่ง password_hash กลับไปที่ frontend
+P0188 [Normal] ข้อมูลที่เกี่ยวข้อง
+P0189 [List Paragraph] username
+P0190 [List Paragraph] password_hash
+P0191 [List Paragraph] role_id
+P0192 [List Paragraph] status
+P0193 [List Paragraph] employee_id
+P0194 [List Paragraph] last_login_at
+P0195 [Normal] FR-02 User Management
+P0196 [Normal] Admin สามารถจัดการบัญชีผู้ใช้งานได้
+P0197 [Normal] รายละเอียด
+P0198 [List Paragraph] เพิ่มบัญชีผู้ใช้
+P0199 [List Paragraph] แก้ไขบัญชีผู้ใช้
+P0200 [List Paragraph] ปิดการใช้งานบัญชี
+P0201 [List Paragraph] กำหนด Role
+P0202 [List Paragraph] เปลี่ยนสถานะบัญชี
+P0203 [List Paragraph] ผูกบัญชีผู้ใช้กับข้อมูลพนักงาน
+P0204 [List Paragraph] ห้าม username ซ้ำ
+P0205 [List Paragraph] ผู้ใช้หนึ่งคนผูกกับพนักงานได้หนึ่งคนเท่านั้น
+P0206 [List Paragraph] พนักงานหนึ่งคนมีบัญชีผู้ใช้ได้หนึ่งบัญชีเท่านั้น
+P0207 [List Paragraph] Role ในระบบเวอร์ชันปัจจุบัน เป็นค่ามาตรฐานของระบบ ไม่ให้ Admin เพิ่ม Role ใหม่เอง
+P0208 [Normal] ข้อมูลที่จัดเก็บ
+P0209 [List Paragraph] username
+P0210 [List Paragraph] password_hash
+P0211 [List Paragraph] role_id
+P0212 [List Paragraph] status
+P0213 [List Paragraph] employee_id
+P0214 [List Paragraph] last_login_at
+P0215 [List Paragraph] created_at
+P0216 [List Paragraph] updated_at
+P0217 [Normal] FR-03 Employee Management
+P0218 [Normal] HR สามารถจัดการข้อมูลพนักงานได้
+P0219 [Normal] รายละเอียด
+P0220 [List Paragraph] เพิ่มพนักงาน
+P0221 [List Paragraph] แก้ไขพนักงาน
+P0222 [List Paragraph] ค้นหาพนักงาน
+P0223 [List Paragraph] เปลี่ยนสถานะพนักงาน
+P0224 [List Paragraph] กำหนดหัวหน้างาน
+P0225 [List Paragraph] ผูกพนักงานกับแผนก
+P0226 [List Paragraph] ผูกพนักงานกับตำแหน่ง
+P0227 [List Paragraph] ตรวจสอบว่า supervisor_id ต้องเป็นพนักงานที่มีบัญชี active และ Role = Supervisor
+P0228 [List Paragraph] ไม่อนุญาตให้พนักงานเป็นหัวหน้างานของตนเอง
+P0229 [Normal] ข้อมูลที่จัดเก็บ
+P0230 [List Paragraph] employee_code
+P0231 [List Paragraph] first_name
+P0232 [List Paragraph] last_name
+P0233 [List Paragraph] phone
+P0234 [List Paragraph] email
+P0235 [List Paragraph] department_id
+P0236 [List Paragraph] position_id
+P0237 [List Paragraph] supervisor_id
+P0238 [List Paragraph] hire_date
+P0239 [List Paragraph] status
+P0240 [List Paragraph] created_at
+P0241 [List Paragraph] updated_at
+P0242 [Normal] FR-04 Department Management
+P0243 [Normal] Admin สามารถจัดการข้อมูลแผนกได้
+P0244 [Normal] รายละเอียด
+P0245 [List Paragraph] เพิ่มแผนก
+P0246 [List Paragraph] แก้ไขแผนก
+P0247 [List Paragraph] ปิดการใช้งานแผนก
+P0248 [List Paragraph] ใช้แผนกสำหรับจัดกลุ่มพนักงานและรายงาน
+P0249 [List Paragraph] ห้ามลบแผนกที่เคยถูกใช้งานแล้ว ให้ปิดการใช้งานแทน
+P0250 [Normal] ข้อมูลที่จัดเก็บ
+P0251 [List Paragraph] department_name
+P0252 [List Paragraph] description
+P0253 [List Paragraph] is_active
+P0254 [List Paragraph] created_at
+P0255 [List Paragraph] updated_at
+P0256 [Normal] FR-05 Position Management
+P0257 [Normal] Admin สามารถจัดการข้อมูลตำแหน่งงานได้
+P0258 [Normal] รายละเอียด
+P0259 [List Paragraph] เพิ่มตำแหน่ง
+P0260 [List Paragraph] แก้ไขตำแหน่ง
+P0261 [List Paragraph] ปิดการใช้งานตำแหน่ง
+P0262 [List Paragraph] ใช้ตำแหน่งเพื่อผูกกับพนักงาน
+P0263 [List Paragraph] ห้ามลบตำแหน่งที่เคยถูกใช้งานแล้ว ให้ปิดการใช้งานแทน
+P0264 [Normal] หมายเหตุสำคัญ
+P0265 [List Paragraph] ตาราง positions ไม่เก็บ department_id
+P0266 [List Paragraph] แผนกของพนักงานให้อ้างอิงจาก employees.department_id เท่านั้น
+P0267 [Normal] ข้อมูลที่จัดเก็บ
+P0268 [List Paragraph] position_name
+P0269 [List Paragraph] is_active
+P0270 [List Paragraph] created_at
+P0271 [List Paragraph] updated_at
+P0272 [Normal] FR-06 Leave Type Management
+P0273 [Normal] HR สามารถจัดการประเภทการลาได้
+P0274 [Normal] รายละเอียด
+P0275 [List Paragraph] เพิ่มประเภทการลา
+P0276 [List Paragraph] แก้ไขประเภทการลา
+P0277 [List Paragraph] ปิดการใช้งานประเภทการลา
+P0278 [List Paragraph] กำหนดจำนวนวันลาต่อปีเป็นค่า default
+P0279 [List Paragraph] กำหนดว่าต้องแนบเอกสารหรือไม่
+P0280 [List Paragraph] กำหนดเงื่อนไขแนบเอกสาร เช่น ลาเกินกี่วันต้องแนบ
+P0281 [List Paragraph] ห้ามลบประเภทการลาที่เคยถูกใช้งานแล้ว ให้ปิดการใช้งานแทน
+P0282 [List Paragraph] ประเภทการลาที่ inactive จะไม่แสดงให้เลือกในคำขอใหม่ แต่ยังใช้ดูประวัติได้
+P0283 [Normal] ตัวอย่างประเภทการลา
+P0284 [List Paragraph] ลาป่วย
+P0285 [List Paragraph] ลากิจ
+P0286 [List Paragraph] ลาพักร้อน
+P0287 [List Paragraph] ลาคลอด
+P0288 [List Paragraph] ลาอื่น ๆ
+P0289 [Normal] ข้อมูลที่จัดเก็บ
+P0290 [List Paragraph] leave_type_name
+P0291 [List Paragraph] annual_quota_days
+P0292 [List Paragraph] requires_attachment
+P0293 [List Paragraph] attachment_required_after_days
+P0294 [List Paragraph] is_active
+P0295 [List Paragraph] created_at
+P0296 [List Paragraph] updated_at
+P0297 [Normal] หมายเหตุ
+P0298 [Normal] annual_quota_days เป็นค่า default สำหรับสร้างสิทธิ์วันลา ส่วนสิทธิ์จริงของพนักงานแต่ละคนให้ยึดจาก leave_entitlements.total_days
+P0299 [Normal] FR-07 Leave Entitlement Management
+P0300 [Normal] HR สามารถจัดการสิทธิ์วันลาของพนักงานได้
+P0301 [Normal] รายละเอียด
+P0302 [List Paragraph] แสดงวันลาทั้งหมด
+P0303 [List Paragraph] แสดงวันที่ใช้ไปแล้ว
+P0304 [List Paragraph] แสดงวันที่รออนุมัติ
+P0305 [List Paragraph] แสดงวันลาที่สามารถใช้ได้
+P0306 [List Paragraph] ป้องกันวันลาติดลบ
+P0307 [List Paragraph] บันทึก Audit Log ทุกครั้งที่มีการแก้ไขหรือปรับยอด
+P0308 [Normal] สูตรพื้นฐาน
+P0309 [List Paragraph] used_days = จำนวนวันที่ถูกอนุมัติแล้ว
+P0310 [List Paragraph] pending_days = จำนวนวันที่อยู่ระหว่างรออนุมัติ
+P0311 [List Paragraph] remaining_days = total_days - used_days
+P0312 [List Paragraph] available_days = total_days - used_days - pending_days
+P0313 [Normal] เงื่อนไขสำคัญ
+P0314 [List Paragraph] total_days >= 0
+P0315 [List Paragraph] used_days >= 0
+P0316 [List Paragraph] pending_days >= 0
+P0317 [List Paragraph] remaining_days >= 0
+P0318 [List Paragraph] available_days >= 0
+P0319 [List Paragraph] used_days <= total_days
+P0320 [List Paragraph] pending_days ใช้จากคำขอ status = pending
+P0321 [Normal] หมายเหตุสำคัญ ระบบไม่ให้ผู้ใช้แก้ไข remaining_days หรือ available_days โดยตรง เพราะเป็นค่าที่คำนวณจากข้อมูลอื่น
+P0322 [Normal] FR-08 Leave Request Creation
+P0323 [Normal] ผู้ใช้งานทุก Role สามารถสร้างคำขอลาของตนเองได้ในฐานะพนักงาน
+P0324 [Normal] รายละเอียด
+P0325 [List Paragraph] สร้างคำขอลา
+P0326 [List Paragraph] เลือกประเภทการลา
+P0327 [List Paragraph] ระบุวันที่เริ่มลา
+P0328 [List Paragraph] ระบุวันที่สิ้นสุดลา
+P0329 [List Paragraph] ระบุเหตุผลการลา
+P0330 [List Paragraph] แนบเอกสาร ถ้ามี
+P0331 [List Paragraph] บันทึกเป็น Draft
+P0332 [List Paragraph] แก้ไข Draft
+P0333 [List Paragraph] ลบ Draft
+P0334 [List Paragraph] ส่งคำขอเข้าสู่ Workflow
+P0335 [List Paragraph] ระบบสร้างเลขที่คำขออัตโนมัติเมื่อ Submit
+P0336 [List Paragraph] ระบบบันทึก approver_employee_id จากหัวหน้างานของผู้ยื่นลา ณ เวลาที่ Submit
+P0337 [Normal] ข้อมูลที่ต้องกรอก
+P0338 [List Paragraph] leave_type_id
+P0339 [List Paragraph] start_date
+P0340 [List Paragraph] end_date
+P0341 [List Paragraph] reason
+P0342 [List Paragraph] attachment ถ้ามี
+P0343 [Normal] ข้อมูลที่ระบบคำนวณหรือกำหนด
+P0344 [List Paragraph] leave_days
+P0345 [List Paragraph] request_no
+P0346 [List Paragraph] status
+P0347 [List Paragraph] submitted_at
+P0348 [List Paragraph] approver_employee_id
+P0349 [Normal] ข้อจำกัด ระบบเวอร์ชันปัจจุบัน
+P0350 [List Paragraph] รองรับเฉพาะการลาเต็มวัน
+P0351 [List Paragraph] ไม่รองรับลาครึ่งวัน
+P0352 [List Paragraph] ไม่รองรับการลาข้ามปี
+P0353 [Normal] FR-09 Leave Validation
+P0354 [Normal] ก่อนส่งคำขอ ระบบต้องตรวจสอบข้อมูล
+T007 BLOCK=355 ROWS=12 GRID=[4675, 4675]
+  R000 | Validation | เงื่อนไข
+  R001 | วันที่ถูกต้อง | end_date ต้องไม่น้อยกว่า start_date
+  R002 | จำนวนวันลา | leave_days ต้องมากกว่า 0
+  R003 | ประเภทการลา | leave_type ต้อง active
+  R004 | สิทธิ์วันลา | available_days ต้องเพียงพอ
+  R005 | ลาซ้อน | ห้ามซ้ำกับคำขอ pending หรือ approved
+  R006 | เอกสารแนบ | ถ้าประเภทการลากำหนดว่าต้องแนบ ต้องมีไฟล์
+  R007 | ลาป่วยเกิน 3 วัน | ต้องแนบใบรับรองแพทย์
+  R008 | วันหยุด | ไม่นับเสาร์ อาทิตย์ และวันหยุดองค์กร
+  R009 | ปีเดียวกัน | start_date และ end_date ต้องอยู่ในปีเดียวกัน
+  R010 | หัวหน้างาน | ต้องมี supervisor_id ที่เป็น user active และ Role = Supervisor
+  R011 | ผู้ยื่นลา | บัญชีและสถานะพนักงานต้อง active
+P0357 [Normal] FR-10 Leave Approval
+P0358 [Normal] Supervisor สามารถอนุมัติหรือปฏิเสธคำขอลาของลูกทีมได้
+P0359 [Normal] Approve
+P0360 [List Paragraph] ตรวจสอบว่า request status = pending
+P0361 [List Paragraph] ตรวจสอบว่าผู้อนุมัติเป็น approver_employee_id ของคำขอนั้น
+P0362 [List Paragraph] ตรวจสอบว่าไม่ใช่คำขอของตนเอง
+P0363 [List Paragraph] ตรวจสอบสิทธิ์วันลาคงเหลืออีกครั้ง
+P0364 [List Paragraph] ตรวจสอบว่า available_days เพียงพอ
+P0365 [List Paragraph] เปลี่ยน status เป็น approved
+P0366 [List Paragraph] หักวันลาโดยเพิ่ม used_days
+P0367 [List Paragraph] บันทึก approval log
+P0368 [List Paragraph] บันทึก audit log
+P0369 [List Paragraph] สร้าง notification ให้ผู้ยื่นลา
+P0370 [List Paragraph] ทุกขั้นตอนต้องอยู่ใน Transaction เดียวกัน
+P0371 [Normal] Reject
+P0372 [List Paragraph] ตรวจสอบว่า request status = pending
+P0373 [List Paragraph] ตรวจสอบว่าผู้ปฏิเสธเป็น approver_employee_id ของคำขอนั้น
+P0374 [List Paragraph] ตรวจสอบว่าไม่ใช่คำขอของตนเอง
+P0375 [List Paragraph] ต้องระบุเหตุผลการปฏิเสธ
+P0376 [List Paragraph] เปลี่ยน status เป็น rejected
+P0377 [List Paragraph] บันทึก approval log
+P0378 [List Paragraph] บันทึก audit log
+P0379 [List Paragraph] สร้าง notification ให้ผู้ยื่นลา
+P0380 [Normal] FR-11 Leave Cancellation
+P0381 [Normal] ระบบรองรับการยกเลิกคำขอเฉพาะก่อนอนุมัติ
+T008 BLOCK=382 ROWS=6 GRID=[3116, 3117, 3117]
+  R000 | Current Status | Action | Result
+  R001 | draft | delete | ลบ Draft
+  R002 | pending | cancel | status = cancelled
+  R003 | approved | not allowed | ไม่สามารถยกเลิกได้
+  R004 | rejected | not allowed | ไม่สามารถยกเลิกได้
+  R005 | cancelled | not allowed | ไม่สามารถยกเลิกได้
+P0383 [Normal] หมายเหตุ: ระบบเวอร์ชันปัจจุบันยังไม่รองรับการยกเลิกคำขอที่ Approved แล้ว จึงยังไม่มี Workflow คืนสิทธิ์วันลา
+P0384 [Normal] FR-12 Attachment Management
+P0385 [Normal] ระบบรองรับเอกสารแนบประกอบการลา
+P0386 [Normal] รายละเอียด
+P0387 [List Paragraph] Employee อัปโหลดไฟล์แนบของตนเองได้
+P0388 [List Paragraph] Employee ดูไฟล์ของตนเองได้
+P0389 [List Paragraph] Employee แก้ไขหรือลบไฟล์ได้เฉพาะ Draft
+P0390 [List Paragraph] หลัง Submit แล้ว Employee ไม่สามารถแก้ไขหรือลบไฟล์แนบได้ในระบบเวอร์ชันปัจจุบัน
+P0391 [List Paragraph] Supervisor ดูไฟล์ของลูกทีมเฉพาะคำขอที่ต้องพิจารณา
+P0392 [List Paragraph] HR ดูไฟล์ตามขอบเขตหน้าที่
+P0393 [List Paragraph] Admin สามารถเปิดหรือดาวน์โหลดไฟล์แนบตามสิทธิ์ของ Backend ปัจจุบัน
+P0394 [List Paragraph] ระบบต้องตรวจสอบทั้ง file extension และ MIME type
+P0395 [List Paragraph] ระบบต้องจำกัดขนาดไฟล์ไม่เกิน 10 MB ต่อไฟล์
+P0396 [Normal] ข้อมูล metadata ที่จัดเก็บ
+P0397 [List Paragraph] file_name
+P0398 [List Paragraph] storage_file_name
+P0399 [List Paragraph] file_path
+P0400 [List Paragraph] file_type
+P0401 [List Paragraph] mime_type
+P0402 [List Paragraph] file_size_bytes
+P0403 [List Paragraph] uploaded_by
+P0404 [List Paragraph] uploaded_at
+P0405 [List Paragraph] deleted_at
+P0406 [List Paragraph] deleted_by
+P0407 [Normal] ประเภทไฟล์ที่รองรับ
+P0408 [List Paragraph] PDF
+P0409 [List Paragraph] JPG
+P0410 [List Paragraph] JPEG
+P0411 [List Paragraph] PNG
+P0412 [Normal] ขนาดไฟล์
+P0413 [Normal] ไม่เกิน 10 MB ต่อไฟล์
+P0414 [Normal] FR-13 Holiday Management
+P0415 [Normal] HR สามารถจัดการวันหยุดองค์กรได้
+P0416 [Normal] รายละเอียด
+P0417 [List Paragraph] เพิ่มวันหยุด
+P0418 [List Paragraph] แก้ไขวันหยุด
+P0419 [List Paragraph] ปิดการใช้งานวันหยุด
+P0420 [List Paragraph] แยกวันหยุดตามปี
+P0421 [List Paragraph] ใช้วันหยุดในการคำนวณจำนวนวันลา
+P0422 [List Paragraph] วันหยุดที่ inactive จะไม่ถูกนำมาหักออกจากการคำนวณวันลา
+P0423 [Normal] สูตรคำนวณวันลา
+P0424 [Normal] leave_days = จำนวนวันทำการระหว่าง start_date ถึง end_date โดยไม่นับวันเสาร์ วันอาทิตย์ และวันหยุดองค์กรที่ active อยู่ในระบบ
+P0425 [Normal] FR-14 Reporting
+P0426 [Normal] ระบบต้องมีรายงานพื้นฐาน
+T009 BLOCK=427 ROWS=7 GRID=[4675, 4675]
+  R000 | Report | ผู้ใช้งานที่เข้าถึงได้
+  R001 | รายงานประวัติการลาของตนเอง | ทุก Role เฉพาะข้อมูลตนเอง
+  R002 | รายงานคำขอรออนุมัติ | Supervisor
+  R003 | รายงานการลาของลูกทีม | Supervisor
+  R004 | รายงานวันลาคงเหลือ | HR
+  R005 | รายงานการลารายแผนก | HR
+  R006 | รายงานคำขอตามสถานะ | HR
+P0429 [Normal] Filter รายงาน
+P0430 [List Paragraph] วันที่เริ่มต้น
+P0431 [List Paragraph] วันที่สิ้นสุด
+P0432 [List Paragraph] แผนก
+P0433 [List Paragraph] พนักงาน
+P0434 [List Paragraph] ประเภทการลา
+P0435 [List Paragraph] สถานะคำขอ
+P0436 [List Paragraph] ปี
+P0437 [Normal] Export
+P0438 [List Paragraph] รองรับ Excel เท่านั้นในระบบเวอร์ชันปัจจุบัน
+P0439 [List Paragraph] PDF เป็น Future Scope
+P0440 [Normal] FR-15 In-App Notification
+P0441 [Normal] ระบบต้องรองรับการแจ้งเตือนภายในระบบ
+P0442 [Normal] เหตุการณ์ที่ต้องแจ้งเตือน
+P0443 [Normal] เมื่อ Employee ส่งคำขอสำเร็จ
+P0444 [List Paragraph] เมื่อมีคำขอรอ Supervisor อนุมัติ
+P0445 [List Paragraph] เมื่อคำขอได้รับอนุมัติ
+P0446 [List Paragraph] เมื่อคำขอถูกปฏิเสธ
+P0447 [List Paragraph] Notification Event ของ Workflow ปัจจุบันมีเฉพาะ Submit, Approve และ Reject; การ Cancel ไม่สร้าง Notification
+P0448 [Normal] ความสามารถของผู้ใช้
+P0449 [List Paragraph] ดูรายการแจ้งเตือนของตนเอง
+P0450 [List Paragraph] เห็นเฉพาะแจ้งเตือนที่เกี่ยวข้องกับตนเอง
+P0451 [List Paragraph] เปลี่ยนสถานะแจ้งเตือนเป็นอ่านแล้วได้
+P0452 [List Paragraph] ปลี่ยนแจ้งเตือนทั้งหมดเป็นอ่านแล้วได้
+P0453 [Normal] FR-16 Audit Log
+P0454 [Normal] ระบบต้องบันทึก Event สำคัญที่กำหนด และไม่อ้างว่าครอบคลุมทุก Action
+P0455 [Normal] เหตุการณ์ที่ต้องบันทึก
+P0456 [List Paragraph] user_created
+P0457 [List Paragraph] admin_password_reset
+P0458 [List Paragraph] change_password
+P0459 [List Paragraph] password_reset_rate_limited
+P0460 [List Paragraph] password_reset_otp_requested
+P0461 [List Paragraph] password_reset_otp_failed
+P0462 [List Paragraph] password_reset_otp_verified
+P0463 [List Paragraph] password_reset_completed
+P0464 [List Paragraph] leave_approved
+P0465 [List Paragraph] leave_rejected
+P0466 [List Paragraph] หมายเหตุ: Backend ปัจจุบันบันทึกเฉพาะ Event สำคัญข้างต้น ไม่อ้างว่าบันทึกทุก Action ของระบบ
+P0467 [Normal] ข้อมูลที่ต้องบันทึก
+P0468 [List Paragraph] user_id
+P0469 [List Paragraph] action
+P0470 [List Paragraph] table_name
+P0471 [List Paragraph] record_id
+P0472 [List Paragraph] detail
+P0473 [List Paragraph] ip_address
+P0474 [List Paragraph] created_at
+P0475 [Normal] รูปแบบ detail สำหรับ action สำคัญ
+P0476 [Normal] กรณีปรับสิทธิ์วันลา ให้เก็บ detail อย่างน้อยดังนี้
+P0477 [Normal] {
+P0478 [Normal] "employee_id": 10,
+P0479 [Normal] "leave_type_id": 1,
+P0480 [Normal] "year": 2569,
+P0481 [Normal] "old_total_days": 10,
+P0482 [Normal] "new_total_days": 12,
+P0483 [Normal] "old_used_days": 3,
+P0484 [Normal] "new_used_days": 3,
+P0485 [Normal] "reason": "ปรับสิทธิ์ตามอายุงาน"
+P0486 [Normal] }
+P0487 [Normal] FR-17 Temporary Password และ Password Policy
+P0488 [Normal] ระบบต้องรองรับ Temporary Password สำหรับบัญชีที่ Admin สร้างหรือ Reset Password และบังคับให้ผู้ใช้เปลี่ยนรหัสผ่านก่อนใช้งานฟังก์ชันธุรกิจ
+P0489 [Normal] รายละเอียด
+P0490 [List Paragraph] Admin สร้างบัญชีหรือ Reset Password แล้วระบบสร้าง Temporary Password แบบสุ่ม
+P0491 [List Paragraph] ระบบจัดเก็บเฉพาะ Password Hash และกำหนด must_change_password = true
+P0492 [List Paragraph] ผู้ใช้ที่ยังไม่เปลี่ยน Temporary Password เข้าถึงได้เฉพาะ Session และ Change Password
+P0493 [List Paragraph] รหัสผ่านใหม่ต้องยาวอย่างน้อย 10 ตัว มีตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก ตัวเลข และอักขระพิเศษ โดยห้ามมีช่องว่าง
+P0494 [List Paragraph] รหัสผ่านใหม่ต้องต่างจากรหัสผ่านปัจจุบัน Username และ Email
+P0495 [List Paragraph] เมื่อเปลี่ยนรหัสผ่านสำเร็จ ระบบล้าง must_change_password และเพิ่ม token_version เพื่อยกเลิก Session เดิม
+P0496 [Normal] FR-18 Forgot Password, OTP และ Reset Token
+P0497 [Normal] ผู้ใช้ทุก Role สามารถขอรีเซ็ตรหัสผ่านด้วย Username หรือ Email ที่ผูกกับบัญชี Active ได้
+P0498 [Normal] รายละเอียด
+P0499 [List Paragraph] ระบบส่ง OTP 6 หลักไปยัง Email ที่ลงทะเบียน โดยไม่เปิดเผยว่ามีบัญชีหรือไม่
+P0500 [List Paragraph] ระบบจำกัดอัตราการขอ OTP, ระยะเวลาขอซ้ำ และจำนวนครั้งที่กรอกผิด
+P0501 [List Paragraph] OTP ต้องมีวันหมดอายุ ใช้ได้ครั้งเดียว และ OTP ใหม่ต้องทำให้ OTP เดิมใช้ไม่ได้
+P0502 [List Paragraph] เมื่อยืนยัน OTP สำเร็จ ระบบออก Reset Token แบบใช้ครั้งเดียวและมีวันหมดอายุ
+P0503 [List Paragraph] การ Reset Password ต้องตรวจ Password Policy, ทำให้ OTP/Token ถูกใช้แล้ว และยกเลิก Token อื่นของผู้ใช้
+P0504 [Normal] FR-19 Profile Management
+P0505 [Normal] ผู้ใช้ทุก Role สามารถดูและแก้ไขข้อมูล Profile ของตนเองได้ตามฟิลด์ที่ระบบอนุญาต
+P0506 [Normal] รายละเอียด
+P0507 [List Paragraph] ผู้ใช้แก้ไขชื่อ นามสกุล Email เบอร์โทรศัพท์ และรูปโปรไฟล์ของตนเองได้
+P0508 [List Paragraph] รูปโปรไฟล์รองรับ JPEG, PNG หรือ WebP จำนวน 1 ไฟล์ ขนาดไม่เกิน 2 MB
+P0509 [List Paragraph] ผู้ใช้สามารถลบรูปเดิมได้ และระบบต้องไม่อนุญาตให้แก้ Employee ID, Role, Department หรือ Position ผ่านหน้า Profile
+P0510 [Normal] FR-20 Notification Management
+P0511 [Normal] ผู้ใช้ทุก Role จัดการ In-app Notification ที่เป็นของตนเองได้
+P0512 [Normal] รายละเอียด
+P0513 [List Paragraph] ระบบแสดงจำนวน Unread และเรียงรายการตามเวลาล่าสุด
+P0514 [List Paragraph] ผู้ใช้ Mark Read, Mark All Read และ Delete Notification ของตนเองได้
+P0515 [List Paragraph] Notification ที่มี Leave Request อ้างอิงสามารถเปิด Deep Link ไปยังรายละเอียดที่ผู้ใช้มีสิทธิ์เข้าถึง
+P0516 [List Paragraph] Submit แจ้ง Supervisor; Approve หรือ Reject แจ้งเจ้าของคำขอ
+P0517 [List Paragraph] HR และ Admin มีหน้า Notification ได้ แต่ Workflow ปัจจุบันไม่สร้าง Event เฉพาะให้สอง Role นี้
+P0518 [Normal] FR-21 Role Dashboard
+P0519 [Normal] ระบบต้องแสดง Dashboard ตาม Role โดยใช้ข้อมูลจริงจาก Backend และจำกัดข้อมูลตาม Ownership หรือ Data Scope
+P0520 [Normal] รายละเอียด
+P0521 [List Paragraph] ทุก Role เห็นข้อมูลคำขอและ Leave Balance ของตนเอง
+P0522 [List Paragraph] Supervisor เห็นจำนวน Pending และรายการล่าสุดของ Direct Team
+P0523 [List Paragraph] HR เห็นข้อมูลสรุปพนักงาน ประเภทการลา วันหยุด และคำขอระดับองค์กรตามสิทธิ์
+P0524 [List Paragraph] Admin เห็นข้อมูลสรุปบัญชีผู้ใช้ โครงสร้างองค์กร และ Audit Log ตามสิทธิ์
+P0525 [Normal] 8. Business Rules และ Non-Functional Requirements
+P0526 [Normal] 8.1 Business Rules
+T010 BLOCK=527 ROWS=41 GRID=[4675, 4675]
+  R000 | Code | Rule
+  R001 | BR-01 | พนักงานต้องมี available_days เพียงพอก่อนส่งคำขอ
+  R002 | BR-02 | วันลาคงเหลือต้องไม่ติดลบ
+  R003 | BR-03 | ระบบหักวันลาเมื่อคำขอเปลี่ยนเป็น approved เท่านั้น
+  R004 | BR-04 | ระบบ ระบบเวอร์ชันปัจจุบัน ยังไม่รองรับการคืนวันลาจากการยกเลิกหลังอนุมัติ
+  R005 | BR-05 | ห้ามยื่นลาซ้อนกับคำขอที่มีสถานะ pending หรือ approved
+  R006 | BR-06 | end_date ต้องมากกว่าหรือเท่ากับ start_date
+  R007 | BR-07 | leave_days ต้องมากกว่า 0
+  R008 | BR-08 | ลาป่วยเกิน 3 วันต้องแนบใบรับรองแพทย์
+  R009 | BR-09 | ผู้อนุมัติห้ามอนุมัติหรือปฏิเสธคำขอของตนเอง
+  R010 | BR-10 | ผู้ยื่นลาแก้ไขคำขอได้เฉพาะ draft
+  R011 | BR-11 | ผู้ยื่นลายกเลิกได้เฉพาะ pending
+  R012 | BR-12 | คำขอ approved, rejected, cancelled ไม่สามารถกลับเข้า workflow เดิม
+  R013 | BR-13 | ประเภทการลาที่เคยใช้งานแล้ว ห้ามลบ ให้ปิดการใช้งานแทน
+  R014 | BR-14 | คำนวณวันลาโดยไม่นับเสาร์ อาทิตย์ และวันหยุดองค์กร
+  R015 | BR-15 | request_no ต้องไม่ซ้ำ
+  R016 | BR-16 | request_no เป็น NULL ได้เฉพาะสถานะ draft
+  R017 | BR-17 | การ Submit ต้องสร้าง request_no และ approver_employee_id ใน Transaction เดียวกัน
+  R018 | BR-18 | การอนุมัติและการหักวันลาต้องทำใน Transaction เดียว
+  R019 | BR-19 | การปฏิเสธคำขอต้องระบุเหตุผล
+  R020 | BR-20 | ไฟล์แนบต้องเป็น PDF, JPG, JPEG หรือ PNG
+  R021 | BR-21 | ไฟล์แนบต้องไม่เกิน 10 MB
+  R022 | BR-22 | Audit Log ห้ามแก้ไขหรือลบผ่านระบบทั่วไป
+  R023 | BR-23 | Supervisor อนุมัติได้เฉพาะคำขอที่ระบุ approver_employee_id เป็นของตนเอง
+  R024 | BR-24 | Admin เข้าถึงเอกสารแนบได้ตามสิทธิ์ของ Backend ปัจจุบัน
+  R025 | BR-25 | HR หรือ Admin ไม่สามารถอนุมัติหรือปฏิเสธคำขอลาแทน Supervisor ใน ระบบเวอร์ชันปัจจุบัน
+  R026 | BR-26 | ระบบเวอร์ชันปัจจุบัน รองรับเฉพาะการลาเต็มวัน ไม่รองรับลาครึ่งวัน
+  R027 | BR-27 | ระบบเวอร์ชันปัจจุบัน ไม่รองรับคำขอลาข้ามปี
+  R028 | BR-28 | supervisor_id ต้องอ้างถึงพนักงานที่มีบัญชี active และ Role = Supervisor
+  R029 | BR-29 | พนักงานไม่สามารถเป็น Supervisor ของตนเอง
+  R030 | BR-30 | pending_days ต้องถูกนำไปคำนวณ available_days
+  R031 | BR-31 | remaining_days และ available_days เป็นค่าคำนวณ ไม่ให้ผู้ใช้แก้ไขโดยตรง
+  R032 | BR-32 | Reason ต้องมีความยาว 5-500 ตัวอักษร
+  R033 | BR-33 | จำนวนวันลาต้องอยู่ระหว่าง minimum_days และ maximum_days_per_request ของ Leave Type
+  R034 | BR-34 | ไฟล์แนบคำขอลารองรับสูงสุด 5 ไฟล์ต่อการอัปโหลด และตรวจ MIME Type
+  R035 | BR-35 | Notification อ่าน แก้สถานะ หรือลบได้เฉพาะผู้ใช้เจ้าของข้อมูล
+  R036 | BR-36 | Temporary Password ต้องบังคับเปลี่ยนก่อนเข้าถึงฟังก์ชันธุรกิจ
+  R037 | BR-37 | OTP และ Reset Token ต้องมีวันหมดอายุ ใช้ได้ครั้งเดียว และถูกจัดเก็บในรูปแบบ Hash
+  R038 | BR-38 | Username ต้องไม่ซ้ำ และพนักงานหนึ่งคนมี User Account ได้หนึ่งบัญชี
+  R039 | BR-39 | ชื่อ Department, Position, Leave Type Code และ Entitlement ต่อพนักงาน/ประเภทลา/ปีต้องไม่ซ้ำ
+  R040 | BR-40 | ระบบบันทึกเฉพาะ Event สำคัญที่กำหนดใน Audit Log ไม่รับประกันการบันทึกทุก Action
+P0529 [Normal] 8.2 Non-Functional Requirements
+T011 BLOCK=530 ROWS=17 GRID=[4675, 4675]
+  R000 | Code | Rule
+  R001 | NFR-01 | จัดเก็บรหัสผ่านแบบ hash เช่น bcrypt หรือ Argon2 ไม่เก็บรหัสผ่านจริง
+  R002 | NFR-02 | ทุก API ต้องตรวจสอบ authentication และ authorization ตาม Role
+  R003 | NFR-03 | ไฟล์แนบต้องจำกัดสิทธิ์การเข้าถึงตาม Role
+  R004 | NFR-04 | ควรใช้ HTTPS เมื่อใช้งานจริง
+  R005 | NFR-05 | การ Submit, Approve, Reject และ Cancel ต้องทำงานแบบ Transaction เมื่อมีหลายตารางเกี่ยวข้อง
+  R006 | NFR-06 | Audit Log ต้องไม่ถูกแก้ไขหรือลบผ่านระบบทั่วไป
+  R007 | NFR-07 | หน้าใช้งานทั่วไปควรตอบสนองภายใน 3 วินาทีในข้อมูลขนาดปกติ
+  R008 | NFR-08 | การ Submit, Approve, Reject และ Cancel ควรเสร็จภายใน 5 วินาที
+  R009 | NFR-09 | ข้อความแจ้งเตือนต้องเข้าใจง่ายและระบุสาเหตุเมื่อทำรายการไม่สำเร็จ
+  R010 | NFR-10 | แยก Module ตามหน้าที่ เช่น Auth, User, Employee, Leave, Report
+  R011 | NFR-11 | รองรับ Browser สมัยใหม่ เช่น Chrome, Edge, Firefox
+  R012 | NFR-12 | จำกัดไฟล์แนบไม่เกิน 10 MB และตรวจ MIME type / extension
+  R013 | NFR-13 | API ที่อ่านข้อมูลรายการควรรองรับ pagination
+  R014 | NFR-14 | ข้อมูลวันที่และเวลาควรใช้ timezone เดียวกันทั้งระบบ
+  R015 | NFR-15 | ห้ามส่ง password_hash หรือข้อมูลลับกลับไปที่ frontend
+  R016 | NFR-16 | ต้องป้องกันการอนุมัติซ้ำหรือกดอนุมัติพร้อมกันแล้วทำให้วันลาติดลบ
+P0532 [Normal] 9. Database Design
+P0533 [Normal] ระบบใช้ 15 ตารางหลัก
+P0534 [List Paragraph] roles
+P0535 [List Paragraph] users
+P0536 [List Paragraph] employees
+P0537 [List Paragraph] departments
+P0538 [List Paragraph] positions
+P0539 [List Paragraph] leave_types
+P0540 [List Paragraph] leave_entitlements
+P0541 [List Paragraph] leave_requests
+P0542 [List Paragraph] leave_approval_logs
+P0543 [List Paragraph] leave_request_attachments
+P0544 [List Paragraph] holidays
+P0545 [List Paragraph] notifications
+P0546 [List Paragraph] audit_logs
+P0547 [Normal] 9.1 ERD แบบข้อความ
+P0548 [Normal] roles 1 ──── * users
+P0549 [Normal] employees 1 ──── 1 users
+P0550 [Normal] departments 1 ──── * employees
+P0551 [Normal] positions 1 ──── * employees
+P0552 [Normal] employees 1 ──── * employees
+P0553 [Normal] ผ่าน employees.supervisor_id
+P0554 [Normal] employees 1 ──── * leave_requests
+P0555 [Normal] ผ่าน leave_requests.employee_id
+P0556 [Normal] employees 1 ──── * leave_requests
+P0557 [Normal] ผ่าน leave_requests.approver_employee_id
+P0558 [Normal] leave_types 1 ──── * leave_requests
+P0559 [Normal] employees 1 ──── * leave_entitlements
+P0560 [Normal] leave_types 1 ──── * leave_entitlements
+P0561 [Normal] leave_requests 1 ──── * leave_approval_logs
+P0562 [Normal] leave_requests 1 ──── * leave_attachments
+P0563 [Normal] leave_requests 1 ──── * notifications
+P0564 [Normal] users 1 ──── * notifications
+P0565 [Normal] users 1 ──── * audit_logs
+P0566 [Normal] 9.2 ตาราง roles
+P0567 [Normal] ตาราง roles ใช้สำหรับจัดเก็บข้อมูลบทบาทของผู้ใช้งานในระบบ เช่น Employee, Supervisor, HR และ Admin
+T012 BLOCK=568 ROWS=5 GRID=[2337, 2337, 2338, 2338]
+  R000 | Field | Type | Key | Description
+  R001 | role_id | INT | PK | รหัสบทบาท
+  R002 | role_name | VARCHAR(50) | UNIQUE | ชื่อบทบาท เช่น Employee, Supervisor, HR, Admin
+  R003 | description | TEXT |  | รายละเอียดของบทบาท
+  R004 | is_active | BOOLEAN |  | สถานะการใช้งานของบทบาท
+P0569 [Normal] หมายเหตุ
+P0570 [Normal] Role เป็น Master Data ของระบบเวอร์ชันปัจจุบัน และไม่เปิดให้เพิ่ม Role ใหม่ผ่านหน้าจอ
+P0571 [Normal] 9.3 ตาราง users
+P0572 [Normal] ตาราง users ใช้สำหรับจัดเก็บข้อมูลบัญชีผู้ใช้งานที่ใช้เข้าสู่ระบบ โดยเชื่อมโยงกับข้อมูลพนักงานและบทบาทของผู้ใช้งาน
+T013 BLOCK=573 ROWS=13 GRID=[2337, 2337, 2338, 2338]
+  R000 | Field | Type | Key | Description
+  R001 | user_id | INT | PK | รหัสผู้ใช้งาน
+  R002 | employee_id | INT | FK, UNIQUE | อ้างอิง employees.employee_id
+  R003 | role_id | INT | FK roles.role_id | อ้างอิงรหัสบทบาท
+  R004 | username | VARCHAR(50) | Unique | ชื่อผู้ใช้สำหรับเข้าสู่ระบบ
+  R005 | password_hash | VARCHAR(255) |  | รหัสผ่านที่ผ่านกระบวนการ Hash แล้ว
+  R006 | status | ENUM |  | สถานะบัญชี เช่น active, inactive, locked
+  R007 | last_login_at | DATETIME |  | วันและเวลาที่เข้าสู่ระบบล่าสุด
+  R008 | created_at | DATETIME |  | วันที่สร้างข้อมูล
+  R009 | updated_at | DATETIME |  | วันที่แก้ไขข้อมูลล่าสุด
+  R010 | password_changed_at | DATETIME | NULL | เวลาที่เปลี่ยนรหัสผ่านล่าสุด
+  R011 | must_change_password | BOOLEAN |  | บังคับเปลี่ยน Temporary Password
+  R012 | token_version | INT UNSIGNED |  | รุ่น Token สำหรับยกเลิก Session เดิม
+P0574 [Normal] หมายเหตุ
+P0575 [Normal] ตาราง users ไม่เก็บ email เพื่อลดข้อมูลซ้ำ ให้ใช้ employees.email เป็น email หลักของพนักงาน
+P0576 [Normal] 9.4 ตาราง employees
+P0577 [Normal] ตาราง employees ใช้สำหรับจัดเก็บข้อมูลพนักงานภายในองค์กร เพื่อใช้ประกอบการยื่นคำขอลา การกำหนดหัวหน้างาน และการจัดทำรายงาน
+T014 BLOCK=578 ROWS=15 GRID=[2337, 2337, 2338, 2338]
+  R000 | Field | Type | Key | Description
+  R001 | employee_id | INT | PK | รหัสพนักงาน
+  R002 | employee_code | VARCHAR(20) | Unique | รหัสพนักงาน
+  R003 | first_name | VARCHAR(100) |  | ชื่อพนักงาน
+  R004 | last_name | VARCHAR(100) |  | นามสกุลพนักงาน
+  R005 | phone | VARCHAR(20) |  | เบอร์โทรศัพท์
+  R006 | email | VARCHAR(100) | Unique | อีเมลพนักงาน
+  R007 | department_id | INT | FK departments.department_id | อ้างอิงรหัสแผนก
+  R008 | position_id | INT | FK positions.position_id | อ้างอิงรหัสตำแหน่ง
+  R009 | supervisor_id | INT | FK employees.employee_id | อ้างอิงรหัสหัวหน้างาน
+  R010 | hire_date | DATE |  | วันที่เริ่มงาน
+  R011 | status | ENUM |  | สถานะพนักงาน เช่น active, inactive, resigned
+  R012 | created_at | DATETIME |  | วันที่สร้างข้อมูล
+  R013 | updated_at | DATETIME |  | วันที่แก้ไขข้อมูลล่าสุด
+  R014 | profile_image_url | VARCHAR(255) | NULL | ตำแหน่งไฟล์รูปโปรไฟล์
+P0579 [Normal] Constraint สำคัญ
+P0580 [List Paragraph] supervisor_id ต้องไม่เท่ากับ employee_id
+P0581 [List Paragraph] supervisor_id ต้องอ้างถึงพนักงานที่มี user active และ Role = Supervisor
+P0582 [Normal] 9.5 ตาราง departments
+P0583 [Normal] ตาราง departments ใช้สำหรับจัดเก็บข้อมูลแผนกภายในองค์กร เพื่อใช้เชื่อมโยงกับข้อมูลพนักงานและรายงานการลา
+T015 BLOCK=584 ROWS=7 GRID=[2337, 2337, 2338, 2338]
+  R000 | Field | Type | Key | Description
+  R001 | department_id | INT | PK | รหัสแผนก
+  R002 | department_name | VARCHAR(100) | Unique | ชื่อแผนก
+  R003 | description | TEXT |  | รายละเอียดของแผนก
+  R004 | is_active | BOOLEAN |  | สถานะการใช้งานของแผนก
+  R005 | created_at | DATETIME |  | วันที่สร้าง
+  R006 | updated_at | DATETIME |  | วันที่แก้ไข
+P0586 [Normal] 9.6 ตาราง positions
+P0587 [Normal] ตาราง positions ใช้สำหรับจัดเก็บข้อมูลตำแหน่งงานภายในองค์กร เพื่อใช้เชื่อมโยงกับข้อมูลพนักงานและโครงสร้างองค์กร
+T016 BLOCK=588 ROWS=6 GRID=[2337, 2337, 2338, 2338]
+  R000 | Field | Type | Key | Description
+  R001 | position_id | INT | PK | รหัสตำแหน่ง
+  R002 | position_name | VARCHAR(100) | UNIQUE | ชื่อตำแหน่งงาน
+  R003 | is_active | BOOLEAN |  | สถานะการใช้งานของตำแหน่ง
+  R004 | created_at | DATETIME |  | วันที่สร้าง
+  R005 | updated_at | DATETIME |  | วันที่แก้ไข
+P0589 [Normal] หมายเหตุ ตาราง positions ไม่เก็บ department_id เพราะพนักงานแต่ละคนอ้างอิงแผนกผ่าน employees.department_id
+P0590 [Normal] 9.7 ตาราง leave_types
+P0591 [Normal] ตาราง leave_types ใช้สำหรับจัดเก็บข้อมูลประเภทการลา เช่น ลาป่วย ลากิจ ลาพักร้อน และเงื่อนไขของประเภทการลาแต่ละประเภท
+T017 BLOCK=592 ROWS=13 GRID=[2569, 2273, 2244, 2264]
+  R000 | Field | Type | Key | Description
+  R001 | leave_type_id | INT | PK | รหัสประเภทการลา
+  R002 | leave_type_name | VARCHAR(100) | Unique | ชื่อประเภทการลา
+  R003 | annual_quota_days | DECIMAL(5,2) |  | ค่า default จำนวนวันลาต่อปี
+  R004 | requires_attachment | BOOLEAN |  | กำหนดว่าต้องแนบเอกสารหรือไม่
+  R005 | attachment_required_after_days | DECIMAL(5,2) | NULL | จำนวนวันที่ต้องแนบเมื่อเกินกำหนด
+  R006 | is_active | BOOLEAN |  | สถานะการใช้งานของประเภทการลา
+  R007 | created_at | DATETIME |  | วันที่สร้างข้อมูล
+  R008 | updated_at | DATETIME |  | วันที่แก้ไขข้อมูลล่าสุด
+  R009 | leave_type_code | VARCHAR(10) | UNIQUE | รหัสประเภทการลา
+  R010 | description | VARCHAR(300) | NULL | รายละเอียดประเภทการลา
+  R011 | minimum_days | DECIMAL(5,2) |  | จำนวนวันลาขั้นต่ำต่อคำขอ
+  R012 | maximum_days_per_request | DECIMAL(5,2) |  | จำนวนวันลาสูงสุดต่อคำขอ
+P0594 [Normal] 9.8 ตาราง leave_entitlements
+P0595 [Normal] ตาราง leave_entitlements ใช้สำหรับจัดเก็บสิทธิ์วันลาของพนักงานแต่ละคนในแต่ละปี โดยแยกตามประเภทการลา
+T018 BLOCK=596 ROWS=9 GRID=[2337, 2337, 2338, 2338]
+  R000 | Field | Type | Key | Description
+  R001 | entitlement_id | INT | PK | รหัสสิทธิ์วันลา
+  R002 | employee_id | INT | FK employees.employee_id | อ้างอิงรหัสพนักงาน
+  R003 | leave_type_id | INT | FK leave_types.leave_type_id | อ้างอิงรหัสประเภทการลา
+  R004 | year | INT |  | ปีของสิทธิ์วันลา
+  R005 | total_days | DECIMAL(5,2) |  | จำนวนวันลาทั้งหมด
+  R006 | used_days | DECIMAL(5,2) |  | จำนวนวันที่ใช้ไปแล้ว
+  R007 | updated_by | INT | FK users.user_id | ผู้แก้ไขข้อมูลล่าสุด
+  R008 | updated_at | DATETIME |  | วันที่แก้ไขข้อมูลล่าสุด
+P0597 [Normal] Constraint
+P0598 [List Paragraph] UNIQUE(employee_id, leave_type_id, year)
+P0599 [List Paragraph] total_days >= 0
+P0600 [List Paragraph] used_days >= 0
+P0601 [List Paragraph] used_days <= total_days
+P0602 [Normal] ค่าที่ไม่เก็บเป็น field
+P0603 [List Paragraph] remaining_days = total_days - used_days
+P0604 [List Paragraph] pending_days = SUM leave_days จาก leave_requests ที่ status = pending
+P0605 [List Paragraph] available_days = total_days - used_days - pending_days
+P0606 [Normal] 9.9 ตาราง leave_requests
+P0607 [Normal] ตาราง leave_requests ใช้สำหรับจัดเก็บข้อมูลคำขอลาของพนักงาน ตั้งแต่การสร้างคำขอ การส่งคำขอ การอนุมัติ การปฏิเสธ และการยกเลิกคำขอ
+T019 BLOCK=608 ROWS=17 GRID=[2337, 2337, 2338, 2338]
+  R000 | Field | Type | Key | Description
+  R001 | leave_request_id | INT | PK | รหัสคำขอลา
+  R002 | request_no | VARCHAR(30) | UNIQUE, NULL | เลขที่คำขอลา สร้างตอน Submit
+  R003 | employee_id | INT | FK employees.employee_id | อ้างอิงรหัสพนักงานผู้ยื่นลา
+  R004 | leave_type_id | INT | FK leave_types.leave_type_id | อ้างอิงรหัสประเภทการลา
+  R005 | approver_employee_id | INT | FK, NULL | Supervisor ณ เวลาที่ Submit
+  R006 | start_date | DATE |  | วันที่เริ่มลา
+  R007 | end_date | DATE |  | วันที่สิ้นสุดการลา
+  R008 | leave_days | DECIMAL(5,2) |  | จำนวนวันลา
+  R009 | reason | TEXT |  | เหตุผลการลา
+  R010 | status | ENUM |  | สถานะคำขอ เช่น draft, pending, approved, rejected, cancelled
+  R011 | submitted_at | DATETIME |  | วันที่ส่งคำขอ
+  R012 | approved_at | DATETIME |  | วันที่อนุมัติคำขอ
+  R013 | rejected_at | DATETIME |  | วันที่ปฏิเสธคำขอ
+  R014 | cancelled_at | DATETIME |  | วันที่ยกเลิกคำขอ
+  R015 | created_at | DATETIME |  | วันที่สร้างข้อมูล
+  R016 | updated_at | DATETIME |  | วันที่แก้ไขข้อมูลล่าสุด
+P0610 [Normal] 9.10 ตาราง leave_approval_logs
+P0611 [Normal] ตาราง leave_approval_logs ใช้สำหรับจัดเก็บประวัติการอนุมัติหรือปฏิเสธคำขอลา เพื่อให้สามารถตรวจสอบย้อนหลังได้
+T020 BLOCK=612 ROWS=7 GRID=[2276, 2240, 2583, 2251]
+  R000 | Field | Type | Key | Description
+  R001 | approval_id | INT | PK | รหัสประวัติการอนุมัติ
+  R002 | leave_request_id | INT | FK leave_requests.leave_request_id | อ้างอิงรหัสคำขอลา
+  R003 | approver_id | INT | FK users.user_id | อ้างอิงรหัสผู้อนุมัติ
+  R004 | action | ENUM |  | ผลการดำเนินการ เช่น approved, rejected
+  R005 | comment | TEXT |  | หมายเหตุหรือเหตุผลการปฏิเสธ
+  R006 | acted_at | DATETIME |  | วันที่และเวลาที่ดำเนินการ
+P0614 [Normal] 9.11 ตาราง leave_request_attachments
+P0615 [Normal] ตาราง leave_request_attachments ใช้สำหรับจัดเก็บ Metadata ของเอกสารแนบประกอบคำขอลา
+T021 BLOCK=616 ROWS=8 GRID=[2270, 2254, 2583, 2243]
+  R000 | Field | Type | Key | Description
+  R001 | attachment_id | BIGINT UNSIGNED | PK | รหัสเอกสารแนบ
+  R002 | leave_request_id | INT UNSIGNED | FK | อ้างอิงคำขอลาและลบตามคำขอ
+  R003 | original_name | VARCHAR(255) |  | ชื่อไฟล์เดิม
+  R004 | stored_name | VARCHAR(255) |  | ชื่อไฟล์ที่จัดเก็บ
+  R005 | mime_type | VARCHAR(100) |  | MIME Type ที่ตรวจสอบแล้ว
+  R006 | file_size | BIGINT UNSIGNED |  | ขนาดไฟล์หน่วย Byte
+  R007 | created_at | DATETIME |  | วันที่และเวลาที่อัปโหลด
+P0618 [Normal] 9.12 ตาราง holidays
+P0619 [Normal] ตาราง holidays ใช้สำหรับจัดเก็บข้อมูลวันหยุดองค์กร เพื่อใช้ประกอบการคำนวณจำนวนวันลา
+T022 BLOCK=620 ROWS=8 GRID=[2337, 2337, 2338, 2338]
+  R000 | Field | Type | Key | Description
+  R001 | holiday_id | INT | PK | รหัสวันหยุด
+  R002 | holiday_date | DATE | Unique | วันที่หยุด
+  R003 | holiday_name | VARCHAR(100) |  | ชื่อวันหยุด
+  R004 | year | INT |  | ปีของวันหยุด
+  R005 | is_active | BOOLEAN |  | สถานะการใช้งานของวันหยุด
+  R006 | holiday_type | VARCHAR(50) |  | ประเภทวันหยุด
+  R007 | description | VARCHAR(300) | NULL | รายละเอียดวันหยุด
+P0622 [Normal] 9.13 ตาราง notifications
+P0623 [Normal] ตาราง notifications ใช้สำหรับจัดเก็บ In-app Notification ของผู้ใช้ โดย Workflow ปัจจุบันสร้างรายการเมื่อ Submit, Approve หรือ Reject
+T023 BLOCK=624 ROWS=9 GRID=[2270, 2254, 2583, 2243]
+  R000 | Field | Type | Key | Description
+  R001 | notification_id | INT | PK | รหัสการแจ้งเตือน
+  R002 | user_id | INT | FK users.user_id | อ้างอิงรหัสผู้ใช้งานที่ได้รับการแจ้งเตือน
+  R003 | leave_request_id | INT | FK , NULL | คำขอลาที่เกี่ยวข้อง
+  R004 | title | VARCHAR(255) |  | หัวข้อการแจ้งเตือน
+  R005 | message | TEXT |  | รายละเอียดการแจ้งเตือน
+  R006 | notification_type | VARCHAR(50) |  | ประเภทการแจ้งเตือน เช่น pending, approved, rejected, cancelled
+  R007 | is_read | BOOLEAN |  | สถานะการอ่านแจ้งเตือน
+  R008 | created_at | DATETIME |  | วันที่และเวลาที่สร้างการแจ้งเตือน
+P0626 [Normal] 9.14 ตาราง audit_logs
+P0627 [Normal] ตาราง audit_logs ใช้สำหรับจัดเก็บประวัติกิจกรรมสำคัญของผู้ใช้งานและระบบ เพื่อรองรับการตรวจสอบย้อนหลัง
+T024 BLOCK=628 ROWS=9 GRID=[2337, 2337, 2338, 2338]
+  R000 | Field | Type | Key | Description
+  R001 | audit_id | INT | PK | รหัส Audit Log
+  R002 | user_id | INT | FK users.user_id | อ้างอิงรหัสผู้ดำเนินการ
+  R003 | action | VARCHAR(100) |  | ชื่อกิจกรรมที่เกิดขึ้น
+  R004 | table_name | VARCHAR(100) |  | ชื่อตารางที่เกี่ยวข้อง
+  R005 | record_id | INT |  | รหัสข้อมูลที่เกี่ยวข้อง
+  R006 | detail | TEXT / JSON |  | รายละเอียดของกิจกรรม
+  R007 | ip_address | VARCHAR(50) |  | IP Address ของผู้ใช้งาน
+  R008 | created_at | DATETIME |  | วันที่และเวลาที่บันทึกกิจกรรม
+P0630 [Normal] 9.15 ตาราง password_reset_otps
+P0631 [Normal] ตาราง password_reset_otps จัดเก็บ OTP แบบ Hash พร้อมสถานะการยืนยัน การใช้งาน การยกเลิก จำนวนครั้งที่ลอง และข้อมูลควบคุมอัตราการขอ
+T025 BLOCK=632 ROWS=9 GRID=[2337, 2337, 2338, 2338]
+  R000 | Field | Type | Key | Description
+  R001 | id | BIGINT UNSIGNED | PK | รหัสรายการ OTP
+  R002 | user_id | INT UNSIGNED | FK | บัญชีผู้ขอ Reset Password
+  R003 | otp_hash | CHAR(64) |  | ค่า OTP ที่ Hash แล้ว
+  R004 | expires_at | DATETIME |  | เวลาหมดอายุ
+  R005 | verified_at / used_at | DATETIME | NULL | เวลายืนยันและใช้งาน
+  R006 | invalidated_at | DATETIME | NULL | เวลาที่ทำให้ใช้ไม่ได้
+  R007 | attempt_count / resend_count | TINYINT |  | จำนวนครั้งที่ลองและขอซ้ำ
+  R008 | requested_ip / requested_user_agent | VARCHAR | NULL | ข้อมูลคำขอเพื่อความปลอดภัย
+P0633 [Normal] 9.16 ตาราง password_reset_tokens
+P0634 [Normal] ตาราง password_reset_tokens จัดเก็บ Reset Token แบบ Hash ที่ผูกกับ OTP ซึ่งผ่านการยืนยันแล้วและใช้ได้ครั้งเดียว
+T026 BLOCK=635 ROWS=8 GRID=[2337, 2337, 2338, 2338]
+  R000 | Field | Type | Key | Description
+  R001 | id | BIGINT UNSIGNED | PK | รหัส Reset Token
+  R002 | user_id | INT UNSIGNED | FK | บัญชีผู้ใช้
+  R003 | token_hash | CHAR(64) | UNIQUE | Reset Token ที่ Hash แล้ว
+  R004 | otp_id | BIGINT UNSIGNED | FK | OTP ที่ผ่านการยืนยัน
+  R005 | expires_at | DATETIME |  | เวลาหมดอายุ
+  R006 | used_at / invalidated_at | DATETIME | NULL | สถานะใช้แล้วหรือถูกยกเลิก
+  R007 | created_at | DATETIME |  | เวลาที่สร้าง
+P0636 [Normal] 10. API Specification
+P0638 [Normal] 10.1 Authentication
+T027 BLOCK=639 ROWS=10 GRID=[3116, 3117, 3117]
+  R000 | Method | Endpoint | Permission
+  R001 | POST | /api/auth/login | Public
+  R002 | POST | /api/auth/logout | ทุก Role
+  R003 | GET | /api/auth/me | ทุก Role
+  R004 | POST | /api/auth/change-password | ทุก Role
+  R005 | POST | /api/auth/forgot-password/request-otp | Public
+  R006 | POST | /api/auth/forgot-password/verify-otp | Public
+  R007 | POST | /api/auth/reset-password | Public พร้อม Reset Token
+  R008 | GET | /api/profile | ทุก Role หลังเปลี่ยน Temporary Password
+  R009 | PUT | /api/profile | ทุก Role เฉพาะ Profile ของตนเอง
+P0641 [Normal] 10.2 User Management
+T028 BLOCK=642 ROWS=8 GRID=[3116, 3117, 3117]
+  R000 | Method | Endpoint | Permission
+  R001 | GET | /api/admin/users | Admin
+  R002 | GET | /api/admin/users/{userId} | Admin
+  R003 | GET | /api/admin/employees/available-for-account | Admin
+  R004 | POST | /api/admin/users | Admin
+  R005 | PUT | /api/admin/users/{userId} | Admin
+  R006 | PATCH | /api/admin/users/{userId}/status | Admin
+  R007 | POST | /api/admin/users/{userId}/reset-password | Admin
+P0644 [Normal] 10.3 Employee Management
+T029 BLOCK=645 ROWS=6 GRID=[3036, 3270, 3044]
+  R000 | Method | Endpoint | Permission
+  R001 | GET | /api/hr/employees | HR / Admin
+  R002 | POST | /api/hr/employees | HR / Admin
+  R003 | GET | /api/hr/employees/{employeeId} | HR / Admin
+  R004 | PUT | /api/hr/employees/{employeeId} | HR / Admin
+  R005 | PATCH | /api/hr/employees/{employeeId}/status | HR / Admin
+P0647 [Normal] 10.4 Department Management
+T030 BLOCK=648 ROWS=6 GRID=[3116, 3117, 3117]
+  R000 | Method | Endpoint | Permission
+  R001 | GET | /api/hr/departments | HR / Admin
+  R002 | POST | /api/hr/departments | HR / Admin
+  R003 | GET | /api/hr/departments/{departmentId} | HR / Admin
+  R004 | PUT | /api/hr/departments/{departmentId} | HR / Admin
+  R005 | PATCH | /api/hr/departments/{departmentId}/status | HR / Admin
+P0650 [Normal] 10.5 Position Management
+T031 BLOCK=651 ROWS=6 GRID=[3116, 3117, 3117]
+  R000 | Method | Endpoint | Permission
+  R001 | GET | /api/hr/positions | HR / Admin
+  R002 | POST | /api/hr/positions | HR / Admin
+  R003 | GET | /api/hr/positions/{positionId} | HR / Admin
+  R004 | PUT | /api/hr/positions/{positionId} | HR / Admin
+  R005 | PATCH | /api/hr/positions/{positionId}/status | HR / Admin
+P0653 [Normal] 10.6 Leave Type Management
+T032 BLOCK=654 ROWS=6 GRID=[3116, 3117, 3117]
+  R000 | Method | Endpoint | Permission
+  R001 | GET | /api/hr/leave-types | HR / Admin
+  R002 | POST | /api/hr/leave-types | HR / Admin
+  R003 | GET | /api/hr/leave-types/{leaveTypeId} | HR / Admin
+  R004 | PUT | /api/hr/leave-types/{leaveTypeId} | HR / Admin
+  R005 | PATCH | /api/hr/leave-types/{leaveTypeId}/status | HR / Admin
+P0656 [Normal] 10.7 Leave Entitlement Management
+T033 BLOCK=657 ROWS=6 GRID=[3116, 3117, 3117]
+  R000 | Method | Endpoint | Permission
+  R001 | GET | /api/leave/balance | ทุก Role เฉพาะของตนเอง
+  R002 | GET | /api/hr/leave-entitlements | HR / Admin
+  R003 | POST | /api/hr/leave-entitlements | HR / Admin
+  R004 | GET | /api/hr/leave-entitlements/{entitlementId} | HR / Admin
+  R005 | PUT | /api/hr/leave-entitlements/{entitlementId} | HR / Admin
+P0659 [Normal] 10.8 Leave Request Management
+T034 BLOCK=660 ROWS=10 GRID=[3116, 3117, 3117]
+  R000 | Method | Endpoint | Permission
+  R001 | GET | /api/leave/options | ทุก Role
+  R002 | GET | /api/leave/requests | ทุก Role เฉพาะของตนเอง
+  R003 | GET | /api/leave/requests/{requestId} | Owner
+  R004 | POST | /api/leave/requests/drafts | ทุก Role
+  R005 | PUT | /api/leave/requests/{requestId}/draft | Owner เฉพาะ Draft
+  R006 | POST | /api/leave/requests/submit | ทุก Role
+  R007 | POST | /api/leave/requests/{requestId}/submit | Owner เฉพาะ Draft
+  R008 | DELETE | /api/leave/requests/{requestId}/draft | Owner เฉพาะ Draft
+  R009 | PATCH | /api/leave/requests/{requestId}/cancel | Owner เฉพาะ Pending
+P0662 [Normal] 10.9 Approval
+T035 BLOCK=663 ROWS=4 GRID=[3008, 3323, 3019]
+  R000 | Method | Endpoint | Permission
+  R001 | GET | /api/supervisor/approvals | Supervisor
+  R002 | GET | /api/supervisor/approvals/{requestId} | Direct Supervisor
+  R003 | POST | /api/supervisor/approvals/{requestId}/decision | Direct Supervisor
+P0665 [Normal] 10.10 Attachment
+T036 BLOCK=666 ROWS=3 GRID=[3116, 3117, 3117]
+  R000 | Method | Endpoint | Permission
+  R001 | GET | /api/leave-attachments/{attachmentId} | Owner / Direct Supervisor / HR / Admin
+  R002 | DELETE | /api/leave-attachments/{attachmentId} | Owner เฉพาะ Draft
+P0667 [Normal] 10.11 Holiday Management
+T037 BLOCK=668 ROWS=6 GRID=[3116, 3117, 3117]
+  R000 | Method | Endpoint | Permission
+  R001 | GET | /api/hr/holidays | HR / Admin
+  R002 | POST | /api/hr/holidays | HR / Admin
+  R003 | GET | /api/hr/holidays/{holidayId} | HR / Admin
+  R004 | PUT | /api/hr/holidays/{holidayId} | HR / Admin
+  R005 | DELETE | /api/hr/holidays/{holidayId} | HR / Admin
+P0670 [Normal] 10.12 Notification
+T038 BLOCK=671 ROWS=5 GRID=[3116, 3117, 3117]
+  R000 | Method | Endpoint | Permission
+  R001 | GET | /api/notifications | ทุก Role เฉพาะของตนเอง
+  R002 | PATCH | /api/notifications/{notificationId}/read | ทุก Role เฉพาะของตนเอง
+  R003 | PATCH | /api/notifications/read-all | ทุก Role เฉพาะของตนเอง
+  R004 | DELETE | /api/notifications/{notificationId} | ทุก Role เฉพาะของตนเอง
+P0673 [Normal] 10.13 Reports
+T039 BLOCK=674 ROWS=3 GRID=[3116, 3117, 3117]
+  R000 | Method | Endpoint | Permission
+  R001 | GET | /api/supervisor/team-report | Supervisor เฉพาะ Direct Team
+  R002 | GET | /api/reports/leave-requests | HR / Admin
+P0676 [Normal] 10.14 Audit Log
+T040 BLOCK=677 ROWS=2 GRID=[3116, 3117, 3117]
+  R000 | Method | Endpoint | Permission
+  R001 | GET | /api/admin/audit-logs | Admin
+P0678 [Normal] ไม่มี API สำหรับแก้ไขหรือลบ Audit Log
+P0680 [Normal] 11. Validation Logic สำหรับ Dev
+P0681 [Normal] 11.1 คำนวณจำนวนวันลา
+P0682 [Normal] leave_days = 0
+P0683 [Normal] FOR each date between start_date and end_date:
+P0684 [Normal] IF date is Saturday OR Sunday:
+P0685 [Normal] continue
+P0686 [Normal] ELSE IF date exists in holidays where is_active = true:
+P0687 [Normal] continue
+P0688 [Normal] ELSE:
+P0689 [Normal] leave_days += 1
+P0690 [Normal] IF leave_days <= 0:
+P0691 [Normal] RETURN error "จำนวนวันลาต้องมากกว่า 0"
+P0692 [Normal] 11.2 ตรวจสอบลาข้ามปี
+P0693 [Normal] IF year(start_date) != year(end_date):
+P0694 [Normal] RETURN error "ระบบ ระบบเวอร์ชันปัจจุบัน ไม่รองรับการยื่นลาข้ามปี กรุณาแยกคำขอเป็นคนละปี"
+P0695 [Normal] 11.3 ตรวจสอบลาซ้อน
+P0696 [Normal] existing = SELECT * FROM leave_requests
+P0697 [Normal] WHERE employee_id = current_employee_id
+P0698 [Normal] AND status IN ('pending', 'approved')
+P0699 [Normal] AND start_date <= new_end_date
+P0700 [Normal] AND end_date >= new_start_date
+P0701 [Normal] IF existing exists:
+P0702 [Normal] RETURN error "มีคำขอลาในช่วงวันที่ซ้ำกัน"
+P0703 [Normal] 11.4 ตรวจสอบสิทธิ์วันลา
+P0704 [Normal] entitlement = get entitlement by employee_id, leave_type_id, year
+P0705 [Normal] pending_days = SUM leave_days
+P0706 [Normal] FROM leave_requests
+P0707 [Normal] WHERE employee_id = current_employee_id
+P0708 [Normal] AND leave_type_id = selected_leave_type_id
+P0709 [Normal] AND status = 'pending'
+P0710 [Normal] available_days = entitlement.total_days - entitlement.used_days - pending_days
+P0711 [Normal] IF available_days < leave_days:
+P0712 [Normal] RETURN error "วันลาคงเหลือไม่เพียงพอ"
+P0713 [Normal] 11.5 ตรวจสอบหัวหน้างานก่อน Submit
+P0714 [Normal] employee = get current employee
+P0715 [Normal] IF employee.supervisor_id is null:
+P0716 [Normal] RETURN error "ไม่พบหัวหน้างานของผู้ยื่นลา"
+P0717 [Normal] supervisor_user = get user by employee.supervisor_id
+P0718 [Normal] IF supervisor_user is null:
+P0719 [Normal] RETURN error "หัวหน้างานยังไม่มีบัญชีผู้ใช้ในระบบ"
+P0720 [Normal] IF supervisor_user.status != 'active':
+P0721 [Normal] RETURN error "บัญชีหัวหน้างานไม่พร้อมใช้งาน"
+P0722 [Normal] IF supervisor_user.role != 'Supervisor':
+P0723 [Normal] RETURN error "หัวหน้างานต้องมี Role = Supervisor"
+P0724 [Normal] IF employee.supervisor_id == employee.employee_id:
+P0725 [Normal] RETURN error "พนักงานไม่สามารถเป็นหัวหน้างานของตนเองได้"
+P0726 [Normal] 11.6 Submit คำขอลา
+P0727 [Normal] BEGIN TRANSACTION
+P0728 [Normal] leave_request = get leave_request by id
+P0729 [Normal] IF leave_request.status != 'draft':
+P0730 [Normal] RETURN error "ส่งคำขอได้เฉพาะสถานะ draft"
+P0731 [Normal] IF leave_request.employee_id != current_employee_id:
+P0732 [Normal] RETURN error "ผู้ใช้สามารถส่งคำขอได้เฉพาะคำขอของตนเองเท่านั้น"
+P0733 [Normal] validate leave_days
+P0734 [Normal] validate cross-year
+P0735 [Normal] validate overlap leave request
+P0736 [Normal] validate available_days
+P0737 [Normal] validate supervisor
+P0738 [Normal] UPDATE leave_requests
+P0739 [Normal] SET status = 'pending',
+P0740 [Normal] request_no = generate_request_no(),
+P0741 [Normal] leave_days = calculated_leave_days,
+P0742 [Normal] approver_employee_id = employee.supervisor_id,
+P0743 [Normal] submitted_at = now()
+P0744 [Normal] INSERT notifications ให้ Supervisor
+P0745 [Normal] INSERT audit_logs
+P0746 [Normal] COMMIT
+P0747 [Normal] 11.7 อนุมัติคำขอ
+P0748 [Normal] BEGIN TRANSACTION
+P0749 [Normal] leave_request = get leave_request by id
+P0750 [Normal] IF leave_request.status != 'pending':
+P0751 [Normal] RETURN error "อนุมัติได้เฉพาะคำขอที่อยู่ในสถานะ pending"
+P0752 [Normal] IF current_employee_id != leave_request.approver_employee_id:
+P0753 [Normal] RETURN error "ผู้ใช้คนนี้ไม่มีสิทธิ์อนุมัติคำขอนี้"
+P0754 [Normal] IF current_employee_id == leave_request.employee_id:
+P0755 [Normal] RETURN error "ไม่สามารถอนุมัติคำขอของตนเองได้"
+P0756 [Normal] entitlement = get entitlement FOR UPDATE
+P0757 [Normal] available_days = entitlement.total_days - entitlement.used_days - 	pending_days_excluding_current_request
+P0758 [Normal] IF available_days < leave_request.leave_days:
+P0759 [Normal] RETURN error "วันลาคงเหลือไม่เพียงพอ"
+P0760 [Normal] UPDATE leave_requests
+P0761 [Normal] SET status = 'approved',
+P0762 [Normal] approved_at = now()
+P0763 [Normal] UPDATE leave_entitlements
+P0764 [Normal] SET used_days = used_days + leave_request.leave_days
+P0765 [Normal] INSERT leave_approval_logs
+P0766 [Normal] INSERT notifications ให้ผู้ยื่นลา
+P0767 [Normal] INSERT audit_logs
+P0768 [Normal] COMMIT
+P0769 [Normal] 11.8 ปฏิเสธคำขอ
+P0770 [Normal] BEGIN TRANSACTION
+P0771 [Normal] leave_request = get leave_request by id
+P0772 [Normal] IF leave_request.status != 'pending':
+P0773 [Normal] RETURN error "ปฏิเสธได้เฉพาะคำขอที่อยู่ในสถานะ pending"
+P0774 [Normal] IF current_employee_id != leave_request.approver_employee_id:
+P0775 [Normal] RETURN error "ผู้ใช้คนนี้ไม่มีสิทธิ์ปฏิเสธคำขอนี้"
+P0776 [Normal] IF current_employee_id == leave_request.employee_id:
+P0777 [Normal] RETURN error "ไม่สามารถปฏิเสธคำขอของตนเองได้"
+P0778 [Normal] IF reject_reason is empty:
+P0779 [Normal] RETURN error "กรุณาระบุเหตุผลการปฏิเสธ"
+P0780 [Normal] UPDATE leave_requests
+P0781 [Normal] SET status = 'rejected',
+P0782 [Normal] rejected_at = now()
+P0783 [Normal] INSERT leave_approval_logs พร้อมเหตุผลการปฏิเสธ
+P0784 [Normal] INSERT notifications ให้ผู้ยื่นลา
+P0785 [Normal] INSERT audit_logs
+P0786 [Normal] COMMIT
+P0787 [Normal] 11.9 ยกเลิกคำขอ Pending
+P0788 [Normal] BEGIN TRANSACTION
+P0789 [Normal] leave_request = get leave_request by id FOR UPDATE
+P0790 [Normal] IF leave_request.status != 'pending':
+P0791 [Normal] RETURN error "ยกเลิกได้เฉพาะคำขอที่อยู่ในสถานะ pending"
+P0792 [Normal] IF leave_request.employee_id != current_employee_id:
+P0793 [Normal] RETURN error "ผู้ใช้สามารถยกเลิกได้เฉพาะคำขอของตนเองเท่านั้น"
+P0794 [Normal] UPDATE leave_requests
+P0795 [Normal] SET status = 'cancelled',
+P0796 [Normal] cancelled_at = now()
+P0797 [Normal] ไม่สร้าง Notification สำหรับการ Cancel ใน Workflow ปัจจุบัน
+P0798 [Normal] INSERT audit_logs
+P0799 [Normal] COMMIT
+P0800 [Normal] 12. หน้าจอที่ต้องพัฒนา
+T041 BLOCK=801 ROWS=20 GRID=[4675, 4675]
+  R000 | Screen | Role
+  R001 | Login | ทุก Role
+  R002 | Dashboard | ทุก Role
+  R003 | My Leave Requests | ทุก Role
+  R004 | Leave Request Form | ทุก Role
+  R005 | Leave Request Detail | ตามสิทธิ์
+  R006 | Pending Approval | Supervisor
+  R007 | Employee Management | HR
+  R008 | Leave Type Management | HR
+  R009 | Leave Entitlement Management | HR
+  R010 | Holiday Management | HR
+  R011 | User Management | Admin
+  R012 | Department Management | Admin
+  R013 | Position Management | Admin
+  R014 | Notification List | ทุก Role
+  R015 | Reports | Supervisor/HR
+  R016 | Audit Log | Admin
+  R017 | Forgot Password / Verify OTP / Reset Password | ทุก Role ก่อน Login
+  R018 | Profile | ทุก Role
+  R019 | Change Password / Force Change Password | ทุก Role
+P0803 [Normal] 12.1 Dashboard Requirements
+P0804 [Normal] ทุก Role
+P0805 [List Paragraph] จำนวนคำขอลาของตนเองที่เป็น draft
+P0806 [List Paragraph] จำนวนคำขอลาของตนเองที่เป็น pending
+P0807 [List Paragraph] จำนวนคำขอลาของตนเองที่ approved
+P0808 [List Paragraph] จำนวนคำขอลาของตนเองที่ rejected
+P0809 [List Paragraph] วันลาคงเหลือของตนเองแยกตามประเภทการลา
+P0810 [List Paragraph] แจ้งเตือนล่าสุด
+P0811 [Normal] Supervisor
+P0812 [List Paragraph] จำนวนคำขอ pending ที่รออนุมัติ
+P0813 [List Paragraph] รายการคำขอ pending ล่าสุดของลูกทีม
+P0814 [Normal] HR
+P0815 [List Paragraph] จำนวนพนักงาน active
+P0816 [List Paragraph] จำนวนประเภทการลาที่ active
+P0817 [List Paragraph] จำนวนคำขอลาในเดือนปัจจุบัน
+P0818 [Normal] Admin
+P0819 [List Paragraph] จำนวนผู้ใช้งาน active
+P0820 [List Paragraph] จำนวนบัญชี locked
+P0821 [List Paragraph] Audit Log ล่าสุด
+P0822 [Normal] 12.2 รายละเอียดหน้าจอ Leave Request Form
+T042 BLOCK=823 ROWS=9 GRID=[2337, 2337, 2338, 2338]
+  R000 | Field | Type | Required | หมายเหตุ
+  R001 | leave_type_id | Dropdown | Yes | แสดงเฉพาะ leave_types.is_active = true
+  R002 | start_date | Date | Yes | ต้องไม่มากกว่า end_date
+  R003 | end_date | Date | Yes | ต้องไม่น้อยกว่า start_date และต้องอยู่ปีเดียวกับ start_date
+  R004 | leave_days | Calculated | Yes | ระบบคำนวณอัตโนมัติ โดยไม่นับเสาร์ อาทิตย์ และวันหยุดองค์กร
+  R005 | reason | Textarea | Yes | เหตุผลการลา
+  R006 | attachment | File | Conditional | ตามเงื่อนไขประเภทการลา
+  R007 | available_days | Display | No | แสดงสิทธิ์วันที่สามารถใช้ได้หลังหัก pending_days
+  R008 | approver_employee_id | Hidden / System Generated | No | ระบบบันทึกหัวหน้างาน ณ เวลาที่ Submit
+P0825 [Normal] Form Rules
+P0826 [List Paragraph] ผู้ใช้แก้ไขได้เฉพาะ draft
+P0827 [List Paragraph] หลัง submit แล้ว field ทั้งหมดเป็น read-only
+P0828 [List Paragraph] ระบบต้องแสดง error หากวันลาคงเหลือไม่พอ
+P0829 [List Paragraph] ระบบต้องแสดง error หากช่วงวันลาซ้ำ
+P0830 [List Paragraph] ระบบต้องแสดง error หากขาดเอกสารแนบที่จำเป็น
+P0831 [Normal] 12.3 Pending Approval Screen
+T043 BLOCK=832 ROWS=9 GRID=[4675, 4675]
+  R000 | Field | Description
+  R001 | request_no | เลขที่คำขอ
+  R002 | employee_name | ชื่อผู้ยื่นลา
+  R003 | leave_type | ประเภทการลา
+  R004 | start_date | วันที่เริ่มลา
+  R005 | end_date | วันที่สิ้นสุด
+  R006 | leave_days | จำนวนวันลา
+  R007 | submitted_at | วันที่ส่งคำขอ
+  R008 | action | approve / reject
+P0834 [Normal] Rules
+P0835 [List Paragraph] แสดงเฉพาะคำขอที่ status = pending
+P0836 [List Paragraph] แสดงเฉพาะคำขอที่ approver_employee_id = current_user.employee_id
+P0837 [List Paragraph] Reject ต้องระบุเหตุผล
+P0838 [List Paragraph] Approve ต้องตรวจสิทธิ์วันลาอีกครั้งก่อนอนุมัติ
+P0839 [Normal] 13. Report Requirements
+T044 BLOCK=840 ROWS=7 GRID=[1870, 1870, 1870, 1870, 1870]
+  R000 | Report | Role | Filter | ข้อมูลที่แสดง | Export
+  R001 | ประวัติการลาของตนเอง | ทุก Role เฉพาะข้อมูลตนเอง | ช่วงวันที่, สถานะ | เลขที่คำขอ, ประเภท, วันที่, จำนวนวัน, สถานะ | ไม่บังคับ
+  R002 | คำขอรออนุมัติ | Supervisor | ช่วงวันที่, ลูกทีม | คำขอ pending ของลูกทีม | Excel
+  R003 | การลาของลูกทีม | Supervisor | ช่วงวันที่, สถานะ, ประเภทลา | ประวัติการลาของลูกทีม | Excel
+  R004 | วันลาคงเหลือ | HR | ปี, แผนก, พนักงาน | total_days, used_days, pending_days, remaining_days, available_days | Excel
+  R005 | การลารายแผนก | HR | ช่วงวันที่, แผนก, ประเภทลา | จำนวนคำขอและจำนวนวันลา | Excel
+  R006 | คำขอตามสถานะ | HR | ช่วงวันที่, สถานะ, แผนก | รายการคำขอตามสถานะ | Excel
+P0842 [Normal] 14. ข้อจำกัดของระบบเวอร์ชันปัจจุบัน
+P0843 [List Paragraph] ผู้ใช้งานหนึ่งคนมีได้เพียงหนึ่ง Role เท่านั้น
+P0844 [List Paragraph] ทุก Role สามารถยื่นคำขอลาของตนเองได้ในฐานะพนักงาน
+P0845 [List Paragraph] ผู้ที่สามารถอนุมัติคำขอลาได้ต้องมี Role เป็น Supervisor เท่านั้น
+P0846 [List Paragraph] Supervisor อนุมัติได้เฉพาะคำขอที่ระบุ approver_employee_id เป็นของตนเอง
+P0847 [List Paragraph] ระบบรองรับเฉพาะการลาเต็มวัน ยังไม่รองรับการลาครึ่งวัน
+P0848 [List Paragraph] ระบบไม่รองรับการยื่นคำขอลาข้ามปี
+P0849 [List Paragraph] ระบบไม่รองรับการยกเลิกคำขอที่ได้รับอนุมัติแล้ว
+P0850 [List Paragraph] ระบบไม่รองรับการอนุมัติหลายระดับ
+P0851 [List Paragraph] ระบบไม่รองรับการมอบหมายผู้อนุมัติแทน
+P0852 [List Paragraph] ระบบไม่ใช้ Email เป็นช่องทางแจ้งเตือน Workflow การลา โดย Email ใช้เฉพาะส่ง OTP สำหรับ Forgot Password
+P0853 [List Paragraph] ระบบไม่รองรับ PDF Export
+P0854 [List Paragraph] Dashboard ปัจจุบันแสดงข้อมูลสรุปตาม Role แต่ยังไม่รองรับการวิเคราะห์ขั้นสูงหลายมิติ
+P0855 [List Paragraph] ระบบไม่รองรับ Backup Assignee
+P0856 [List Paragraph] ระบบไม่รองรับ Delegation
+P0857 [List Paragraph] ระบบไม่รองรับ Multi-role User
+P0858 [Normal] 15. Acceptance Criteria หลัก
+P0859 [Normal] AC-01 Login
+P0860 [List Paragraph] Given ผู้ใช้มีบัญชี active
+P0861 [List Paragraph] When กรอก username หรือ email และ password ถูกต้อง
+P0862 [List Paragraph] Then ระบบต้อง Login สำเร็จและเข้าสู่ Dashboard ตาม Role
+P0863 [Normal] AC-02 Login ด้วยบัญชี inactive
+P0864 [List Paragraph] Given ผู้ใช้มีบัญชี inactive หรือ locked
+P0865 [List Paragraph] When พยายาม Login
+P0866 [List Paragraph] Then ระบบต้องปฏิเสธและแสดงข้อความว่า "บัญชีนี้ไม่พร้อมใช้งาน"
+P0867 [Normal] AC-03 Submit Leave Request
+P0868 [List Paragraph] Given ผู้ใช้สร้าง Draft ครบถ้วน
+P0869 [List Paragraph] And มี available_days เพียงพอ
+P0870 [List Paragraph] And ไม่มีช่วงวันลาซ้ำ
+P0871 [List Paragraph] And มี Supervisor ที่ถูกต้อง
+P0872 [List Paragraph] When กด Submit
+P0873 [List Paragraph] Then ระบบต้องเปลี่ยนสถานะเป็น pending
+P0874 [List Paragraph] And สร้าง request_no
+P0875 [List Paragraph] And บันทึก approver_employee_id
+P0876 [List Paragraph] And แจ้งเตือน Supervisor
+P0877 [Normal] AC-04 Submit Leave Request เกินสิทธิ์
+P0878 [List Paragraph] Given ผู้ใช้มี available_days ไม่เพียงพอ
+P0879 [List Paragraph] When กด Submit
+P0880 [List Paragraph] Then ระบบต้องไม่ให้ส่งคำขอ
+P0881 [List Paragraph] And แสดงข้อความว่า "วันลาคงเหลือไม่เพียงพอ"
+P0882 [Normal] AC-05 Submit Leave Request ข้ามปี
+P0883 [List Paragraph] Given start_date และ end_date อยู่คนละปี
+P0884 [List Paragraph] When กด Submit
+P0885 [List Paragraph] Then ระบบต้องไม่ให้ส่งคำขอ
+P0886 [List Paragraph] And แสดงข้อความว่า "ระบบ ระบบเวอร์ชันปัจจุบัน ไม่รองรับการยื่นลาข้ามปี"
+P0887 [Normal] AC-06 Approve Leave Request
+P0888 [List Paragraph] Given คำขออยู่ในสถานะ pending
+P0889 [List Paragraph] And current user เป็น approver_employee_id
+P0890 [List Paragraph] And available_days ยังเพียงพอ
+P0891 [List Paragraph] When Supervisor กด Approve
+P0892 [List Paragraph] Then ระบบต้องเปลี่ยนสถานะเป็น approved
+P0893 [List Paragraph] And เพิ่ม used_days
+P0894 [List Paragraph] And บันทึก approval log
+P0895 [List Paragraph] And บันทึก audit log
+P0896 [List Paragraph] And แจ้งเตือนผู้ยื่นลา
+P0897 [Normal] AC-07 Reject Leave Request
+P0898 [List Paragraph] Given คำขออยู่ในสถานะ pending
+P0899 [List Paragraph] And current user เป็น approver_employee_id
+P0900 [List Paragraph] When Supervisor กด Reject พร้อมระบุเหตุผล
+P0901 [List Paragraph] Then ระบบต้องเปลี่ยนสถานะเป็น rejected
+P0902 [List Paragraph] And บันทึกเหตุผล
+P0903 [List Paragraph] And แจ้งเตือนผู้ยื่นลา
+P0904 [List Paragraph] And บันทึก approval log
+P0905 [List Paragraph] And บันทึก audit log
+P0906 [Normal] AC-08 Reject โดยไม่ระบุเหตุผล
+P0907 [List Paragraph] Given คำขออยู่ในสถานะ pending
+P0908 [List Paragraph] When Supervisor กด Reject โดยไม่กรอกเหตุผล
+P0909 [List Paragraph] Then ระบบต้องไม่ให้ปฏิเสธ
+P0910 [List Paragraph] And แสดงข้อความว่า "กรุณาระบุเหตุผลการปฏิเสธ"
+P0911 [Normal] AC-09 Cancel Pending Request
+P0912 [List Paragraph] Given ผู้ใช้เป็นเจ้าของคำขอ
+P0913 [List Paragraph] And คำขออยู่ในสถานะ pending
+P0914 [List Paragraph] When กด Cancel
+P0915 [List Paragraph] Then ระบบต้องเปลี่ยนสถานะเป็น cancelled
+P0916 [List Paragraph] And บันทึก audit log
+P0917 [List Paragraph] And ไม่สร้าง Notification เพิ่มสำหรับการ Cancel
+P0918 [Normal] AC-10 Admin Download Attachment
+P0919 [List Paragraph] Given ผู้ใช้เป็น Admin
+P0920 [List Paragraph] When เปิดดูรายละเอียดเอกสารแนบของพนักงานอื่น
+P0921 [List Paragraph] Then ระบบต้องอนุญาตให้เปิดหรือดาวน์โหลดไฟล์ตามสิทธิ์ของ Backend
+P0922 [List Paragraph] And ต้องตรวจ Authentication, Role และ Data Scope ก่อนส่งไฟล์
+P0923 [Normal] 16. Future Scope
+P0924 [List Paragraph] Push Notification และ Real-time Notification
+P0925 [List Paragraph] Native Mobile Application
+P0926 [List Paragraph] Multi-step Approval
+P0927 [List Paragraph] HR Approval หรือ Final Approval
+P0928 [List Paragraph] Department Manager Approval
+P0929 [List Paragraph] Backup หรือ Delegate Approver
+P0930 [List Paragraph] การยกเลิกหลัง Approved พร้อมคืนสิทธิ์วันลา
+P0931 [List Paragraph] Half-day Leave
+P0932 [List Paragraph] Cross-year Leave Request
+P0933 [List Paragraph] PDF Export และ Advanced Analytics
+P0934 [List Paragraph] Backup / Restore และ Large-scale Load Test
