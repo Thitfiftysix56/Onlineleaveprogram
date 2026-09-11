@@ -30,7 +30,6 @@ function RoleDepartmentFormPage({
   const { departmentId: routeDepartmentId } = useParams();
   const departmentId = departmentIdProp || routeDepartmentId;
   const [formData, setFormData] = useState(emptyData);
-  const [initialData, setInitialData] = useState(emptyData);
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(isEditMode);
@@ -42,7 +41,6 @@ function RoleDepartmentFormPage({
     const load = async () => {
       if (!isEditMode) {
         setFormData(emptyData);
-        setInitialData(emptyData);
         setLoading(false);
         return;
       }
@@ -56,7 +54,6 @@ function RoleDepartmentFormPage({
         };
         if (active) {
           setFormData(nextData);
-          setInitialData(nextData);
         }
       } catch (error) {
         if (active) setMessage({ type: 'error', text: error.response?.data?.message || 'ไม่สามารถโหลดข้อมูลแผนกได้' });
@@ -166,7 +163,7 @@ function RoleDepartmentFormPage({
           />
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'flex-end', columnGap: '12px', rowGap: '10px', flexWrap: 'wrap', padding: '16px 22px 20px', borderTop: 0, backgroundColor: 'transparent' }}>
-          <Button type="button" variant="outlined" onClick={() => { setFormData(initialData); setErrors({}); }} sx={{ minWidth: '116px', height: '42px', borderRadius: '9px', fontSize: '13px', fontWeight: 600 }}>ล้างการแก้ไข</Button>
+          <Button type="button" variant="outlined" onClick={closeForm} sx={{ minWidth: '116px', height: '42px', borderRadius: '9px', fontSize: '13px', fontWeight: 600 }}>ยกเลิก</Button>
           <Button type="submit" variant="contained" disabled={loading || saving} sx={{ minWidth: '148px', height: '42px', borderRadius: '9px', fontSize: '13px', fontWeight: 600 }}>{isEditMode ? 'บันทึกการแก้ไข' : 'เพิ่มแผนก'}</Button>
         </DialogActions>
       </Dialog>

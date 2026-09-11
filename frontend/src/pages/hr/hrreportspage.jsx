@@ -502,6 +502,11 @@ const normalizeRequest = (
           request.end_date,
       ),
 
+    approvedAt:
+      request.approvedAt ||
+      request.approved_at ||
+      null,
+
     leaveDays:
       Number(
         request.leaveDays ??
@@ -954,10 +959,23 @@ function HRReportsPage() {
       filteredRequests,
     ]);
 
+  const approvedDaysThisMonth = useMemo(() => {
+    const now = new Date();
+    return leaveRequests
+      .filter((request) => {
+        if (request.status !== 'approved' || !request.approvedAt) return false;
+        const approvedAt = new Date(request.approvedAt);
+        return !Number.isNaN(approvedAt.getTime()) &&
+          approvedAt.getFullYear() === now.getFullYear() &&
+          approvedAt.getMonth() === now.getMonth();
+      })
+      .reduce((total, request) => total + Number(request.leaveDays || 0), 0);
+  }, [leaveRequests]);
+
   const summaryCards = [
     {
       title:
-        'คำขอตามตัวกรอง',
+        'รายการที่พบ',
 
       value:
         summary.total,
@@ -971,10 +989,10 @@ function HRReportsPage() {
 
     {
       title:
-        'จำนวนวันลาที่อนุมัติ',
+        'วันลาอนุมัติเดือนนี้',
 
       value:
-        summary.approvedDays,
+        approvedDaysThisMonth,
 
       backgroundColor:
         '#F3E8FF',

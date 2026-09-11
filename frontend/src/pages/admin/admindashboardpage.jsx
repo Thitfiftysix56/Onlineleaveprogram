@@ -868,7 +868,7 @@ function AdminDashboardPage() {
     },
     {
       title:
-        'กิจกรรมวันนี้',
+        'ประวัติกิจกรรมวันนี้',
 
       value:
         todayActivityCount,

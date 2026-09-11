@@ -13,6 +13,17 @@ import { getLeaveBalance } from '../api/leave-service.js';
 
 const number = (value) => Number(value || 0);
 
+const getAvailableDays = (balance) => {
+  if (balance.available !== undefined && balance.available !== null) {
+    return Math.max(number(balance.available), 0);
+  }
+
+  return Math.max(
+    number(balance.remaining) - number(balance.pending),
+    0,
+  );
+};
+
 const leaveAccents = [
   {
     color: '#4338CA',
@@ -321,7 +332,7 @@ export default function DashboardLeaveBalance() {
                       fontWeight: 500,
                     }}
                   >
-                    คงเหลือ
+                    ยื่นเพิ่มได้
                   </Typography>
 
                   <Box
@@ -346,9 +357,7 @@ export default function DashboardLeaveBalance() {
                         lineHeight: 1.1,
                       }}
                     >
-                      {number(
-                        balance.remaining,
-                      )}
+                      {getAvailableDays(balance)}
                     </Typography>
 
                     <Typography

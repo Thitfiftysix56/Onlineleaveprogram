@@ -226,7 +226,7 @@ const menuLabels = {
     'รายการรออนุมัติ',
 
   'Team Reports':
-    'รายงานทีม',
+    'ประวัติการลาของทีม',
 
   'Employee Management':
     'จัดการพนักงาน',

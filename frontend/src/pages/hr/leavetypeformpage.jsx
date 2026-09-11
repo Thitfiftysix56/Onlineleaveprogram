@@ -206,20 +206,9 @@ function LeaveTypeFormPage({ mode = 'add' }) {
     finally { setSaving(false); }
   };
 
-  const handleReset = () => {
-    setFormData(initialFormData);
-    setErrors({});
-    setSuccessMessage('');
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
-  };
-
   return (
     <HRLayout activeMenu="Leave Type">
-      <PageHeader title={isEditMode ? 'แก้ไขประเภทการลา' : 'เพิ่มประเภทการลา'} actions={<Button type="button" variant="outlined" onClick={() => navigate(returnTo)}>ยกเลิก</Button>} sx={{ maxWidth: '920px', marginInline: 'auto' }} />
+      <PageHeader title={isEditMode ? 'แก้ไขประเภทการลา' : 'เพิ่มประเภทการลา'} sx={{ maxWidth: '920px', marginInline: 'auto' }} />
 
       {successMessage && (
         <Alert
@@ -661,7 +650,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
             <Button
               type="button"
               variant="outlined"
-              onClick={handleReset}
+              onClick={() => navigate(returnTo)}
               sx={{
                 minWidth: '110px',
                 height: '44px',
@@ -679,7 +668,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
                 },
               }}
             >
-              ล้างข้อมูล
+              ยกเลิก
             </Button>
 
             <Button
