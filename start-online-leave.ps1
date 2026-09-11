@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$project = "C:\Users\User\Desktop\online-leavesystem"
+$project = $PSScriptRoot
 Set-Location $project
 
 Write-Host "Starting Online Leave System..."
@@ -20,6 +20,11 @@ while ($true) {
 # เปิดระบบด้วยค่า localhost ก่อน
 docker compose up -d
 
+$frontendPort = $env:FRONTEND_PORT
+if (-not $frontendPort) {
+    $frontendPort = "18080"
+}
+
 # ลบ Quick Tunnel container เก่า ถ้ามีจริง
 $oldTunnel = docker ps -a --filter "name=^online-leave-system-tunnel$" --format "{{.Names}}"
 
@@ -32,7 +37,7 @@ docker run -d `
   --name online-leave-system-tunnel `
   cloudflare/cloudflared:latest `
   tunnel --no-autoupdate `
-  --url http://host.docker.internal:8080 | Out-Null
+  --url "http://host.docker.internal:$frontendPort" | Out-Null
 
 Write-Host "Waiting for Cloudflare Tunnel..."
 

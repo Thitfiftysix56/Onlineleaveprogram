@@ -11,7 +11,7 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: "${TUNNEL_HOST:-}"
     ports:
-      - "8080:5173"
+      - "${FRONTEND_PORT:-18080}:5173"
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
@@ -30,7 +30,7 @@ services:
       context: ./backend
     container_name: online-leave-system-backend
     restart: unless-stopped
-    command: npm run dev
+    command: ["sh", "-c", "npm run db:migrate && exec npm run dev"]
     environment:
       NODE_ENV: development
       TZ: Asia/Bangkok
@@ -58,11 +58,11 @@ services:
       SMTP_USER: "${SMTP_USER:-}"
       SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
       SMTP_FROM: "${SMTP_FROM:-Online Leave Approval System <no-reply@organization.local>}"
-      FRONTEND_URL: "${TUNNEL_URL:-http://localhost:8080}"
-      CORS_ORIGINS: http://localhost:8080,http://localhost:5173,http://127.0.0.1:5173,https://directories-necessary-spa-surge.trycloudflare.com
+      FRONTEND_URL: "${TUNNEL_URL:-http://localhost:${FRONTEND_PORT:-18080}}"
+      CORS_ORIGINS: "http://localhost:${FRONTEND_PORT:-18080},http://127.0.0.1:${FRONTEND_PORT:-18080},http://localhost:5173,http://127.0.0.1:5173,https://directories-necessary-spa-surge.trycloudflare.com"
 
     ports:
-      - "8082:3000"
+      - "${BACKEND_PORT:-18082}:3000"
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
@@ -89,7 +89,7 @@ services:
       MARIADB_USER: leave_app
       MARIADB_PASSWORD: LeaveApp2026
     ports:
-      - "3307:3306"
+      - "${DB_HOST_PORT:-13307}:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./Backups/Before-Mentor-Test-20260904-135531/database-before-mentor-test.sql:/docker-entrypoint-initdb.d/01-before-mentor-test.sql:ro
@@ -110,7 +110,7 @@ services:
       PMA_PORT: 3306
       UPLOAD_LIMIT: 128M
     ports:
-      - "8081:80"
+      - "${PHPMYADMIN_PORT:-18081}:80"
     depends_on:
       db:
         condition: service_healthy
@@ -126,8 +126,8 @@ services:
     container_name: online-leave-system-mailhog
     restart: unless-stopped
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "${MAILHOG_SMTP_PORT:-11025}:1025"
+      - "${MAILHOG_UI_PORT:-18025}:8025"
 
 volumes:
   mariadb_data:

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "db:migrate": "node scripts/apply-safe-migrations.js",
     "check": "node --check src/server.js",
     "test": "node --test \"test/*.test.js\"",
     "repair:leave-runtime": "node scripts/repair-leave-runtime.js"
