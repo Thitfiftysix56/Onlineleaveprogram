@@ -291,33 +291,9 @@ function EmployeeFormPage({ mode = 'add' }) {
     }
   };
 
-  const handleReset = () => {
-    setFormData({
-      employeeId: '',
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      department: '',
-      position: '',
-      supervisor: '',
-      role: 'Employee',
-      employmentDate: '',
-      status: 'Active',
-    });
-
-    setErrors({});
-    setSuccessMessage('');
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
-  };
-
   return (
     <HRLayout activeMenu="Employee Management">
-      <PageHeader title={isEditMode ? 'แก้ไขพนักงาน' : 'เพิ่มพนักงาน'} actions={<Button type="button" variant="outlined" onClick={() => navigate(returnTo)}>ยกเลิก</Button>} sx={{ maxWidth: '900px', marginInline: 'auto' }} />
+      <PageHeader title={isEditMode ? 'แก้ไขพนักงาน' : 'เพิ่มพนักงาน'} sx={{ maxWidth: '900px', marginInline: 'auto' }} />
 
       {successMessage && (
         <Alert
@@ -854,7 +830,7 @@ function EmployeeFormPage({ mode = 'add' }) {
             <Button
               type="button"
               variant="outlined"
-              onClick={handleReset}
+              onClick={() => navigate(returnTo)}
               sx={{
                 minWidth: '110px',
                 height: '44px',
@@ -872,7 +848,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 },
               }}
             >
-              ล้างข้อมูล
+              ยกเลิก
             </Button>
 
             <Button

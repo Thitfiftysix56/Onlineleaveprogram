@@ -229,7 +229,7 @@ function SupervisorReportsPage() {
       } catch (err) {
         setError(
           err.response?.data?.message ||
-            'ไม่สามารถโหลดรายงานทีมได้',
+            'ไม่สามารถโหลดประวัติการลาของทีมได้',
         );
       } finally {
         setLoading(false);
@@ -403,7 +403,7 @@ function SupervisorReportsPage() {
               fontWeight: 600,
             }}
           >
-            ประวัติการลาของลูกทีม
+            ประวัติการลาของทีม
           </Typography>
 
           <Box
@@ -607,11 +607,11 @@ function SupervisorReportsPage() {
                         key={request.id}
                         hover
                         tabIndex={0}
-                        onClick={() => navigate(`/supervisor/approval/${request.id}`, { state: { returnTo: `${window.location.pathname}${window.location.search}`, returnLabel: 'รายงานทีม' } })}
+                        onClick={() => navigate(`/supervisor/approval/${request.id}`, { state: { returnTo: `${window.location.pathname}${window.location.search}`, returnLabel: 'ประวัติการลาของทีม' } })}
                         onKeyDown={(event) => {
                           if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault();
-                            navigate(`/supervisor/approval/${request.id}`, { state: { returnTo: `${window.location.pathname}${window.location.search}`, returnLabel: 'รายงานทีม' } });
+                            navigate(`/supervisor/approval/${request.id}`, { state: { returnTo: `${window.location.pathname}${window.location.search}`, returnLabel: 'ประวัติการลาของทีม' } });
                           }
                         }}
                         sx={{

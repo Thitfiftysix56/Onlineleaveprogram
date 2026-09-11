@@ -259,28 +259,35 @@ export function InlineListSummary({ items = [], sx, ...props }) {
       useFlexGap
       flexWrap="wrap"
       sx={{
-        columnGap: `${spacingTokens.xl}px`,
+        columnGap: `${spacingTokens.sm}px`,
         rowGap: `${spacingTokens.sm}px`,
         marginBottom: `${spacingTokens.lg}px`,
         color: colorTokens.text.secondary,
         ...sx,
       }}
     >
-      {items.map((item, index) => (
+      {items.map((item) => (
         <Box
           key={item.title || item.label}
           sx={{
             display: 'inline-flex',
             alignItems: 'baseline',
-            gap: `${spacingTokens.xs}px`,
-            paddingRight: index < items.length - 1 ? `${spacingTokens.xl}px` : 0,
-            borderRight: index < items.length - 1 ? `1px solid ${colorTokens.border}` : 0,
+            justifyContent: 'space-between',
+            gap: `${spacingTokens.md}px`,
+            minHeight: 48,
+            minWidth: { xs: '100%', sm: 164 },
+            flex: { xs: '1 1 100%', sm: '0 1 auto' },
+            padding: `${spacingTokens.sm}px ${spacingTokens.lg}px`,
+            border: `1px solid ${colorTokens.border}`,
+            borderRadius: `${radiusTokens.control}px`,
+            background: '#FFFFFF',
+            boxSizing: 'border-box',
           }}
         >
-          <Typography sx={{ color: colorTokens.text.secondary, fontSize: 12, fontWeight: 600 }}>
+          <Typography sx={{ color: colorTokens.text.secondary, fontSize: 14, fontWeight: 600, lineHeight: 1.45 }}>
             {item.title || item.label}
           </Typography>
-          <Typography sx={{ color: item.color || colorTokens.text.primary, fontSize: 15, fontWeight: 700 }}>
+          <Typography sx={{ color: item.valueColor || item.color || colorTokens.text.primary, fontSize: 18, fontWeight: 700, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
             {item.value}{item.unit ? ` ${item.unit}` : ''}
           </Typography>
         </Box>
