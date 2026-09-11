@@ -12,6 +12,7 @@ const approvedMigrations = [
   '20260804_add_users_must_change_password.sql',
   '20260805_add_leave_workflow.sql',
   '20260908_add_login_lockout.sql',
+  '20260911_sync_thailand_public_holidays_2026.sql',
 ]
 const allowed = new Set(approvedMigrations)
 const requested = process.argv.slice(2)
