@@ -180,10 +180,12 @@ test('general leave must be requested at least three calendar days in advance', 
   assert.equal(validateLeaveStartDatePolicy('2026-09-11', annualLeave, '2026-09-08'), null)
 })
 
-test('sick leave can start today or in the past', () => {
+test('sick leave can start in the past, today or at most one day ahead', () => {
   const sickLeave = { leave_type_name: 'Sick Leave' }
   assert.equal(isSickLeaveType(sickLeave), true)
   assert.equal(isSickLeaveType({ leave_type_name: 'ลาป่วย' }), true)
   assert.equal(validateLeaveStartDatePolicy('2026-09-08', sickLeave, '2026-09-08'), null)
   assert.equal(validateLeaveStartDatePolicy('2026-09-01', sickLeave, '2026-09-08'), null)
+  assert.equal(validateLeaveStartDatePolicy('2026-09-09', sickLeave, '2026-09-08'), null)
+  assert.match(validateLeaveStartDatePolicy('2026-09-10', sickLeave, '2026-09-08'), /ล่วงหน้าไม่เกิน 1 วัน/)
 })

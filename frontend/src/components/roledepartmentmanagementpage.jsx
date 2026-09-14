@@ -29,7 +29,7 @@ import FixedTableBody from './fixedtablebody.jsx';
 import { ConfirmationDialog, DataListToolbar } from './shareduiprimitives.jsx';
 import { InlineListSummary } from './sharedvisualfoundation.jsx';
 import RoleDepartmentFormPage from './roledepartmentformpage.jsx';
-import { divisionLabelFor } from '../constants/organizationcatalog.js';
+import { departmentLabelFor, divisionLabelFor } from '../constants/organizationcatalog.js';
 
 import {
   deleteDepartment,
@@ -382,7 +382,7 @@ function RoleDepartmentManagementPage({
         await loadDepartments();
 
         setActionMessage(
-          `เปลี่ยนสถานะของแผนก ${selectedDepartment.departmentName} เป็น ${translateStatus(
+          `เปลี่ยนสถานะของแผนก ${departmentLabelFor(selectedDepartment.departmentName)} เป็น ${translateStatus(
             nextStatus,
           )} แล้ว`,
         );
@@ -406,7 +406,7 @@ function RoleDepartmentManagementPage({
       await deleteDepartment(deleteTarget.id);
       setDeleteTarget(null);
       await loadDepartments();
-      setActionMessage(`ลบแผนก ${deleteTarget.departmentName} เรียบร้อยแล้ว`);
+      setActionMessage(`ลบแผนก ${departmentLabelFor(deleteTarget.departmentName)} เรียบร้อยแล้ว`);
     } catch (error) {
       setLoadError(error.response?.data?.message || 'ไม่สามารถลบแผนกได้');
     } finally {
@@ -1108,7 +1108,7 @@ function RoleDepartmentManagementPage({
                               '1px solid #E5E7EB',
                           }}
                         >
-                          {department.departmentName}
+                          {departmentLabelFor(department.departmentName)}
                         </TableCell>
 
                         {/* Division */}
@@ -1453,7 +1453,7 @@ function RoleDepartmentManagementPage({
       <ConfirmationDialog
         open={Boolean(disableTarget)}
         title="ยืนยันการปิดใช้งานแผนก"
-        description={`ต้องการปิดใช้งานแผนก ${disableTarget?.departmentName || ''} ใช่หรือไม่`}
+        description={`ต้องการปิดใช้งานแผนก ${departmentLabelFor(disableTarget?.departmentName)} ใช่หรือไม่`}
         loading={Number(updatingId) === Number(disableTarget?.id)}
         onCancel={() => setDisableTarget(null)}
         onConfirm={async () => { const target = disableTarget; if (!target) return; await handleStatusChange(target); setDisableTarget(null); }}
@@ -1462,7 +1462,7 @@ function RoleDepartmentManagementPage({
       <ConfirmationDialog
         open={Boolean(deleteTarget)}
         title="ยืนยันการลบแผนก"
-        description={`ต้องการลบแผนก ${deleteTarget?.departmentName || ''} ใช่หรือไม่ ระบบจะลบได้เฉพาะแผนกที่ไม่มีพนักงานสังกัดอยู่`}
+        description={`ต้องการลบแผนก ${departmentLabelFor(deleteTarget?.departmentName)} ใช่หรือไม่ ระบบจะลบได้เฉพาะแผนกที่ไม่มีพนักงานสังกัดอยู่`}
         loading={Number(updatingId) === Number(deleteTarget?.id)}
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDeleteDepartment}

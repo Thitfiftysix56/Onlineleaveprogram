@@ -1,0 +1,15 @@
+INSERT IGNORE INTO departments (department_name, division_name, description, is_active) VALUES
+  ('Information Technology', 'Development', 'Development', 1),
+  ('Information Technology', 'Infrastructure', 'Infrastructure', 1),
+  ('Information Technology', 'IT Support', 'IT Support', 1),
+  ('Information Technology', 'Cybersecurity', 'Cybersecurity', 1),
+  ('Human Resources', 'Recruitment', 'Recruitment', 1),
+  ('Human Resources', 'Employee Relations', 'Employee Relations', 1),
+  ('Human Resources', 'Payroll and Benefits', 'Payroll and Benefits', 1),
+  ('Human Resources', 'Training and Development', 'Training and Development', 1),
+  ('Finance', 'Accounting', 'Accounting', 1),
+  ('Finance', 'Financial Planning', 'Financial Planning', 1),
+  ('Finance', 'Treasury', 'Treasury', 1),
+  ('Marketing', 'Digital Marketing', 'Digital Marketing', 1),
+  ('Marketing', 'Content', 'Content', 1),
+  ('Marketing', 'Market Research', 'Market Research', 1);

@@ -46,6 +46,17 @@ const emptyFormData = {
   password: '',
 }
 
+const loginRetryDelays = [500, 1000]
+
+const isTemporaryConnectionError = (error) =>
+  !error.response ||
+  [502, 503, 504].includes(error.response.status)
+
+const wait = (milliseconds) =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, milliseconds)
+  })
+
 
 /* =========================
    ANIMATIONS
@@ -85,9 +96,9 @@ function LoginPage() {
     ...emptyFormData,
   })
 
-  const [errorMessage, setErrorMessage] = useState(
-    String(location.state?.authError || ''),
-  )
+  // หน้าเข้าสู่ระบบต้องไม่แสดงข้อผิดพลาดของ session ที่ค้างจากหน้าก่อนหน้า
+  // ข้อความผิดพลาดจะแสดงเฉพาะเมื่อผู้ใช้กดเข้าสู่ระบบในหน้านี้เท่านั้น
+  const [errorMessage, setErrorMessage] = useState('')
 
   const successMessage = String(
     location.state?.successMessage || '',
@@ -149,13 +160,32 @@ function LoginPage() {
     setIsSubmitting(true)
 
     try {
-      const response = await api.post(
-        '/auth/login',
-        {
-          username: normalizedUsername,
-          password: enteredPassword,
-        },
-      )
+      let response
+
+      for (
+        let attempt = 0;
+        attempt <= loginRetryDelays.length;
+        attempt += 1
+      ) {
+        try {
+          response = await api.post(
+            '/auth/login',
+            {
+              username: normalizedUsername,
+              password: enteredPassword,
+            },
+          )
+          break
+        } catch (error) {
+          const canRetry =
+            isTemporaryConnectionError(error) &&
+            attempt < loginRetryDelays.length
+
+          if (!canRetry) throw error
+
+          await wait(loginRetryDelays[attempt])
+        }
+      }
 
       if (response.data.status !== 'ok') {
         setErrorMessage(
@@ -211,8 +241,13 @@ function LoginPage() {
         replace: true,
       })
     } catch (error) {
+      const isServiceUnavailable =
+        isTemporaryConnectionError(error)
+
       setErrorMessage(
-        error.response?.data?.message ||
+        (isServiceUnavailable
+          ? 'ระบบกำลังเริ่มทำงาน กรุณารอสักครู่แล้วลองเข้าสู่ระบบอีกครั้ง'
+          : error.response?.data?.message) ||
           error.message ||
           'เกิดข้อผิดพลาดขณะเข้าสู่ระบบ กรุณาลองอีกครั้ง',
       )

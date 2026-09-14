@@ -34,13 +34,6 @@ import TemporaryPasswordDialog from '../../components/temporarypassworddialog.js
 import { BackButton, PageHeader } from '../../components/sharedvisualfoundation.jsx';
 import { roleDashboardCardSurfaceSx } from '../../theme/rolecardsurface.js';
 
-const roleOptions = [
-  'Employee',
-  'Supervisor',
-  'HR',
-  'Admin',
-];
-
 const statusOptions = [
   'Active',
   'Inactive',
@@ -685,8 +678,6 @@ function UserFormPage({
               {
                 username:
                   submittedData.username,
-                role:
-                  submittedData.role,
                 status:
                   submittedData.status,
               },
@@ -1274,56 +1265,23 @@ function UserFormPage({
               }}
             />
 
-            <FormControl
+            <TextField
               fullWidth
               required
+              label="บทบาท"
+              value={roleDisplayLabels[formData.role] || formData.role}
               error={Boolean(
                 errors.role,
               )}
-            >
-              <InputLabel id="user-role-label">
-                บทบาท
-              </InputLabel>
-
-              <Select
-                labelId="user-role-label"
-                value={
-                  formData.role
-                }
-                label="บทบาท"
-                disabled={!isEditMode}
-                onChange={(
-                  event,
-                ) =>
-                  handleInputChange(
-                    'role',
-
-                    event.target.value,
-                  )
-                }
-                sx={{
-                  borderRadius:
-                    '8px',
-                }}
-              >
-                {roleOptions.map(
-                  (role) => (
-                    <MenuItem
-                      key={role}
-                      value={role}
-                    >
-                      {roleDisplayLabels[role] || role}
-                    </MenuItem>
-                  ),
-                )}
-              </Select>
-
-              {errors.role && (
-                <FormHelperText>
-                  {errors.role}
-                </FormHelperText>
-              )}
-            </FormControl>
+              helperText={errors.role || 'กำหนดโดยฝ่ายบุคคล'}
+              slotProps={{ input: { readOnly: true } }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  backgroundColor: '#F8FAFC',
+                },
+              }}
+            />
 
             <FormControl
               fullWidth
@@ -1368,11 +1326,11 @@ function UserFormPage({
                 )}
               </Select>
 
-              <FormHelperText>
-                {errors.status || (formData.status === 'Locked'
-                  ? 'บัญชีนี้จะเข้าสู่ระบบไม่ได้จนกว่าจะครบเวลาล็อก หรือผู้ดูแลเปลี่ยนสถานะเป็นใช้งาน'
-                  : 'ระบบล็อกชั่วคราว 30 นาทีเมื่อกรอกรหัสผิด 5 ครั้งใน 15 นาที และผู้ดูแลสามารถล็อกเองได้')}
-              </FormHelperText>
+              {errors.status ? (
+                <FormHelperText>
+                  {errors.status}
+                </FormHelperText>
+              ) : null}
             </FormControl>
 
           </Box>

@@ -33,7 +33,7 @@ import FixedTableBody from '../../components/fixedtablebody.jsx';
 import CloseRounded from '@mui/icons-material/CloseRounded';
 
 import AdminLayout from '../../layouts/adminlayout.jsx';
-import { HeaderlessPageTopOffset, InlineListSummary } from '../../components/sharedvisualfoundation.jsx';
+import { HeaderlessPageTopOffset } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
 import {
   formatAuditActivity,
@@ -675,23 +675,6 @@ const _translateDetail = (
    Date Helpers
 ========================= */
 
-const getDateOnly = (
-  value,
-) => {
-  const text =
-    String(value || '');
-
-  const match =
-    text.match(
-      /^\d{4}-\d{2}-\d{2}/,
-    );
-
-  return (
-    match?.[0] ||
-    ''
-  );
-};
-
 const formatDateTime = (
   value,
 ) => {
@@ -1155,100 +1138,6 @@ function AuditLogPage() {
   }, [searchText, roleFilter, actionFilter]);
 
   /* =========================
-     Summary
-  ========================= */
-
-  const summary =
-    useMemo(() => {
-      const today =
-        new Date();
-
-      const year =
-        today.getFullYear();
-
-      const month =
-        String(
-          today.getMonth() +
-            1,
-        ).padStart(
-          2,
-          '0',
-        );
-
-      const day =
-        String(
-          today.getDate(),
-        ).padStart(
-          2,
-          '0',
-        );
-
-      const todayText =
-        `${year}-${month}-${day}`;
-
-      return {
-        total:
-          loadedAuditLogs.length,
-
-        today:
-          loadedAuditLogs.filter(
-            (log) =>
-              getDateOnly(
-                log.createdAt,
-              ) ===
-              todayText,
-          ).length,
-
-        authentication:
-          loadedAuditLogs.filter(
-            (log) =>
-              [
-                'LOGIN',
-                'LOGOUT',
-                'LOGIN_FAILED',
-              ].includes(
-                String(
-                  log.action ||
-                    '',
-                ).toUpperCase(),
-              ),
-          ).length,
-
-        admin:
-          loadedAuditLogs.filter(
-            (log) =>
-              log.role ===
-              'Admin',
-          ).length,
-      };
-    }, [loadedAuditLogs]);
-
-  const summaryCards = [
-    {
-      title:
-        'บันทึกทั้งหมด',
-
-      value:
-        summary.total,
-
-      color:
-        '#0891B2',
-    },
-
-    {
-      title:
-        'กิจกรรมวันนี้',
-
-      value:
-        summary.today,
-
-      color:
-        '#2563EB',
-    },
-
-  ];
-
-  /* =========================
      Actions
   ========================= */
 
@@ -1304,36 +1193,6 @@ function AuditLogPage() {
         >
           ประวัติการใช้งาน
         </Typography>
-      </Box>
-
-      {/* Summary */}
-
-      <Box
-        sx={{
-          display:
-            'grid',
-
-          gridTemplateColumns: {
-            xs:
-              '1fr',
-
-            sm:
-              'repeat(2, minmax(0, 1fr))',
-
-            md:
-              'repeat(2, minmax(0, 1fr))',
-          },
-
-          gap:
-            '16px',
-
-          marginBottom:
-            '16px',
-          maxWidth: '760px',
-          marginRight: 'auto',
-        }}
-      >
-        <InlineListSummary items={summaryCards} sx={{ gridColumn: '1 / -1', marginBottom: 0 }} />
       </Box>
 
       {loadError ? (

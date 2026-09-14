@@ -143,15 +143,6 @@ function LeaveEntitlementManagementPage() {
     [filteredEntitlements, page],
   );
 
-  const selectedEmployeeEntitlements = useMemo(
-    () => selectedEntitlement
-      ? entitlements.filter((item) =>
-        item.employeeCode === selectedEntitlement.employeeCode &&
-        item.year === selectedEntitlement.year)
-      : [],
-    [entitlements, selectedEntitlement],
-  );
-
   const activeFilters = [
     ...(departmentFilter !== 'all' ? [{
       key: 'department',
@@ -357,10 +348,10 @@ function LeaveEntitlementManagementPage() {
             ))}
           </Box>
           <Typography sx={{ fontSize: '16px', fontWeight: 600, marginTop: '20px', marginBottom: '10px' }}>
-            สิทธิ์แต่ละประเภท
+            สิทธิ์ประเภทที่เลือก
           </Typography>
           <Box sx={{ display: 'grid', gap: '10px' }}>
-            {selectedEmployeeEntitlements.map((item) => (
+            {selectedEntitlement ? [selectedEntitlement].map((item) => (
               <Box
                 key={item.id}
                 sx={{
@@ -387,7 +378,7 @@ function LeaveEntitlementManagementPage() {
                   </Box>
                 ))}
               </Box>
-            ))}
+            )) : null}
           </Box>
         </DialogContent>
         <DialogActions sx={{ padding: '16px 24px 24px' }}>

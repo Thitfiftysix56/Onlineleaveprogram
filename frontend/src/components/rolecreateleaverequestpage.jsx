@@ -318,6 +318,7 @@ function ThaiDateField({
   const visibleHolidays = Array.from(holidaysByDate.values())
     .filter((holiday) => holiday.date.startsWith(visibleMonthPrefix))
     .sort((first, second) => first.date.localeCompare(second.date));
+  const todayValue = getBangkokToday();
 
   const moveMonth = (offset) => {
     setVisibleMonth(new Date(Date.UTC(year, month + offset, 1)));
@@ -442,6 +443,7 @@ function ThaiDateField({
               const dayOfWeek = new Date(`${dateValue}T00:00:00Z`).getUTCDay();
               const holiday = holidaysByDate.get(dateValue);
               const isBlocked = dayOfWeek === 0 || dayOfWeek === 6 || Boolean(holiday) || Boolean(minDate && dateValue < minDate) || Boolean(maxDate && dateValue > maxDate);
+              const isToday = dateValue === todayValue;
               return (
                 <Button
                   key={dateValue}
@@ -450,7 +452,23 @@ function ThaiDateField({
                   title={holiday?.name || (dayOfWeek === 0 || dayOfWeek === 6 ? 'วันหยุดสุดสัปดาห์' : '')}
                   aria-label={holiday ? `${dateValue} ${holiday.name}` : dateValue}
                   onClick={() => selectDate(day)}
-                  sx={{ minWidth: 0, height: '38px', padding: 0, borderRadius: '9px', fontWeight: value === dateValue ? 800 : 500, backgroundColor: value === dateValue ? '#DBEAFE' : 'transparent' }}
+                  sx={{
+                    minWidth: 0,
+                    width: '34px',
+                    height: '34px',
+                    justifySelf: 'center',
+                    padding: 0,
+                    borderRadius: '11px',
+                    fontWeight: value === dateValue || isToday ? 800 : 500,
+                    color: isToday ? '#1D4ED8' : undefined,
+                    backgroundColor: value === dateValue ? '#BFDBFE' : isToday ? '#DBEAFE' : 'transparent',
+                    boxShadow: isToday && value !== dateValue ? '0 5px 14px rgba(37, 99, 235, 0.30)' : 'none',
+                    transform: isToday && value !== dateValue ? 'translateY(-1px)' : 'none',
+                    transition: 'background-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease',
+                    '&:hover': {
+                      backgroundColor: value === dateValue ? '#93C5FD' : isToday ? '#BFDBFE' : '#F1F5F9',
+                    },
+                  }}
                 >
                   {day}
                 </Button>
@@ -826,6 +844,13 @@ function RoleCreateLeaveRequestPage({
       : `${year}-12-31`;
   }, []);
 
+  const maximumStartDate = useMemo(
+    () => selectedLeaveType && isSickLeaveType(selectedLeaveType)
+      ? addCalendarDays(getBangkokToday(), 1)
+      : maximumSelectableDate,
+    [maximumSelectableDate, selectedLeaveType],
+  );
+
   const dateSelectionDisabled = !selectedLeaveType || !selectedLeaveType.isSelectable;
 
   const activeHolidayByDate =
@@ -1084,12 +1109,17 @@ function RoleCreateLeaveRequestPage({
     const nextMinimumDate = nextLeaveType && !isSickLeaveType(nextLeaveType)
       ? addCalendarDays(getBangkokToday(), 3)
       : '';
+    const nextMaximumDate = nextLeaveType && isSickLeaveType(nextLeaveType)
+      ? addCalendarDays(getBangkokToday(), 1)
+      : '';
 
     setFormData((previousData) => {
       const mustClearDates = Boolean(
-        nextMinimumDate &&
         previousData.startDate &&
-        previousData.startDate < nextMinimumDate,
+        (
+          (nextMinimumDate && previousData.startDate < nextMinimumDate) ||
+          (nextMaximumDate && previousData.startDate > nextMaximumDate)
+        ),
       );
       return {
         ...previousData,
@@ -1412,6 +1442,16 @@ function RoleCreateLeaveRequestPage({
       ) {
         validationErrors.startDate =
           `การลาประเภทนี้ต้องยื่นล่วงหน้าอย่างน้อย 3 วัน กรุณาเลือกวันที่ตั้งแต่ ${formatDisplayDate(minimumStartDate)}`;
+      }
+
+      if (
+        formData.startDate &&
+        selectedLeaveType &&
+        isSickLeaveType(selectedLeaveType) &&
+        formData.startDate > maximumStartDate
+      ) {
+        validationErrors.startDate =
+          `ลาป่วยสามารถเลือกวันเริ่มลาได้ล่วงหน้าไม่เกิน 1 วัน กรุณาเลือกไม่เกิน ${formatDisplayDate(maximumStartDate)}`;
       }
 
       if (
@@ -2285,7 +2325,7 @@ function RoleCreateLeaveRequestPage({
             <ThaiDateField
               label="วันที่เริ่มลา"
               minDate={minimumStartDate}
-              maxDate={maximumSelectableDate}
+              maxDate={maximumStartDate}
               holidaysByDate={activeHolidayByDate}
               disabled={dateSelectionDisabled}
               value={

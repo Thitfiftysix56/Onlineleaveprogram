@@ -30,6 +30,7 @@ import FixedTableBody from './fixedtablebody.jsx';
 import { ConfirmationDialog, DataListToolbar } from './shareduiprimitives.jsx';
 import { InlineListSummary } from './sharedvisualfoundation.jsx';
 import RolePositionFormPage from './rolepositionformpage.jsx';
+import { positionLabelFor } from '../constants/organizationcatalog.js';
 
 import {
   deletePosition,
@@ -433,7 +434,7 @@ function RolePositionManagementPage({
         await loadPositions();
 
         setActionMessage(
-          `เปลี่ยนสถานะตำแหน่ง ${selectedPosition.positionName} เป็น ${translateStatus(
+          `เปลี่ยนสถานะตำแหน่ง ${positionLabelFor(selectedPosition.positionName)} เป็น ${translateStatus(
             nextStatus,
           )} แล้ว`,
         );
@@ -457,7 +458,7 @@ function RolePositionManagementPage({
       await deletePosition(deleteTarget.id);
       setDeleteTarget(null);
       await loadPositions();
-      setActionMessage(`ลบตำแหน่ง ${deleteTarget.positionName} เรียบร้อยแล้ว`);
+      setActionMessage(`ลบตำแหน่ง ${positionLabelFor(deleteTarget.positionName)} เรียบร้อยแล้ว`);
     } catch (error) {
       setLoadError(error.response?.data?.message || 'ไม่สามารถลบตำแหน่งได้');
     } finally {
@@ -1166,7 +1167,7 @@ function RolePositionManagementPage({
                               '1px solid #E5E7EB',
                           }}
                         >
-                          {position.positionName}
+                          {positionLabelFor(position.positionName)}
                         </TableCell>
 
                         {/* Employees */}
@@ -1486,7 +1487,7 @@ function RolePositionManagementPage({
       <ConfirmationDialog
         open={Boolean(disableTarget)}
         title="ยืนยันการปิดใช้งานตำแหน่ง"
-        description={`ต้องการปิดใช้งานตำแหน่ง ${disableTarget?.positionName || ''} ใช่หรือไม่`}
+        description={`ต้องการปิดใช้งานตำแหน่ง ${positionLabelFor(disableTarget?.positionName)} ใช่หรือไม่`}
         loading={Number(updatingId) === Number(disableTarget?.id)}
         onCancel={() => setDisableTarget(null)}
         onConfirm={async () => { const target = disableTarget; if (!target) return; await handleStatusChange(target); setDisableTarget(null); }}
@@ -1495,7 +1496,7 @@ function RolePositionManagementPage({
       <ConfirmationDialog
         open={Boolean(deleteTarget)}
         title="ยืนยันการลบตำแหน่ง"
-        description={`ต้องการลบตำแหน่ง ${deleteTarget?.positionName || ''} ใช่หรือไม่ ระบบจะลบได้เฉพาะตำแหน่งที่ไม่มีพนักงานอยู่`}
+        description={`ต้องการลบตำแหน่ง ${positionLabelFor(deleteTarget?.positionName)} ใช่หรือไม่ ระบบจะลบได้เฉพาะตำแหน่งที่ไม่มีพนักงานอยู่`}
         loading={Number(updatingId) === Number(deleteTarget?.id)}
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDeletePosition}

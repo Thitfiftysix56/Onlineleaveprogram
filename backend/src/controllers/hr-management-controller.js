@@ -287,6 +287,15 @@ export async function updateEmployee(request, response) {
       [v.employeeCode, v.firstName, v.lastName, v.phone, v.email, v.departmentId, v.positionId, v.roleId, v.supervisorId, v.hireDate, v.status, id],
     )
     await pool.execute('UPDATE users SET role_id = ?, updated_at = NOW() WHERE employee_id = ?', [v.roleId, id])
+    if (v.status !== 'active') {
+      await pool.execute(
+        `UPDATE users
+         SET status = 'inactive', failed_login_attempts = 0, last_failed_login_at = NULL,
+             locked_until = NULL, token_version = token_version + 1, updated_at = NOW()
+         WHERE employee_id = ?`,
+        [id],
+      )
+    }
     if (v.status === 'active') {
       await ensureCurrentYearEntitlements(pool, {
         employeeId: id,
@@ -302,6 +311,7 @@ export async function updateEmployee(request, response) {
 }
 
 export async function updateEmployeeStatus(request, response) {
+  let connection
   try {
     const id = positiveId(request.params.employeeId)
     const status = lower(request.body.status)
@@ -309,7 +319,19 @@ export async function updateEmployeeStatus(request, response) {
     if (!employeeStatuses.has(status)) return sendError(response, 400, 'Status must be active, inactive or resigned.')
     const row = await employeeById(id)
     if (!row) return sendError(response, 404, 'Employee was not found.')
-    await pool.execute('UPDATE employees SET status = ? WHERE employee_id = ?', [status, id])
+    connection = await pool.getConnection()
+    await connection.beginTransaction()
+    await connection.execute('UPDATE employees SET status = ? WHERE employee_id = ?', [status, id])
+    if (status !== 'active') {
+      await connection.execute(
+        `UPDATE users
+         SET status = 'inactive', failed_login_attempts = 0, last_failed_login_at = NULL,
+             locked_until = NULL, token_version = token_version + 1, updated_at = NOW()
+         WHERE employee_id = ?`,
+        [id],
+      )
+    }
+    await connection.commit()
     if (status === 'active') {
       await ensureCurrentYearEntitlements(pool, {
         employeeId: id,
@@ -318,7 +340,10 @@ export async function updateEmployeeStatus(request, response) {
     }
     return response.json({ status: 'ok', message: 'Employee status updated successfully', data: { employeeId: id, status } })
   } catch (error) {
+    if (connection) await connection.rollback()
     return internalError(response, 'Update employee status error:', error)
+  } finally {
+    if (connection) connection.release()
   }
 }
 
@@ -402,7 +427,8 @@ async function saveDepartment(request, response, id = null) {
   const description = trim(request.body.description) || null
   const isActive = activeValue(request.body.isActive ?? request.body.status)
   if (name.length < 2 || name.length > 100) return sendError(response, 400, 'Department name must contain 2-100 characters.')
-  if (divisionName.length < 2 || divisionName.length > 100) return sendError(response, 400, 'กรุณาเลือกฝ่ายให้ถูกต้อง')
+  if (divisionName.length < 2) return sendError(response, 400, 'ชื่อฝ่ายต้องมีอย่างน้อย 2 ตัวอักษร')
+  if (divisionName.length > 100) return sendError(response, 400, 'ชื่อฝ่ายต้องไม่เกิน 100 ตัวอักษร')
   if (isActive === null) return sendError(response, 400, 'Status must be Active or Inactive.')
   if (id && !await departmentById(id)) return sendError(response, 404, 'Department was not found.')
   const [duplicates] = await pool.execute('SELECT department_id FROM departments WHERE LOWER(department_name) = LOWER(?) AND LOWER(division_name) = LOWER(?) AND department_id <> ? LIMIT 1', [name, divisionName, id || 0])

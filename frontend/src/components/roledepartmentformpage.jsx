@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createDepartment, getDepartment, getDepartments, updateDepartment } from '../api/department-service.js';
-import { departmentNames, divisionLabelFor, divisionNamesFor } from '../constants/organizationcatalog.js';
+import { departmentLabelFor, departmentNames, divisionLabelFor, divisionNamesFor } from '../constants/organizationcatalog.js';
 
 const emptyData = { departmentName: '', divisionName: '', description: '', status: 'Active' };
 
@@ -40,6 +40,12 @@ function RoleDepartmentFormPage({
   const [existingDepartments, setExistingDepartments] = useState([]);
   const [customDepartmentMode, setCustomDepartmentMode] = useState(false);
   const [customDivisionMode, setCustomDivisionMode] = useState(false);
+
+  const availableDepartmentNames = [...new Set([
+    ...departmentNames,
+    ...existingDepartments.map((department) => department.departmentName).filter(Boolean),
+    formData.departmentName,
+  ].filter(Boolean))];
 
   useEffect(() => {
     let active = true;
@@ -88,10 +94,13 @@ function RoleDepartmentFormPage({
   const validate = () => {
     const nextErrors = {};
     const name = formData.departmentName.trim();
+    const divisionName = formData.divisionName.trim();
     if (!name) nextErrors.departmentName = 'กรุณากรอกชื่อแผนก';
     else if (name.length < 2) nextErrors.departmentName = 'ชื่อแผนกต้องมีอย่างน้อย 2 ตัวอักษร';
     else if (name.length > 100) nextErrors.departmentName = 'ชื่อแผนกต้องไม่เกิน 100 ตัวอักษร';
-    if (!formData.divisionName) nextErrors.divisionName = 'กรุณาเลือกฝ่าย';
+    if (!divisionName) nextErrors.divisionName = customDivisionMode ? 'กรุณากรอกชื่อฝ่ายใหม่' : 'กรุณาเลือกฝ่าย';
+    else if (divisionName.length < 2) nextErrors.divisionName = 'ชื่อฝ่ายต้องมีอย่างน้อย 2 ตัวอักษร';
+    else if (divisionName.length > 100) nextErrors.divisionName = 'ชื่อฝ่ายต้องไม่เกิน 100 ตัวอักษร';
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -104,8 +113,8 @@ function RoleDepartmentFormPage({
   const confirmSave = async () => {
     const payload = {
       departmentName: formData.departmentName.trim(),
-      divisionName: formData.divisionName,
-      description: divisionLabelFor(formData.divisionName),
+      divisionName: formData.divisionName.trim(),
+      description: divisionLabelFor(formData.divisionName.trim()),
       status: formData.status,
     };
     setSaving(true);
@@ -173,7 +182,7 @@ function RoleDepartmentFormPage({
             helperText={errors.departmentName}
             sx={{ display: customDepartmentMode ? 'none' : undefined, marginBottom: '22px' }}
           >
-            {departmentNames.map((name) => <MenuItem key={name} value={name}>{name}</MenuItem>)}
+            {availableDepartmentNames.map((name) => <MenuItem key={name} value={name}>{departmentLabelFor(name)}</MenuItem>)}
             {!isEditMode ? <MenuItem value="__new_department__">เพิ่มแผนกใหม่</MenuItem> : null}
           </TextField>
           {customDepartmentMode ? (
@@ -224,7 +233,7 @@ function RoleDepartmentFormPage({
         <DialogTitle>ยืนยันการบันทึกข้อมูลแผนก</DialogTitle>
         <DialogContent>
           <Stack gap="8px">
-            <Typography><strong>ชื่อแผนก:</strong> {formData.departmentName.trim()}</Typography>
+            <Typography><strong>ชื่อแผนก:</strong> {departmentLabelFor(formData.departmentName.trim())}</Typography>
             <Typography><strong>ฝ่าย:</strong> {divisionLabelFor(formData.divisionName)}</Typography>
           </Stack>
         </DialogContent>

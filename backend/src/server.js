@@ -261,12 +261,26 @@ const hrRoutes = [
   ['put', '/api/hr/leave-entitlements/:entitlementId', updateLeaveEntitlement],
 ]
 
+const hrOnlyOrganizationMutations = new Set([
+  'post /api/hr/departments',
+  'put /api/hr/departments/:departmentId',
+  'patch /api/hr/departments/:departmentId/status',
+  'delete /api/hr/departments/:departmentId',
+  'post /api/hr/positions',
+  'put /api/hr/positions/:positionId',
+  'patch /api/hr/positions/:positionId/status',
+  'delete /api/hr/positions/:positionId',
+])
+
 for (const [method, path, handler] of hrRoutes) {
+  const authorize = hrOnlyOrganizationMutations.has(`${method} ${path}`)
+    ? requireHr
+    : requireHrOrAdmin
   expressApp[method](
     path,
     requireAuthentication,
     requirePasswordChangeCompleted,
-    requireHrOrAdmin,
+    authorize,
     handler,
   )
 }

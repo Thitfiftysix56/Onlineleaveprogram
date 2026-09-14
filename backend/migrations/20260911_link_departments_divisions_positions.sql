@@ -1,9 +1,9 @@
 ALTER TABLE departments
-  ADD COLUMN division_name VARCHAR(100) NULL AFTER department_name;
+  ADD COLUMN IF NOT EXISTS division_name VARCHAR(100) NULL AFTER department_name;
 
-ALTER TABLE departments DROP INDEX uq_departments_name;
+ALTER TABLE departments DROP INDEX IF EXISTS uq_departments_name;
 ALTER TABLE departments
-  ADD UNIQUE KEY uq_department_division (department_name, division_name);
+  ADD UNIQUE KEY IF NOT EXISTS uq_department_division (department_name, division_name);
 
 UPDATE departments SET division_name = CASE department_name
   WHEN 'Information Technology' THEN 'Development'
@@ -19,10 +19,10 @@ INSERT IGNORE INTO departments (department_name, division_name, description, is_
   ('Information Technology', 'Infrastructure', 'ฝ่ายโครงสร้างพื้นฐาน', 1);
 
 ALTER TABLE positions
-  ADD COLUMN department_id INT UNSIGNED NULL AFTER position_name,
-  ADD COLUMN position_group VARCHAR(100) NULL AFTER department_id,
-  ADD KEY idx_positions_department (department_id),
-  ADD CONSTRAINT fk_positions_department FOREIGN KEY (department_id)
+  ADD COLUMN IF NOT EXISTS department_id INT UNSIGNED NULL AFTER position_name,
+  ADD COLUMN IF NOT EXISTS position_group VARCHAR(100) NULL AFTER department_id,
+  ADD KEY IF NOT EXISTS idx_positions_department (department_id),
+  ADD CONSTRAINT IF NOT EXISTS fk_positions_department FOREIGN KEY (department_id)
     REFERENCES departments (department_id) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 UPDATE positions SET

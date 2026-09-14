@@ -23,7 +23,7 @@ import ThaiCalendarField from '../../components/thaicalendarfield.jsx';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getDepartments } from '../../api/department-service.js';
 import { getPositions } from '../../api/position-service.js';
-import { divisionLabelFor } from '../../constants/organizationcatalog.js';
+import { departmentLabelFor, divisionLabelFor, positionGroupLabelFor, positionLabelFor } from '../../constants/organizationcatalog.js';
 import {
   createEmployee,
   getEmployee,
@@ -123,6 +123,18 @@ function EmployeeFormPage({ mode = 'add' }) {
     loadForm();
     return () => { active = false; };
   }, [employeeId, isEditMode]);
+
+  const selectedDepartmentPositions = positions.filter(
+    (position) => String(position.departmentId) === String(formData.department),
+  );
+  const availablePositionGroups = [...new Set(
+    selectedDepartmentPositions
+      .map((position) => position.positionGroup)
+      .filter(Boolean),
+  )];
+  const availablePositions = selectedDepartmentPositions.filter(
+    (position) => position.positionGroup === formData.positionGroup,
+  );
 
   const handleInputChange = (fieldName, value) => {
     setFormData((previousData) => ({
@@ -550,7 +562,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                   borderRadius: '8px',
                 }}
               >
-                {[...new Set(departments.map((department) => department.departmentName))].map((name) => <MenuItem key={name} value={name}>{name}</MenuItem>)}
+                {[...new Set(departments.map((department) => department.departmentName))].map((name) => <MenuItem key={name} value={name}>{departmentLabelFor(name)}</MenuItem>)}
               </Select>
 
               {errors.departmentName && (
@@ -601,18 +613,30 @@ function EmployeeFormPage({ mode = 'add' }) {
               <Select labelId="employee-position-group-label" value={formData.positionGroup} label="กลุ่มตำแหน่ง"
                 onChange={(event) => setFormData((current) => ({ ...current, positionGroup: event.target.value, position: '' }))}
                 sx={{ borderRadius: '8px' }}>
-                {[...new Set(positions.filter((position) => String(position.departmentId) === String(formData.department)).map((position) => position.positionGroup).filter(Boolean))]
-                  .map((group) => <MenuItem key={group} value={group}>{group}</MenuItem>)}
+                {availablePositionGroups.length ? availablePositionGroups
+                  .map((group) => <MenuItem key={group} value={group}>{positionGroupLabelFor(group)}</MenuItem>) : (
+                    <MenuItem disabled value="">
+                      ฝ่ายนี้ยังไม่มีตำแหน่ง กรุณาเพิ่มตำแหน่งก่อน
+                    </MenuItem>
+                  )}
               </Select>
-              {errors.positionGroup && <FormHelperText>{errors.positionGroup}</FormHelperText>}
+              {(errors.positionGroup || (formData.department && !availablePositionGroups.length)) && (
+                <FormHelperText>
+                  {errors.positionGroup || 'ฝ่ายนี้ยังไม่มีตำแหน่ง กรุณาเพิ่มตำแหน่งก่อน'}
+                </FormHelperText>
+              )}
             </FormControl>
 
             <FormControl fullWidth required disabled={!formData.positionGroup} error={Boolean(errors.position)}>
               <InputLabel id="employee-position-label">ชื่อตำแหน่ง</InputLabel>
               <Select labelId="employee-position-label" value={formData.position} label="ชื่อตำแหน่ง"
                 onChange={(event) => handleInputChange('position', event.target.value)} sx={{ borderRadius: '8px' }}>
-                {positions.filter((position) => String(position.departmentId) === String(formData.department) && position.positionGroup === formData.positionGroup)
-                  .map((position) => <MenuItem key={position.positionId} value={position.positionId}>{position.positionName}</MenuItem>)}
+                {availablePositions.length ? availablePositions
+                  .map((position) => <MenuItem key={position.positionId} value={position.positionId}>{positionLabelFor(position.positionName)}</MenuItem>) : (
+                    <MenuItem disabled value="">
+                      ไม่มีตำแหน่งในกลุ่มนี้
+                    </MenuItem>
+                  )}
               </Select>
               {errors.position && <FormHelperText>{errors.position}</FormHelperText>}
             </FormControl>
@@ -827,10 +851,10 @@ function EmployeeFormPage({ mode = 'add' }) {
             <Typography><strong>ชื่อ:</strong> {formData.firstName} {formData.lastName}</Typography>
             <Typography><strong>รหัสพนักงาน:</strong> {isEditMode ? formData.employeeId : 'ระบบสร้างอัตโนมัติ'}</Typography>
             <Typography><strong>อีเมล:</strong> {formData.email}</Typography>
-            <Typography><strong>แผนก:</strong> {formData.departmentName || '-'}</Typography>
+            <Typography><strong>แผนก:</strong> {departmentLabelFor(formData.departmentName)}</Typography>
             <Typography><strong>ฝ่าย:</strong> {divisionLabelFor(departments.find((item) => String(item.departmentId) === String(formData.department))?.divisionName)}</Typography>
-            <Typography><strong>กลุ่มตำแหน่ง:</strong> {formData.positionGroup || '-'}</Typography>
-            <Typography><strong>ชื่อตำแหน่ง:</strong> {positions.find((item) => String(item.positionId) === String(formData.position))?.positionName || '-'}</Typography>
+            <Typography><strong>กลุ่มตำแหน่ง:</strong> {positionGroupLabelFor(formData.positionGroup)}</Typography>
+            <Typography><strong>ชื่อตำแหน่ง:</strong> {positionLabelFor(positions.find((item) => String(item.positionId) === String(formData.position))?.positionName)}</Typography>
           </Box>
         </DialogContent>
         <DialogActions sx={{ padding: '14px 20px' }}><Button type="button" variant="outlined" color="secondary" disabled={saving} onClick={() => { setConfirmationOpen(false); setConfirmationError(''); }}>กลับไปแก้ไข</Button><Button type="button" variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions>

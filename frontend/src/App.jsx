@@ -7,7 +7,6 @@ import {
   Navigate,
   Route,
   Routes,
-  useParams,
 } from 'react-router-dom';
 
 import ProtectedRoute from './components/protectedroute.jsx';
@@ -86,10 +85,7 @@ const AdminCreateLeaveRequestPage = lazy(() => import('./pages/admin/createleave
 const AdminMyRequestsPage = lazy(() => import('./pages/admin/myrequestspage.jsx'));
 const AdminLeaveRequestDetailPage = lazy(() => import('./pages/admin/leaverequestdetailpage.jsx'));
 const UserManagementPage = lazy(() => import('./pages/admin/usermanagementpage.jsx'));
-const DepartmentManagementPage = lazy(() => import('./pages/admin/departmentmanagementpage.jsx'));
-const DepartmentFormPage = lazy(() => import('./pages/admin/departmentformpage.jsx'));
-const PositionManagementPage = lazy(() => import('./pages/admin/positionmanagementpage.jsx'));
-const PositionFormPage = lazy(() => import('./pages/admin/positionformpage.jsx'));
+const OrganizationStructurePage = lazy(() => import('./pages/admin/organizationstructurepage.jsx'));
 const AuditLogPage = lazy(() => import('./pages/admin/auditlogpage.jsx'));
 const AdminProfilePage = lazy(() => import('./pages/admin/adminprofilepage.jsx'));
 const AdminNotificationPage = lazy(() => import('./pages/admin/adminnotificationpage.jsx'));
@@ -116,11 +112,6 @@ function RootRedirect() {
       replace
     />
   );
-}
-
-function UserManagementRouteForm({ mode }) {
-  const { userId } = useParams();
-  return <UserManagementPage initialFormMode={mode} initialUserId={userId} />;
 }
 
 function App() {
@@ -525,60 +516,8 @@ function App() {
         />
 
         <Route
-          path="/admin/user-management/:userId/edit"
-          element={
-            <UserManagementRouteForm mode="edit" />
-          }
-        />
-
-        <Route
-          path="/admin/department-management"
-          element={
-            <DepartmentManagementPage />
-          }
-        />
-
-        <Route
-          path="/admin/department-management/add"
-          element={
-            <DepartmentFormPage
-              mode="add"
-            />
-          }
-        />
-
-        <Route
-          path="/admin/department-management/:departmentId/edit"
-          element={
-            <DepartmentFormPage
-              mode="edit"
-            />
-          }
-        />
-
-        <Route
-          path="/admin/position-management"
-          element={
-            <PositionManagementPage />
-          }
-        />
-
-        <Route
-          path="/admin/position-management/add"
-          element={
-            <PositionFormPage
-              mode="add"
-            />
-          }
-        />
-
-        <Route
-          path="/admin/position-management/:positionId/edit"
-          element={
-            <PositionFormPage
-              mode="edit"
-            />
-          }
+          path="/admin/organization-structure"
+          element={<OrganizationStructurePage />}
         />
 
         <Route

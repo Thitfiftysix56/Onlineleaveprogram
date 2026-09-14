@@ -2311,6 +2311,10 @@ function RoleNotificationPage({
 
                       cursor: notification.path ? 'pointer' : 'default',
 
+                      opacity: notification.isRead ? 0.62 : 1,
+
+                      transition: 'background-color 0.16s ease, opacity 0.16s ease',
+
                       padding: {
                         xs:
                           '20px',
@@ -2350,6 +2354,7 @@ function RoleNotificationPage({
                       '&:hover': visualCalibration
                         ? undefined
                         : {
+                            opacity: notification.isRead ? 0.78 : 1,
                             backgroundColor:
                               notification.isRead
                                 ? '#F8FAFC'

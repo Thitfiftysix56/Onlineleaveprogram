@@ -922,18 +922,18 @@ function AdminDashboardPage() {
 
       Inactive: {
         backgroundColor:
-          '#FEF3C7',
-
-        color:
-          '#B45309',
-      },
-
-      Locked: {
-        backgroundColor:
           '#FEE2E2',
 
         color:
           '#B91C1C',
+      },
+
+      Locked: {
+        backgroundColor:
+          '#FEF3C7',
+
+        color:
+          '#B45309',
       },
     };
 

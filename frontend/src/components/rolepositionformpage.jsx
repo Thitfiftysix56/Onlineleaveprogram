@@ -3,7 +3,7 @@ import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, 
 import { useNavigate, useParams } from 'react-router-dom';
 import { createPosition, getPosition, getPositions, updatePosition } from '../api/position-service.js';
 import { getDepartments } from '../api/department-service.js';
-import { divisionLabelFor, organizationCatalog } from '../constants/organizationcatalog.js';
+import { departmentLabelFor, divisionLabelFor, organizationCatalog, positionLabelFor } from '../constants/organizationcatalog.js';
 
 const emptyData = { departmentName: '', departmentId: '', divisionName: '', positionGroup: '', positionName: '', status: 'Active' };
 const positionChoices = Object.entries(organizationCatalog).flatMap(([departmentName, divisions]) =>
@@ -188,8 +188,26 @@ function RolePositionFormPage({
           <Box>
             <TextField select fullWidth required disabled={customPositionMode} label="ชื่อตำแหน่ง" value={customPositionMode ? '__new__' : formData.positionName}
               onChange={(event) => selectPositionOption(event.target.value)} error={!customPositionMode && Boolean(errors.positionName)}
-              helperText={!customPositionMode ? errors.positionName : ''} sx={{ display: customPositionMode ? 'none' : undefined }}>
-              {availablePositionChoices.length ? availablePositionChoices.map((item) => <MenuItem key={`${item.departmentName}-${item.divisionName}-${item.positionName}`} value={item.positionName}>{item.positionName}</MenuItem>) : (
+              helperText={!customPositionMode ? errors.positionName : ''}
+              SelectProps={{
+                MenuProps: {
+                  PaperProps: {
+                    sx: {
+                      maxHeight: '292px',
+                      marginTop: '6px',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '12px',
+                      boxShadow: '0 16px 36px rgba(15, 23, 42, 0.18)',
+                      overflowY: 'auto',
+                      overscrollBehavior: 'contain',
+                      '& .MuiMenu-list': { padding: '6px' },
+                      '& .MuiMenuItem-root': { minHeight: '42px', borderRadius: '8px', whiteSpace: 'normal', lineHeight: 1.4 },
+                    },
+                  },
+                },
+              }}
+              sx={{ display: customPositionMode ? 'none' : undefined }}>
+              {availablePositionChoices.length ? availablePositionChoices.map((item) => <MenuItem key={`${item.departmentName}-${item.divisionName}-${item.positionName}`} value={item.positionName}>{positionLabelFor(item.positionName)}</MenuItem>) : (
                 <MenuItem disabled value="">ไม่มีชื่อตำแหน่งที่สามารถเพิ่มได้</MenuItem>
               )}
               {!isEditMode ? <MenuItem value="__new__">เพิ่มตำแหน่งใหม่</MenuItem> : null}
@@ -206,7 +224,7 @@ function RolePositionFormPage({
                     setErrors((current) => ({ ...current, departmentName: '', departmentId: '' }));
                   }} error={Boolean(errors.departmentId || errors.departmentName)} helperText={errors.departmentId || errors.departmentName}>
                   {departmentOptions.map((item) => (
-                    <MenuItem key={item.departmentId} value={item.departmentId}>{item.departmentName} — {divisionLabelFor(item.divisionName)}</MenuItem>
+                    <MenuItem key={item.departmentId} value={item.departmentId}>{departmentLabelFor(item.departmentName)} — {divisionLabelFor(item.divisionName)}</MenuItem>
                   ))}
                 </TextField>
               </Box>
@@ -222,8 +240,8 @@ function RolePositionFormPage({
       <Dialog open={confirmationOpen} onClose={() => !saving && setConfirmationOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>ยืนยันการบันทึกข้อมูลตำแหน่ง</DialogTitle>
         <DialogContent><Box sx={{ display: 'grid', gap: '8px' }}>
-          <Typography><strong>ชื่อตำแหน่ง:</strong> {formData.positionName}</Typography>
-          {customPositionMode ? <Typography><strong>สังกัด:</strong> {formData.departmentName} — {divisionLabelFor(formData.divisionName)}</Typography> : null}
+          <Typography><strong>ชื่อตำแหน่ง:</strong> {positionLabelFor(formData.positionName)}</Typography>
+          {customPositionMode ? <Typography><strong>สังกัด:</strong> {departmentLabelFor(formData.departmentName)} — {divisionLabelFor(formData.divisionName)}</Typography> : null}
         </Box></DialogContent>
         <DialogActions sx={{ padding: '14px 20px' }}>
           <Button variant="outlined" color="secondary" disabled={saving} onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button>

@@ -191,11 +191,8 @@ const roleRoutes = {
     'User Management':
       '/admin/user-management',
 
-    'Department Management':
-      '/admin/department-management',
-
-    'Position Management':
-      '/admin/position-management',
+    'Organization Structure':
+      '/admin/organization-structure',
 
     'Audit Log':
       '/admin/audit-log',
@@ -251,6 +248,9 @@ const menuLabels = {
 
   'User Management':
     'จัดการผู้ใช้งาน',
+
+  'Organization Structure':
+    'โครงสร้างองค์กร',
 
   'Department Management':
     'จัดการแผนก',
@@ -357,6 +357,9 @@ const getMenuIcon = (
 
     'User Management':
       ManageAccountsRounded,
+
+    'Organization Structure':
+      GroupsRounded,
 
     'Department Management':
       GroupsRounded,
@@ -1730,7 +1733,7 @@ function RoleLayout({
             const unread = !isNotificationRead(item);
             return (
               <Box key={item.id || item.notificationId || index}>
-                <ButtonBase type="button" onClick={() => handleNotificationClick(item)} sx={{ width: '100%', padding: '13px 18px', display: 'block', textAlign: 'left', backgroundColor: unread ? '#F8FAFF' : '#FFFFFF', '&:hover': { backgroundColor: '#F8FAFC' } }}>
+                <ButtonBase type="button" onClick={() => handleNotificationClick(item)} sx={{ width: '100%', padding: '13px 18px', display: 'block', textAlign: 'left', backgroundColor: unread ? '#F8FAFF' : '#FFFFFF', opacity: unread ? 1 : 0.62, transition: 'background-color 0.16s ease, opacity 0.16s ease', '&:hover': { backgroundColor: '#F8FAFC', opacity: unread ? 1 : 0.78 } }}>
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
                     <Typography sx={{ color: unread ? '#0F172A' : '#475569', fontSize: '13px', fontWeight: unread ? 800 : 600, lineHeight: 1.45 }}>{item.title || 'การแจ้งเตือน'}</Typography>
                     {unread ? <Typography sx={{ color: '#DC2626', fontSize: '10px', fontWeight: 800, flexShrink: 0 }}>ใหม่</Typography> : null}

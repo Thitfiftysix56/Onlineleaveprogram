@@ -52,6 +52,7 @@ function ThaiCalendarField({
     return day >= 1 && day <= daysInMonth ? day : null;
   });
   const moveMonth = (offset) => setVisibleMonth(new Date(Date.UTC(year, month + offset, 1)));
+  const todayValue = today();
   const selectDay = (day) => {
     const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     onChange(date);
@@ -116,9 +117,34 @@ function ThaiCalendarField({
               if (!day) return <Box key={`empty-${index}`} />;
               const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               const outsideRange = Boolean(min && date < min) || Boolean(max && date > max);
+              const isToday = date === todayValue;
               return (
                 <Button key={date} type="button" disabled={outsideRange} onClick={() => selectDay(day)}
-                  sx={{ minWidth: 0, height: '38px', padding: 0, borderRadius: '9px', fontWeight: value === date ? 800 : 500, backgroundColor: value === date ? '#DBEAFE' : 'transparent' }}>
+                  sx={{
+                    minWidth: 0,
+                    width: '34px',
+                    height: '34px',
+                    justifySelf: 'center',
+                    padding: 0,
+                    borderRadius: '11px',
+                    fontWeight: value === date || isToday ? 800 : 500,
+                    color: isToday ? (primaryColor || '#1D4ED8') : undefined,
+                    backgroundColor: value === date
+                      ? '#BFDBFE'
+                      : isToday
+                        ? `color-mix(in srgb, ${primaryColor || '#2563EB'} 20%, white)`
+                        : 'transparent',
+                    boxShadow: isToday && value !== date ? `0 5px 14px color-mix(in srgb, ${primaryColor || '#2563EB'} 30%, transparent)` : 'none',
+                    transform: isToday && value !== date ? 'translateY(-1px)' : 'none',
+                    transition: 'background-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease',
+                    '&:hover': {
+                      backgroundColor: value === date
+                        ? '#93C5FD'
+                        : isToday
+                          ? `color-mix(in srgb, ${primaryColor || '#2563EB'} 28%, white)`
+                          : '#F1F5F9',
+                    },
+                  }}>
                   {day}
                 </Button>
               );

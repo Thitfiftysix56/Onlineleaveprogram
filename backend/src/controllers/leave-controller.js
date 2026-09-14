@@ -59,7 +59,12 @@ export function validateLeaveStartDatePolicy(
   leaveType,
   todayDate = todayInBangkok(),
 ) {
-  if (isSickLeaveType(leaveType)) return null
+  if (isSickLeaveType(leaveType)) {
+    const maximumDate = addCalendarDays(todayDate, 1)
+    return startDate > maximumDate
+      ? `ลาป่วยสามารถเลือกวันเริ่มลาได้ล่วงหน้าไม่เกิน 1 วัน โดยเลือกได้ถึง ${maximumDate}`
+      : null
+  }
   const minimumDate = addCalendarDays(todayDate, 3)
   return startDate < minimumDate
     ? `การลาประเภทนี้ต้องยื่นล่วงหน้าอย่างน้อย 3 วัน โดยเลือกวันเริ่มลาได้ตั้งแต่ ${minimumDate}`

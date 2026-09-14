@@ -419,7 +419,6 @@ export async function createAdminUser(request, response) {
 }
 
 export async function updateAdminUser(request, response) {
-  let connection
   try {
     const userId = Number(request.params.userId)
     const username = normalizeUsername(request.body.username)
@@ -430,6 +429,13 @@ export async function updateAdminUser(request, response) {
       return response.status(400).json({
         status: 'error',
         message: 'A valid userId is required.',
+      })
+    }
+
+    if (userId === Number(request.user.userId) && status !== 'active') {
+      return response.status(409).json({
+        status: 'error',
+        message: 'You cannot deactivate or lock your own account.',
       })
     }
 
@@ -472,37 +478,18 @@ export async function updateAdminUser(request, response) {
       })
     }
 
-    const role = await findRole(request.body.role)
-
-    if (!role) {
-      return response.status(400).json({
-        status: 'error',
-        message: 'The selected role is invalid or inactive.',
-      })
-    }
-
-    connection = await pool.getConnection()
-    await connection.beginTransaction()
-    await syncEmployeeCodeWithRole(
-      connection,
-      existingUser.employee_id,
-      existingUser.employee_code,
-      role.role_name,
-    )
-    await connection.execute(
+    await pool.execute(
       `UPDATE users
        SET username = ?,
-           role_id = ?,
            status = ?,
            failed_login_attempts = 0,
            last_failed_login_at = NULL,
            locked_until = NULL,
            updated_at = NOW()
        WHERE user_id = ?`,
-      [username, role.role_id, status, userId],
+      [username, status, userId],
     )
-    const updatedUser = await findUserById(userId, connection)
-    await connection.commit()
+    const updatedUser = await findUserById(userId)
 
     return response.status(200).json({
       status: 'ok',
@@ -510,7 +497,6 @@ export async function updateAdminUser(request, response) {
       user: publicAdminUserDetail(updatedUser),
     })
   } catch (error) {
-    if (connection) await connection.rollback()
     if (error.code === 'ER_DUP_ENTRY') {
       return response.status(409).json({
         status: 'error',
@@ -519,8 +505,6 @@ export async function updateAdminUser(request, response) {
     }
 
     return internalError(response, 'Update admin user error:', error)
-  } finally {
-    if (connection) connection.release()
   }
 }
 
@@ -533,6 +517,14 @@ export async function updateAdminUserStatus(request, response) {
       return response.status(400).json({
         status: 'error',
         message: 'A valid userId is required.',
+      })
+    }
+
+
+    if (userId === Number(request.user.userId) && status !== 'active') {
+      return response.status(409).json({
+        status: 'error',
+        message: 'You cannot deactivate or lock your own account.',
       })
     }
 

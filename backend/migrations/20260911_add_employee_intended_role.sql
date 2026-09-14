@@ -1,7 +1,7 @@
 ALTER TABLE employees
-  ADD COLUMN intended_role_id INT UNSIGNED NULL AFTER position_id,
-  ADD KEY idx_employees_intended_role_id (intended_role_id),
-  ADD CONSTRAINT fk_employees_intended_role FOREIGN KEY (intended_role_id)
+  ADD COLUMN IF NOT EXISTS intended_role_id INT UNSIGNED NULL AFTER position_id,
+  ADD KEY IF NOT EXISTS idx_employees_intended_role_id (intended_role_id),
+  ADD CONSTRAINT IF NOT EXISTS fk_employees_intended_role FOREIGN KEY (intended_role_id)
     REFERENCES roles (role_id) ON UPDATE CASCADE;
 
 UPDATE employees e

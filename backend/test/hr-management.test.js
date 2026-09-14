@@ -147,10 +147,50 @@ test('employee create, update and status update succeed with parameterized SQL',
   response = await fetch(`${baseUrl}/api/hr/employees/10`, { method: 'PUT', headers: auth(), body: JSON.stringify(payload) })
   assert.equal(response.status, 200)
 
-  results = [[[employeeRow]], [{ affectedRows: 1 }]]
+  results = [[[employeeRow]]]
   pool.execute = async () => results.shift()
+  const statusQueries = []
+  pool.getConnection = async () => ({
+    beginTransaction: async () => {},
+    commit: async () => {},
+    rollback: async () => {},
+    release: () => {},
+    execute: async (sql, parameters) => {
+      statusQueries.push({ sql, parameters })
+      return [{ affectedRows: 1 }]
+    },
+  })
   response = await fetch(`${baseUrl}/api/hr/employees/10/status`, { method: 'PATCH', headers: auth(), body: JSON.stringify({ status: 'inactive' }) })
   assert.equal(response.status, 200)
+  assert.equal(statusQueries.length, 2)
+  assert.match(statusQueries[1].sql, /UPDATE users/)
+  assert.match(statusQueries[1].sql, /token_version = token_version \+ 1/)
+  assert.deepEqual(statusQueries[1].parameters, [10])
+})
+
+test('only HR can mutate departments and positions while Admin retains read access', async () => {
+  pool.execute = async () => [[]]
+  assert.equal((await fetch(`${baseUrl}/api/hr/departments`, { headers: auth('Admin') })).status, 200)
+  assert.equal((await fetch(`${baseUrl}/api/hr/positions`, { headers: auth('Admin') })).status, 200)
+
+  const mutationRequests = [
+    ['/api/hr/departments', 'POST', { departmentName: 'IT', divisionName: 'Development' }],
+    ['/api/hr/departments/1', 'PUT', { departmentName: 'IT', divisionName: 'Development' }],
+    ['/api/hr/departments/1/status', 'PATCH', { status: 'inactive' }],
+    ['/api/hr/departments/1', 'DELETE'],
+    ['/api/hr/positions', 'POST', { positionName: 'Developer', departmentId: 1 }],
+    ['/api/hr/positions/1', 'PUT', { positionName: 'Developer', departmentId: 1 }],
+    ['/api/hr/positions/1/status', 'PATCH', { status: 'inactive' }],
+    ['/api/hr/positions/1', 'DELETE'],
+  ]
+  for (const [path, method, body] of mutationRequests) {
+    const response = await fetch(`${baseUrl}${path}`, {
+      method,
+      headers: auth('Admin'),
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    })
+    assert.equal(response.status, 403, `${method} ${path}`)
+  }
 })
 
 test('employee phone is required and must contain exactly ten digits', async () => {

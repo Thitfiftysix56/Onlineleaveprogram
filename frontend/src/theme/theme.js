@@ -341,6 +341,22 @@ const theme = createTheme({
       },
     },
 
+    MuiMenu: {
+      styleOverrides: {
+        paper: {
+          maxHeight: 'min(320px, calc(100vh - 32px))',
+          border: `1px solid ${colorTokens.border}`,
+          borderRadius: radiusTokens.surface,
+          boxShadow: shadowTokens.floating,
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+        },
+        list: {
+          padding: spacingTokens.xs,
+        },
+      },
+    },
+
     MuiInputBase: {
       styleOverrides: {
         root: {
@@ -597,6 +613,9 @@ const theme = createTheme({
     MuiMenuItem: {
       styleOverrides: {
         root: {
+          minHeight: 40,
+          borderRadius: radiusTokens.control,
+          whiteSpace: 'normal',
           fontSize: '0.875rem',
           lineHeight: 1.6,
           '&:focus-visible': {
