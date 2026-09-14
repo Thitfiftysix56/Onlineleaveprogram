@@ -19,6 +19,7 @@ import api from '../api/axios.js';
 
 import {
   clearAuthSession,
+  getAuthSession,
   getDashboardPathByRole,
   saveBackendAuthSession,
 } from '../utils/authstorage.js';
@@ -39,18 +40,23 @@ function ProtectedRoute({
     setIsCheckingSession,
   ] = useState(true);
 
-  const [
-    authError,
-    setAuthError,
-  ] = useState('');
-
   useEffect(() => {
     let isActive = true;
 
     const restoreSession =
       async () => {
+        // Opening a protected URL without a saved login is a normal first-visit
+        // state. Do not call /auth/me or turn it into an error on the login page.
+        if (!getAuthSession()) {
+          clearAuthSession();
+          if (isActive) {
+            setSession(null);
+            setIsCheckingSession(false);
+          }
+          return;
+        }
+
         setIsCheckingSession(true);
-        setAuthError('');
 
         try {
           const response =
@@ -65,7 +71,7 @@ function ProtectedRoute({
           ) {
             throw new Error(
               response.data?.message ||
-                'Unable to verify the current session.',
+                'Invalid session response.',
             );
           }
 
@@ -79,17 +85,11 @@ function ProtectedRoute({
               restoredSession,
             );
           }
-        } catch (error) {
+        } catch {
           clearAuthSession();
 
           if (isActive) {
             setSession(null);
-
-            setAuthError(
-              error.response?.data
-                ?.message ||
-                'Please sign in to continue.',
-            );
           }
         } finally {
           if (isActive) {
@@ -147,10 +147,6 @@ function ProtectedRoute({
         state={{
           from:
             location.pathname,
-
-          authError:
-            authError ||
-            'Please sign in to continue.',
         }}
       />
     );

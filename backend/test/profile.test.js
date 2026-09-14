@@ -143,6 +143,22 @@ test('profile update changes only allowed employee fields', async () => {
   assert.doesNotMatch(queries[2].sql, /username|role_id|employee_code|password_hash/)
 })
 
+test('profile phone is required and must contain exactly ten digits', async () => {
+  for (const phone of ['', '081234567', '08123456789', '08A2345678']) {
+    pool.execute = async () => [[profileRow]]
+    const form = new FormData()
+    form.set('fullName', 'Profile User')
+    form.set('email', 'profile@example.test')
+    form.set('phone', phone)
+    const response = await fetch(`${baseUrl}/api/profile`, {
+      method: 'PUT',
+      headers: auth(),
+      body: form,
+    })
+    assert.equal(response.status, 400, phone)
+  }
+})
+
 test('profile upload validates file type and file size', async () => {
   let form = new FormData()
   form.set('fullName', 'Profile User')
@@ -184,7 +200,7 @@ test('valid profile image is persisted and returned as a URL', async () => {
   const form = new FormData()
   form.set('fullName', 'Profile User')
   form.set('email', 'profile@example.test')
-  form.set('phone', '')
+  form.set('phone', '0812345678')
   form.set('profileImage', new Blob([pngHeader], { type: 'image/png' }), 'profile.png')
 
   const response = await fetch(`${baseUrl}/api/profile`, {

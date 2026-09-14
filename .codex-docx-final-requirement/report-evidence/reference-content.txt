@@ -1,0 +1,136 @@
+P0000 [Normal] ระบบอนุมัติใบลาออนไลน์
+P0001 [Normal] Online Leave Approval System
+P0002 [Normal] Final Requirement
+P0003 [Normal] 1. ขอบเขตของระบบ
+P0004 [Normal] Online Leave Approval System เป็นระบบสำหรับบริหารจัดการกระบวนการลาของบุคลากรภายในองค์กร ตั้งแต่การเข้าสู่ระบบ การสร้างและส่งคำขอลา การตรวจสอบสิทธิ์การลาและวันลาคงเหลือ การคำนวณวันทำงาน การอนุมัติหรือปฏิเสธคำขอ การติดตามสถานะ และการแจ้งเตือนภายในระบบ
+P0005 [Normal] ระบบรองรับการจัดการข้อมูล Employee, Leave Type, Leave Entitlement และ Holiday สำหรับฝ่ายทรัพยากรบุคคล ตลอดจนการจัดการ User Account, Department, Position และ Audit Log สำหรับผู้ดูแลระบบ รวมถึง Dashboard และรายงานตามขอบเขตของแต่ละ Role ข้อมูลธุรกิจหลักถูกจัดเก็บในระบบกลางเพื่อให้การแสดงผลและการทำงานของแต่ละส่วนมีความสอดคล้องกัน
+P0006 [Normal] ระบบมีผู้ใช้งาน 4 Role ได้แก่ Employee, Supervisor, HR และ Admin โดยผู้ใช้งานทุก Role สามารถใช้ความสามารถด้านคำขอลาของตนเองตามเงื่อนไขที่กำหนด Workflow การอนุมัติปัจจุบันเป็นการอนุมัติขั้นเดียว ผู้ใช้งานส่ง Leave Request ให้ Supervisor ซึ่งเป็นหัวหน้างานโดยตรงพิจารณาและเปลี่ยนผลเป็น Approved หรือ Rejected
+P0007 [Normal] 2. ผู้ใช้งานและบทบาทของระบบ
+T000 BLOCK=8 ROWS=5 GRID=[2200, 7150]
+  R000 | บทบาท | หน้าที่
+  R001 | Employee | สร้างและติดตาม Leave Request ของตนเอง ตรวจสอบ Leave Balance จัดการ Notification และ Profile ของตนเอง
+  R002 | Supervisor | ใช้ความสามารถด้านการลาของตนเอง พิจารณาคำขอของพนักงานที่อยู่ภายใต้การดูแลโดยตรง และดู Team Report
+  R003 | HR | ใช้ความสามารถด้านการลาของตนเอง และจัดการ Employee, Leave Type, Leave Entitlement, Holiday และ HR Report
+  R004 | Admin | ใช้ความสามารถด้านการลาของตนเอง และจัดการ User Account, Department, Position รวมถึงดู Audit Log
+P0010 [Normal] 3. Functional Requirement
+T001 BLOCK=11 ROWS=28 GRID=[1050, 6450, 1850]
+  R000 | รหัส | Functional Requirement | ผู้ใช้งานที่เกี่ยวข้อง
+  R001 | FR-01 | ระบบสามารถให้ผู้ใช้งานเข้าสู่ระบบด้วย Username หรือ Email และ Password ออกจากระบบ และใช้งาน Session ที่ผ่านการตรวจสอบได้ | ทุก Role
+  R002 | FR-02 | ระบบสามารถควบคุมการเข้าถึง Function และข้อมูลตาม Role และ Data Scope ของผู้ใช้งานได้ | ทุก Role
+  R003 | FR-03 | ระบบสามารถบังคับผู้ใช้ที่ได้รับ Temporary Password ให้เปลี่ยน Password ก่อนใช้ Function ธุรกิจ และให้ผู้ใช้เปลี่ยน Password ของตนเองตาม Password Policy ได้ | ทุก Role
+  R004 | FR-04 | ระบบสามารถให้ผู้ใช้งานขอ OTP ทาง Email ยืนยัน OTP และ Reset Password ด้วย Reset Token แบบใช้ครั้งเดียวได้ | ทุก Role
+  R005 | FR-05 | ระบบสามารถให้ผู้ใช้งานดูและแก้ไข Profile ของตนเอง รวมถึงอัปโหลด เปลี่ยน หรือลบ Profile Image ตามเงื่อนไขได้ | ทุก Role
+  R006 | FR-06 | ระบบสามารถให้ Admin เพิ่ม แก้ไข Role, Username และสถานะ User Account สร้าง Temporary Password และ Reset Password ของบัญชีที่อนุญาตได้ | Admin
+  R007 | FR-07 | ระบบสามารถให้ HR และ Admin ดู เพิ่ม แก้ไข ค้นหา และเปลี่ยนสถานะ Employee รวมถึงกำหนด Department, Position และ Supervisor ได้ | HR, Admin
+  R008 | FR-08 | ระบบสามารถให้ Admin เพิ่ม แก้ไข และเปลี่ยนสถานะ Department ได้ | Admin
+  R009 | FR-09 | ระบบสามารถให้ Admin เพิ่ม แก้ไข และเปลี่ยนสถานะ Position ได้ | Admin
+  R010 | FR-10 | ระบบสามารถให้ HR และ Admin ดู เพิ่ม แก้ไข และเปลี่ยนสถานะ Leave Type พร้อมกำหนด Quota, Minimum/Maximum Days และ Attachment Policy ได้ | HR, Admin
+  R011 | FR-11 | ระบบสามารถให้ HR และ Admin ดู เพิ่ม และแก้ไข Leave Entitlement ของ Employee แยกตาม Leave Type และปีได้ | HR, Admin
+  R012 | FR-12 | ระบบสามารถให้ HR และ Admin ดู เพิ่ม แก้ไข และลบ Holiday และนำ Holiday ที่ Active ไปใช้คำนวณวันทำงานได้ | HR, Admin
+  R013 | FR-13 | ระบบสามารถให้ผู้ใช้งานทุก Role สร้าง Leave Request ของตนเอง บันทึกเป็น Draft และ Submit คำขอได้ | ทุก Role
+  R014 | FR-14 | ระบบสามารถให้เจ้าของแก้ไขหรือลบ Draft และจัดการ Attachment ของ Draft ได้ | ทุก Role
+  R015 | FR-15 | ระบบสามารถตรวจสอบ Required Field, Date Range, Same Year, Reason Length, Active Leave Type, Working Days, Minimum/Maximum Days, Entitlement, Balance, Date Overlap, Attachment Policy และ Supervisor Account ก่อน Submit ได้ | ทุก Role
+  R016 | FR-16 | ระบบสามารถให้ผู้ใช้งานดูรายการและรายละเอียด Leave Request ของตนเองทุกสถานะ พร้อมข้อมูลการลาและ Attachment ที่เกี่ยวข้องได้ | ทุก Role
+  R017 | FR-17 | ระบบสามารถให้เจ้าของยกเลิก Leave Request ของตนเองที่อยู่ในสถานะ Pending โดยเปลี่ยนสถานะเป็น Cancelled ได้ | ทุก Role
+  R018 | FR-18 | ระบบสามารถแสดง Leave Balance ของผู้ใช้งานแยกตาม Leave Type และปี โดยแสดง Total, Used, Pending และ Remaining ได้ | ทุก Role
+  R019 | FR-19 | ระบบสามารถรับและจัดเก็บ Attachment ประกอบ Leave Request ตาม Policy พร้อมควบคุมชนิด จำนวน ขนาด และสิทธิ์การเข้าถึงไฟล์ได้ | ทุก Role ตาม Data Scope
+  R020 | FR-20 | ระบบสามารถให้ Supervisor ดูรายการ Pending และรายละเอียดคำขอของพนักงานที่อยู่ภายใต้การดูแลโดยตรงได้ | Supervisor
+  R021 | FR-21 | ระบบสามารถให้ Supervisor Approve หรือ Reject Leave Request สถานะ Pending ของ Direct Team ได้ โดย Reject ต้องระบุเหตุผล | Supervisor
+  R022 | FR-22 | ระบบสามารถให้ Supervisor ดู Team Report ของ Direct Team พร้อม Filter และ Summary ที่ระบบรองรับได้ | Supervisor
+  R023 | FR-23 | ระบบสามารถให้ HR และ Admin ดู HR Leave Report พร้อม Filter, Summary และรายละเอียด โดย HR Report สามารถส่งออกเป็น Excel ได้ | HR, Admin
+  R024 | FR-24 | ระบบสามารถสร้าง In-app Notification เมื่อมีการ Submit เพื่อแจ้ง Supervisor และเมื่อมีการ Approve หรือ Reject เพื่อแจ้งเจ้าของคำขอได้ | ทุก Role ตาม Event
+  R025 | FR-25 | ระบบสามารถให้ผู้ใช้งานดูจำนวน Unread, Mark Read, Mark All Read, Delete Notification ของตนเอง และเปิด Deep Link ไปยังรายการที่เกี่ยวข้องได้ | ทุก Role
+  R026 | FR-26 | ระบบสามารถแสดง Dashboard ตาม Role โดยใช้ข้อมูลจากระบบกลางและเชื่อมโยงไปยัง Function ที่ Role นั้นมีสิทธิ์ใช้งานได้ | ทุก Role
+  R027 | FR-27 | ระบบสามารถบันทึก Event สำคัญที่กำหนดและให้ Admin ดู Audit Log ได้ | Admin, System
+P0013 [Normal] 4. Role and Permission Requirement
+P0014 [Normal] ระบบควบคุมสิทธิ์ตาม Role ทั้งในส่วนการเข้าถึง Function และการเรียกใช้ข้อมูล โดย Backend เป็นจุดบังคับสิทธิ์สุดท้าย การไม่แสดง Menu เพียงอย่างเดียวไม่ถือเป็นการควบคุมสิทธิ์ ผู้ใช้งานต้องเข้าถึงได้เฉพาะข้อมูลที่อยู่ภายใต้ Ownership หรือ Data Scope ของตนเอง
+T002 BLOCK=15 ROWS=17 GRID=[3750, 1400, 1400, 1400, 1400]
+  R000 | Function | Employee | Supervisor | HR | Admin
+  R001 | Login, Logout, Profile และ Change Password | ✓ | ✓ | ✓ | ✓
+  R002 | Own Leave: Draft, Submit, List, Detail และ Cancel | เงื่อนไข | เงื่อนไข | เงื่อนไข | เงื่อนไข
+  R003 | ดู Leave Balance ของตนเอง | ✓ | ✓ | ✓ | ✓
+  R004 | จัดการ Notification ของตนเอง | ✓ | ✓ | ✓ | ✓
+  R005 | Pending Approval และ Decision | – | เงื่อนไข | – | –
+  R006 | Team Report | – | เงื่อนไข | – | –
+  R007 | Employee Management | – | – | ✓ | ✓
+  R008 | Leave Type / Entitlement / Holiday | – | – | ✓ | ✓
+  R009 | HR Leave Report | – | – | ✓ | ✓
+  R010 | User Management | – | – | – | ✓
+  R011 | Department / Position Management UI | – | – | – | ✓
+  R012 | Department / Position API | – | – | ✓ | ✓
+  R013 | ดู Audit Log | – | – | – | ✓
+  R014 | ดาวน์โหลด Attachment ของตนเอง | ✓ | ✓ | ✓ | ✓
+  R015 | ดาวน์โหลด Attachment ของ Direct Team | – | เงื่อนไข | – | –
+  R016 | ดาวน์โหลด Attachment ตามสิทธิ์ HR/Admin | – | – | ✓ | ✓
+P0017 [Normal] คำอธิบายเงื่อนไข
+P0018 [List Paragraph] ผู้ใช้งานจัดการ Leave Request ของตนเองเท่านั้น และการ Submit ต้องมี Employee Record, Leave Entitlement, Balance และ Supervisor Account ตามเงื่อนไข
+P0019 [List Paragraph] Supervisor พิจารณาและดู Team Report ได้เฉพาะ Direct Team และไม่สามารถ Approve หรือ Reject Leave Request ของตนเอง
+P0020 [List Paragraph] Notification จำกัดตาม User ผู้เป็นเจ้าของข้อมูล
+P0021 [List Paragraph] Attachment ดาวน์โหลดได้เฉพาะเจ้าของ Direct Supervisor, HR หรือ Admin ส่วนการลบจำกัดเฉพาะเจ้าของ Draft
+P0022 [Normal] 5. Business Rule
+T003 BLOCK=23 ROWS=38 GRID=[1200, 8150]
+  R000 | รหัส | Business Rule
+  R001 | BR-01 | การ Submit ต้องระบุ Leave Type, Start Date, End Date และ Reason ครบถ้วน
+  R002 | BR-02 | End Date ต้องไม่ก่อน Start Date และวันที่ต้องอยู่ในรูปแบบที่ระบบยอมรับ
+  R003 | BR-03 | Leave Request หนึ่งรายการต้องไม่ข้ามปี
+  R004 | BR-04 | Reason ต้องมีความยาวตั้งแต่ 5 ถึง 500 ตัวอักษร
+  R005 | BR-05 | Submit ได้เฉพาะ Leave Type ที่ Active
+  R006 | BR-06 | Working Days ไม่นับวันเสาร์ วันอาทิตย์ และ Holiday ที่ Active
+  R007 | BR-07 | ช่วงวันที่ที่ไม่มี Working Day ไม่สามารถ Submit ได้
+  R008 | BR-08 | จำนวนวันลาต้องอยู่ระหว่าง Minimum Days และ Maximum Days Per Request ของ Leave Type
+  R009 | BR-09 | ผู้ยื่นต้องมี Leave Entitlement ของ Employee, Leave Type และปีที่เลือก
+  R010 | BR-10 | Leave Balance ที่ใช้ยื่นคำขอคำนวณจาก Total ลบ Used และ Pending
+  R011 | BR-11 | Pending Request ของประเภทและปีเดียวกันต้องถูกนำไปหักออกจาก Leave Balance ที่ใช้ได้
+  R012 | BR-12 | ห้ามช่วงวันลาทับกับ Leave Request สถานะ Pending หรือ Approved ของ Employee คนเดียวกัน
+  R013 | BR-13 | เมื่อ Leave Type กำหนดให้แนบเอกสารและถึง Threshold ผู้ยื่นต้องมี Attachment ก่อน Submit
+  R014 | BR-14 | Attachment รองรับ PDF, JPEG และ PNG สูงสุด 5 ไฟล์ โดยแต่ละไฟล์ไม่เกิน 10 MB
+  R015 | BR-15 | ดาวน์โหลด Attachment ได้เฉพาะเจ้าของ Direct Supervisor, HR หรือ Admin
+  R016 | BR-16 | แก้ไขหรือลบ Leave Request และลบ Attachment ได้เฉพาะรายการที่เป็น Owned Draft
+  R017 | BR-17 | เจ้าของยกเลิกได้เฉพาะ Leave Request สถานะ Pending
+  R018 | BR-18 | Submit ต้องพบ Supervisor ที่ผูกกับ Employee และ Supervisor ต้องมี User Account
+  R019 | BR-19 | เฉพาะ Role Supervisor เท่านั้นที่ใช้ Approval Function ได้ และคำขอต้องเป็นของ Direct Team
+  R020 | BR-20 | Supervisor ห้าม Approve หรือ Reject Leave Request ของตนเอง
+  R021 | BR-21 | Approve หรือ Reject ทำได้เฉพาะสถานะ Pending และคำขอที่ตัดสินแล้วไม่สามารถตัดสินซ้ำ
+  R022 | BR-22 | Reject ต้องระบุ Rejection Reason
+  R023 | BR-23 | Approve ต้องตรวจ Entitlement และ Balance ซ้ำภายใน Transaction ก่อนเพิ่ม Used Days
+  R024 | BR-24 | Employee Code และ Email ต้องไม่ซ้ำ และข้อมูลอ้างอิง Department, Position และ Supervisor ต้องถูกต้อง
+  R025 | BR-25 | Department Name และ Position Name ต้องมีความยาว 2 ถึง 100 ตัวอักษรและไม่ซ้ำโดยไม่คำนึงถึงตัวพิมพ์
+  R026 | BR-26 | Leave Type Code ต้องเป็นตัวพิมพ์ใหญ่หรือตัวเลข 2 ถึง 10 ตัว และ Code กับ Name ต้องไม่ซ้ำ
+  R027 | BR-27 | Holiday Date ต้องไม่ซ้ำ และข้อมูล Name, Type, Description และ Status ต้องผ่านการตรวจสอบ
+  R028 | BR-28 | Leave Entitlement ต้องไม่ซ้ำในชุด Employee, Leave Type และ Year โดย Year อยู่ระหว่าง 2000 ถึง 2100 และ Total/Used Days อยู่ระหว่าง 0 ถึง 365
+  R029 | BR-29 | Username ต้องไม่ซ้ำ มีความยาว 4 ถึง 50 ตัว และใช้ตัวพิมพ์เล็ก ตัวเลข จุด ขีดล่าง หรือขีดกลางตามรูปแบบที่กำหนด
+  R030 | BR-30 | User Account หนึ่งรายการผูกกับ Employee หนึ่งรายที่ยังไม่มีบัญชี Role ต้อง Active และสถานะบัญชีต้องเป็น Active, Inactive หรือ Locked
+  R031 | BR-31 | Admin Create หรือ Reset Password ต้องสร้าง Temporary Password และบังคับให้ผู้ใช้เปลี่ยน Password โดยบัญชี Inactive ไม่สามารถ Reset Password ได้
+  R032 | BR-32 | Password ใหม่ต้องมีอย่างน้อย 10 ตัวอักษร มีตัวพิมพ์ใหญ่ ตัวพิมพ์เล็ก ตัวเลข อักขระพิเศษ ไม่มีช่องว่าง และไม่เท่ากับ Username, Email หรือ Password เดิม
+  R033 | BR-33 | Profile Image รองรับ JPEG, PNG หรือ WebP หนึ่งไฟล์ ขนาดไม่เกิน 2 MB และเนื้อหาไฟล์ต้องตรงกับชนิดไฟล์
+  R034 | BR-34 | Notification List, Read และ Delete ต้องจำกัดด้วย User ของ Session
+  R035 | BR-35 | Protected Function ต้องปฏิเสธบัญชีที่ไม่ Active และ Session ที่หมดอายุหรือ Token Version ไม่ตรง
+  R036 | BR-36 | OTP เป็นตัวเลข 6 หลัก มีอายุเริ่มต้น 5 นาที ตรวจผิดได้สูงสุด 5 ครั้ง มีระยะรอขอใหม่และจำกัดจำนวนการขอในช่วงเวลา
+  R037 | BR-37 | Reset Token มีอายุเริ่มต้น 15 นาที ใช้ได้ครั้งเดียว และเมื่อ Reset สำเร็จต้องยกเลิก Token และ OTP อื่นที่ยังใช้ได้ของผู้ใช้รายนั้น
+P0025 [Normal] 6. Non-Functional Requirement
+T004 BLOCK=26 ROWS=13 GRID=[1200, 8150]
+  R000 | รหัส | Non-Functional Requirement
+  R001 | NFR-01 | ระบบต้องรักษาความปลอดภัยของ Session โดยตรวจลายเซ็น อายุ สถานะบัญชี และ Token Version
+  R002 | NFR-02 | Browser Session ต้องใช้ HTTP-only Cookie และกำหนด SameSite รวมถึง Secure ตามสภาพแวดล้อม Production
+  R003 | NFR-03 | Password และ Temporary Password ต้องจัดเก็บเป็น Hash ส่วน OTP และ Reset Token ต้องไม่จัดเก็บเป็น Plain Text
+  R004 | NFR-04 | Backend ต้องบังคับ Role และ Data Scope ของทุก Endpoint สำคัญ แม้มีการเรียก Direct API
+  R005 | NFR-05 | ข้อมูลธุรกิจหลักต้องใช้ Backend API และฐานข้อมูลกลางเป็น Source of Truth เดียวกัน
+  R006 | NFR-06 | กระบวนการ Submit, Approve, Reject และ Password Reset ที่เปลี่ยนหลายข้อมูลต้องทำงานแบบ Transaction
+  R007 | NFR-07 | Backend ต้องตรวจ Required Field, รูปแบบข้อมูล, ช่วงค่า, Duplicate และ Reference ก่อนบันทึก
+  R008 | NFR-08 | การ Upload ต้องจำกัดจำนวน ขนาด และชนิดไฟล์ พร้อมตรวจสิทธิ์เข้าถึงไฟล์
+  R009 | NFR-09 | ระบบต้องแสดง Error Message ที่เข้าใจได้และไม่เปิดเผยข้อมูลบัญชีหรือรายละเอียดภายในที่ไม่ควรเปิดเผย
+  R010 | NFR-10 | ระบบต้องรองรับ Responsive Web และ Function หลักต้องใช้งานได้บน Desktop และ Mobile ขนาด 390 x 844
+  R011 | NFR-11 | Interactive Control สำคัญ โดยเฉพาะ Icon-only Action ต้องมี Accessible Name และรองรับ Focus
+  R012 | NFR-12 | Event ด้าน Security และ Approval ที่ระบบกำหนดต้องมีข้อมูลผู้กระทำ Action, Record, Result และ Metadata เพื่อการตรวจสอบย้อนหลัง
+P0028 [Normal] 7. Future Scope
+P0029 [Normal] ระบบสามารถพัฒนาความสามารถเพิ่มเติมในอนาคตเพื่อรองรับการใช้งานที่ซับซ้อนและหลากหลายขึ้น โดยรายการต่อไปนี้ไม่อยู่ใน Current Requirement ของระบบ
+P0030 [List Paragraph] Push Notification เข้าโทรศัพท์
+P0031 [List Paragraph] Native Mobile Application
+P0032 [List Paragraph] Real-time Notification
+P0033 [List Paragraph] Multi-step Approval
+P0034 [List Paragraph] HR Approval หรือ Final Approval
+P0035 [List Paragraph] Department Manager Approval
+P0036 [List Paragraph] Backup Approver หรือ Delegate Approval
+P0037 [List Paragraph] การยกเลิก Leave Request หลัง Approved พร้อมกระบวนการคืนสิทธิ์ลา
+P0038 [List Paragraph] Half-day Leave
+P0039 [List Paragraph] Cross-year Leave Request

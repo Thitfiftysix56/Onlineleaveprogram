@@ -42,19 +42,6 @@ const defaultLeaveTypes = [
       'Leave for necessary personal matters and appointments.',
   },
   {
-    id: 4,
-    code: 'ML',
-    name: 'Maternity Leave',
-    defaultDays: 98,
-    minimumDays: 1,
-    maximumDaysPerRequest: 98,
-    attachmentRequired: true,
-    attachmentRequiredAfterDays: null,
-    status: 'Active',
-    description:
-      'Leave provided for pregnancy and childbirth.',
-  },
-  {
     id: 5,
     code: 'OL',
     name: 'Other Leave',

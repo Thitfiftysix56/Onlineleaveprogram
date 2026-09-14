@@ -1,19 +1,17 @@
 import RoleLeaveBalancePage from '../../components/roleleavebalancepage.jsx';
 import EmployeeLayout from '../../layouts/employeelayout.jsx';
+import { roleAccentTokens } from '../../theme/tokens.js';
+
+function CalibratedEmployeeLayout(props) {
+  return <EmployeeLayout {...props} calibrated />;
+}
 
 function LeaveBalancePage() {
-  const employeeTheme = {
-    primary: '#2563EB',
-    dark: '#1D4ED8',
-    soft: '#EFF6FF',
-    border: '#BFDBFE',
-    text: '#1E40AF',
-  };
-
   return (
     <RoleLeaveBalancePage
-      LayoutComponent={EmployeeLayout}
-      theme={employeeTheme}
+      LayoutComponent={CalibratedEmployeeLayout}
+      theme={roleAccentTokens.employee}
+      visualCalibration
     />
   );
 }

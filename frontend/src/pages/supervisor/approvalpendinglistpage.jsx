@@ -6,109 +6,267 @@ import {
 } from 'react';
 
 import {
+  Alert,
   Box,
   Button,
-  Chip,
+  CircularProgress,
   FormControl,
   InputLabel,
   MenuItem,
   Paper,
   Select,
   Table,
-  TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TablePagination,
   TableRow,
   TextField,
   Typography,
 } from '@mui/material';
+import FixedTableBody from '../../components/fixedtablebody.jsx';
 
-import { useNavigate } from 'react-router-dom';
+import {
+  useNavigate,
+} from 'react-router-dom';
 
-import RoleLayout from '../../components/rolelayout.jsx';
+import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
+import RequestNumberText from '../../components/requestnumbertext.jsx';
+import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
+import { HeaderlessPageTopOffset, InlineListSummary } from '../../components/sharedvisualfoundation.jsx';
+import { roleAccentTokens } from '../../theme/tokens.js';
 
-import { getSupervisorApprovals } from '../../api/leave-service.js';
+import api from '../../api/axios.js';
 
-const supervisorMenuItems = [
-  'Dashboard',
-  'Leave Request',
-  'My Requests',
-  'Leave Balance',
-  'Approval',
-  'Team Reports',
-  'Notification',
-  'Profile',
-  'Change Password',
-  'Logout',
-];
+const supervisorTheme = roleAccentTokens.supervisor;
 
-const supervisorTheme = {
-  primary: '#7C3AED',
-  dark: '#6D28D9',
-  soft: '#F3E8FF',
-  border: '#DDD6FE',
-  text: '#5B21B6',
+const translateLeaveType = (
+  leaveType,
+) => {
+  const value = String(
+    leaveType || '',
+  ).trim();
+
+  const labels = {
+    'Annual Leave':
+      'ลาพักร้อน',
+
+    'Sick Leave':
+      'ลาป่วย',
+
+    'Personal Leave':
+      'ลากิจ',
+
+    'Paternity Leave':
+      'ลาเพื่อดูแลบุตร',
+
+    'Ordination Leave':
+      'ลาอุปสมบท',
+
+    'Military Leave':
+      'ลาเพื่อรับราชการทหาร',
+
+    Other:
+      'ลาอื่น ๆ',
+  };
+
+  return (
+    labels[value] ||
+    value ||
+    '-'
+  );
 };
 
-const formatDate = (dateString) => {
-  if (!dateString) {
+const formatDate = (
+  dateValue,
+) => {
+  if (!dateValue) {
     return '-';
   }
 
-  const date = new Date(
-    `${dateString}T00:00:00`,
-  );
+  const value = String(
+    dateValue,
+  ).trim();
 
-  if (Number.isNaN(date.getTime())) {
+  const directMatch =
+    value.match(
+      /^(\d{4})-(\d{2})-(\d{2})/,
+    );
+
+  if (directMatch) {
+    const [
+      ,
+      year,
+      month,
+      day,
+    ] = directMatch;
+
+    return `${day}/${month}/${year}`;
+  }
+
+  const date =
+    new Date(dateValue);
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
     return '-';
   }
 
-  return date.toLocaleDateString(
-    'en-GB',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    },
-  );
+  const day =
+    String(
+      date.getDate(),
+    ).padStart(
+      2,
+      '0',
+    );
+
+  const month =
+    String(
+      date.getMonth() + 1,
+    ).padStart(
+      2,
+      '0',
+    );
+
+  return `${day}/${month}/${date.getFullYear()}`;
+};
+
+const formatDateRange = (
+  startDate,
+  endDate,
+) => {
+  if (
+    !startDate &&
+    !endDate
+  ) {
+    return '-';
+  }
+
+  if (
+    !endDate ||
+    startDate === endDate
+  ) {
+    return formatDate(
+      startDate,
+    );
+  }
+
+  return `${formatDate(
+    startDate,
+  )} - ${formatDate(
+    endDate,
+  )}`;
 };
 
 const formatDateTime = (
-  dateTimeString,
+  dateValue,
 ) => {
-  if (!dateTimeString) {
+  if (!dateValue) {
     return '-';
   }
 
-  const date = new Date(
-    dateTimeString,
-  );
+  const date =
+    new Date(dateValue);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
     return '-';
   }
 
-  return date.toLocaleString(
-    'en-GB',
-    {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    },
+  const day =
+    String(
+      date.getDate(),
+    ).padStart(
+      2,
+      '0',
+    );
+
+  const month =
+    String(
+      date.getMonth() + 1,
+    ).padStart(
+      2,
+      '0',
+    );
+
+  const hours =
+    String(
+      date.getHours(),
+    ).padStart(
+      2,
+      '0',
+    );
+
+  const minutes =
+    String(
+      date.getMinutes(),
+    ).padStart(
+      2,
+      '0',
+    );
+
+  return `${day}/${month}/${date.getFullYear()} ${hours}:${minutes}`;
+};
+
+const isSubmittedToday = (
+  dateValue,
+) => {
+  if (!dateValue) {
+    return false;
+  }
+
+  const date =
+    new Date(dateValue);
+
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
+    return false;
+  }
+
+  const today =
+    new Date();
+
+  return (
+    date.getFullYear() ===
+      today.getFullYear() &&
+    date.getMonth() ===
+      today.getMonth() &&
+    date.getDate() ===
+      today.getDate()
   );
 };
 
-function ApprovalPendingListPage() {
-  const navigate = useNavigate();
+function ApprovalPendingListPage({
+  LayoutComponent = SupervisorLayout,
+  activeMenu = 'Approval',
+  approvalsApiPath = '/supervisor/approvals',
+  approvalPagePath = '/supervisor/approval',
+}) {
+  const navigate =
+    useNavigate();
 
   const [
     requests,
     setRequests,
   ] = useState([]);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    loadError,
+    setLoadError,
+  ] = useState('');
 
   const [
     searchText,
@@ -118,12 +276,12 @@ function ApprovalPendingListPage() {
   const [
     leaveTypeFilter,
     setLeaveTypeFilter,
-  ] = useState('all');
+  ] = useState('');
 
   const [
     departmentFilter,
     setDepartmentFilter,
-  ] = useState('all');
+  ] = useState('');
 
   const [
     page,
@@ -135,47 +293,103 @@ function ApprovalPendingListPage() {
     setRowsPerPage,
   ] = useState(5);
 
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
-  const loadPendingRequests = useCallback(async () => { setLoading(true); setLoadError(''); try { setRequests(await getSupervisorApprovals()); setPage(0); } catch (error) { setLoadError(error.response?.data?.message || 'Unable to load pending approvals.'); } finally { setLoading(false); } }, []);
+  const loadPendingRequests = useCallback(
+    async () => {
+      setLoading(true);
+      setLoadError('');
+
+      try {
+        const response =
+          await api.get(
+            approvalsApiPath,
+          );
+
+        const leaveRequests =
+          response.data?.data
+            ?.leaveRequests ||
+          response.data
+            ?.leaveRequests ||
+          [];
+
+        const normalizedRequests =
+          Array.isArray(
+            leaveRequests,
+          )
+            ? [
+                ...leaveRequests,
+              ].sort(
+                (
+                  firstRequest,
+                  secondRequest,
+                ) =>
+                  new Date(
+                    secondRequest
+                      .submittedAt ||
+                      secondRequest
+                        .createdAt ||
+                      0,
+                  ).getTime() -
+                  new Date(
+                    firstRequest
+                      .submittedAt ||
+                      firstRequest
+                        .createdAt ||
+                      0,
+                  ).getTime(),
+              )
+            : [];
+
+        setRequests(
+          normalizedRequests,
+        );
+
+        setPage(0);
+      } catch (error) {
+        setRequests([]);
+
+        setLoadError(
+          error.response?.data
+            ?.message ||
+            'ไม่สามารถโหลดรายการรออนุมัติได้ กรุณาลองอีกครั้ง',
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [approvalsApiPath],
+  );
 
   useEffect(() => {
     loadPendingRequests();
-
-    return undefined;
   }, [loadPendingRequests]);
 
   const leaveTypeOptions =
-    useMemo(
-      () =>
-        [
-          ...new Set(
-            requests
-              .map(
-                (request) =>
-                  request.leaveType,
-              )
-              .filter(Boolean),
-          ),
-        ].sort(),
-      [requests],
-    );
+    useMemo(() => {
+      return [
+        ...new Set(
+          requests
+            .map(
+              (request) =>
+                request.leaveType,
+            )
+            .filter(Boolean),
+        ),
+      ].sort();
+    }, [requests]);
 
   const departmentOptions =
-    useMemo(
-      () =>
-        [
-          ...new Set(
-            requests
-              .map(
-                (request) =>
-                  request.department,
-              )
-              .filter(Boolean),
-          ),
-        ].sort(),
-      [requests],
-    );
+    useMemo(() => {
+      return [
+        ...new Set(
+          requests
+            .map(
+              (request) =>
+                request.department,
+            )
+            .filter(Boolean),
+        ),
+      ].sort();
+    }, [requests]);
 
   const filteredRequests =
     useMemo(() => {
@@ -193,6 +407,9 @@ function ApprovalPendingListPage() {
             request.department,
             request.position,
             request.leaveType,
+            translateLeaveType(
+              request.leaveType,
+            ),
             request.reason,
           ]
             .filter(Boolean)
@@ -206,14 +423,12 @@ function ApprovalPendingListPage() {
             );
 
           const matchesLeaveType =
-            leaveTypeFilter ===
-              'all' ||
+            !leaveTypeFilter ||
             request.leaveType ===
               leaveTypeFilter;
 
           const matchesDepartment =
-            departmentFilter ===
-              'all' ||
+            !departmentFilter ||
             request.department ===
               departmentFilter;
 
@@ -233,12 +448,12 @@ function ApprovalPendingListPage() {
 
   const paginatedRequests =
     useMemo(() => {
-      const firstRow =
+      const start =
         page * rowsPerPage;
 
       return filteredRequests.slice(
-        firstRow,
-        firstRow + rowsPerPage,
+        start,
+        start + rowsPerPage,
       );
     }, [
       filteredRequests,
@@ -246,281 +461,78 @@ function ApprovalPendingListPage() {
       rowsPerPage,
     ]);
 
-  const totalPendingDays =
+  const submittedToday =
     useMemo(
       () =>
-        requests.reduce(
-          (
-            totalDays,
-            request,
-          ) =>
-            totalDays +
-            Number(
-              request.leaveDays ||
-                0,
+        requests.filter(
+          (request) =>
+            isSubmittedToday(
+              request.submittedAt,
             ),
-          0,
-        ),
+        ).length,
       [requests],
     );
 
-  const submittedToday =
-    useMemo(() => {
-      const today =
-        new Date()
-          .toISOString()
-          .slice(
-            0,
-            10,
-          );
-
-      return requests.filter(
-        (request) =>
-          request.submittedAt
-            ?.slice(
-              0,
-              10,
-            ) === today,
-      ).length;
-    }, [requests]);
+  const summaryCards = [
+    {
+      title: 'รออนุมัติ',
+      value: requests.length,
+      color: '#B45309',
+    },
+    {
+      title: 'คำขอใหม่วันนี้',
+      value: submittedToday,
+      color: '#2563EB',
+    },
+  ];
 
   const handleClearFilters =
     () => {
       setSearchText('');
-
       setLeaveTypeFilter(
-        'all',
+        '',
       );
-
       setDepartmentFilter(
-        'all',
+        '',
       );
-
       setPage(0);
     };
 
-  const summaryCards = [
-    {
-      title:
-        'Pending Approval',
-
-      value:
-        requests.length,
-
-      helper:
-        'Requests awaiting your review',
-
-      backgroundColor:
-        '#F3E8FF',
-
-      color:
-        '#7C3AED',
-    },
-    {
-      title:
-        'Submitted Today',
-
-      value:
-        submittedToday,
-
-      helper:
-        'New requests received today',
-
-      backgroundColor:
-        '#DBEAFE',
-
-      color:
-        '#2563EB',
-    },
-    {
-      title:
-        'Total Leave Days',
-
-      value:
-        totalPendingDays,
-
-      helper:
-        'Days requested in pending items',
-
-      backgroundColor:
-        '#FEF3C7',
-
-      color:
-        '#B45309',
-    },
-  ];
+  const handleViewRequest =
+    (request) => {
+      navigate(
+        `${approvalPagePath}/${request.id}`,
+        {
+          state: {
+            returnTo: `${window.location.pathname}${window.location.search}`,
+            returnLabel: 'รายการรออนุมัติ',
+          },
+        },
+      );
+    };
 
   return (
-    <RoleLayout
-      activeMenu="Approval"
-      menuItems={
-        supervisorMenuItems
-      }
-      theme={
-        supervisorTheme
-      }
+    <LayoutComponent
+      activeMenu={activeMenu}
     >
-      {(loading || loadError) && <Typography sx={{ marginBottom:'16px', color:loadError?'#B91C1C':'#6B7280' }}>{loadError || 'Loading pending approvals...'}</Typography>}
-      <Box
-        sx={{
-          marginBottom:
-            '28px',
-        }}
-      >
-        <Typography
-          component="h1"
+      <HeaderlessPageTopOffset />
+
+      {loadError && (
+        <Alert
+          severity="error"
           sx={{
-            color:
-              '#111827',
+            marginBottom:
+              '20px',
 
-            fontSize: {
-              xs:
-                '26px',
-
-              sm:
-                '30px',
-            },
-
-            fontWeight:
-              800,
+            borderRadius:
+              '10px',
           }}
         >
-          Pending Approval
-        </Typography>
+          {loadError}
+        </Alert>
+      )}
 
-        <Typography
-          sx={{
-            color:
-              '#6B7280',
-
-            fontSize:
-              '15px',
-
-            marginTop:
-              '6px',
-          }}
-        >
-          Review leave requests
-          submitted by your team.
-        </Typography>
-      </Box>
-
-      <Box
-        sx={{
-          display:
-            'grid',
-
-          gridTemplateColumns: {
-            xs:
-              '1fr',
-
-            md:
-              'repeat(3, minmax(0, 1fr))',
-          },
-
-          gap:
-            '18px',
-
-          marginBottom:
-            '24px',
-        }}
-      >
-        {summaryCards.map(
-          (card) => (
-            <Paper
-              key={
-                card.title
-              }
-              elevation={0}
-              sx={{
-                padding:
-                  '22px',
-
-                backgroundColor:
-                  '#FFFFFF',
-
-                border:
-                  '1px solid #E5E7EB',
-
-                borderRadius:
-                  '12px',
-              }}
-            >
-              <Box
-                sx={{
-                  width:
-                    '48px',
-
-                  height:
-                    '48px',
-
-                  display:
-                    'flex',
-
-                  alignItems:
-                    'center',
-
-                  justifyContent:
-                    'center',
-
-                  backgroundColor:
-                    card.backgroundColor,
-
-                  color:
-                    card.color,
-
-                  borderRadius:
-                    '10px',
-
-                  fontSize:
-                    '20px',
-
-                  fontWeight:
-                    800,
-                }}
-              >
-                {card.value}
-              </Box>
-
-              <Typography
-                sx={{
-                  color:
-                    '#111827',
-
-                  fontSize:
-                    '16px',
-
-                  fontWeight:
-                    800,
-
-                  marginTop:
-                    '15px',
-                }}
-              >
-                {card.title}
-              </Typography>
-
-              <Typography
-                sx={{
-                  color:
-                    '#6B7280',
-
-                  fontSize:
-                    '12px',
-
-                  lineHeight:
-                    1.6,
-
-                  marginTop:
-                    '4px',
-                }}
-              >
-                {card.helper}
-              </Typography>
-            </Paper>
-          ),
-        )}
-      </Box>
+      <InlineListSummary items={summaryCards} />
 
       <Paper
         elevation={0}
@@ -532,7 +544,7 @@ function ApprovalPendingListPage() {
             '1px solid #E5E7EB',
 
           borderRadius:
-            '12px',
+            '20px',
 
           overflow:
             'hidden',
@@ -541,15 +553,9 @@ function ApprovalPendingListPage() {
         <Box
           sx={{
             padding: {
-              xs:
-                '20px',
-
-              sm:
-                '24px',
+              xs: '18px',
+              sm: '20px 22px',
             },
-
-            borderBottom:
-              '1px solid #E5E7EB',
           }}
         >
           <Typography
@@ -561,36 +567,30 @@ function ApprovalPendingListPage() {
                 '18px',
 
               fontWeight:
-                800,
+                600,
             }}
           >
-            Leave Requests
+            คำขอลาที่รอตรวจสอบ
           </Typography>
 
-          <Typography
-            sx={{
-              color:
-                '#6B7280',
-
-              fontSize:
-                '14px',
-
-              marginTop:
-                '4px',
-            }}
-          >
-            Showing{' '}
-            {
-              filteredRequests.length
-            }{' '}
-            of {requests.length}{' '}
-            pending requests
-          </Typography>
+          <DataListToolbar
+            searchValue={searchText}
+            onSearchChange={(value) => { setSearchText(value); setPage(0); }}
+            searchPlaceholder="ค้นหาพนักงานหรือคำขอลา"
+            resultLabel=""
+            activeFilters={[
+              ...(leaveTypeFilter ? [{ key: 'type', label: `ประเภท: ${translateLeaveType(leaveTypeFilter)}`, onDelete: () => setLeaveTypeFilter('') }] : []),
+              ...(departmentFilter ? [{ key: 'department', label: `แผนก: ${departmentFilter}`, onDelete: () => setDepartmentFilter('') }] : []),
+            ]}
+            onClearFilters={handleClearFilters}
+            filters={<><FormControl size="small"><Select value={leaveTypeFilter} displayEmpty renderValue={(value) => value ? translateLeaveType(value) : 'ประเภท'} inputProps={{ 'aria-label': 'ประเภท' }} onChange={(event) => { setLeaveTypeFilter(event.target.value); setPage(0); }}>{leaveTypeOptions.map((leaveType) => <MenuItem key={leaveType} value={leaveType}>{translateLeaveType(leaveType)}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={departmentFilter} displayEmpty renderValue={(value) => value || 'แผนก'} inputProps={{ 'aria-label': 'แผนก' }} onChange={(event) => { setDepartmentFilter(event.target.value); setPage(0); }}>{departmentOptions.map((department) => <MenuItem key={department} value={department}>{department}</MenuItem>)}</Select></FormControl></>}
+            sx={{ marginTop: '16px' }}
+          />
 
           <Box
             sx={{
               display:
-                'grid',
+                'none',
 
               gridTemplateColumns: {
                 xs:
@@ -601,66 +601,26 @@ function ApprovalPendingListPage() {
               },
 
               gap:
-                '16px',
+                '14px',
 
               marginTop:
-                '22px',
+                '20px',
             }}
           >
-            <TextField
-              fullWidth
-              label="Search Request"
-              placeholder="Request number, employee or leave type"
-              value={
-                searchText
-              }
-              onChange={(
-                event,
-              ) => {
-                setSearchText(
-                  event.target
-                    .value,
-                );
-
-                setPage(0);
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root':
-                  {
-                    height:
-                      '48px',
-
-                    borderRadius:
-                      '8px',
-
-                    '&.Mui-focused fieldset':
-                      {
-                        borderColor:
-                          supervisorTheme.primary,
-                      },
-                  },
-
-                '& .MuiInputLabel-root.Mui-focused':
-                  {
-                    color:
-                      supervisorTheme.primary,
-                  },
-              }}
-            />
-
+            <TextField fullWidth label="ค้นหาคำขอ" placeholder="เลขที่คำขอ ชื่อพนักงาน หรือประเภทการลา" value={searchText} onChange={(event) => { setSearchText(event.target.value); setPage(0); }} sx={{ '& .MuiOutlinedInput-root': { height: '44px', borderRadius: '11px', '&.Mui-focused fieldset': { borderColor: supervisorTheme.primary } }, '& .MuiInputLabel-root.Mui-focused': { color: supervisorTheme.primary } }} />
             <FormControl
               fullWidth
             >
-              <InputLabel id="approval-leave-type-filter-label">
-                Leave Type
+              <InputLabel id="approval-leave-type-label">
+                ประเภทการลา
               </InputLabel>
 
               <Select
-                labelId="approval-leave-type-filter-label"
+                labelId="approval-leave-type-label"
+                label="ประเภทการลา"
                 value={
                   leaveTypeFilter
                 }
-                label="Leave Type"
                 onChange={(
                   event,
                 ) => {
@@ -676,17 +636,13 @@ function ApprovalPendingListPage() {
                     '48px',
 
                   borderRadius:
-                    '8px',
-
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline':
-                    {
-                      borderColor:
-                        supervisorTheme.primary,
-                    },
+                    '9px',
                 }}
               >
-                <MenuItem value="all">
-                  All Leave Types
+                <MenuItem
+                  value="all"
+                >
+                  ประเภท
                 </MenuItem>
 
                 {leaveTypeOptions.map(
@@ -701,7 +657,9 @@ function ApprovalPendingListPage() {
                         leaveType
                       }
                     >
-                      {leaveType}
+                      {translateLeaveType(
+                        leaveType,
+                      )}
                     </MenuItem>
                   ),
                 )}
@@ -711,16 +669,16 @@ function ApprovalPendingListPage() {
             <FormControl
               fullWidth
             >
-              <InputLabel id="approval-department-filter-label">
-                Department
+              <InputLabel id="approval-department-label">
+                แผนก
               </InputLabel>
 
               <Select
-                labelId="approval-department-filter-label"
+                labelId="approval-department-label"
+                label="แผนก"
                 value={
                   departmentFilter
                 }
-                label="Department"
                 onChange={(
                   event,
                 ) => {
@@ -736,17 +694,13 @@ function ApprovalPendingListPage() {
                     '48px',
 
                   borderRadius:
-                    '8px',
-
-                  '&.Mui-focused .MuiOutlinedInput-notchedOutline':
-                    {
-                      borderColor:
-                        supervisorTheme.primary,
-                    },
+                    '9px',
                 }}
               >
-                <MenuItem value="all">
-                  All Departments
+                <MenuItem
+                  value="all"
+                >
+                  แผนก
                 </MenuItem>
 
                 {departmentOptions.map(
@@ -761,7 +715,9 @@ function ApprovalPendingListPage() {
                         department
                       }
                     >
-                      {department}
+                      {
+                        department
+                      }
                     </MenuItem>
                   ),
                 )}
@@ -785,16 +741,16 @@ function ApprovalPendingListPage() {
                   '0 18px',
 
                 color:
-                  '#374151',
+                  '#475569',
 
                 borderColor:
-                  '#D1D5DB',
+                  '#CBD5E1',
 
                 borderRadius:
-                  '8px',
+                  '9px',
 
                 fontSize:
-                  '14px',
+                  '12px',
 
                 fontWeight:
                   700,
@@ -804,45 +760,75 @@ function ApprovalPendingListPage() {
 
                 '&:hover': {
                   backgroundColor:
-                    '#F9FAFB',
+                    '#F8FAFC',
 
                   borderColor:
-                    '#9CA3AF',
+                    '#94A3B8',
                 },
               }}
             >
-              Clear
+              ล้างตัวกรอง
             </Button>
           </Box>
         </Box>
 
-        {filteredRequests.length >
-        0 ? (
+        {loading ? (
+          <Box
+            sx={{
+              minHeight:
+                '260px',
+
+              display:
+                'flex',
+
+              alignItems:
+                'center',
+
+              justifyContent:
+                'center',
+            }}
+          >
+            <CircularProgress
+              size={34}
+              sx={{
+                color:
+                  supervisorTheme.primary,
+              }}
+            />
+          </Box>
+        ) : filteredRequests.length >
+          0 ? (
           <>
-            <TableContainer>
+            <Box
+              sx={{
+                width:
+                  '100%',
+
+                overflowX:
+                  'auto',
+              }}
+            >
               <Table
                 sx={{
                   minWidth:
-                    '1180px',
+                    '1040px',
                 }}
               >
                 <TableHead>
                   <TableRow
                     sx={{
                       backgroundColor:
-                        '#F9FAFB',
+                        '#F8FAFC',
                     }}
                   >
                     {[
-                      'Request Number',
-                      'Employee',
-                      'Department',
-                      'Leave Type',
-                      'Date Range',
-                      'Days',
-                      'Status',
-                      'Submitted',
-                      'Action',
+                      'เลขที่คำขอ',
+                      'พนักงาน',
+                      'แผนก',
+                      'ประเภทการลา',
+                      'ช่วงวันที่',
+                      'จำนวนวัน',
+                      'ส่งคำขอเมื่อ',
                     ].map(
                       (
                         heading,
@@ -853,28 +839,25 @@ function ApprovalPendingListPage() {
                           }
                           align={
                             heading ===
-                            'Action'
-                              ? 'right'
+                            'จำนวนวัน'
+                              ? 'center'
                               : heading ===
-                                  'Days'
-                                ? 'center'
+                                  'การดำเนินการ'
+                                ? 'right'
                                 : 'left'
                           }
                           sx={{
+                            padding:
+                              '13px 18px',
+
                             color:
-                              '#6B7280',
+                              '#64748B',
 
                             fontSize:
-                              '11px',
+                              '12px',
 
                             fontWeight:
-                              800,
-
-                            textTransform:
-                              'uppercase',
-
-                            letterSpacing:
-                              '0.4px',
+                              700,
 
                             whiteSpace:
                               'nowrap',
@@ -883,14 +866,16 @@ function ApprovalPendingListPage() {
                               '1px solid #E5E7EB',
                           }}
                         >
-                          {heading}
+                          {
+                            heading
+                          }
                         </TableCell>
                       ),
                     )}
                   </TableRow>
                 </TableHead>
 
-                <TableBody>
+                <FixedTableBody>
                   {paginatedRequests.map(
                     (
                       request,
@@ -900,18 +885,40 @@ function ApprovalPendingListPage() {
                           request.id
                         }
                         hover
+                        tabIndex={0}
+                        onClick={() => handleViewRequest(request)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleViewRequest(request);
+                          }
+                        }}
                         sx={{
+                          cursor: 'pointer',
+                          '&:focus-visible': {
+                            outline: `2px solid ${supervisorTheme.primary}`,
+                            outlineOffset: -2,
+                          },
                           '&:last-child td':
                             {
                               borderBottom:
                                 'none',
                             },
+
+                          '&:hover':
+                            {
+                              backgroundColor:
+                                '#FAFBFD',
+                            },
                         }}
                       >
                         <TableCell
                           sx={{
+                            padding:
+                              '16px 18px',
+
                             borderBottom:
-                              '1px solid #E5E7EB',
+                              '1px solid #EEF0F3',
                           }}
                         >
                           <Typography
@@ -929,15 +936,19 @@ function ApprovalPendingListPage() {
                                 'nowrap',
                             }}
                           >
-                            {request.requestNo ||
-                              `Request #${request.id}`}
+                            <RequestNumberText>
+                              {request.requestNo || `#${request.id}`}
+                            </RequestNumberText>
                           </Typography>
                         </TableCell>
 
                         <TableCell
                           sx={{
+                            padding:
+                              '16px 18px',
+
                             borderBottom:
-                              '1px solid #E5E7EB',
+                              '1px solid #EEF0F3',
                           }}
                         >
                           <Typography
@@ -955,33 +966,34 @@ function ApprovalPendingListPage() {
                                 'nowrap',
                             }}
                           >
-                            {
-                              request.employeeName
-                            }
+                            {request.employeeName ||
+                              '-'}
                           </Typography>
 
                           <Typography
                             sx={{
                               color:
-                                '#9CA3AF',
+                                '#94A3B8',
 
                               fontSize:
-                                '11px',
+                                '10px',
 
                               marginTop:
-                                '3px',
+                                '2px',
                             }}
                           >
-                            {
-                              request.employeeCode
-                            }
+                            {request.employeeCode ||
+                              '-'}
                           </Typography>
                         </TableCell>
 
                         <TableCell
                           sx={{
+                            padding:
+                              '16px 18px',
+
                             color:
-                              '#4B5563',
+                              '#475569',
 
                             fontSize:
                               '12px',
@@ -990,18 +1002,74 @@ function ApprovalPendingListPage() {
                               'nowrap',
 
                             borderBottom:
-                              '1px solid #E5E7EB',
+                              '1px solid #EEF0F3',
                           }}
                         >
-                          {
-                            request.department
-                          }
+                          {request.department ||
+                            '-'}
                         </TableCell>
 
                         <TableCell
                           sx={{
+                            padding:
+                              '16px 18px',
+
                             color:
                               '#374151',
+
+                            fontSize:
+                              '13px',
+
+                            fontWeight:
+                              600,
+
+                            whiteSpace:
+                              'nowrap',
+
+                            borderBottom:
+                              '1px solid #EEF0F3',
+                          }}
+                        >
+                          {translateLeaveType(
+                            request.leaveType,
+                          )}
+                        </TableCell>
+
+                        <TableCell
+                          sx={{
+                            padding:
+                              '16px 18px',
+
+                            color:
+                              '#4B5563',
+
+                            fontSize:
+                              '12px',
+
+                            fontWeight:
+                              500,
+
+                            whiteSpace:
+                              'nowrap',
+
+                            borderBottom:
+                              '1px solid #EEF0F3',
+                          }}
+                        >
+                          {formatDateRange(
+                            request.startDate,
+                            request.endDate,
+                          )}
+                        </TableCell>
+
+                        <TableCell
+                          align="center"
+                          sx={{
+                            padding:
+                              '16px 18px',
+
+                            color:
+                              '#111827',
 
                             fontSize:
                               '13px',
@@ -1013,51 +1081,7 @@ function ApprovalPendingListPage() {
                               'nowrap',
 
                             borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          {request.leaveType ||
-                            'Not selected'}
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
-                            color:
-                              '#4B5563',
-
-                            fontSize:
-                              '12px',
-
-                            whiteSpace:
-                              'nowrap',
-
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          {formatDate(
-                            request.startDate,
-                          )}{' '}
-                          –{' '}
-                          {formatDate(
-                            request.endDate,
-                          )}
-                        </TableCell>
-
-                        <TableCell
-                          align="center"
-                          sx={{
-                            color:
-                              '#111827',
-
-                            fontSize:
-                              '13px',
-
-                            fontWeight:
-                              800,
-
-                            borderBottom:
-                              '1px solid #E5E7EB',
+                              '1px solid #EEF0F3',
                           }}
                         >
                           {Number(
@@ -1068,39 +1092,11 @@ function ApprovalPendingListPage() {
 
                         <TableCell
                           sx={{
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          <Chip
-                            label="Pending"
-                            size="small"
-                            sx={{
-                              minWidth:
-                                '78px',
+                            padding:
+                              '16px 18px',
 
-                              backgroundColor:
-                                '#FEF3C7',
-
-                              color:
-                                '#B45309',
-
-                              borderRadius:
-                                '999px',
-
-                              fontSize:
-                                '11px',
-
-                              fontWeight:
-                                700,
-                            }}
-                          />
-                        </TableCell>
-
-                        <TableCell
-                          sx={{
                             color:
-                              '#6B7280',
+                              '#64748B',
 
                             fontSize:
                               '12px',
@@ -1109,7 +1105,7 @@ function ApprovalPendingListPage() {
                               'nowrap',
 
                             borderBottom:
-                              '1px solid #E5E7EB',
+                              '1px solid #EEF0F3',
                           }}
                         >
                           {formatDateTime(
@@ -1117,80 +1113,19 @@ function ApprovalPendingListPage() {
                           )}
                         </TableCell>
 
-                        <TableCell
-                          align="right"
-                          sx={{
-                            whiteSpace:
-                              'nowrap',
-
-                            borderBottom:
-                              '1px solid #E5E7EB',
-                          }}
-                        >
-                          <Button
-                            type="button"
-                            variant="contained"
-                            onClick={() =>
-                              navigate(
-                                `/supervisor/approval/${request.id}`,
-                              )
-                            }
-                            sx={{
-                              minWidth:
-                                '110px',
-
-                              height:
-                                '36px',
-
-                              padding:
-                                '0 14px',
-
-                              backgroundColor:
-                                supervisorTheme.primary,
-
-                              borderRadius:
-                                '8px',
-
-                              fontSize:
-                                '12px',
-
-                              fontWeight:
-                                700,
-
-                              textTransform:
-                                'none',
-
-                              boxShadow:
-                                'none',
-
-                              '&:hover':
-                                {
-                                  backgroundColor:
-                                    supervisorTheme.dark,
-
-                                  boxShadow:
-                                    'none',
-                                },
-                            }}
-                          >
-                            Review
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     ),
                   )}
-                </TableBody>
+                </FixedTableBody>
               </Table>
-            </TableContainer>
+            </Box>
 
             <TablePagination
               component="div"
               count={
                 filteredRequests.length
               }
-              page={
-                page
-              }
+              page={page}
               onPageChange={(
                 event,
                 newPage,
@@ -1216,11 +1151,40 @@ function ApprovalPendingListPage() {
               }}
               rowsPerPageOptions={[
                 5,
-                10,
               ]}
+              labelRowsPerPage="จำนวนรายการต่อหน้า:"
+              labelDisplayedRows={() =>
+                `หน้า ${page + 1} จาก ${Math.max(
+                  1,
+                  Math.ceil(
+                    filteredRequests.length /
+                      rowsPerPage,
+                  ),
+                )}`
+              }
               sx={{
                 borderTop:
                   '1px solid #E5E7EB',
+
+                color:
+                  '#4B5563',
+
+                '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows':
+                  {
+                    fontSize:
+                      '12px',
+                  },
+
+                '& .MuiTablePagination-toolbar': {
+                  minHeight: '50px',
+                  paddingInline: { xs: '10px', sm: '16px' },
+                },
+
+                '& .MuiTablePagination-actions .MuiIconButton-root': {
+                  width: '32px',
+                  height: '32px',
+                  border: 'none',
+                },
               }}
             />
           </>
@@ -1228,10 +1192,10 @@ function ApprovalPendingListPage() {
           <Box
             sx={{
               minHeight:
-                '320px',
+                '280px',
 
               padding:
-                '40px 24px',
+                '36px 24px',
 
               display:
                 'flex',
@@ -1252,10 +1216,10 @@ function ApprovalPendingListPage() {
             <Box
               sx={{
                 width:
-                  '66px',
+                  '58px',
 
                 height:
-                  '66px',
+                  '58px',
 
                 display:
                   'flex',
@@ -1276,7 +1240,7 @@ function ApprovalPendingListPage() {
                   '50%',
 
                 fontSize:
-                  '24px',
+                  '20px',
 
                 fontWeight:
                   800,
@@ -1291,92 +1255,43 @@ function ApprovalPendingListPage() {
                   '#111827',
 
                 fontSize:
-                  '18px',
+                  '16px',
 
                 fontWeight:
                   800,
 
                 marginTop:
-                  '16px',
+                  '14px',
               }}
             >
-              No pending requests
+              {requests.length ===
+              0
+                ? 'ไม่มีคำขอที่รออนุมัติ'
+                : 'ไม่พบรายการที่ตรงกับตัวกรอง'}
             </Typography>
 
             <Typography
               sx={{
-                maxWidth:
-                  '420px',
-
                 color:
-                  '#6B7280',
+                  '#64748B',
 
                 fontSize:
-                  '14px',
-
-                lineHeight:
-                  1.7,
+                  '12px',
 
                 marginTop:
-                  '6px',
+                  '5px',
               }}
             >
-              There are currently no
-              leave requests awaiting
-              approval, or no requests
-              match the selected
-              filters.
+              {requests.length ===
+              0
+                ? 'เมื่อพนักงานในทีมส่งคำขอลา รายการจะแสดงที่หน้านี้'
+                : 'ลองปรับตัวกรองหรือกดกากบาทเพื่อล้างค่าเพื่อดูรายการอื่น'}
             </Typography>
 
-            <Button
-              type="button"
-              variant="outlined"
-              onClick={
-                handleClearFilters
-              }
-              sx={{
-                height:
-                  '42px',
-
-                marginTop:
-                  '20px',
-
-                padding:
-                  '0 18px',
-
-                color:
-                  supervisorTheme.primary,
-
-                borderColor:
-                  supervisorTheme.primary,
-
-                borderRadius:
-                  '8px',
-
-                fontSize:
-                  '14px',
-
-                fontWeight:
-                  700,
-
-                textTransform:
-                  'none',
-
-                '&:hover': {
-                  backgroundColor:
-                    supervisorTheme.soft,
-
-                  borderColor:
-                    supervisorTheme.dark,
-                },
-              }}
-            >
-              Clear Filters
-            </Button>
           </Box>
         )}
       </Paper>
-    </RoleLayout>
+    </LayoutComponent>
   );
 }
 

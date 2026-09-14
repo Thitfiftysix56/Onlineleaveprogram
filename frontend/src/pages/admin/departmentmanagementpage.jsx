@@ -1,7 +1,7 @@
 import RoleDepartmentManagementPage from '../../components/roledepartmentmanagementpage.jsx';
 import AdminLayout from '../../layouts/adminlayout.jsx';
 
-function DepartmentManagementPage() {
+function DepartmentManagementPage({ initialFormMode, initialDepartmentId }) {
   const adminTheme = {
     primary: '#EA580C',
     dark: '#C2410C',
@@ -13,6 +13,8 @@ function DepartmentManagementPage() {
       LayoutComponent={AdminLayout}
       activeMenu="Department Management"
       theme={adminTheme}
+      initialFormMode={initialFormMode}
+      initialDepartmentId={initialDepartmentId}
     />
   );
 }

@@ -1,20 +1,14 @@
 import RoleProfilePage from '../../components/roleprofilepage.jsx';
 
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
+import { roleAccentTokens } from '../../theme/tokens.js';
 
-const supervisorTheme = {
-  primary: '#7C3AED',
-  dark: '#6D28D9',
-  soft: '#F3E8FF',
-  border: '#DDD6FE',
-  text: '#5B21B6',
-};
-
-function SupervisorProfilePage() {
+function SupervisorProfilePage({ editMode = false }) {
   return (
     <RoleProfilePage
       LayoutComponent={SupervisorLayout}
-      theme={supervisorTheme}
+      theme={roleAccentTokens.supervisor}
+      editMode={editMode}
     />
   );
 }

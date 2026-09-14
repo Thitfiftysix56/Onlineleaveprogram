@@ -126,8 +126,8 @@ export async function updateProfile(request, response) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 100) {
       return response.status(400).json({ status: 'error', message: 'A valid email is required.' })
     }
-    if (phone.length > 20) {
-      return response.status(400).json({ status: 'error', message: 'Phone number must not exceed 20 characters.' })
+    if (!/^\d{10}$/.test(phone)) {
+      return response.status(400).json({ status: 'error', message: 'กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 10 หลัก' })
     }
 
     const [duplicates] = await pool.execute(

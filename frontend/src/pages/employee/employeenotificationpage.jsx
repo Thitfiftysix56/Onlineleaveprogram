@@ -1,12 +1,18 @@
 import RoleNotificationPage from '../../components/rolenotificationpage.jsx';
 import EmployeeLayout from '../../layouts/employeelayout.jsx';
+import {
+  colorTokens,
+  roleAccentTokens,
+} from '../../theme/tokens.js';
+
+function CalibratedEmployeeLayout(props) {
+  return <EmployeeLayout {...props} calibrated />;
+}
 
 function EmployeeNotificationPage() {
   const employeeTheme = {
-    primary: '#2563EB',
-    dark: '#1D4ED8',
-    soft: '#EFF6FF',
-    unreadBackground: '#F8FAFF',
+    ...roleAccentTokens.employee,
+    unreadBackground: colorTokens.surfaceSubtle,
   };
 
   const employeeNotifications = [
@@ -59,11 +65,12 @@ function EmployeeNotificationPage() {
 
   return (
     <RoleNotificationPage
-      LayoutComponent={EmployeeLayout}
-      pageTitle="Employee Notification"
+      LayoutComponent={CalibratedEmployeeLayout}
+      pageTitle="การแจ้งเตือน"
       pageDescription="Review updates about your leave requests, entitlement and account."
       initialNotifications={employeeNotifications}
       theme={employeeTheme}
+      visualCalibration
     />
   );
 }

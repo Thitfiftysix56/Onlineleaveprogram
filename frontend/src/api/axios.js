@@ -46,6 +46,7 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
+    window.dispatchEvent(new CustomEvent('api-connection-restored'));
     if (typeof response.data?.message === 'string') {
       response.data.message = translateThai(response.data.message);
     }
@@ -53,6 +54,9 @@ api.interceptors.response.use(
   },
 
   (error) => {
+    if (!error.response) {
+      window.dispatchEvent(new CustomEvent('api-server-unavailable', { detail: { message: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' } }));
+    }
     if (typeof error.response?.data?.message === 'string') {
       error.response.data.message = translateThai(error.response.data.message);
     }

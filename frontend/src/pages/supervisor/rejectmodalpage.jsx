@@ -93,7 +93,7 @@ function RejectModalPage() {
     <SupervisorLayout activeMenu="Approval">
       <Box
         sx={{
-          marginBottom: '28px',
+          marginBottom: '16px',
         }}
       >
         <Box
@@ -169,7 +169,7 @@ function RejectModalPage() {
             },
           }}
         >
-          ← Back to Pending Approval
+          ← กลับไปยังรายการรออนุมัติ
         </Button>
       </Box>
 
@@ -369,11 +369,11 @@ function RejectModalPage() {
                     value: leaveRequest.totalDays,
                   },
                   {
-                    label: 'Start Date',
+                    label: 'วันที่เริ่มลา',
                     value: leaveRequest.startDate,
                   },
                   {
-                    label: 'End Date',
+                    label: 'วันที่สิ้นสุด',
                     value: leaveRequest.endDate,
                   },
                 ].map((item) => (
@@ -415,7 +415,7 @@ function RejectModalPage() {
                   fontWeight: 600,
                 }}
               >
-                Reason for Leave
+                เหตุผลการลา
               </Typography>
 
               <Typography
@@ -585,7 +585,7 @@ function RejectModalPage() {
               fontWeight: 800,
             }}
           >
-            Reject Leave Request
+            ปฏิเสธคำขอลา
           </Typography>
 
           <Typography
@@ -710,7 +710,7 @@ function RejectModalPage() {
             multiline
             minRows={5}
             label="Rejection Reason"
-            placeholder="Explain why this leave request is being rejected"
+            placeholder="ระบุเหตุผลที่ไม่อนุมัติคำขอนี้"
             value={rejectionReason}
             onChange={handleRejectionReasonChange}
             error={Boolean(rejectionReasonError)}
@@ -743,7 +743,7 @@ function RejectModalPage() {
               xs: '16px 20px 20px',
               sm: '16px 24px 24px',
             },
-            borderTop: '1px solid #E5E7EB',
+            borderTop: 0,
             gap: '10px',
           }}
         >

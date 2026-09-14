@@ -1,14 +1,7 @@
 import RoleChangePasswordPage from '../../components/rolechangepasswordpage.jsx';
 
 import EmployeeLayout from '../../layouts/employeelayout.jsx';
-
-const employeeTheme = {
-  primary: '#2563EB',
-  dark: '#1D4ED8',
-  soft: '#EFF6FF',
-  border: '#BFDBFE',
-  text: '#1E3A8A',
-};
+import { roleAccentTokens } from '../../theme/tokens.js';
 
 function EmployeeChangePasswordPage() {
   return (
@@ -17,7 +10,7 @@ function EmployeeChangePasswordPage() {
         EmployeeLayout
       }
       theme={
-        employeeTheme
+        roleAccentTokens.employee
       }
     />
   );

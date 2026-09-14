@@ -1,11 +1,5 @@
 import { useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Paper,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, Paper, Typography } from '@mui/material';
 
 function ImportEmployeesPage() {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -14,7 +8,6 @@ function ImportEmployeesPage() {
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
-
     setSelectedFile(file || null);
     setMessage('');
     setError('');
@@ -32,13 +25,7 @@ function ImportEmployeesPage() {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        backgroundColor: '#F5F7FB',
-        padding: '32px',
-      }}
-    >
+    <Box sx={{ minHeight: '100vh', backgroundColor: '#F5F7FB', padding: '32px' }}>
       <Paper
         sx={{
           width: '100%',
@@ -54,48 +41,19 @@ function ImportEmployeesPage() {
       >
         <Typography
           component="h1"
-          sx={{
-            color: '#111827',
-            fontSize: '28px',
-            fontWeight: 800,
-            marginBottom: '8px',
-          }}
+          sx={{ color: '#111827', fontSize: '28px', fontWeight: 800, marginBottom: '8px' }}
         >
-          Import Employees
+          นำเข้าข้อมูลพนักงาน
         </Typography>
 
         <Typography
-          sx={{
-            color: '#6B7280',
-            fontSize: '16px',
-            fontWeight: 400,
-            marginBottom: '24px',
-          }}
+          sx={{ color: '#6B7280', fontSize: '16px', fontWeight: 400, marginBottom: '24px' }}
         >
           นำเข้าข้อมูลพนักงานจากไฟล์ CSV และสร้างบัญชีผู้ใช้งานอัตโนมัติ
         </Typography>
 
-        {message && (
-          <Alert
-            severity="success"
-            sx={{
-              marginBottom: '20px',
-            }}
-          >
-            {message}
-          </Alert>
-        )}
-
-        {error && (
-          <Alert
-            severity="error"
-            sx={{
-              marginBottom: '20px',
-            }}
-          >
-            {error}
-          </Alert>
-        )}
+        {message && <Alert severity="success" sx={{ marginBottom: '20px' }}>{message}</Alert>}
+        {error && <Alert severity="error" sx={{ marginBottom: '20px' }}>{error}</Alert>}
 
         <Button
           component="label"
@@ -110,21 +68,11 @@ function ImportEmployeesPage() {
             textTransform: 'none',
             borderRadius: '8px',
             marginBottom: '16px',
-
-            '&:hover': {
-              borderColor: '#1D4ED8',
-              backgroundColor: '#EFF6FF',
-            },
+            '&:hover': { borderColor: '#1D4ED8', backgroundColor: '#EFF6FF' },
           }}
         >
-          Choose CSV File
-
-          <input
-            type="file"
-            accept=".csv"
-            hidden
-            onChange={handleFileChange}
-          />
+          เลือกไฟล์ CSV
+          <input type="file" accept=".csv" hidden onChange={handleFileChange} />
         </Button>
 
         <Typography
@@ -136,9 +84,7 @@ function ImportEmployeesPage() {
             marginBottom: '24px',
           }}
         >
-          {selectedFile
-            ? `Selected file: ${selectedFile.name}`
-            : 'No file selected'}
+          {selectedFile ? `ไฟล์ที่เลือก: ${selectedFile.name}` : 'ยังไม่ได้เลือกไฟล์'}
         </Typography>
 
         <Button
@@ -154,14 +100,10 @@ function ImportEmployeesPage() {
             textTransform: 'none',
             borderRadius: '8px',
             boxShadow: 'none',
-
-            '&:hover': {
-              backgroundColor: '#1D4ED8',
-              boxShadow: 'none',
-            },
+            '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' },
           }}
         >
-          Preview Employees
+          ตรวจสอบข้อมูลพนักงาน
         </Button>
       </Paper>
     </Box>

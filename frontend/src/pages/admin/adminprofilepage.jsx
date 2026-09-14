@@ -10,11 +10,12 @@ const adminTheme = {
   text: '#9A3412',
 };
 
-function AdminProfilePage() {
+function AdminProfilePage({ editMode = false }) {
   return (
     <RoleProfilePage
       LayoutComponent={AdminLayout}
       theme={adminTheme}
+      editMode={editMode}
     />
   );
 }
