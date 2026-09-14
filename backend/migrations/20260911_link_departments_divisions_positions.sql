@@ -22,7 +22,7 @@ ALTER TABLE positions
   ADD COLUMN IF NOT EXISTS department_id INT UNSIGNED NULL AFTER position_name,
   ADD COLUMN IF NOT EXISTS position_group VARCHAR(100) NULL AFTER department_id,
   ADD KEY IF NOT EXISTS idx_positions_department (department_id),
-  ADD CONSTRAINT IF NOT EXISTS fk_positions_department FOREIGN KEY (department_id)
+  ADD CONSTRAINT fk_positions_department FOREIGN KEY (department_id)
     REFERENCES departments (department_id) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 UPDATE positions SET

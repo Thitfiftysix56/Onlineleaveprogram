@@ -20,9 +20,9 @@ export default defineConfig({
     viewport: { width: 1280, height: 720 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: {
-      mode: 'on',
-      size: { width: 1280, height: 720 },
-    },
+    // video: {
+    //   mode: 'off',
+    //   size: { width: 1280, height: 720 },
+    // },
   },
 })

@@ -16,20 +16,20 @@ async function leaveOptions(api) {
   return (await json(await api.get('/api/leave/options'))).data
 }
 
-async function findFreeDates(api, count) {
+async function findFreeDates(api, count, startOffset = 4, direction = 1) {
   const options = await leaveOptions(api)
   const own = (await json(await api.get('/api/leave/requests'))).data.leaveRequests
   const holidays = new Set(options.holidays.map((item) => item.date))
   const occupied = own.filter((item) => ['pending', 'approved'].includes(item.status))
   const selected = []
   const cursor = new Date()
-  cursor.setUTCDate(cursor.getUTCDate() + 4)
+  cursor.setUTCDate(cursor.getUTCDate() + startOffset)
   for (let attempts = 0; attempts < 300 && selected.length < count; attempts += 1) {
     const key = dateKey(cursor)
     const day = cursor.getUTCDay()
     const overlaps = occupied.some((item) => item.startDate <= key && item.endDate >= key)
     if (day !== 0 && day !== 6 && !holidays.has(key) && !overlaps) selected.push(key)
-    cursor.setUTCDate(cursor.getUTCDate() + 1)
+    cursor.setUTCDate(cursor.getUTCDate() + direction)
   }
   expect(selected, 'Not enough free working dates in the entitlement year').toHaveLength(count)
   return { dates: selected, options }
@@ -70,11 +70,14 @@ test('complete leave lifecycle, approval routing, notifications and audit trail'
       contexts[role] = await apiLogin(playwright, baseURL, role)
     }
 
-    const employeeData = await findFreeDates(contexts.employee, 4)
+    let employeeData = await findFreeDates(contexts.employee, 4)
     const employeeType = employeeData.options.leaveTypes.find((item) =>
       item.hasEntitlement && !item.requiresAttachment && item.availableDays >= 2,
     )
     expect(employeeType, 'Employee needs an active non-attachment entitlement').toBeTruthy()
+    if (String(employeeType.name || '').toLowerCase().includes('sick') || String(employeeType.name || '').includes('ป่วย')) {
+      employeeData = await findFreeDates(contexts.employee, 4, 0, -1)
+    }
     const employeeBalance = (await json(await contexts.employee.get('/api/leave/balance'))).data.balances
       .find((item) => item.leaveTypeId === employeeType.leaveTypeId)
     balances.push({ id: employeeBalance.id, used: employeeBalance.used })
@@ -129,11 +132,14 @@ test('complete leave lifecycle, approval routing, notifications and audit trail'
 
     let supervisorApproved
     await test.step('HR approves a Supervisor own request; Supervisor cannot self-approve', async () => {
-      const supervisorData = await findFreeDates(contexts.supervisor, 1)
+      let supervisorData = await findFreeDates(contexts.supervisor, 1)
       const supervisorType = supervisorData.options.leaveTypes.find((item) =>
         item.hasEntitlement && !item.requiresAttachment && item.availableDays >= 1,
       )
       expect(supervisorType, 'Supervisor needs an active non-attachment entitlement').toBeTruthy()
+      if (String(supervisorType.name || '').toLowerCase().includes('sick') || String(supervisorType.name || '').includes('ป่วย')) {
+        supervisorData = await findFreeDates(contexts.supervisor, 1, 0, -1)
+      }
       const supervisorBalance = (await json(await contexts.supervisor.get('/api/leave/balance'))).data.balances
         .find((item) => item.leaveTypeId === supervisorType.leaveTypeId)
       balances.push({ id: supervisorBalance.id, used: supervisorBalance.used })

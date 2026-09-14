@@ -27,24 +27,44 @@ const migrations = requested.length ? requested : approvedMigrations
 
 const migrationChecks = {
   '20260911_link_departments_divisions_positions.sql': async () => {
-    const [rows] = await pool.query(
-      `SELECT COUNT(*) AS column_count
-         FROM information_schema.columns
-        WHERE table_schema = DATABASE()
-          AND ((table_name = 'departments' AND column_name = 'division_name')
-            OR (table_name = 'positions' AND column_name IN ('department_id', 'position_group')))`,
-    )
-    return Number(rows[0]?.column_count) === 3
+    const [[columns], [constraints]] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*) AS column_count
+           FROM information_schema.columns
+          WHERE table_schema = DATABASE()
+            AND ((table_name = 'departments' AND column_name = 'division_name')
+              OR (table_name = 'positions' AND column_name IN ('department_id', 'position_group')))`,
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS constraint_count
+           FROM information_schema.referential_constraints
+          WHERE constraint_schema = DATABASE()
+            AND table_name = 'positions'
+            AND constraint_name = 'fk_positions_department'`,
+      ),
+    ])
+    return Number(columns[0]?.column_count) === 3
+      && Number(constraints[0]?.constraint_count) === 1
   },
   '20260911_add_employee_intended_role.sql': async () => {
-    const [rows] = await pool.query(
-      `SELECT COUNT(*) AS column_count
-         FROM information_schema.columns
-        WHERE table_schema = DATABASE()
-          AND table_name = 'employees'
-          AND column_name = 'intended_role_id'`,
-    )
-    return Number(rows[0]?.column_count) === 1
+    const [[columns], [constraints]] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*) AS column_count
+           FROM information_schema.columns
+          WHERE table_schema = DATABASE()
+            AND table_name = 'employees'
+            AND column_name = 'intended_role_id'`,
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS constraint_count
+           FROM information_schema.referential_constraints
+          WHERE constraint_schema = DATABASE()
+            AND table_name = 'employees'
+            AND constraint_name = 'fk_employees_intended_role'`,
+      ),
+    ])
+    return Number(columns[0]?.column_count) === 1
+      && Number(constraints[0]?.constraint_count) === 1
   },
   '20260914_seed_organization_catalog.sql': async () => {
     const [rows] = await pool.query(

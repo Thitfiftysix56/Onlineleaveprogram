@@ -15,35 +15,42 @@ test('Admin and HR management CRUD generates complete audit evidence', async ({ 
   const created = {}
 
   try {
-    await test.step('Admin department create, update, status, list and delete', async () => {
-      const createdPayload = await body(await admin.post('/api/hr/departments', { data: {
+    await test.step('HR department create, update, status, list and delete', async () => {
+      const createdPayload = await body(await hr.post('/api/hr/departments', { data: {
         departmentName: `Playwright Department ${suffix}`,
+        divisionName: `Playwright Division ${suffix}`,
         description: 'Playwright management verification', isActive: true,
       } }), [201])
       created.department = createdPayload.data.department.departmentId
-      await body(await admin.put(`/api/hr/departments/${created.department}`, { data: {
+      await body(await hr.put(`/api/hr/departments/${created.department}`, { data: {
         departmentName: `Playwright Department Updated ${suffix}`,
+        divisionName: `Playwright Division Updated ${suffix}`,
         description: 'Playwright updated verification', isActive: true,
       } }))
-      await body(await admin.patch(`/api/hr/departments/${created.department}/status`, { data: { status: 'Inactive' } }))
-      const list = (await body(await admin.get('/api/hr/departments'))).data.departments
+      await body(await hr.patch(`/api/hr/departments/${created.department}/status`, { data: { status: 'Inactive' } }))
+      const list = (await body(await hr.get('/api/hr/departments'))).data.departments
       expect(list.some((item) => item.departmentId === created.department)).toBeTruthy()
-      await body(await admin.delete(`/api/hr/departments/${created.department}`))
+      await body(await hr.delete(`/api/hr/departments/${created.department}`))
       created.department = null
     })
 
-    await test.step('Admin position create, update, status, list and delete', async () => {
-      const createdPayload = await body(await admin.post('/api/hr/positions', { data: {
-        positionName: `Playwright Position ${suffix}`, isActive: true,
+    await test.step('HR position create, update, status, list and delete', async () => {
+      const departments = (await body(await hr.get('/api/hr/departments'))).data.departments
+      const activeDepartment = departments.find((item) => item.isActive)
+      expect(activeDepartment, 'An active department is required for a position').toBeTruthy()
+      const createdPayload = await body(await hr.post('/api/hr/positions', { data: {
+        positionName: `Playwright Position ${suffix}`, positionGroup: 'Operations',
+        departmentId: activeDepartment.departmentId, isActive: true,
       } }), [201])
       created.position = createdPayload.data.position.positionId
-      await body(await admin.put(`/api/hr/positions/${created.position}`, { data: {
-        positionName: `Playwright Position Updated ${suffix}`, isActive: true,
+      await body(await hr.put(`/api/hr/positions/${created.position}`, { data: {
+        positionName: `Playwright Position Updated ${suffix}`, positionGroup: 'Operations',
+        departmentId: activeDepartment.departmentId, isActive: true,
       } }))
-      await body(await admin.patch(`/api/hr/positions/${created.position}/status`, { data: { status: 'Inactive' } }))
-      const list = (await body(await admin.get('/api/hr/positions'))).data.positions
+      await body(await hr.patch(`/api/hr/positions/${created.position}/status`, { data: { status: 'Inactive' } }))
+      const list = (await body(await hr.get('/api/hr/positions'))).data.positions
       expect(list.some((item) => item.positionId === created.position)).toBeTruthy()
-      await body(await admin.delete(`/api/hr/positions/${created.position}`))
+      await body(await hr.delete(`/api/hr/positions/${created.position}`))
       created.position = null
     })
 
@@ -105,12 +112,12 @@ test('Admin and HR management CRUD generates complete audit evidence', async ({ 
       await hr.delete(`/api/hr/leave-types/${created.leaveType}`)
     }
     if (created.position) {
-      await admin.patch(`/api/hr/positions/${created.position}/status`, { data: { status: 'Inactive' } })
-      await admin.delete(`/api/hr/positions/${created.position}`)
+      await hr.patch(`/api/hr/positions/${created.position}/status`, { data: { status: 'Inactive' } })
+      await hr.delete(`/api/hr/positions/${created.position}`)
     }
     if (created.department) {
-      await admin.patch(`/api/hr/departments/${created.department}/status`, { data: { status: 'Inactive' } })
-      await admin.delete(`/api/hr/departments/${created.department}`)
+      await hr.patch(`/api/hr/departments/${created.department}/status`, { data: { status: 'Inactive' } })
+      await hr.delete(`/api/hr/departments/${created.department}`)
     }
     await admin.dispose()
     await hr.dispose()

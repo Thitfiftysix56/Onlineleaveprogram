@@ -2,18 +2,18 @@
 
 ## Start all services
 
-For the first run after cloning, create the local environment file:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Then set secure values for `JWT_SECRET` and
-`PASSWORD_RESET_OTP_SECRET` in `.env`, and start the services:
+After cloning, start the complete development environment with one command:
 
 ```powershell
 docker compose up -d --build
 ```
+
+No `.env` file is required for local development. Compose provides development
+defaults and automatically synchronizes frontend and backend dependencies before
+the applications start. To customize ports, email delivery, or secrets, copy
+`.env.example` to `.env` and override only the values you need. Always replace
+`JWT_SECRET` and `PASSWORD_RESET_OTP_SECRET` before deploying outside a local
+development machine.
 
 The backend applies all approved additive database migrations automatically
 before starting. Existing data is preserved, migrations are safe to run again,

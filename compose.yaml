@@ -6,6 +6,7 @@ services:
       context: ./frontend
     container_name: online-leave-system-frontend
     restart: unless-stopped
+    command: ["sh", "-c", "npm ci && exec npm run dev -- --host 0.0.0.0"]
     environment:
       VITE_API_PROXY_TARGET: http://backend:3000
       CHOKIDAR_USEPOLLING: "true"
@@ -30,7 +31,8 @@ services:
       context: ./backend
     container_name: online-leave-system-backend
     restart: unless-stopped
-    command: ["sh", "-c", "npm run db:migrate && exec npm run dev"]
+    user: root
+    command: ["sh", "-c", "npm ci --omit=dev && chown -R node:node /app/node_modules && exec su node -s /bin/sh -c 'npm run db:migrate && exec npm run dev'"]
     environment:
       NODE_ENV: development
       TZ: Asia/Bangkok
@@ -43,11 +45,11 @@ services:
       DB_PASSWORD: LeaveApp2026
       DB_CONNECTION_LIMIT: 10
 
-      JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in .env}"
+      JWT_SECRET: "${JWT_SECRET:-local-development-jwt-secret-change-before-production-2026}"
       JWT_EXPIRES_IN: "${JWT_EXPIRES_IN:-8h}"
       COOKIE_SECURE: "${COOKIE_SECURE:-false}"
 
-      PASSWORD_RESET_OTP_SECRET: "${PASSWORD_RESET_OTP_SECRET:?Set PASSWORD_RESET_OTP_SECRET in .env}"
+      PASSWORD_RESET_OTP_SECRET: "${PASSWORD_RESET_OTP_SECRET:-local-development-otp-secret-change-before-production-2026}"
       PASSWORD_RESET_OTP_TTL_MINUTES: "${PASSWORD_RESET_OTP_TTL_MINUTES:-5}"
       PASSWORD_RESET_TOKEN_TTL_MINUTES: "${PASSWORD_RESET_TOKEN_TTL_MINUTES:-15}"
       PASSWORD_RESET_RESEND_SECONDS: "${PASSWORD_RESET_RESEND_SECONDS:-60}"
@@ -79,7 +81,7 @@ services:
       start_period: 30s
 
   db:
-    image: mariadb:10.6
+    image: mariadb:11.4.13
     container_name: online-leave-system-db
     restart: unless-stopped
     environment:
@@ -88,6 +90,7 @@ services:
       MARIADB_DATABASE: online_leave_approval_system
       MARIADB_USER: leave_app
       MARIADB_PASSWORD: LeaveApp2026
+      MARIADB_AUTO_UPGRADE: "1"
     ports:
       - "${DB_HOST_PORT:-13307}:3306"
     volumes:
@@ -101,7 +104,7 @@ services:
       start_period: 30s
 
   phpmyadmin:
-    image: phpmyadmin:latest
+    image: phpmyadmin:5.2.3
     container_name: online-leave-system-db-admin
     restart: unless-stopped
     environment:
