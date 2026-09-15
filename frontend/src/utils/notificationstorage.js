@@ -586,9 +586,23 @@ export const notifyEmployeeLeaveCancelled =
       request.requestNo ||
       `Request #${request.id}`;
 
+    saveNotifications(
+      initializeNotifications().filter(
+        (notification) =>
+          !(
+            notification.type === 'leave-submitted' &&
+            Number(notification.referenceId) === Number(request.id)
+          ),
+      ),
+    );
+
+    const approverRole = request.role === 'supervisor'
+      ? 'hr'
+      : 'supervisor';
+
     return createNotification({
       role:
-        request.role || 'employee',
+        approverRole,
 
       title:
         'Leave request cancelled',
@@ -600,8 +614,8 @@ export const notifyEmployeeLeaveCancelled =
       referenceId: request.id,
 
       path: `/${
-        request.role || 'employee'
-      }/my-requests/${request.id}`,
+        approverRole
+      }/approval/${request.id}`,
     });
   };
 

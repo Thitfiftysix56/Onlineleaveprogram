@@ -5,11 +5,11 @@ import { createPosition, getPosition, getPositions, updatePosition } from '../ap
 import { getDepartments } from '../api/department-service.js';
 import { departmentLabelFor, divisionLabelFor, organizationCatalog, positionLabelFor } from '../constants/organizationcatalog.js';
 
-const emptyData = { departmentName: '', departmentId: '', divisionName: '', positionGroup: '', positionName: '', status: 'Active' };
+const emptyData = { departmentName: '', departmentId: '', divisionName: '', positionName: '', status: 'Active' };
 const positionChoices = Object.entries(organizationCatalog).flatMap(([departmentName, divisions]) =>
   Object.entries(divisions).flatMap(([divisionName, groups]) =>
-    Object.entries(groups).flatMap(([positionGroup, names]) =>
-      names.map((positionName) => ({ departmentName, divisionName, positionGroup, positionName })),
+    Object.values(groups).flatMap((names) =>
+      names.map((positionName) => ({ departmentName, divisionName, positionName })),
     ),
   ),
 );
@@ -74,7 +74,6 @@ function RolePositionFormPage({
           departmentName: position.departmentName || '',
           departmentId: position.departmentId || '',
           divisionName: position.divisionName || '',
-          positionGroup: position.positionGroup || '',
           positionName: position.positionName || '',
           status: position.status || 'Active',
         };
@@ -101,7 +100,6 @@ function RolePositionFormPage({
       departmentName: choice?.departmentName || '',
       departmentId: department?.departmentId || '',
       divisionName: choice?.divisionName || '',
-      positionGroup: choice?.positionGroup || '',
       positionName,
     }));
     setErrors({});
@@ -111,7 +109,7 @@ function RolePositionFormPage({
   const selectPositionOption = (value) => {
     if (value === '__new__') {
       setCustomPositionMode(true);
-      setFormData((current) => ({ ...current, departmentName: '', departmentId: '', divisionName: '', positionGroup: 'อื่นๆ', positionName: '' }));
+      setFormData((current) => ({ ...current, departmentName: '', departmentId: '', divisionName: '', positionName: '' }));
       setErrors({});
       return;
     }
@@ -128,7 +126,6 @@ function RolePositionFormPage({
         departmentName: formData.departmentName,
         departmentId: formData.departmentId,
         divisionName: formData.divisionName,
-        positionGroup: formData.positionGroup,
         positionName: formData.positionName,
       }, ...catalogChoices]
     : catalogChoices;
@@ -138,7 +135,6 @@ function RolePositionFormPage({
     const nextErrors = {};
     if (!formData.departmentName) nextErrors.departmentName = 'กรุณาเลือกแผนก';
     if (!formData.departmentId) nextErrors.departmentId = 'กรุณาเลือกฝ่าย';
-    if (!formData.positionGroup) nextErrors.positionGroup = 'กรุณาเลือกกลุ่มตำแหน่ง';
     if (!name) nextErrors.positionName = 'กรุณากรอกชื่อตำแหน่ง';
     else if (name.length < 2) nextErrors.positionName = 'ชื่อตำแหน่งต้องมีอย่างน้อย 2 ตัวอักษร';
     else if (name.length > 100) nextErrors.positionName = 'ชื่อตำแหน่งต้องไม่เกิน 100 ตัวอักษร';
@@ -152,7 +148,7 @@ function RolePositionFormPage({
   };
 
   const confirmSave = async () => {
-    const payload = { departmentId: formData.departmentId, positionGroup: formData.positionGroup, positionName: formData.positionName.trim(), status: formData.status };
+    const payload = { departmentId: formData.departmentId, positionGroup: null, positionName: formData.positionName.trim(), status: formData.status };
     setSaving(true);
     try {
       const result = isEditMode ? await updatePosition(selectedPositionId, payload) : await createPosition(payload);

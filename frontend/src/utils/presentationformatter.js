@@ -71,13 +71,13 @@ export const formatNotificationMessage = (message) => {
   if (match) return `คำขอลา ${match[1]} ถูกยกเลิกแล้ว`;
 
   match = text.match(/^Leave request (LR-[A-Z0-9-]+) is waiting for approval\.?$/i);
-  if (match) return `คำขอลา ${match[1]} กำลังรอการอนุมัติ`;
+  if (match) return `คำขอลา ${match[1]} กำลังรออนุมัติ`;
 
   match = text.match(/^(.+?) submitted leave request (LR-[A-Z0-9-]+) for approval\.?$/i);
-  if (match) return `${match[1]} ส่งคำขอลา ${match[2]} เพื่อรอการอนุมัติ`;
+  if (match) return `${match[1]} ส่งคำขอลา ${match[2]} เพื่อรออนุมัติ`;
 
   match = text.match(/^(.+?) submitted (.+? Leave) request (LR-[A-Z0-9-]+)(?: for approval)?\.?$/i);
-  if (match) return `${match[1]} ส่งคำขอ${thaiLeaveType(match[2])} ${match[3]} เพื่อรอการอนุมัติ`;
+  if (match) return `${match[1]} ส่งคำขอ${thaiLeaveType(match[2])} ${match[3]} เพื่อรออนุมัติ`;
 
   match = text.match(/^(.+?) approved (.+? Leave) request (LR-[A-Z0-9-]+)\.?$/i);
   if (match) return `หัวหน้างานอนุมัติคำขอ${thaiLeaveType(match[2])} ${match[3]} แล้ว`;

@@ -262,7 +262,6 @@ function RolePositionManagementPage({
             ).includes(
               keyword,
             ) ||
-            normalizeValue(position.positionGroup).includes(keyword) ||
             normalizeValue(position.departmentName).includes(keyword) ||
             normalizeValue(position.divisionName).includes(keyword) ||
             normalizeValue(
@@ -1363,7 +1362,7 @@ function RolePositionManagementPage({
                 )}
               </FixedTableBody>
             </Table>
-            {filteredPositions.length > rowsPerPage ? <TablePagination component="div" count={filteredPositions.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredPositions.length / rowsPerPage)}`} /> : null}
+            <TablePagination component="div" count={filteredPositions.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.max(1, Math.ceil(filteredPositions.length / rowsPerPage))}`} />
           </Box>
         ) : (
           /* Empty */

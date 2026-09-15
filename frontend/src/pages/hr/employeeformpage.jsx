@@ -23,7 +23,7 @@ import ThaiCalendarField from '../../components/thaicalendarfield.jsx';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getDepartments } from '../../api/department-service.js';
 import { getPositions } from '../../api/position-service.js';
-import { departmentLabelFor, divisionLabelFor, positionGroupLabelFor, positionLabelFor } from '../../constants/organizationcatalog.js';
+import { departmentLabelFor, divisionLabelFor, positionLabelFor } from '../../constants/organizationcatalog.js';
 import {
   createEmployee,
   getEmployee,
@@ -53,7 +53,6 @@ function EmployeeFormPage({ mode = 'add' }) {
     phone: '',
     departmentName: '',
     department: '',
-    positionGroup: '',
     position: '',
     supervisor: '',
     role: 'Employee',
@@ -107,7 +106,6 @@ function EmployeeFormPage({ mode = 'add' }) {
             phone: employee.phone || '',
             departmentName: employee.department || '',
             department: employee.departmentId,
-            positionGroup: employee.positionGroup || '',
             position: employee.positionId,
             supervisor: employee.roleName === 'Supervisor' ? '' : (employee.supervisorId || ''),
             role: employee.roleName || 'Employee',
@@ -127,14 +125,7 @@ function EmployeeFormPage({ mode = 'add' }) {
   const selectedDepartmentPositions = positions.filter(
     (position) => String(position.departmentId) === String(formData.department),
   );
-  const availablePositionGroups = [...new Set(
-    selectedDepartmentPositions
-      .map((position) => position.positionGroup)
-      .filter(Boolean),
-  )];
-  const availablePositions = selectedDepartmentPositions.filter(
-    (position) => position.positionGroup === formData.positionGroup,
-  );
+  const availablePositions = selectedDepartmentPositions;
 
   const handleInputChange = (fieldName, value) => {
     setFormData((previousData) => ({
@@ -193,8 +184,6 @@ function EmployeeFormPage({ mode = 'add' }) {
     }
 
     if (!formData.departmentName) validationErrors.departmentName = 'กรุณาเลือกแผนก';
-    if (!formData.positionGroup) validationErrors.positionGroup = 'กรุณาเลือกกลุ่มตำแหน่ง';
-
     if (!formData.position) {
       validationErrors.position =
         'กรุณาเลือกตำแหน่ง';
@@ -557,7 +546,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 labelId="employee-department-label"
                 value={formData.departmentName}
                 label="แผนก"
-                onChange={(event) => setFormData((current) => ({ ...current, departmentName: event.target.value, department: '', positionGroup: '', position: '' }))}
+                onChange={(event) => setFormData((current) => ({ ...current, departmentName: event.target.value, department: '', position: '' }))}
                 sx={{
                   borderRadius: '8px',
                 }}
@@ -586,7 +575,7 @@ function EmployeeFormPage({ mode = 'add' }) {
                 labelId="employee-division-label"
                 value={formData.department}
                 label="ฝ่าย"
-                onChange={(event) => setFormData((current) => ({ ...current, department: event.target.value, positionGroup: '', position: '' }))}
+                onChange={(event) => setFormData((current) => ({ ...current, department: event.target.value, position: '' }))}
                 sx={{
                   borderRadius: '8px',
                 }}
@@ -608,33 +597,14 @@ function EmployeeFormPage({ mode = 'add' }) {
               )}
             </FormControl>
 
-            <FormControl fullWidth required disabled={!formData.department} error={Boolean(errors.positionGroup)}>
-              <InputLabel id="employee-position-group-label">กลุ่มตำแหน่ง</InputLabel>
-              <Select labelId="employee-position-group-label" value={formData.positionGroup} label="กลุ่มตำแหน่ง"
-                onChange={(event) => setFormData((current) => ({ ...current, positionGroup: event.target.value, position: '' }))}
-                sx={{ borderRadius: '8px' }}>
-                {availablePositionGroups.length ? availablePositionGroups
-                  .map((group) => <MenuItem key={group} value={group}>{positionGroupLabelFor(group)}</MenuItem>) : (
-                    <MenuItem disabled value="">
-                      ฝ่ายนี้ยังไม่มีตำแหน่ง กรุณาเพิ่มตำแหน่งก่อน
-                    </MenuItem>
-                  )}
-              </Select>
-              {(errors.positionGroup || (formData.department && !availablePositionGroups.length)) && (
-                <FormHelperText>
-                  {errors.positionGroup || 'ฝ่ายนี้ยังไม่มีตำแหน่ง กรุณาเพิ่มตำแหน่งก่อน'}
-                </FormHelperText>
-              )}
-            </FormControl>
-
-            <FormControl fullWidth required disabled={!formData.positionGroup} error={Boolean(errors.position)}>
+            <FormControl fullWidth required disabled={!formData.department} error={Boolean(errors.position)}>
               <InputLabel id="employee-position-label">ชื่อตำแหน่ง</InputLabel>
               <Select labelId="employee-position-label" value={formData.position} label="ชื่อตำแหน่ง"
                 onChange={(event) => handleInputChange('position', event.target.value)} sx={{ borderRadius: '8px' }}>
                 {availablePositions.length ? availablePositions
                   .map((position) => <MenuItem key={position.positionId} value={position.positionId}>{positionLabelFor(position.positionName)}</MenuItem>) : (
                     <MenuItem disabled value="">
-                      ไม่มีตำแหน่งในกลุ่มนี้
+                      ฝ่ายนี้ยังไม่มีตำแหน่ง กรุณาเพิ่มตำแหน่งก่อน
                     </MenuItem>
                   )}
               </Select>
@@ -853,7 +823,6 @@ function EmployeeFormPage({ mode = 'add' }) {
             <Typography><strong>อีเมล:</strong> {formData.email}</Typography>
             <Typography><strong>แผนก:</strong> {departmentLabelFor(formData.departmentName)}</Typography>
             <Typography><strong>ฝ่าย:</strong> {divisionLabelFor(departments.find((item) => String(item.departmentId) === String(formData.department))?.divisionName)}</Typography>
-            <Typography><strong>กลุ่มตำแหน่ง:</strong> {positionGroupLabelFor(formData.positionGroup)}</Typography>
             <Typography><strong>ชื่อตำแหน่ง:</strong> {positionLabelFor(positions.find((item) => String(item.positionId) === String(formData.position))?.positionName)}</Typography>
           </Box>
         </DialogContent>

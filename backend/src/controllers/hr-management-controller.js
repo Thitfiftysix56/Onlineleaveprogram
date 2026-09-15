@@ -526,11 +526,11 @@ export async function getPosition(request, response) {
 }
 async function savePosition(request, response, id = null) {
   const name = trim(request.body.positionName)
-  const positionGroup = trim(request.body.positionGroup)
+  const positionGroup = trim(request.body.positionGroup) || null
   const departmentId = positiveId(request.body.departmentId)
   const isActive = activeValue(request.body.isActive ?? request.body.status)
   if (name.length < 2 || name.length > 100) return sendError(response, 400, 'Position name must contain 2-100 characters.')
-  if (!positionGroup || positionGroup.length > 100) return sendError(response, 400, 'กรุณาเลือกกลุ่มตำแหน่ง')
+  if (positionGroup && positionGroup.length > 100) return sendError(response, 400, 'กลุ่มตำแหน่งต้องไม่เกิน 100 ตัวอักษร')
   if (!departmentId || !await referenceExists('departments', 'department_id', departmentId, true)) return sendError(response, 400, 'กรุณาเลือกแผนกและฝ่ายที่เปิดใช้งาน')
   if (isActive === null) return sendError(response, 400, 'Status must be Active or Inactive.')
   const currentPosition = id ? await positionById(id) : null

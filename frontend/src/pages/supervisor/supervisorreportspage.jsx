@@ -464,12 +464,14 @@ function SupervisorReportsPage() {
           /* Table */
           <Box
             sx={{
-              overflowX: 'auto',
+              overflow: 'hidden',
             }}
           >
-            <Table
+            <Box sx={{ overflowX: 'auto', width: '100%' }}>
+              <Table
               sx={{
-                minWidth: '850px',
+                minWidth: '920px',
+                '& tbody td': { height: '72px', verticalAlign: 'middle' },
               }}
             >
               <TableHead>
@@ -483,8 +485,8 @@ function SupervisorReportsPage() {
                     'เลขที่คำขอ',
                     'พนักงาน',
                     'ประเภทการลา',
-                    'ช่วงวันที่',
-                    'จำนวนวัน',
+                    'ช่วงวันลา',
+                    'จำนวนวันลา',
                     'สถานะ',
                   ].map((heading) => (
                     <TableCell
@@ -492,7 +494,7 @@ function SupervisorReportsPage() {
                       sx={{
                         color: '#64748B',
 
-                        fontSize: '11px',
+                        fontSize: '13px',
                         fontWeight: 700,
 
                         whiteSpace: 'nowrap',
@@ -552,10 +554,10 @@ function SupervisorReportsPage() {
                                 theme.primary,
 
                               fontSize:
-                                '12px',
+                                '13px',
 
                               fontWeight:
-                                800,
+                                600,
 
                               whiteSpace:
                                 'nowrap',
@@ -575,10 +577,10 @@ function SupervisorReportsPage() {
                                 '#111827',
 
                               fontSize:
-                                '12px',
+                                '14px',
 
                               fontWeight:
-                                700,
+                                600,
 
                               whiteSpace:
                                 'nowrap',
@@ -594,7 +596,9 @@ function SupervisorReportsPage() {
                                 '#94A3B8',
 
                               fontSize:
-                                '10px',
+                                '12px',
+                              fontWeight: 400,
+                              marginTop: '4px',
                             }}
                           >
                             {request.employeeCode ||
@@ -602,10 +606,10 @@ function SupervisorReportsPage() {
                           </Typography>
                         </TableCell>
 
-                        {/* ประเภทลา */}
+                        {/* ประเภทการลา */}
                         <TableCell
                           sx={{
-                            fontSize: '12px',
+                            fontSize: '14px',
                             whiteSpace: 'nowrap',
                           }}
                         >
@@ -617,7 +621,7 @@ function SupervisorReportsPage() {
                         {/* วันที่ */}
                         <TableCell
                           sx={{
-                            fontSize: '12px',
+                            fontSize: '14px',
                             whiteSpace: 'nowrap',
                           }}
                         >
@@ -630,8 +634,8 @@ function SupervisorReportsPage() {
                         {/* จำนวนวัน */}
                         <TableCell
                           sx={{
-                            fontSize: '12px',
-                            fontWeight: 700,
+                            fontSize: '14px',
+                            fontWeight: 600,
                           }}
                         >
                           {Number(
@@ -668,9 +672,9 @@ function SupervisorReportsPage() {
                                 '999px',
 
                               fontSize:
-                                '10px',
+                                '13px',
 
-                              fontWeight: 700,
+                              fontWeight: 600,
 
                               whiteSpace:
                                 'nowrap',
@@ -689,9 +693,9 @@ function SupervisorReportsPage() {
                   },
                 )}
               </FixedTableBody>
-            </Table>
-            {filteredRequests.length > rowsPerPage ? (
-              <TablePagination
+              </Table>
+            </Box>
+            <TablePagination
                 component="div"
                 count={filteredRequests.length}
                 page={page}
@@ -699,9 +703,8 @@ function SupervisorReportsPage() {
                 rowsPerPage={rowsPerPage}
                 rowsPerPageOptions={[rowsPerPage]}
                 labelRowsPerPage=""
-                labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredRequests.length / rowsPerPage)}`}
+                labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.max(1, Math.ceil(filteredRequests.length / rowsPerPage))}`}
               />
-            ) : null}
           </Box>
         ) : (
           /* Empty */

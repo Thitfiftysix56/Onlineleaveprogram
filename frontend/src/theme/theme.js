@@ -61,7 +61,7 @@ const theme = createTheme({
     fontFamily:
       "'IBM Plex Sans Thai', 'IBM Plex Sans', 'Noto Sans Thai', system-ui, 'Segoe UI', sans-serif",
     htmlFontSize: 16,
-    fontSize: 15,
+    fontSize: 16,
     fontWeightRegular: 400,
     fontWeightMedium: 500,
     fontWeightBold: 600,
@@ -94,37 +94,37 @@ const theme = createTheme({
       color: colorTokens.text.primary,
     },
     body1: {
-      fontSize: '0.9375rem',
+      fontSize: '1rem',
       lineHeight: 1.6,
     },
     body2: {
-      fontSize: '0.8125rem',
+      fontSize: '0.875rem',
       lineHeight: 1.55,
     },
     subtitle1: {
-      fontSize: '0.9375rem',
+      fontSize: '1rem',
       fontWeight: 500,
       lineHeight: 1.6,
     },
     subtitle2: {
-      fontSize: '0.8125rem',
+      fontSize: '0.875rem',
       fontWeight: 500,
       lineHeight: 1.6,
     },
     button: {
       textTransform: 'none',
-      fontSize: '0.875rem',
+      fontSize: '0.9375rem',
       fontWeight: 500,
       lineHeight: 1.5,
     },
     caption: {
-      fontSize: '0.75rem',
+      fontSize: '0.8125rem',
       fontWeight: 500,
       lineHeight: 1.6,
       color: colorTokens.text.muted,
     },
     overline: {
-      fontSize: '0.75rem',
+      fontSize: '0.8125rem',
       fontWeight: 600,
       lineHeight: 1.5,
       letterSpacing: '0.04em',
@@ -185,9 +185,9 @@ const theme = createTheme({
             opacity: 0.62,
           },
           '&.MuiButton-sizeSmall': {
-            minHeight: 36,
+            minHeight: 38,
             paddingInline: spacingTokens.md,
-            fontSize: '0.8125rem',
+            fontSize: '0.875rem',
           },
           '&.MuiButton-outlined.MuiButton-colorError': {
             color: '#DC2626 !important',
@@ -360,7 +360,7 @@ const theme = createTheme({
     MuiInputBase: {
       styleOverrides: {
         root: {
-          fontSize: '0.875rem',
+          fontSize: '0.9375rem',
           lineHeight: 1.6,
         },
         input: {
@@ -377,7 +377,7 @@ const theme = createTheme({
         root: {
           borderRadius: radiusTokens.control,
           backgroundColor: '#FFFFFF',
-          minHeight: 44,
+          minHeight: 46,
           transition: 'background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease',
           '&:hover .MuiOutlinedInput-notchedOutline': {
             borderColor: 'var(--role-border, #CBD5E1)',
@@ -400,7 +400,7 @@ const theme = createTheme({
     MuiInputLabel: {
       styleOverrides: {
         root: {
-          fontSize: '0.875rem',
+          fontSize: '0.9375rem',
           fontWeight: 500,
           lineHeight: 1.45,
         },
@@ -410,7 +410,7 @@ const theme = createTheme({
     MuiFormHelperText: {
       styleOverrides: {
         root: {
-          fontSize: '0.75rem',
+          fontSize: '0.8125rem',
           fontWeight: 400,
           lineHeight: 1.6,
           marginTop: spacingTokens.xs,
@@ -529,7 +529,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           color: colorTokens.text.secondary,
-          fontSize: '0.875rem',
+          fontSize: '0.9375rem',
           lineHeight: 1.7,
         },
       },
@@ -542,7 +542,7 @@ const theme = createTheme({
           fontWeight: 600,
         },
         label: {
-          fontSize: '0.75rem',
+          fontSize: '0.8125rem',
         },
       },
     },
@@ -552,7 +552,7 @@ const theme = createTheme({
         root: {
           borderBottomColor: colorTokens.border,
           color: colorTokens.text.secondary,
-          fontSize: '0.8125rem',
+          fontSize: '0.875rem',
           lineHeight: 1.6,
           padding: `${spacingTokens.md}px ${spacingTokens.lg}px`,
         },
@@ -560,7 +560,7 @@ const theme = createTheme({
           backgroundColor: '#EEF3F8',
           color: colorTokens.text.primary,
           fontWeight: 600,
-          height: 44,
+          height: 46,
         },
       },
     },
@@ -593,13 +593,16 @@ const theme = createTheme({
         root: {
           color: colorTokens.text.secondary,
           borderTop: '0 !important',
+          minHeight: 50,
         },
         toolbar: {
-          minHeight: 50,
+          minHeight: '50px !important',
           paddingInline: spacingTokens.lg,
         },
-        selectLabel: { fontSize: '0.75rem' },
-        displayedRows: { fontSize: '0.75rem' },
+        selectLabel: { display: 'none' },
+        select: { display: 'none' },
+        input: { display: 'none' },
+        displayedRows: { fontSize: '0.8125rem', margin: 0 },
         actions: {
           '& .MuiIconButton-root': {
             width: 34,
@@ -613,10 +616,10 @@ const theme = createTheme({
     MuiMenuItem: {
       styleOverrides: {
         root: {
-          minHeight: 40,
+          minHeight: 44,
           borderRadius: radiusTokens.control,
           whiteSpace: 'normal',
-          fontSize: '0.875rem',
+          fontSize: '0.9375rem',
           lineHeight: 1.6,
           '&:focus-visible': {
             outline: '3px solid currentColor',

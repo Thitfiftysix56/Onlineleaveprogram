@@ -106,6 +106,27 @@ function normalizeStatus(status) {
   return String(status || '').trim().toLowerCase()
 }
 
+async function isLastActiveAdmin(user, nextStatus) {
+  if (
+    String(user?.role_name || '').toLowerCase() !== 'admin' ||
+    normalizeStatus(user?.status) !== 'active' ||
+    normalizeStatus(nextStatus) === 'active'
+  ) {
+    return false
+  }
+
+  const [[row]] = await pool.execute(
+    `SELECT COUNT(*) AS active_admin_count
+       FROM users u
+       JOIN roles r ON r.role_id = u.role_id
+      WHERE LOWER(r.role_name) = 'admin'
+        AND LOWER(u.status) = 'active'
+        AND u.user_id <> ?`,
+    [user.user_id],
+  )
+  return Number(row.active_admin_count) === 0
+}
+
 async function findRole(role) {
   const roleName = String(role || '').trim()
 
@@ -435,7 +456,7 @@ export async function updateAdminUser(request, response) {
     if (userId === Number(request.user.userId) && status !== 'active') {
       return response.status(409).json({
         status: 'error',
-        message: 'You cannot deactivate or lock your own account.',
+        message: 'ไม่สามารถปิดใช้งานหรือล็อกบัญชีแอดมินที่กำลังเข้าสู่ระบบอยู่ได้',
       })
     }
 
@@ -459,6 +480,13 @@ export async function updateAdminUser(request, response) {
       return response.status(404).json({
         status: 'error',
         message: 'User account was not found.',
+      })
+    }
+
+    if (await isLastActiveAdmin(existingUser, status)) {
+      return response.status(409).json({
+        status: 'error',
+        message: 'ต้องมีบัญชีแอดมินที่เปิดใช้งานอยู่อย่างน้อย 1 บัญชี',
       })
     }
 
@@ -520,11 +548,10 @@ export async function updateAdminUserStatus(request, response) {
       })
     }
 
-
     if (userId === Number(request.user.userId) && status !== 'active') {
       return response.status(409).json({
         status: 'error',
-        message: 'You cannot deactivate or lock your own account.',
+        message: 'ไม่สามารถปิดใช้งานหรือล็อกบัญชีแอดมินที่กำลังเข้าสู่ระบบอยู่ได้',
       })
     }
 
@@ -536,9 +563,10 @@ export async function updateAdminUserStatus(request, response) {
     }
 
     const [users] = await pool.execute(
-      `SELECT user_id, username, status
-       FROM users
-       WHERE user_id = ?
+      `SELECT u.user_id, u.username, u.status, r.role_name
+       FROM users u
+       JOIN roles r ON r.role_id = u.role_id
+       WHERE u.user_id = ?
        LIMIT 1`,
       [userId],
     )
@@ -547,6 +575,13 @@ export async function updateAdminUserStatus(request, response) {
       return response.status(404).json({
         status: 'error',
         message: 'User account was not found.',
+      })
+    }
+
+    if (await isLastActiveAdmin(users[0], status)) {
+      return response.status(409).json({
+        status: 'error',
+        message: 'ต้องมีบัญชีแอดมินที่เปิดใช้งานอยู่อย่างน้อย 1 บัญชี',
       })
     }
 

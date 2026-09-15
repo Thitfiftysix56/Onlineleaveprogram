@@ -25,7 +25,7 @@ import { getPositions } from '../../api/position-service.js';
 import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
 import { InlineListSummary } from '../../components/sharedvisualfoundation.jsx';
 import AdminLayout from '../../layouts/adminlayout.jsx';
-import { departmentLabelFor, divisionLabelFor, positionGroupLabelFor, positionLabelFor } from '../../constants/organizationcatalog.js';
+import { departmentLabelFor, divisionLabelFor, positionLabelFor } from '../../constants/organizationcatalog.js';
 
 const rowsPerPage = 5;
 const normalize = (value) => String(value ?? '').trim().toLowerCase();
@@ -113,7 +113,7 @@ function OrganizationStructurePage() {
     && (!divisionFilter || item.divisionName === divisionFilter)
   )), [departments, keyword, departmentFilter, divisionFilter]);
   const filteredPositions = useMemo(() => positions.filter((item) => (
-    (!keyword || [item.positionName, item.positionGroup, item.departmentName, item.divisionName]
+    (!keyword || [item.positionName, item.departmentName, item.divisionName]
       .some((value) => normalize(value).includes(keyword)))
     && (!departmentFilter || item.departmentName === departmentFilter)
     && (!divisionFilter || item.divisionName === divisionFilter)
@@ -241,7 +241,7 @@ function OrganizationStructurePage() {
                   <colgroup>
                     {(tab === 0
                       ? ['25%', '25%', '15%', '20%', '15%']
-                      : ['20%', '18%', '32%', '15%', '15%']
+                      : ['25%', '40%', '17.5%', '17.5%']
                     ).map((width, index) => <col key={`${tab}-${index}`} style={{ width }} />)}
                   </colgroup>
                   <TableHead sx={{ backgroundColor: '#F1F5F9' }}>
@@ -251,7 +251,7 @@ function OrganizationStructurePage() {
                       </TableRow>
                     ) : (
                       <TableRow>
-                        <TableCell>ตำแหน่ง</TableCell><TableCell>กลุ่มตำแหน่ง</TableCell><TableCell>แผนก / ฝ่าย</TableCell><TableCell align="center">พนักงาน</TableCell><TableCell align="center">สถานะ</TableCell>
+                        <TableCell>ตำแหน่ง</TableCell><TableCell>แผนก / ฝ่าย</TableCell><TableCell align="center">พนักงาน</TableCell><TableCell align="center">สถานะ</TableCell>
                       </TableRow>
                     )}
                   </TableHead>
@@ -267,13 +267,12 @@ function OrganizationStructurePage() {
                     ) : (
                       <TableRow key={item.positionId} sx={{ height: 72 }}>
                         <TableCell sx={{ fontWeight: 700 }}>{positionLabelFor(item.positionName)}</TableCell>
-                        <TableCell>{positionGroupLabelFor(item.positionGroup)}</TableCell>
                         <TableCell>{departmentLabelFor(item.departmentName)} / {divisionLabelFor(item.divisionName)}</TableCell>
                         <TableCell align="center">{Number(item.employeeCount || 0)}</TableCell>
                         <TableCell align="center"><StatusChip active={Boolean(item.isActive)} /></TableCell>
                       </TableRow>
                     ))}
-                    <EmptyRows count={Math.max(0, rowsPerPage - paginatedRows.length)} columns={5} />
+                    <EmptyRows count={Math.max(0, rowsPerPage - paginatedRows.length)} columns={tab === 0 ? 5 : 4} />
                   </TableBody>
                 </Table>
               </TableContainer>

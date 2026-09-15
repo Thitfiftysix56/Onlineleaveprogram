@@ -25,6 +25,7 @@ import {
 } from '../../components/sharedvisualfoundation.jsx';
 import DashboardLeaveBalance from '../../components/dashboardleavebalance.jsx';
 import { DashboardTablePagination } from '../../components/shareduiprimitives.jsx';
+import { FixedGridFillerRows } from '../../components/fixedtablebody.jsx';
 import { getLeaveBalance, getMyLeaveRequests } from '../../api/leave-service.js';
 import { getNotifications, markNotificationRead as markNotificationAsRead } from '../../api/notification-service.js';
 import {
@@ -950,7 +951,7 @@ function EmployeeDashboardPage() {
       valueColor: '#15803D',
     },
     {
-      title: 'ไม่อนุมัติ',
+      title: 'ปฏิเสธแล้ว',
       value: rejectedRequestCount,
       background: 'linear-gradient(135deg, #FFF0F1 0%, #FFF8F8 68%, #FFFFFF 100%)',
       glowColor: 'rgba(248, 113, 113, 0.16)',
@@ -1215,12 +1216,14 @@ function EmployeeDashboardPage() {
             }}
           >
             <Box
+              className="system-data-grid"
               sx={{
                 minWidth:
                   '850px',
               }}
             >
               <Box
+                className="system-data-grid-header"
                 sx={{
                   display:
                     'grid',
@@ -1241,8 +1244,8 @@ function EmployeeDashboardPage() {
                 {[
                   'เลขที่คำขอ',
                   'ประเภทการลา',
-                  'ช่วงวันที่',
-                  'จำนวนวัน',
+                  'ช่วงวันลา',
+                  'จำนวนวันลา',
                   'สถานะ',
                 ].map(
                   (
@@ -1282,6 +1285,7 @@ function EmployeeDashboardPage() {
 
                   return (
                     <Box
+                      className="system-data-grid-row"
                       key={
                         request.id
                       }
@@ -1436,6 +1440,7 @@ function EmployeeDashboardPage() {
                   );
                 },
               )}
+              <FixedGridFillerRows visibleRows={recentRequests.length} />
             </Box>
           </Box>
           <DashboardTablePagination
@@ -1589,7 +1594,7 @@ function EmployeeDashboardPage() {
                 },
               }}
             >
-              สร้างคำขอลา
+              ยื่นคำขอลา
             </Button>
           </Box>
         )}

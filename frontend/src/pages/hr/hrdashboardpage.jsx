@@ -400,7 +400,7 @@ function HRDashboardPage() {
       glowColor: 'rgba(59, 130, 246, 0.10)',
     },
     {
-      title: 'พนักงานสถานะปฏิบัติงาน',
+      title: 'พนักงานที่ปฏิบัติงาน',
       value: activeEmployees.length,
       unit: 'คน',
       color: '#15803D',
@@ -454,7 +454,7 @@ function HRDashboardPage() {
         Dashboard
       </Typography>
 
-      <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/hr/leave-request', { state: { returnTo: '/hr/dashboard' } })} sx={{ display: 'none' }}>สร้างคำขอลา</Button>
+      <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/hr/leave-request', { state: { returnTo: '/hr/dashboard' } })} sx={{ display: 'none' }}>ยื่นคำขอลา</Button>
 
       {error && (
         <Alert

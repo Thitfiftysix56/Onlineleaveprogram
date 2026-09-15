@@ -38,6 +38,7 @@ import {
   SearchRounded,
 } from '@mui/icons-material';
 import ThaiCalendarField from '../../components/thaicalendarfield.jsx';
+import { departmentLabelFor } from '../../constants/organizationcatalog.js';
 
 import {
   useNavigate,
@@ -1024,7 +1025,7 @@ function HRReportsPage() {
                   <th>ประเภทการลา</th>
                   <th>วันที่เริ่มต้น</th>
                   <th>วันที่สิ้นสุด</th>
-                  <th>จำนวนวัน</th>
+                  <th>จำนวนวันลา</th>
                   <th>สถานะ</th>
                   <th>ผู้อนุมัติ</th>
                 </tr>
@@ -1261,12 +1262,12 @@ function HRReportsPage() {
                   <Select
                     value={departmentFilter === 'all' ? '' : departmentFilter}
                     displayEmpty
-                    renderValue={(value) => value || 'แผนก'}
+                    renderValue={(value) => value ? departmentLabelFor(value) : 'แผนก'}
                     inputProps={{ 'aria-label': 'แผนก' }}
                     onChange={(event) => setDepartmentFilter(event.target.value || 'all')}
                   >
                     {departments.map((department) => (
-                      <MenuItem key={department} value={department}>{department}</MenuItem>
+                      <MenuItem key={department} value={department}>{departmentLabelFor(department)}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -1650,11 +1651,15 @@ function HRReportsPage() {
                 'hidden',
             }}
           >
-            <Table
+            <Box sx={{ overflowX: 'auto', width: '100%' }}>
+              <Table
               size="small"
               sx={{
                 width:
                   '100%',
+
+                minWidth:
+                  '1320px',
 
                 tableLayout:
                   'fixed',
@@ -1663,62 +1668,67 @@ function HRReportsPage() {
                   boxSizing:
                     'border-box',
                 },
+
+                '& tbody td': {
+                  height: '72px',
+                  verticalAlign: 'middle',
+                },
               }}
             >
               <colgroup>
                 <col
                   style={{
                     width:
-                      '11%',
+                      '190px',
                   }}
                 />
 
                 <col
                   style={{
                     width:
-                      '14%',
+                      '180px',
                   }}
                 />
 
                 <col
                   style={{
                     width:
-                      '12%',
+                      '220px',
                   }}
                 />
 
                 <col
                   style={{
                     width:
-                      '12%',
+                      '140px',
                   }}
                 />
 
                 <col
                   style={{
                     width:
-                      '17%',
+                      '190px',
                   }}
                 />
 
                 <col
                   style={{
                     width:
-                      '8%',
+                      '100px',
                   }}
                 />
 
                 <col
                   style={{
                     width:
-                      '11%',
+                      '120px',
                   }}
                 />
 
                 <col
                   style={{
                     width:
-                      '15%',
+                      '180px',
                   }}
                 />
               </colgroup>
@@ -1735,8 +1745,8 @@ function HRReportsPage() {
                     'พนักงาน',
                     'แผนก',
                     'ประเภทการลา',
-                    'ช่วงวันที่',
-                    'จำนวนวัน',
+                    'ช่วงวันลา',
+                    'จำนวนวันลา',
                     'สถานะ',
                     'ผู้อนุมัติ',
                   ].map(
@@ -1749,7 +1759,7 @@ function HRReportsPage() {
                         }
                         align={
                           [
-                            'จำนวนวัน',
+                            'จำนวนวันลา',
                             'สถานะ',
                             'การดำเนินการ',
                           ].includes(
@@ -1766,7 +1776,7 @@ function HRReportsPage() {
                             '#64748B',
 
                           fontSize:
-                            '9.5px',
+                            '13px',
 
                           fontWeight:
                             700,
@@ -1844,19 +1854,16 @@ function HRReportsPage() {
                                 theme.primary,
 
                               fontSize:
-                                '10px',
+                                '13px',
 
                               fontWeight:
-                                800,
+                                600,
 
                               lineHeight:
                                 1.4,
 
-                              wordBreak:
-                                'break-word',
-
-                              overflowWrap:
-                                'anywhere',
+                              whiteSpace:
+                                'nowrap',
                             }}
                           >
                             <RequestNumberText>{request.requestNo}</RequestNumberText>
@@ -1866,6 +1873,7 @@ function HRReportsPage() {
                         {/* Employee */}
 
                         <TableCell
+                          title={departmentLabelFor(request.department)}
                           sx={{
                             padding:
                               '12px 7px',
@@ -1880,10 +1888,10 @@ function HRReportsPage() {
                                 '#111827',
 
                               fontSize:
-                                '10px',
+                                '14px',
 
                               fontWeight:
-                                700,
+                                600,
 
                               lineHeight:
                                 1.4,
@@ -1903,13 +1911,13 @@ function HRReportsPage() {
                                 '#94A3B8',
 
                               fontSize:
-                                '9px',
+                                '12px',
 
                               lineHeight:
                                 1.35,
 
                               marginTop:
-                                '2px',
+                                '4px',
 
                               wordBreak:
                                 'break-word',
@@ -1932,23 +1940,20 @@ function HRReportsPage() {
                               '#475569',
 
                             fontSize:
-                              '9.5px',
+                              '14px',
 
                             lineHeight:
                               1.45,
 
-                            wordBreak:
-                              'break-word',
-
-                            overflowWrap:
-                              'anywhere',
+                            whiteSpace:
+                              'nowrap',
 
                             borderBottom:
                               '1px solid #E5E7EB',
                           }}
                         >
                           {
-                            request.department
+                            departmentLabelFor(request.department)
                           }
                         </TableCell>
 
@@ -1963,13 +1968,13 @@ function HRReportsPage() {
                               '#475569',
 
                             fontSize:
-                              '9.5px',
+                              '14px',
 
                             lineHeight:
                               1.45,
 
-                            wordBreak:
-                              'break-word',
+                            whiteSpace:
+                              'nowrap',
 
                             borderBottom:
                               '1px solid #E5E7EB',
@@ -1991,16 +1996,13 @@ function HRReportsPage() {
                               '#475569',
 
                             fontSize:
-                              '9.5px',
+                              '14px',
 
                             lineHeight:
                               1.45,
 
                             whiteSpace:
-                              'normal',
-
-                            wordBreak:
-                              'break-word',
+                              'nowrap',
 
                             borderBottom:
                               '1px solid #E5E7EB',
@@ -2024,10 +2026,10 @@ function HRReportsPage() {
                               '#111827',
 
                             fontSize:
-                              '9.5px',
+                              '14px',
 
                             fontWeight:
-                              700,
+                              600,
 
                             lineHeight:
                               1.4,
@@ -2079,10 +2081,10 @@ function HRReportsPage() {
                                 '999px',
 
                               fontSize:
-                                '8.5px',
+                                '13px',
 
                               fontWeight:
-                                700,
+                                600,
 
                               '& .MuiChip-label': {
                                 paddingLeft:
@@ -2098,6 +2100,7 @@ function HRReportsPage() {
                         {/* Approver */}
 
                         <TableCell
+                          title={request.approver || '-'}
                           sx={{
                             padding:
                               '12px 7px',
@@ -2106,16 +2109,19 @@ function HRReportsPage() {
                               '#475569',
 
                             fontSize:
-                              '9.5px',
+                              '14px',
 
                             lineHeight:
                               1.45,
 
-                            wordBreak:
-                              'break-word',
+                            whiteSpace:
+                              'nowrap',
 
-                            overflowWrap:
-                              'anywhere',
+                            overflow:
+                              'hidden',
+
+                            textOverflow:
+                              'ellipsis',
 
                             borderBottom:
                               '1px solid #E5E7EB',
@@ -2131,9 +2137,9 @@ function HRReportsPage() {
                   },
                 )}
               </FixedTableBody>
-            </Table>
-            {filteredRequests.length > rowsPerPage ? (
-              <TablePagination
+              </Table>
+            </Box>
+            <TablePagination
                 component="div"
                 count={filteredRequests.length}
                 page={page}
@@ -2141,9 +2147,8 @@ function HRReportsPage() {
                 rowsPerPage={rowsPerPage}
                 rowsPerPageOptions={[rowsPerPage]}
                 labelRowsPerPage=""
-                labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredRequests.length / rowsPerPage)}`}
+                labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.max(1, Math.ceil(filteredRequests.length / rowsPerPage))}`}
               />
-            ) : null}
           </Box>
         ) : (
           /* Empty */

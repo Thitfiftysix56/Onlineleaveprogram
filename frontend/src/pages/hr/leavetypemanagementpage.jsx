@@ -782,7 +782,7 @@ function LeaveTypeManagementPage() {
           <DataListToolbar
             searchValue={searchText}
             onSearchChange={setSearchText}
-            searchPlaceholder="ค้นหาชื่อหรือรหัสประเภทลา"
+            searchPlaceholder="ค้นหาชื่อหรือรหัสประเภทการลา"
             resultLabel=""
             activeFilters={statusFilter !== 'all' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}`, onDelete: () => setStatusFilter('all') }] : []}
             onClearFilters={handleClearFilters}

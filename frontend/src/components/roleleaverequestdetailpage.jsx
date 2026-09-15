@@ -20,6 +20,11 @@ import {
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import RequestNumberText from './requestnumbertext.jsx';
 import { BackButton, PageHeader } from './sharedvisualfoundation.jsx';
+import {
+  departmentLabelFor,
+  divisionLabelFor,
+  positionLabelFor,
+} from '../constants/organizationcatalog.js';
 
 import {
   useLocation,
@@ -28,6 +33,22 @@ import {
 } from 'react-router-dom';
 
 import { cancelLeaveRequest, decideHrLeaveRequest, decideLeaveRequest, deleteLeaveDraft, getHrApproval, getLeaveReportRequests, getMyLeaveRequest, getSupervisorApproval } from '../api/leave-service.js';
+
+const employeeNameLabelFor = (employeeName) => {
+  const value = String(employeeName || '').trim();
+  const sampleAccountName = value.match(/^(Employee|Supervisor|Admin|HR)\s+(.+)$/i);
+
+  if (!sampleAccountName) return value || 'พนักงาน';
+
+  const roleLabels = {
+    employee: 'พนักงาน',
+    supervisor: 'หัวหน้างาน',
+    admin: 'ผู้ดูแลระบบ',
+    hr: 'ฝ่ายทรัพยากรบุคคล',
+  };
+
+  return `${roleLabels[sampleAccountName[1].toLowerCase()]} ${sampleAccountName[2]}`;
+};
 
 function RoleLeaveRequestDetailPage({
   LayoutComponent,
@@ -407,10 +428,10 @@ function RoleLeaveRequestDetailPage({
     }
 
     return date.toLocaleDateString(
-      'en-GB',
+      'th-TH-u-ca-gregory',
       {
         day: '2-digit',
-        month: 'short',
+        month: '2-digit',
         year: 'numeric',
       },
     );
@@ -433,10 +454,10 @@ function RoleLeaveRequestDetailPage({
     }
 
     return date.toLocaleString(
-      'en-GB',
+      'th-TH-u-ca-gregory',
       {
         day: '2-digit',
-        month: 'short',
+        month: '2-digit',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
@@ -823,27 +844,28 @@ function RoleLeaveRequestDetailPage({
 
       return [
         {
-          label: 'Request Number',
+          label: 'เลขที่คำขอ',
           value: requestReference,
         },
         {
-          label: 'Status',
+          label: 'สถานะ',
+          kind: 'status',
           value:
             formatStatus(
               currentStatus,
             ),
         },
         {
-          label: 'Leave Type',
+          label: 'ประเภทการลา',
           value:
             request.leaveType ||
             'Not selected',
         },
         {
-          label: 'Leave Days',
+          label: 'จำนวนวันลา',
           value: `${
             request.leaveDays || 0
-          } day(s)`,
+          } วัน`,
         },
         {
           label: 'วันที่เริ่มลา',
@@ -858,13 +880,13 @@ function RoleLeaveRequestDetailPage({
           ),
         },
         {
-          label: 'Submitted At',
+          label: 'วันที่ส่งคำขอ',
           value: formatDateTime(
             request.submittedAt,
           ),
         },
         {
-          label: 'Last Updated',
+          label: 'อัปเดตล่าสุด',
           value: formatDateTime(
             request.updatedAt,
           ),
@@ -896,22 +918,25 @@ function RoleLeaveRequestDetailPage({
           label: 'ชื่อพนักงาน',
 
           value:
-            request.employeeName ||
-            'พนักงาน',
+            employeeNameLabelFor(request.employeeName),
         },
         {
           label: 'แผนก',
 
           value:
-            request.department ||
-            'เทคโนโลยีสารสนเทศ',
+            departmentLabelFor(request.department),
+        },
+        {
+          label: 'ฝ่าย',
+
+          value:
+            divisionLabelFor(request.division),
         },
         {
           label: 'ตำแหน่ง',
 
           value:
-            request.position ||
-            'นักพัฒนาระบบ',
+            positionLabelFor(request.position),
         },
       ];
     },
@@ -1478,29 +1503,36 @@ function RoleLeaveRequestDetailPage({
                       {item.label}
                     </Typography>
 
-                    <Typography
-                      sx={{
-                        color:
-                          '#111827',
-
-                        fontSize:
-                          '14px',
-
-                        fontWeight:
-                          700,
-
-                        lineHeight:
-                          1.6,
-
-                        marginTop:
-                          '5px',
-
-                        wordBreak:
-                          'break-word',
-                      }}
-                    >
-                      <RequestNumberText>{item.value}</RequestNumberText>
-                    </Typography>
+                    {item.kind === 'status' ? (
+                      <Chip
+                        label={item.value}
+                        size="small"
+                        sx={{
+                          minWidth: '86px',
+                          height: '28px',
+                          marginTop: '5px',
+                          backgroundColor: statusStyle.backgroundColor,
+                          color: statusStyle.color,
+                          borderRadius: '999px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          '& .MuiChip-label': { paddingInline: '12px' },
+                        }}
+                      />
+                    ) : (
+                      <Typography
+                        sx={{
+                          color: '#111827',
+                          fontSize: '14px',
+                          fontWeight: 700,
+                          lineHeight: 1.6,
+                          marginTop: '5px',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        <RequestNumberText>{item.value}</RequestNumberText>
+                      </Typography>
+                    )}
                   </Box>
                 ),
               )}

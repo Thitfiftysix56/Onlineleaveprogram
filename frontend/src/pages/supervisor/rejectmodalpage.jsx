@@ -710,7 +710,7 @@ function RejectModalPage() {
             multiline
             minRows={5}
             label="Rejection Reason"
-            placeholder="ระบุเหตุผลที่ไม่อนุมัติคำขอนี้"
+            placeholder="ระบุเหตุผลที่ปฏิเสธคำขอนี้"
             value={rejectionReason}
             onChange={handleRejectionReasonChange}
             error={Boolean(rejectionReasonError)}

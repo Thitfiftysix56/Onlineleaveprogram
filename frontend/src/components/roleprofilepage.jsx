@@ -33,6 +33,11 @@ import {
 import RoleChangePasswordPage from './rolechangepasswordpage.jsx';
 import { PageHeader } from './sharedvisualfoundation.jsx';
 import { roleDashboardCardSurfaceSx } from '../theme/rolecardsurface.js';
+import {
+  departmentLabelFor,
+  divisionLabelFor,
+  positionLabelFor,
+} from '../constants/organizationcatalog.js';
 
 const EmbeddedProfileSection = ({ children }) => children;
 
@@ -576,7 +581,7 @@ function RoleProfilePage({
       value:
         profile
           ?.employeeCode ||
-        'ไม่มีข้อมูล',
+        '-',
     },
 
     {
@@ -587,7 +592,7 @@ function RoleProfilePage({
         profile?.username ||
         currentUser
           ?.username ||
-        'ไม่มีข้อมูล',
+        '-',
     },
 
     {
@@ -604,7 +609,7 @@ function RoleProfilePage({
 
       value:
         profile?.email ||
-        'ไม่มีข้อมูล',
+        '-',
     },
 
     {
@@ -613,7 +618,7 @@ function RoleProfilePage({
 
       value:
         profile?.phone ||
-        'ไม่มีข้อมูล',
+        '-',
     },
 
     {
@@ -631,9 +636,19 @@ function RoleProfilePage({
         'แผนก',
 
       value:
-        profile
-          ?.department ||
-        'ไม่มีข้อมูล',
+        profile?.department
+          ? departmentLabelFor(profile.department)
+          : '-',
+    },
+
+    {
+      label:
+        'ฝ่าย',
+
+      value:
+        profile?.division
+          ? divisionLabelFor(profile.division)
+          : '-',
     },
 
     {
@@ -641,9 +656,9 @@ function RoleProfilePage({
         'ตำแหน่ง',
 
       value:
-        profile
-          ?.position ||
-        'ไม่มีข้อมูล',
+        profile?.position
+          ? positionLabelFor(profile.position)
+          : '-',
     },
   ];
 

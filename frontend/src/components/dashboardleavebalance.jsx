@@ -9,11 +9,19 @@ import {
   Typography,
 } from '@mui/material';
 
-import { getLeaveBalance } from '../api/leave-service.js';
+import { getLeaveOptions } from '../api/leave-service.js';
 
 const number = (value) => Number(value || 0);
 
 const getRemainingDays = (balance) => {
+  if (balance.availableDays !== undefined && balance.availableDays !== null) {
+    return Math.max(number(balance.availableDays), 0);
+  }
+
+  if (balance.available !== undefined && balance.available !== null) {
+    return Math.max(number(balance.available), 0);
+  }
+
   if (balance.remaining !== undefined && balance.remaining !== null) {
     return Math.max(number(balance.remaining), 0);
   }
@@ -104,10 +112,23 @@ export default function DashboardLeaveBalance() {
     setLoading(true);
     setError('');
 
-    getLeaveBalance(year)
+    // Use the exact same leave-type source as the request form dropdown. This
+    // keeps the visible types and the amount that can still be requested in
+    // sync, including pending requests and active types without entitlement.
+    getLeaveOptions(year)
       .then((result) => {
         if (active) {
-          setBalances(result?.balances || []);
+          setBalances(
+            (result?.leaveTypes || []).map((leaveType) => ({
+              ...leaveType,
+              leaveType: leaveType.name,
+              total: leaveType.totalDays,
+              used: leaveType.usedDays,
+              pending: leaveType.pendingDays,
+              remaining: leaveType.remainingDays,
+              available: leaveType.availableDays,
+            })),
+          );
         }
       })
       .catch(() => {
@@ -248,8 +269,15 @@ export default function DashboardLeaveBalance() {
                 sx={{
                   position: 'relative',
                   overflow: 'hidden',
-                  display: 'flex',
-                  alignItems: 'center',
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: 'minmax(0, 1fr)',
+                    sm: 'minmax(0, 1fr) auto',
+                  },
+                  alignItems: {
+                    xs: 'stretch',
+                    sm: 'center',
+                  },
                   gap: '16px',
 
                   minHeight: '72px',
@@ -284,7 +312,7 @@ export default function DashboardLeaveBalance() {
                     alignItems: 'center',
                     gap: '10px',
                     minWidth: 0,
-                    flexShrink: 1,
+                    overflow: 'hidden',
                   }}
                 >
                   <Box
@@ -302,26 +330,33 @@ export default function DashboardLeaveBalance() {
                   />
 
                   <Typography
-                    noWrap
                     sx={{
                       color: '#334155',
                       fontSize: '14px',
                       fontWeight: 800,
+                      lineHeight: 1.45,
+                      overflowWrap: 'anywhere',
                     }}
                   >
                     {balance.leaveType || '-'}
                   </Typography>
                 </Box>
 
-                {/* คงเหลือ */}
+                {/* คงเหลือตามข้อมูลเดียวกับ dropdown คำขอลา */}
                 <Box
                   sx={{
                     display: 'flex',
                     alignItems: 'baseline',
                     flexWrap: 'nowrap',
                     gap: '7px',
-                    marginTop: 0,
-                    marginLeft: 'auto',
+                    marginTop: {
+                      xs: '8px',
+                      sm: 0,
+                    },
+                    marginLeft: {
+                      xs: '20px',
+                      sm: 'auto',
+                    },
                     flexShrink: 0,
                   }}
                 >

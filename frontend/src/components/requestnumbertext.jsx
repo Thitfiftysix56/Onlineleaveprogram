@@ -14,8 +14,9 @@ export default function RequestNumberText({ children }) {
     EXACT_REQUEST_NUMBER_PATTERN.test(part) ? (
       <Box
         component="span"
+        className="system-table-request-number"
         key={`${part}-${index}`}
-        sx={{ color: 'primary.main', fontWeight: 700 }}
+        sx={{ color: 'primary.main', fontWeight: 600 }}
       >
         {part}
       </Box>

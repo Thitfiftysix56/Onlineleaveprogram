@@ -32,6 +32,7 @@ import {
 import HRLayout from '../../layouts/hrlayout.jsx';
 import { ConfirmationDialog, DataListToolbar } from '../../components/shareduiprimitives.jsx';
 import api from '../../api/axios.js';
+import { departmentLabelFor, positionLabelFor } from '../../constants/organizationcatalog.js';
 
 const theme = {
   primary: '#059669',
@@ -670,7 +671,7 @@ function EmployeeManagementPage() {
               ...(statusFilter !== 'all' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'active' ? 'ใช้งานอยู่' : statusFilter === 'inactive' ? 'ไม่ใช้งาน' : 'ลาออก'}`, onDelete: () => setStatusFilter('all') }] : []),
             ]}
             onClearFilters={handleClearFilters}
-            filters={<><FormControl size="small"><Select value={departmentFilter === 'all' ? '' : departmentFilter} displayEmpty renderValue={(value) => value || 'แผนก'} inputProps={{ 'aria-label': 'แผนก' }} onChange={(event) => setDepartmentFilter(event.target.value || 'all')}>{departments.map((department) => <MenuItem key={department} value={department}>{department}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={statusFilter === 'all' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'active' ? 'ใช้งานอยู่' : value === 'inactive' ? 'ไม่ใช้งาน' : value === 'resigned' ? 'ลาออก' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'all')}><MenuItem value="active">ใช้งานอยู่</MenuItem><MenuItem value="inactive">ไม่ใช้งาน</MenuItem><MenuItem value="resigned">ลาออก</MenuItem></Select></FormControl></>}
+            filters={<><FormControl size="small"><Select value={departmentFilter === 'all' ? '' : departmentFilter} displayEmpty renderValue={(value) => value ? departmentLabelFor(value) : 'แผนก'} inputProps={{ 'aria-label': 'แผนก' }} onChange={(event) => setDepartmentFilter(event.target.value || 'all')}>{departments.map((department) => <MenuItem key={department} value={department}>{departmentLabelFor(department)}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={statusFilter === 'all' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'active' ? 'ใช้งานอยู่' : value === 'inactive' ? 'ไม่ใช้งาน' : value === 'resigned' ? 'ลาออก' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'all')}><MenuItem value="active">ใช้งานอยู่</MenuItem><MenuItem value="inactive">ไม่ใช้งาน</MenuItem><MenuItem value="resigned">ลาออก</MenuItem></Select></FormControl></>}
             sx={{ marginTop: '16px' }}
           />
 
@@ -1080,7 +1081,7 @@ function EmployeeManagementPage() {
                           }}
                         >
                           {
-                            employee.department
+                            departmentLabelFor(employee.department)
                           }
                         </TableCell>
 
@@ -1099,7 +1100,7 @@ function EmployeeManagementPage() {
                           }}
                         >
                           {
-                            employee.position
+                            positionLabelFor(employee.position)
                           }
                         </TableCell>
 
@@ -1175,7 +1176,7 @@ function EmployeeManagementPage() {
                 )}
               </FixedTableBody>
             </Table>
-            {filteredEmployees.length > rowsPerPage ? <TablePagination component="div" count={filteredEmployees.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredEmployees.length / rowsPerPage)}`} /> : null}
+            <TablePagination component="div" count={filteredEmployees.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.max(1, Math.ceil(filteredEmployees.length / rowsPerPage))}`} />
           </Box>
         ) : (
           /* Empty State */

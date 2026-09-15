@@ -1329,7 +1329,7 @@ function RoleDepartmentManagementPage({
                 )}
               </FixedTableBody>
             </Table>
-            {filteredDepartments.length > rowsPerPage ? <TablePagination component="div" count={filteredDepartments.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredDepartments.length / rowsPerPage)}`} /> : null}
+            <TablePagination component="div" count={filteredDepartments.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.max(1, Math.ceil(filteredDepartments.length / rowsPerPage))}`} />
           </Box>
         ) : (
           /* Empty */

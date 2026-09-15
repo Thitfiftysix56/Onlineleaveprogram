@@ -1586,7 +1586,7 @@ function RoleLeaveBalancePage({
                                 '10px',
                             }}
                           >
-                            ยื่นเพิ่มได้{' '}
+                            คงเหลือ{' '}
                             {formatDays(
                               balance.availableDays,
                             )}{' '}

@@ -270,6 +270,8 @@ export function InlineListSummary({ items = [], sx, ...props }) {
         <Box
           key={item.title || item.label}
           sx={{
+            position: 'relative',
+            overflow: 'hidden',
             display: 'inline-flex',
             alignItems: 'baseline',
             justifyContent: 'space-between',
@@ -278,16 +280,33 @@ export function InlineListSummary({ items = [], sx, ...props }) {
             minWidth: { xs: '100%', sm: 164 },
             flex: { xs: '1 1 100%', sm: '0 1 auto' },
             padding: `${spacingTokens.sm}px ${spacingTokens.lg}px`,
-            border: `1px solid ${colorTokens.border}`,
+            border: `1px solid ${item.borderColor || `${item.valueColor || item.color || '#2563EB'}2E`}`,
             borderRadius: `${radiusTokens.control}px`,
-            background: '#FFFFFF',
+            background:
+              item.background ||
+              `linear-gradient(135deg, ${item.valueColor || item.color || '#2563EB'}14 0%, #FFFFFF 78%)`,
+            boxShadow: shadowTokens.subtle,
             boxSizing: 'border-box',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              width: 88,
+              height: 88,
+              top: -38,
+              right: -30,
+              borderRadius: '50%',
+              backgroundColor:
+                item.glowColor ||
+                `${item.valueColor || item.color || '#2563EB'}24`,
+              filter: 'blur(3px)',
+              pointerEvents: 'none',
+            },
           }}
         >
-          <Typography sx={{ color: colorTokens.text.secondary, fontSize: 14, fontWeight: 600, lineHeight: 1.45 }}>
+          <Typography sx={{ position: 'relative', zIndex: 1, color: colorTokens.text.primary, fontSize: 14, fontWeight: 600, lineHeight: 1.45 }}>
             {item.title || item.label}
           </Typography>
-          <Typography sx={{ color: item.valueColor || item.color || colorTokens.text.primary, fontSize: 18, fontWeight: 700, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+          <Typography sx={{ position: 'relative', zIndex: 1, color: item.valueColor || item.color || colorTokens.text.primary, fontSize: 18, fontWeight: 700, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
             {item.value}{item.unit ? ` ${item.unit}` : ''}
           </Typography>
         </Box>

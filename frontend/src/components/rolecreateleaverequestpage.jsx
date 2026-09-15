@@ -100,6 +100,10 @@ const addCalendarDays = (dateValue, days) => {
   return value.toISOString().slice(0, 10);
 };
 
+const SICK_LEAVE_RETROACTIVE_DAYS = 3;
+const SICK_LEAVE_ADVANCE_DAYS = 1;
+const SICK_LEAVE_MEDICAL_CERTIFICATE_DAYS = 3;
+
 const isSickLeaveType = (leaveType) => {
   const name = String(leaveType?.name || leaveType?.leaveTypeName || '')
     .trim()
@@ -258,6 +262,10 @@ const getAttachmentRuleText =
   ) => {
     if (!leaveType) {
       return '';
+    }
+
+    if (isSickLeaveType(leaveType)) {
+      return `ต้องแนบใบรับรองแพทย์เมื่อลาป่วยตั้งแต่ ${SICK_LEAVE_MEDICAL_CERTIFICATE_DAYS} วันทำงาน`;
     }
 
     if (
@@ -830,8 +838,11 @@ function RoleCreateLeaveRequestPage({
     );
 
   const minimumStartDate = useMemo(
-    () => selectedLeaveType && !isSickLeaveType(selectedLeaveType)
-      ? addCalendarDays(getBangkokToday(), 3)
+    () => selectedLeaveType
+      ? addCalendarDays(
+          getBangkokToday(),
+          isSickLeaveType(selectedLeaveType) ? -SICK_LEAVE_RETROACTIVE_DAYS : 3,
+        )
       : '',
     [selectedLeaveType],
   );
@@ -846,7 +857,7 @@ function RoleCreateLeaveRequestPage({
 
   const maximumStartDate = useMemo(
     () => selectedLeaveType && isSickLeaveType(selectedLeaveType)
-      ? addCalendarDays(getBangkokToday(), 1)
+      ? addCalendarDays(getBangkokToday(), SICK_LEAVE_ADVANCE_DAYS)
       : maximumSelectableDate,
     [maximumSelectableDate, selectedLeaveType],
   );
@@ -1041,6 +1052,13 @@ function RoleCreateLeaveRequestPage({
         !selectedLeaveType
       ) {
         return false;
+      }
+
+      if (
+        isSickLeaveType(selectedLeaveType) &&
+        requestedDays >= SICK_LEAVE_MEDICAL_CERTIFICATE_DAYS
+      ) {
+        return true;
       }
 
       if (
@@ -1440,8 +1458,9 @@ function RoleCreateLeaveRequestPage({
         minimumStartDate &&
         formData.startDate < minimumStartDate
       ) {
-        validationErrors.startDate =
-          `การลาประเภทนี้ต้องยื่นล่วงหน้าอย่างน้อย 3 วัน กรุณาเลือกวันที่ตั้งแต่ ${formatDisplayDate(minimumStartDate)}`;
+        validationErrors.startDate = selectedLeaveType && isSickLeaveType(selectedLeaveType)
+          ? `ลาป่วยสามารถยื่นย้อนหลังได้ไม่เกิน ${SICK_LEAVE_RETROACTIVE_DAYS} วัน หากเกินกำหนดกรุณาติดต่อ HR กรุณาเลือกวันที่ตั้งแต่ ${formatDisplayDate(minimumStartDate)}`
+          : `การลาประเภทนี้ต้องยื่นล่วงหน้าอย่างน้อย 3 วัน กรุณาเลือกวันที่ตั้งแต่ ${formatDisplayDate(minimumStartDate)}`;
       }
 
       if (
@@ -1451,7 +1470,7 @@ function RoleCreateLeaveRequestPage({
         formData.startDate > maximumStartDate
       ) {
         validationErrors.startDate =
-          `ลาป่วยสามารถเลือกวันเริ่มลาได้ล่วงหน้าไม่เกิน 1 วัน กรุณาเลือกไม่เกิน ${formatDisplayDate(maximumStartDate)}`;
+          `ลาป่วยสามารถเลือกวันเริ่มลาได้ล่วงหน้าไม่เกิน ${SICK_LEAVE_ADVANCE_DAYS} วัน กรุณาเลือกไม่เกิน ${formatDisplayDate(maximumStartDate)}`;
       }
 
       if (
@@ -1522,7 +1541,7 @@ function RoleCreateLeaveRequestPage({
             break;
           }
           if (allocation.leaveDays > Number(yearLeaveType.availableDays || 0)) {
-            validationErrors.balance = `สิทธิ์ปี ${allocation.year} ยื่นเพิ่มได้ ${formatDays(yearLeaveType.availableDays)} วัน`;
+            validationErrors.balance = `สิทธิ์ปี ${allocation.year} คงเหลือ ${formatDays(yearLeaveType.availableDays)} วัน`;
             break;
           }
         }
@@ -1566,7 +1585,9 @@ function RoleCreateLeaveRequestPage({
           0
       ) {
         validationErrors.attachments =
-          'ไม่ได้แนบเอกสาร';
+          selectedLeaveType && isSickLeaveType(selectedLeaveType)
+            ? 'ลาป่วยตั้งแต่ 3 วันทำงานขึ้นไปจำเป็นต้องแนบใบรับรองแพทย์'
+            : 'ไม่ได้แนบเอกสาร';
       }
 
       setErrors(
@@ -1857,7 +1878,7 @@ function RoleCreateLeaveRequestPage({
     ],
 
     [
-      'ช่วงวันที่ลา',
+      'ช่วงวันลา',
 
       formData.startDate &&
       formData.endDate
@@ -1870,7 +1891,7 @@ function RoleCreateLeaveRequestPage({
     ],
 
     [
-      'จำนวนวันที่ขอลา',
+      'จำนวนวันลา',
 
       `${formatDays(
         requestedDays,
@@ -1919,7 +1940,7 @@ function RoleCreateLeaveRequestPage({
     ],
 
     [
-      'ยื่นเพิ่มได้',
+      'คงเหลือ',
 
       selectedLeaveType
         ? `${formatDays(
@@ -1960,7 +1981,7 @@ function RoleCreateLeaveRequestPage({
         title={isEditMode ? 'แก้ไขคำขอลาฉบับร่าง' : 'ยื่นคำขอลา'}
         actions={(
           <BackButton
-            aria-label={backPath.endsWith('/dashboard') ? 'กลับไปหน้าแดชบอร์ด' : 'กลับไปยังรายการคำขอลา'}
+            aria-label={backPath.endsWith('/dashboard') ? 'กลับไปหน้าแดชบอร์ด' : 'กลับไปยังคำขอของฉัน'}
             onClick={() => navigate(backPath)}
           >
             กลับ
@@ -2294,7 +2315,7 @@ function RoleCreateLeaveRequestPage({
                         {leaveType.name}{' '}
 
                         {leaveType.isSelectable
-                          ? `— ยื่นเพิ่มได้ ${formatDays(
+                          ? `— คงเหลือ ${formatDays(
                               leaveType.availableDays,
                             )} วัน`
                           : '— ปิดใช้งาน (กรุณาเลือกประเภทอื่น)'}
@@ -2316,7 +2337,7 @@ function RoleCreateLeaveRequestPage({
                   (
                     activeLeaveTypes.length >
                     0
-                      ? `สิทธิ์ที่ยื่นเพิ่มได้ ปี ${entitlementYear}`
+                      ? `สิทธิ์คงเหลือ ปี ${entitlementYear}`
                       : 'HR ยังไม่ได้เปิดใช้งานประเภทการลา'
                   )}
               </FormHelperText>
@@ -2434,7 +2455,7 @@ function RoleCreateLeaveRequestPage({
                       fontWeight: 600,
                     }}
                   >
-                    ยื่นเพิ่มได้หลังคำขอนี้{' '}
+                    คงเหลือหลังคำขอนี้{' '}
                     {formatDays(
                       Math.max(
                         0,
@@ -2998,7 +3019,7 @@ function RoleCreateLeaveRequestPage({
               ) => {
                 const isDateRange =
                   label ===
-                  'ช่วงวันที่ลา';
+                  'ช่วงวันลา';
 
                 return (
                   <Box
@@ -3145,7 +3166,7 @@ function RoleCreateLeaveRequestPage({
               ))}
               <Box sx={{ gridColumn: { sm: '1 / -1' } }}><Typography sx={{ color: '#94A3B8', fontSize: '11px', fontWeight: 700 }}>เหตุผล</Typography><Typography sx={{ color: '#0F172A', fontSize: '14px', marginTop: '3px', whiteSpace: 'pre-wrap' }}>{formData.reason.trim()}</Typography></Box>
               <Box sx={{ gridColumn: { sm: '1 / -1' } }}><Typography sx={{ color: '#94A3B8', fontSize: '11px', fontWeight: 700 }}>เอกสารแนบ</Typography><Typography sx={{ color: '#0F172A', fontSize: '14px', marginTop: '3px' }}>{attachments.length ? attachments.map((item) => item.name || item.fileName).join(', ') : 'ไม่มี'}</Typography></Box>
-              {selectedLeaveType && workingDaySummary.workingDays > 0 ? <Box sx={{ gridColumn: { sm: '1 / -1' }, padding: '12px 14px', backgroundColor: '#F8FAFC', borderRadius: '10px' }}><Typography sx={{ color: '#64748B', fontSize: '11px', fontWeight: 700 }}>ยื่นเพิ่มได้หลังส่งคำขอนี้</Typography><Typography sx={{ color: '#0F172A', fontSize: '18px', fontWeight: 800 }}>{formatDays(Math.max(0, selectedLeaveType.availableDays - workingDaySummary.workingDays))} วัน</Typography></Box> : null}
+              {selectedLeaveType && workingDaySummary.workingDays > 0 ? <Box sx={{ gridColumn: { sm: '1 / -1' }, padding: '12px 14px', backgroundColor: '#F8FAFC', borderRadius: '10px' }}><Typography sx={{ color: '#64748B', fontSize: '11px', fontWeight: 700 }}>คงเหลือหลังส่งคำขอนี้</Typography><Typography sx={{ color: '#0F172A', fontSize: '18px', fontWeight: 800 }}>{formatDays(Math.max(0, selectedLeaveType.availableDays - workingDaySummary.workingDays))} วัน</Typography></Box> : null}
             </Box>
           </DialogContent>
           <DialogActions sx={{ padding: '14px 20px' }}><Button variant="outlined" color="secondary" onClick={() => setConfirmationOpen(false)}>กลับไปแก้ไข</Button><Button variant="contained" onClick={confirmSubmit}>ยืนยันส่งคำขอ</Button></DialogActions>

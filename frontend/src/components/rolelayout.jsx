@@ -280,16 +280,16 @@ const menuLabels = {
 
 const roleLabels = {
   employee:
-    'Employee',
+    'พนักงาน',
 
   supervisor:
-    'Supervisor',
+    'หัวหน้างาน',
 
   hr:
-    'Human Resources',
+    'ฝ่ายทรัพยากรบุคคล',
 
   admin:
-    'Administrator',
+    'ผู้ดูแลระบบ',
 };
 
 
@@ -718,7 +718,7 @@ function RoleLayout({
         onClick={() => navigate(`/${currentRole}/leave-request`)}
         sx={{ minWidth: 0, height: 40, paddingInline: { xs: '10px', sm: '14px' }, borderRadius: '9px', backgroundColor: '#2563EB', boxShadow: 'none', fontSize: '12px', fontWeight: 800, whiteSpace: 'nowrap', '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' }, '& .MuiButton-startIcon': { margin: compact ? 0 : undefined } }}
       >
-        <Box component="span" sx={{ display: compact ? 'none' : { xs: 'none', sm: 'inline' } }}>สร้างคำขอลา</Box>
+        <Box component="span" sx={{ display: compact ? 'none' : { xs: 'none', sm: 'inline' } }}>ยื่นคำขอลา</Box>
       </Button>
 
       <IconButton
@@ -770,7 +770,7 @@ function RoleLayout({
         onClick={() => navigate(`/${currentRole}/leave-request`, { state: { returnTo: `/${currentRole}/dashboard` } })}
         sx={{ height: 40, minHeight: '40px !important', borderRadius: '9px', backgroundColor: '#2563EB', boxShadow: 'none', fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap', '&:hover': { backgroundColor: '#1D4ED8', boxShadow: 'none' } }}
       >
-        สร้างคำขอลา
+        ยื่นคำขอลา
       </Button>
     </Box>
   );
@@ -1575,7 +1575,7 @@ function RoleLayout({
             '64px',
 
           position:
-            'fixed',
+            'relative',
 
           top:
             0,
@@ -1588,6 +1588,9 @@ function RoleLayout({
 
           zIndex:
             20,
+
+          flexShrink:
+            0,
 
           display: {
             xs:
@@ -1655,7 +1658,7 @@ function RoleLayout({
           sx={{
             minWidth:
               0,
-            display: { xs: 'none', sm: 'block' },
+            display: { xs: 'none', sm: isDashboardPage ? 'none' : 'block' },
           }}
         >
           <Typography
@@ -1694,6 +1697,8 @@ function RoleLayout({
             {profileRoleLabel}
           </Typography>
         </Box>
+
+        {isDashboardPage && renderGlobalActions()}
 
       </Box>
 
@@ -1803,6 +1808,15 @@ function RoleLayout({
               boxSizing:
                 'border-box',
 
+              display:
+                'flex',
+
+              flexDirection:
+                'column',
+
+              overflow:
+                'hidden',
+
               backgroundColor:
                 '#FFFFFF',
 
@@ -1881,26 +1895,23 @@ function RoleLayout({
 
             gap:
               '3px',
+
+            flex:
+              1,
+
+            minHeight:
+              0,
+
+            overflow:
+              'hidden',
           }}
         >
-          {renderSectionTitle(
-            'เมนูหลัก',
-          )}
+          <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable', paddingRight: '2px' }}>
+            {renderSectionTitle('เมนูหลัก')}
+            {mainMenuItems.map((menuItem) => renderNavigationItem(menuItem, true))}
+          </Box>
 
-          {mainMenuItems.map(
-            (
-              menuItem,
-            ) =>
-              renderNavigationItem(
-                menuItem,
-                true,
-              ),
-          )}
-
-          <Box sx={{ flexGrow: 1, minHeight: '24px' }} />
-
-
-          <Box sx={{ position: 'sticky', bottom: 0, marginTop: 'auto', paddingTop: '8px', backgroundColor: '#FFFFFF' }}>
+          <Box sx={{ flexShrink: 0, paddingTop: '8px', backgroundColor: '#FFFFFF', borderTop: '1px solid #F1F5F9' }}>
             {visibleAccountMenuItems.length > 0 && renderSectionTitle('บัญชี')}
             {visibleAccountMenuItems.map((menuItem) => renderNavigationItem(menuItem, true))}
           </Box>
@@ -2044,29 +2055,16 @@ function RoleLayout({
 
             gap:
               '3px',
-            overflowY: 'auto',
+            overflow: 'hidden',
             minHeight: 0,
           }}
         >
-          {renderSectionTitle(
-            'เมนูหลัก',
-          )}
+          <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable', paddingRight: '2px' }}>
+            {renderSectionTitle('เมนูหลัก')}
+            {mainMenuItems.map((menuItem) => renderNavigationItem(menuItem, false))}
+          </Box>
 
-
-          {mainMenuItems.map(
-            (
-              menuItem,
-            ) =>
-              renderNavigationItem(
-                menuItem,
-                false,
-              ),
-          )}
-
-          <Box sx={{ flexGrow: 1, minHeight: '24px' }} />
-
-
-          <Box sx={{ position: 'sticky', bottom: 0, marginTop: 'auto', paddingTop: '8px', paddingBottom: '4px', backgroundColor: '#FFFFFF' }}>
+          <Box sx={{ flexShrink: 0, paddingTop: '8px', paddingBottom: '4px', backgroundColor: '#FFFFFF', borderTop: '1px solid #F1F5F9' }}>
             {visibleAccountMenuItems.length > 0 && renderSectionTitle('บัญชี')}
             {visibleAccountMenuItems.map((menuItem) => renderNavigationItem(menuItem, false))}
           </Box>
@@ -2085,7 +2083,7 @@ function RoleLayout({
               '100%',
 
             md:
-              desktopSidebarOpen ? 'calc(100% - 280px)' : '100%',
+              desktopSidebarOpen ? 'calc(100% - 280px)' : 'calc(100% - 72px)',
           },
 
           minWidth:
@@ -2101,21 +2099,21 @@ function RoleLayout({
               0,
 
             md:
-              desktopSidebarOpen ? '280px' : 0,
+              desktopSidebarOpen ? '280px' : '72px',
           },
 
           padding: {
             xs:
-              '88px 18px 24px',
+              '24px 18px',
 
             sm:
-              '92px 24px 28px',
+              '28px 24px',
 
             md:
-              desktopSidebarOpen ? '32px' : '32px 32px 32px 72px',
+              '32px',
 
             lg:
-              desktopSidebarOpen ? '32px 40px' : '32px 40px 32px 72px',
+              '32px 40px',
           },
 
           overflowX:
@@ -2149,34 +2147,139 @@ function RoleLayout({
             borderTop: '0 !important',
           },
           '& .MuiButton-root': {
-            minHeight: '44px',
+            minHeight: '46px',
             borderRadius: '11px',
             fontWeight: '500',
             paddingInline: '16px',
           },
           '& .MuiButton-sizeSmall': {
-            minHeight: '36px',
+            minHeight: '38px',
           },
           '& .MuiOutlinedInput-root:not(.MuiInputBase-multiline)': {
-            height: '44px',
-            minHeight: '44px',
+            height: '46px',
+            minHeight: '46px',
             borderRadius: '11px',
           },
           '& .MuiInputLabel-root, & .MuiFormLabel-root': {
-            fontSize: '0.875rem',
+            fontSize: '0.9375rem',
             fontWeight: '500',
           },
           '& .MuiFormHelperText-root': {
-            fontSize: '0.75rem',
+            fontSize: '0.8125rem',
             fontWeight: '400',
             marginTop: '4px',
           },
           '& .MuiTableCell-head': {
-            height: '44px',
+            height: '46px',
             fontWeight: '600',
           },
           '& .MuiTableCell-root': {
             paddingBlock: '12px',
+          },
+          '& .MuiTableHead-root .MuiTableCell-root, & .system-data-grid-header .MuiTypography-root': {
+            fontSize: '13px !important',
+            fontWeight: '600 !important',
+            lineHeight: '1.5 !important',
+            verticalAlign: 'middle',
+          },
+          '& .MuiTableBody-root .MuiTableRow-root, & .system-data-grid-row': {
+            height: '72px',
+            minHeight: '72px',
+            boxSizing: 'border-box',
+          },
+          '& .MuiTableBody-root .MuiTableCell-root': {
+            height: '44px',
+            verticalAlign: 'middle',
+            fontSize: '14px !important',
+            fontWeight: '400 !important',
+            lineHeight: '1.5 !important',
+            boxSizing: 'border-box',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          },
+          '& .MuiTableBody-root .MuiTableCell-root > .MuiTypography-root, & .system-data-grid-row > .MuiTypography-root': {
+            fontSize: '14px !important',
+            fontWeight: '400 !important',
+            lineHeight: '1.5 !important',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          },
+          '& .MuiTableBody-root .MuiTableCell-root > .MuiTypography-root:first-of-type:has(+ .MuiTypography-root)': {
+            fontSize: '14px !important',
+            fontWeight: '600 !important',
+            lineHeight: '1.5 !important',
+          },
+          '& .MuiTableBody-root .MuiTableCell-root > .MuiTypography-root + .MuiTypography-root': {
+            marginTop: '3px !important',
+            color: '#94A3B8 !important',
+            fontSize: '12px !important',
+            fontWeight: '400 !important',
+            lineHeight: '1.4 !important',
+          },
+          '& .MuiTableBody-root .MuiTableCell-root > .MuiBox-root > .MuiTypography-root:first-of-type, & .system-data-grid-row > .MuiBox-root > .MuiTypography-root:first-of-type': {
+            fontSize: '14px !important',
+            fontWeight: '600 !important',
+            lineHeight: '1.5 !important',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          },
+          '& .MuiTableBody-root .MuiTableCell-root > .MuiBox-root > .MuiTypography-root + .MuiTypography-root, & .system-data-grid-row > .MuiBox-root > .MuiTypography-root + .MuiTypography-root': {
+            marginTop: '3px !important',
+            color: '#94A3B8 !important',
+            fontSize: '12px !important',
+            fontWeight: '400 !important',
+            lineHeight: '1.4 !important',
+          },
+          '& .system-table-request-number': {
+            fontSize: '13px !important',
+            fontWeight: '600 !important',
+            lineHeight: '1.5 !important',
+          },
+          '& .MuiTableBody-root .MuiChip-label, & .system-data-grid-row .MuiChip-label': {
+            fontSize: '13px !important',
+            fontWeight: '600 !important',
+          },
+          '& .MuiTableBody-root .MuiInputBase-root, & .MuiTableBody-root .MuiSelect-select': {
+            height: '36px',
+            minHeight: '36px !important',
+            fontSize: '13px !important',
+            fontWeight: '600 !important',
+            lineHeight: '1.5 !important',
+          },
+          '& .MuiTableBody-root .MuiButton-root, & .system-data-grid-row .MuiButton-root': {
+            height: '36px',
+            minHeight: '36px !important',
+            fontSize: '13px !important',
+            fontWeight: '600 !important',
+          },
+          '@media (min-width: 900px)': {
+            '& .MuiButton-root': {
+              fontSize: '15px',
+              minHeight: '46px',
+            },
+            '& .MuiInputBase-root, & .MuiSelect-select': {
+              fontSize: '16px',
+            },
+            '& .MuiInputLabel-root, & .MuiFormLabel-root': {
+              fontSize: '15px',
+            },
+            '& .MuiFormHelperText-root': {
+              fontSize: '14px',
+            },
+            '& .MuiTableCell-root': {
+              fontSize: '15px',
+              lineHeight: 1.65,
+              paddingBlock: '14px',
+            },
+            '& .MuiChip-label': {
+              fontSize: '13px',
+            },
+            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+              fontSize: '14px',
+            },
           },
         }}
       >
@@ -2184,7 +2287,7 @@ function RoleLayout({
           <Box
             className="role-page-global-action"
             sx={{
-              display: 'flex',
+              display: { xs: 'none', md: 'flex' },
               justifyContent: 'flex-end',
               marginBottom: '16px',
             }}

@@ -450,8 +450,28 @@ test('Admin cannot deactivate or lock their own account', async () => {
       body: JSON.stringify({ status }),
     })
     assert.equal(response.status, 409)
-    assert.equal((await response.json()).message, 'You cannot deactivate or lock your own account.')
+    assert.equal((await response.json()).message, 'ไม่สามารถปิดใช้งานหรือล็อกบัญชีแอดมินที่กำลังเข้าสู่ระบบอยู่ได้')
   }
+})
+
+test('the last active admin account cannot be deactivated', async () => {
+  const results = [
+    [[{ user_id: 7, username: 'only-admin', status: 'active', role_name: 'Admin' }]],
+    [[{ active_admin_count: 0 }]],
+  ]
+  pool.execute = async () => results.shift()
+
+  const response = await fetch(`${baseUrl}/api/admin/users/7/status`, {
+    method: 'PATCH',
+    headers: {
+      ...authorizationHeader('Admin'),
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ status: 'Inactive' }),
+  })
+
+  assert.equal(response.status, 409)
+  assert.equal((await response.json()).message, 'ต้องมีบัญชีแอดมินที่เปิดใช้งานอยู่อย่างน้อย 1 บัญชี')
 })
 
 for (const requestedStatus of ['Active', 'Locked', 'Inactive']) {

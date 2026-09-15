@@ -550,7 +550,7 @@ function RoleMyRequestsPage({
       {
         state: {
           returnTo: `${location.pathname}${location.search}`,
-          returnLabel: 'รายการคำขอลา',
+          returnLabel: 'คำขอของฉัน',
         },
       },
     );
@@ -729,7 +729,7 @@ function RoleMyRequestsPage({
       valueColor: '#15803D',
     },
     {
-      title: 'ไม่อนุมัติ',
+      title: 'ปฏิเสธแล้ว',
       value: summary.rejected,
       background: 'linear-gradient(135deg, #FFF0F1 0%, #FFFFFF 78%)',
       borderColor: '#FECACA',
@@ -933,7 +933,7 @@ function RoleMyRequestsPage({
                   600,
               }}
             >
-              รายการคำขอลา
+              คำขอของฉัน
             </Typography>
 
           </Box>
@@ -941,7 +941,7 @@ function RoleMyRequestsPage({
           <DataListToolbar
             searchValue={searchText}
             onSearchChange={handleSearchChange}
-            searchPlaceholder="ค้นหาประเภทลา หรือเลขคำขอ"
+            searchPlaceholder="ค้นหาประเภทการลา หรือเลขที่คำขอ"
             resultLabel=""
             activeFilters={[
               ...(statusFilter !== 'all' ? [{ key: 'status', label: `สถานะ: ${statusLabels[statusFilter] || statusFilter}`, onDelete: () => handleStatusFilterChange('all') }] : []),
@@ -1203,7 +1203,7 @@ function RoleMyRequestsPage({
                       <Chip size="small" label={statusLabel} sx={{ backgroundColor: statusStyle.backgroundColor, color: statusStyle.color, flexShrink: 0 }} />
                     </Box>
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #F1F5F9' }}>
-                      <Box><Typography sx={{ color: '#94A3B8', fontSize: '10px' }}>จำนวนวัน</Typography><Typography sx={{ color: '#334155', fontSize: '12px', fontWeight: 700 }}>{formatDays(request.leaveDays)} วัน</Typography></Box>
+                      <Box><Typography sx={{ color: '#94A3B8', fontSize: '10px' }}>จำนวนวันลา</Typography><Typography sx={{ color: '#334155', fontSize: '12px', fontWeight: 700 }}>{formatDays(request.leaveDays)} วัน</Typography></Box>
                       <Box><Typography sx={{ color: '#94A3B8', fontSize: '10px' }}>เลขที่คำขอ</Typography><Typography sx={{ color: '#334155', fontSize: '12px', fontWeight: 700 }}><RequestNumberText>{request.requestNo || `แบบร่าง #${request.id}`}</RequestNumberText></Typography></Box>
                     </Box>
                     {request.status === 'draft' ? (
@@ -1233,8 +1233,10 @@ function RoleMyRequestsPage({
             >
               <Table
                 sx={{
+                  width: '100%',
+                  tableLayout: 'fixed',
                   minWidth:
-                    theme.primary === '#2563EB' ? '780px' : theme.primary === '#059669' ? '820px' : '900px',
+                    '720px',
                 }}
               >
                 <TableHead>
@@ -1251,6 +1253,9 @@ function RoleMyRequestsPage({
 
                         align:
                           'left',
+
+                        width:
+                          '23%',
                       },
 
                       {
@@ -1259,22 +1264,31 @@ function RoleMyRequestsPage({
 
                         align:
                           'left',
+
+                        width:
+                          '16%',
                       },
 
                       {
                         label:
-                          'ช่วงวันที่',
+                          'ช่วงวันลา',
 
                         align:
                           'left',
+
+                        width:
+                          '27%',
                       },
 
                       {
                         label:
-                          'จำนวนวัน',
+                          'จำนวนวันลา',
 
                         align:
                           'center',
+
+                        width:
+                          '14%',
                       },
 
                       {
@@ -1282,21 +1296,10 @@ function RoleMyRequestsPage({
                           'สถานะ',
 
                         align:
-                          theme.primary === '#059669' ? 'center' : 'left',
+                          'center',
 
                         width:
-                          theme.primary === '#059669' ? '132px' : undefined,
-                      },
-
-                      {
-                        label:
-                          'การดำเนินการ',
-
-                        align:
-                          theme.primary === '#059669' ? 'center' : 'right',
-
-                        width:
-                          theme.primary === '#059669' ? '124px' : undefined,
+                          '20%',
                       },
                     ].map(
                       (
@@ -1502,7 +1505,7 @@ function RoleMyRequestsPage({
                           </TableCell>
 
                           <TableCell
-                            align={theme.primary === '#059669' ? 'center' : 'left'}
+                            align="center"
                             sx={{
                               padding:
                                 '16px 18px',
@@ -1547,55 +1550,6 @@ function RoleMyRequestsPage({
                             />
                           </TableCell>
 
-                          <TableCell
-                            align={theme.primary === '#059669' ? 'center' : 'right'}
-                            sx={{
-                              padding:
-                                '16px 18px',
-
-                              whiteSpace:
-                                'nowrap',
-
-                              borderBottom:
-                                '1px solid #EEF0F3',
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                display:
-                                  'flex',
-
-                                justifyContent:
-                                  theme.primary === '#059669' ? 'center' : 'flex-end',
-
-                                alignItems:
-                                  'center',
-
-                                gap:
-                                  theme.primary === '#2563EB' ? '2px' : '7px',
-
-                                flexWrap:
-                                  theme.primary === '#2563EB' ? 'nowrap' : 'wrap',
-
-                                '@media (max-width: 600px)': {
-                                  justifyContent:
-                                    'flex-start',
-                                  gap:
-                                    '4px',
-                                },
-                              }}
-                            >
-                              {request.status === 'draft' ? (
-                                <>
-                                  <Button type="button" size="small" variant="outlined" color="secondary" onClick={(event) => { event.stopPropagation(); handleEditDraft(request); }}>แก้ไข</Button>
-                                  <Button type="button" size="small" variant="outlined" color="error" onClick={(event) => { event.stopPropagation(); openConfirmation('delete', request); }}>ลบ</Button>
-                                </>
-                              ) : null}
-                              {request.status === 'pending' ? (
-                                <Button type="button" size="small" variant="outlined" color="error" onClick={(event) => { event.stopPropagation(); openConfirmation('cancel', request); }}>ยกเลิก</Button>
-                              ) : null}
-                            </Box>
-                          </TableCell>
                         </TableRow>
                       );
                     },

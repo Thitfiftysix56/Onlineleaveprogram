@@ -31,6 +31,7 @@ import {
 
 import SupervisorLayout from '../../layouts/supervisorlayout.jsx';
 import RequestNumberText from '../../components/requestnumbertext.jsx';
+import { departmentLabelFor } from '../../constants/organizationcatalog.js';
 import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
 import { HeaderlessPageTopOffset, InlineListSummary } from '../../components/sharedvisualfoundation.jsx';
 import { roleAccentTokens } from '../../theme/tokens.js';
@@ -583,7 +584,7 @@ function ApprovalPendingListPage({
               ...(departmentFilter ? [{ key: 'department', label: `แผนก: ${departmentFilter}`, onDelete: () => setDepartmentFilter('') }] : []),
             ]}
             onClearFilters={handleClearFilters}
-            filters={<><FormControl size="small"><Select value={leaveTypeFilter} displayEmpty renderValue={(value) => value ? translateLeaveType(value) : 'ประเภท'} inputProps={{ 'aria-label': 'ประเภท' }} onChange={(event) => { setLeaveTypeFilter(event.target.value); setPage(0); }}>{leaveTypeOptions.map((leaveType) => <MenuItem key={leaveType} value={leaveType}>{translateLeaveType(leaveType)}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={departmentFilter} displayEmpty renderValue={(value) => value || 'แผนก'} inputProps={{ 'aria-label': 'แผนก' }} onChange={(event) => { setDepartmentFilter(event.target.value); setPage(0); }}>{departmentOptions.map((department) => <MenuItem key={department} value={department}>{department}</MenuItem>)}</Select></FormControl></>}
+            filters={<><FormControl size="small"><Select value={leaveTypeFilter} displayEmpty renderValue={(value) => value ? translateLeaveType(value) : 'ประเภท'} inputProps={{ 'aria-label': 'ประเภท' }} onChange={(event) => { setLeaveTypeFilter(event.target.value); setPage(0); }}>{leaveTypeOptions.map((leaveType) => <MenuItem key={leaveType} value={leaveType}>{translateLeaveType(leaveType)}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={departmentFilter} displayEmpty renderValue={(value) => value ? departmentLabelFor(value) : 'แผนก'} inputProps={{ 'aria-label': 'แผนก' }} onChange={(event) => { setDepartmentFilter(event.target.value); setPage(0); }}>{departmentOptions.map((department) => <MenuItem key={department} value={department}>{departmentLabelFor(department)}</MenuItem>)}</Select></FormControl></>}
             sx={{ marginTop: '16px' }}
           />
 
@@ -826,8 +827,8 @@ function ApprovalPendingListPage({
                       'พนักงาน',
                       'แผนก',
                       'ประเภทการลา',
-                      'ช่วงวันที่',
-                      'จำนวนวัน',
+                      'ช่วงวันลา',
+                      'จำนวนวันลา',
                       'ส่งคำขอเมื่อ',
                     ].map(
                       (
@@ -839,7 +840,7 @@ function ApprovalPendingListPage({
                           }
                           align={
                             heading ===
-                            'จำนวนวัน'
+                            'จำนวนวันลา'
                               ? 'center'
                               : heading ===
                                   'การดำเนินการ'
@@ -1005,8 +1006,7 @@ function ApprovalPendingListPage({
                               '1px solid #EEF0F3',
                           }}
                         >
-                          {request.department ||
-                            '-'}
+                          {departmentLabelFor(request.department)}
                         </TableCell>
 
                         <TableCell

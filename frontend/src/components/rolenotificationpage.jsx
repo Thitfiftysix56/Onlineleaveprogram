@@ -617,7 +617,7 @@ const _translateNotificationMessage = (
   );
 
   if (match) {
-    return `${match[1]} ส่งคำขอลา ${match[2]} เพื่อรอการอนุมัติ`;
+    return `${match[1]} ส่งคำขอลา ${match[2]} เพื่อรออนุมัติ`;
   }
 
   /*
@@ -630,7 +630,7 @@ const _translateNotificationMessage = (
   if (match) {
     return `${match[1]} ส่งคำขอ${translateLeaveType(
       match[2],
-    )} ${match[3]} เพื่อรอการอนุมัติ`;
+    )} ${match[3]} เพื่อรออนุมัติ`;
   }
 
   /*
@@ -2658,8 +2658,7 @@ function RoleNotificationPage({
                 );
               },
             )}
-            {filteredNotifications.length > rowsPerPage ? (
-              <TablePagination
+            <TablePagination
                 component="div"
                 count={filteredNotifications.length}
                 page={page}
@@ -2685,7 +2684,6 @@ function RoleNotificationPage({
                     '#FFFFFF',
                 }}
               />
-            ) : null}
           </Box>
         ) : (
           /* Empty */

@@ -24,6 +24,7 @@ import FixedTableBody from '../../components/fixedtablebody.jsx';
 import api from '../../api/axios.js';
 import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
 import HRLayout from '../../layouts/hrlayout.jsx';
+import { departmentLabelFor } from '../../constants/organizationcatalog.js';
 
 const currentYear = new Date().getFullYear();
 
@@ -146,7 +147,7 @@ function LeaveEntitlementManagementPage() {
   const activeFilters = [
     ...(departmentFilter !== 'all' ? [{
       key: 'department',
-      label: `แผนก: ${departmentFilter}`,
+      label: `แผนก: ${departmentLabelFor(departmentFilter)}`,
       onDelete: () => setDepartmentFilter('all'),
     }] : []),
     ...(yearFilter !== String(currentYear) ? [{
@@ -195,7 +196,7 @@ function LeaveEntitlementManagementPage() {
                   >
                     <MenuItem value="">ทุกแผนก</MenuItem>
                     {departments.map((department) => (
-                      <MenuItem key={department} value={department}>{department}</MenuItem>
+                      <MenuItem key={department} value={department}>{departmentLabelFor(department)}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -270,7 +271,7 @@ function LeaveEntitlementManagementPage() {
                   >
                     <TableCell sx={{ color: '#059669', fontSize: '12px', fontWeight: 800, whiteSpace: 'nowrap' }}>{item.employeeCode}</TableCell>
                     <TableCell sx={{ fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap' }}>{item.employeeName}</TableCell>
-                    <TableCell sx={{ color: '#475569', fontSize: '12px', whiteSpace: 'nowrap' }}>{item.department}</TableCell>
+                    <TableCell sx={{ color: '#475569', fontSize: '12px', whiteSpace: 'nowrap' }}>{departmentLabelFor(item.department)}</TableCell>
                     <TableCell sx={{ color: '#475569', fontSize: '12px', whiteSpace: 'nowrap' }}>{translateLeaveType(item.leaveType)}</TableCell>
                     <TableCell sx={{ fontSize: '12px' }}>{item.year}</TableCell>
                     <TableCell sx={{ fontSize: '12px', fontWeight: 700 }}>{item.totalDays} วัน</TableCell>
@@ -327,7 +328,7 @@ function LeaveEntitlementManagementPage() {
             {[
               ['รหัสพนักงาน', selectedEntitlement?.employeeCode],
               ['ชื่อพนักงาน', selectedEntitlement?.employeeName],
-              ['แผนก', selectedEntitlement?.department],
+              ['แผนก', departmentLabelFor(selectedEntitlement?.department)],
               ['ปีสิทธิ์', selectedEntitlement?.year],
             ].map(([label, value]) => (
               <Box

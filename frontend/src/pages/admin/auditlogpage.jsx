@@ -1622,9 +1622,7 @@ function AuditLogPage() {
                 )}
               </FixedTableBody>
             </Table>
-            {filteredAuditLogs.length > rowsPerPage ? (
-              <TablePagination component="div" count={filteredAuditLogs.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredAuditLogs.length / rowsPerPage)}`} />
-            ) : null}
+            <TablePagination component="div" count={filteredAuditLogs.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.max(1, Math.ceil(filteredAuditLogs.length / rowsPerPage))}`} />
           </Box>
         ) : (
           /* Empty */

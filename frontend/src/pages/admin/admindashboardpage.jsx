@@ -1062,7 +1062,7 @@ function AdminDashboardPage() {
         </Typography>
       </Box>
 
-      <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/admin/leave-request', { state: { returnTo: '/admin/dashboard' } })} sx={{ display: 'none' }}>สร้างคำขอลา</Button>
+      <Button type="button" variant="contained" startIcon={<AddRounded />} onClick={() => navigate('/admin/leave-request', { state: { returnTo: '/admin/dashboard' } })} sx={{ display: 'none' }}>ยื่นคำขอลา</Button>
 
       {/* Summary Cards */}
 

@@ -332,7 +332,11 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
   const [editingUsernameUserId, setEditingUsernameUserId] = useState(null);
   const [usernameDraft, setUsernameDraft] = useState('');
   const [savingUsernameUserId, setSavingUsernameUserId] = useState(null);
+  const [pendingUsernameChange, setPendingUsernameChange] = useState(null);
   const currentUserId = Number(getCurrentUser()?.userId || 0);
+  const activeAdminCount = users.filter(
+    (user) => String(user.role || '').toLowerCase() === 'admin' && user.status === 'Active',
+  ).length;
   const [formDialog, setFormDialog] = useState({
     open: Boolean(initialFormMode),
     mode: initialFormMode || 'add',
@@ -796,12 +800,21 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
     setPendingStatusChange({ user, status });
   };
 
-  const handleSaveUsername = async (user) => {
+  const requestUsernameChange = (user) => {
     const username = usernameDraft.trim().toLowerCase();
     if (!/^[a-z0-9._-]{4,50}$/.test(username)) {
       showMessage('ชื่อผู้ใช้ต้องมี 4-50 ตัว และใช้ตัวอักษรอังกฤษพิมพ์เล็ก ตัวเลข จุด ขีดล่าง หรือขีดกลาง', 'error');
       return;
     }
+    if (username === String(user.username || '').toLowerCase()) {
+      setEditingUsernameUserId(null);
+      setUsernameDraft('');
+      return;
+    }
+    setPendingUsernameChange({ user, username });
+  };
+
+  const handleSaveUsername = async (user, username) => {
     setSavingUsernameUserId(user.id);
     try {
       const response = await api.put(`/admin/users/${user.id}`, { username, status: user.status });
@@ -810,8 +823,10 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
       setEditingUsernameUserId(null);
       setUsernameDraft('');
       showMessage('แก้ชื่อผู้ใช้เรียบร้อยแล้ว', 'success');
+      return true;
     } catch (error) {
       showMessage(error.response?.data?.message || error.message || 'ไม่สามารถแก้ชื่อผู้ใช้ได้', 'error');
+      return false;
     } finally {
       setSavingUsernameUserId(null);
     }
@@ -1496,13 +1511,13 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
                                 autoFocus
                                 onChange={(event) => setUsernameDraft(event.target.value.toLowerCase())}
                                 onKeyDown={(event) => {
-                                  if (event.key === 'Enter') handleSaveUsername(user);
+                                  if (event.key === 'Enter') requestUsernameChange(user);
                                   if (event.key === 'Escape') setEditingUsernameUserId(null);
                                 }}
                                 inputProps={{ maxLength: 50 }}
                                 sx={{ minWidth: 140, '& .MuiInputBase-root': { height: 34, fontSize: '12px' } }}
                               />
-                              <Button size="small" disabled={savingUsernameUserId !== null} onClick={() => handleSaveUsername(user)}>บันทึก</Button>
+                              <Button size="small" disabled={savingUsernameUserId !== null} onClick={() => requestUsernameChange(user)}>บันทึก</Button>
                               <Button size="small" color="secondary" disabled={savingUsernameUserId !== null} onClick={() => setEditingUsernameUserId(null)}>ยกเลิก</Button>
                             </Box>
                           ) : (
@@ -1642,56 +1657,88 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
                               '1px solid #E5E7EB',
                           }}
                         >
-                          {user.id === currentUserId ? (
-                            <Box
-                              sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                minWidth: '118px',
-                                minHeight: '36px',
-                                px: '14px',
-                                borderRadius: '999px',
-                                fontSize: '10.5px',
-                                fontWeight: 700,
-                                backgroundColor: getStatusStyle(user.status).backgroundColor,
-                                color: getStatusStyle(user.status).color,
-                              }}
-                            >
-                              {translateStatus(user.status)}
-                            </Box>
-                          ) : (
+                          <Tooltip
+                            title={user.id === currentUserId
+                              ? 'บัญชีแอดมินที่กำลังใช้งานต้องเปิดใช้งานอยู่เสมอ'
+                              : String(user.role || '').toLowerCase() === 'admin' && user.status === 'Active' && activeAdminCount <= 1
+                                ? 'ต้องมีบัญชีแอดมินที่เปิดใช้งานอยู่อย่างน้อย 1 บัญชี'
+                                : ''}
+                          >
+                            <Box component="span" sx={{ display: 'inline-flex' }}>
                           <Select
                             size="small"
                             value={user.status}
                             open={openStatusUserId === user.id}
-                            disabled={updatingStatusUserId !== null}
-                            onOpen={() => setOpenStatusUserId(user.id)}
+                            disabled={
+                              updatingStatusUserId !== null ||
+                              user.id === currentUserId ||
+                              (String(user.role || '').toLowerCase() === 'admin' && user.status === 'Active' && activeAdminCount <= 1)
+                            }
+                            onOpen={() => { if (user.id !== currentUserId) setOpenStatusUserId(user.id); }}
                             onClose={() => setOpenStatusUserId(null)}
-                            onClick={() => setOpenStatusUserId(user.id)}
                             onChange={(event) => {
                               setOpenStatusUserId(null);
                               requestStatusChange(user, event.target.value);
                             }}
                             sx={{
-                              minWidth: '118px',
-                              height: '36px',
+                              width: '116px',
+                              height: '40px',
                               borderRadius: '999px',
                               fontSize: '10.5px',
                               fontWeight: 700,
-                              backgroundColor: getStatusStyle(user.status).backgroundColor,
+                              backgroundColor: 'transparent',
                               color: getStatusStyle(user.status).color,
-                              '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
-                              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#CBD5E1' },
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#EA580C' },
-                              '& .MuiSelect-select': { py: 0, pl: '14px' },
+                              boxShadow: 'none',
+                              '&& .MuiOutlinedInput-notchedOutline': {
+                                border: '0 !important',
+                                borderRadius: '999px',
+                              },
+                              '&&:hover .MuiOutlinedInput-notchedOutline': { border: '0 !important' },
+                              '&&.Mui-focused': { boxShadow: 'none' },
+                              '&&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                border: '0 !important',
+                                borderRadius: '999px',
+                              },
+                              '& .MuiSelect-select': {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                height: '100%',
+                                boxSizing: 'border-box',
+                                py: 0,
+                                pl: '28px',
+                                pr: '28px !important',
+                                textAlign: 'center',
+                                cursor: user.id === currentUserId ? 'default' : 'pointer',
+                              },
+                              '& .MuiSelect-icon': {
+                                display: 'block',
+                                right: '8px',
+                                fontSize: '18px',
+                                color: getStatusStyle(user.status).color,
+                                opacity: 0.7,
+                              },
+                              '&&.Mui-disabled': {
+                                opacity: 1,
+                                backgroundColor: 'transparent',
+                                color: getStatusStyle(user.status).color,
+                                borderRadius: '999px',
+                              },
+                              '& .MuiSelect-select.Mui-disabled': {
+                                WebkitTextFillColor: getStatusStyle(user.status).color,
+                              },
+                              '& .MuiSelect-icon.Mui-disabled': {
+                                color: getStatusStyle(user.status).color,
+                                opacity: 0.65,
+                              },
                             }}
                           >
                             {statusOptions.map((status) => (
                               <MenuItem key={status} value={status}>{translateStatus(status)}</MenuItem>
                             ))}
                           </Select>
-                          )}
+                            </Box>
+                          </Tooltip>
                         </TableCell>
 
                         {/* Last Login */}
@@ -1778,9 +1825,7 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
                 )}
               </FixedTableBody>
             </Table>
-            {filteredUsers.length > rowsPerPage ? (
-              <TablePagination component="div" count={filteredUsers.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.ceil(filteredUsers.length / rowsPerPage)}`} />
-            ) : null}
+            <TablePagination component="div" count={filteredUsers.length} page={page} onPageChange={(_, nextPage) => setPage(nextPage)} rowsPerPage={rowsPerPage} rowsPerPageOptions={[rowsPerPage]} labelRowsPerPage="" labelDisplayedRows={() => `หน้า ${page + 1} จาก ${Math.max(1, Math.ceil(filteredUsers.length / rowsPerPage))}`} />
           </Box>
         ) : (
           /* Empty */
@@ -1897,6 +1942,38 @@ function UserManagementPage({ initialFormMode, initialUserId }) {
           }}
         />
       ) : null}
+
+      <Dialog
+        open={Boolean(pendingUsernameChange)}
+        fullWidth
+        maxWidth="xs"
+        onClose={() => { if (savingUsernameUserId === null) setPendingUsernameChange(null); }}
+        PaperProps={{ sx: { borderRadius: '14px' } }}
+      >
+        <DialogTitle sx={{ color: '#111827', fontSize: '20px', fontWeight: 800 }}>
+          ยืนยันการเปลี่ยนชื่อผู้ใช้
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: '#475569', fontSize: '14px', lineHeight: 1.7 }}>
+            ต้องการเปลี่ยนชื่อผู้ใช้จาก <strong>{pendingUsernameChange?.user?.username}</strong> เป็น <strong>{pendingUsernameChange?.username}</strong> ใช่หรือไม่
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ padding: '16px 24px', gap: '8px' }}>
+          <Button variant="outlined" color="secondary" disabled={savingUsernameUserId !== null} onClick={() => setPendingUsernameChange(null)}>ยกเลิก</Button>
+          <Button
+            variant="contained"
+            disabled={savingUsernameUserId !== null}
+            onClick={async () => {
+              const change = pendingUsernameChange;
+              if (!change) return;
+              const saved = await handleSaveUsername(change.user, change.username);
+              if (saved) setPendingUsernameChange(null);
+            }}
+          >
+            ยืนยัน
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={Boolean(pendingStatusChange)}

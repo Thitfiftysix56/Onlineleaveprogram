@@ -14,7 +14,7 @@ const profileSelect = `
   SELECT u.user_id, u.employee_id, u.username, u.role_id, u.status,
          u.last_login_at, u.password_changed_at,
          e.employee_code, e.first_name, e.last_name, e.email, e.phone,
-         e.profile_image_url, e.department_id, d.department_name,
+         e.profile_image_url, e.department_id, d.department_name, d.division_name,
          e.position_id, p.position_name, r.role_name
   FROM users u
   JOIN employees e ON e.employee_id = u.employee_id
@@ -36,6 +36,7 @@ function profileData(row) {
     roleName: row.role_name,
     departmentId: row.department_id,
     department: row.department_name,
+    division: row.division_name,
     positionId: row.position_id,
     position: row.position_name,
     status: row.status,

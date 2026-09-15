@@ -13,6 +13,9 @@ const role = (request) => String(request.user?.roleName || '').toLowerCase()
 const error = (response, status, message) => response.status(status).json({ status: 'error', message })
 const dateOnly = (value) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value || '').slice(0, 10)
 const leaveReasonPattern = /^[A-Za-z\u0E01-\u0E3A\u0E40-\u0E4E\s]+$/u
+const sickLeaveRetroactiveDays = 3
+const sickLeaveAdvanceDays = 1
+const sickLeaveMedicalCertificateDays = 3
 
 export function isValidLeaveReason(value) {
   const reason = String(value || '').trim()
@@ -54,15 +57,32 @@ export function isSickLeaveType(leaveType) {
   return name.includes('sick') || name.includes('ป่วย')
 }
 
+export function isSickLeaveMedicalCertificateRequired(leaveType, leaveDays) {
+  return isSickLeaveType(leaveType) && Number(leaveDays) >= sickLeaveMedicalCertificateDays
+}
+
+export async function removePendingApprovalNotifications(connection, leaveRequestId) {
+  await connection.execute(
+    `DELETE FROM notifications
+     WHERE leave_request_id = ?
+       AND notification_type = 'leave-submitted'`,
+    [leaveRequestId],
+  )
+}
+
 export function validateLeaveStartDatePolicy(
   startDate,
   leaveType,
   todayDate = todayInBangkok(),
 ) {
   if (isSickLeaveType(leaveType)) {
-    const maximumDate = addCalendarDays(todayDate, 1)
+    const minimumDate = addCalendarDays(todayDate, -sickLeaveRetroactiveDays)
+    const maximumDate = addCalendarDays(todayDate, sickLeaveAdvanceDays)
+    if (startDate < minimumDate) {
+      return `ลาป่วยสามารถยื่นย้อนหลังได้ไม่เกิน ${sickLeaveRetroactiveDays} วัน หากเกินกำหนดกรุณาติดต่อ HR โดยเลือกได้ตั้งแต่ ${minimumDate}`
+    }
     return startDate > maximumDate
-      ? `ลาป่วยสามารถเลือกวันเริ่มลาได้ล่วงหน้าไม่เกิน 1 วัน โดยเลือกได้ถึง ${maximumDate}`
+      ? `ลาป่วยสามารถเลือกวันเริ่มลาได้ล่วงหน้าไม่เกิน ${sickLeaveAdvanceDays} วัน โดยเลือกได้ถึง ${maximumDate}`
       : null
   }
   const minimumDate = addCalendarDays(todayDate, 3)
@@ -191,7 +211,7 @@ const select = `SELECT lr.leave_request_id, lr.request_no, lr.employee_id, lr.le
  lr.approver_employee_id, lr.approved_at, lr.rejected_at, lr.rejection_reason,
  lr.cancelled_at, lr.created_at, lr.updated_at,
  lt.leave_type_name, lt.leave_type_code, e.employee_code, CONCAT(e.first_name, ' ', e.last_name) employee_name,
- d.department_name, p.position_name
+ d.department_name, d.division_name, p.position_name
  FROM leave_requests lr JOIN employees e ON e.employee_id = lr.employee_id
  LEFT JOIN leave_types lt ON lt.leave_type_id = lr.leave_type_id
  JOIN departments d ON d.department_id = e.department_id JOIN positions p ON p.position_id = e.position_id`
@@ -207,7 +227,7 @@ async function serialize(connection, row) {
   )
   return { id: row.leave_request_id, leaveRequestId: row.leave_request_id, requestNo: row.request_no,
     employeeId: row.employee_id, employeeCode: row.employee_code, employeeName: row.employee_name,
-    department: row.department_name, position: row.position_name, leaveTypeId: row.leave_type_id,
+    department: row.department_name, division: row.division_name, position: row.position_name, leaveTypeId: row.leave_type_id,
     leaveType: row.leave_type_name, leaveTypeCode: row.leave_type_code, startDate: dateOnly(row.start_date),
     endDate: dateOnly(row.end_date), leaveDays: Number(row.leave_days), reason: row.reason || '', status: row.status,
     submittedAt: row.submitted_at, reviewedAt: row.approved_at || row.rejected_at,
@@ -368,7 +388,7 @@ async function save(request,response,submitting) {
         [id, allocation.year, allocation.leaveDays],
       )
     }
-    if(submitting){ const [[storedCount]]=await connection.execute('SELECT COUNT(*) attachment_count FROM leave_request_attachments WHERE leave_request_id=?',[id]); const mustAttach=Boolean(v.type.requires_attachment)&&Number(v.days)>=Number(v.type.attachment_required_after_days||0); if(mustAttach&&!request.files?.length&&!Number(storedCount.attachment_count))return rollbackError(connection,response,400,'คำขอลาประเภทนี้จำเป็นต้องแนบเอกสาร'); const requestNo=`LR-${new Date().toISOString().slice(0,10).replaceAll('-','')}-${String(id).padStart(6,'0')}`; await connection.execute('UPDATE leave_requests SET request_no=? WHERE leave_request_id=?',[requestNo,id]); const approverUserIds=participants.approverUserIds||[participants.supervisorUserId]; for (const approverUserId of approverUserIds) await createNotification(connection,{userId:approverUserId,type:'leave-submitted',title:'New leave request',message:`Leave request ${requestNo} is waiting for approval.`,leaveRequestId:id}) }
+    if(submitting){ const [[storedCount]]=await connection.execute('SELECT COUNT(*) attachment_count FROM leave_request_attachments WHERE leave_request_id=?',[id]); const sickCertificateRequired=isSickLeaveMedicalCertificateRequired(v.type,v.days); const configuredAttachmentRequired=Boolean(v.type.requires_attachment)&&Number(v.days)>=Number(v.type.attachment_required_after_days||0); const mustAttach=sickCertificateRequired||configuredAttachmentRequired; if(mustAttach&&!request.files?.length&&!Number(storedCount.attachment_count))return rollbackError(connection,response,400,sickCertificateRequired?'ลาป่วยตั้งแต่ 3 วันทำงานขึ้นไปจำเป็นต้องแนบใบรับรองแพทย์':'คำขอลาประเภทนี้จำเป็นต้องแนบเอกสาร'); const requestNo=`LR-${new Date().toISOString().slice(0,10).replaceAll('-','')}-${String(id).padStart(6,'0')}`; await connection.execute('UPDATE leave_requests SET request_no=? WHERE leave_request_id=?',[requestNo,id]); const approverUserIds=participants.approverUserIds||[participants.supervisorUserId]; for (const approverUserId of approverUserIds) await createNotification(connection,{userId:approverUserId,type:'leave-submitted',title:'New leave request',message:`Leave request ${requestNo} is waiting for approval.`,leaveRequestId:id}) }
     await storeFiles(connection,id,request.files)
     const row=await byId(connection,id)
     if(!row) throw new Error('Saved leave request could not be reloaded.')
@@ -433,6 +453,8 @@ export async function cancelOwn(request, response) {
        WHERE leave_request_id = ?`,
       [requestId],
     )
+
+    await removePendingApprovalNotifications(connection, requestId)
 
     for (const approver of approverUsers) {
       await createNotification(connection, {

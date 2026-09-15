@@ -9,7 +9,7 @@ process.env.DB_USER = 'test_user'
 process.env.JWT_SECRET = 'leave-remediation-test-secret-with-at-least-32-bytes'
 
 const [
-  { calculateApprovalAvailability, calculateDisplayedRemaining, calculateRequestAvailability, calculateWorkingDayAllocations, calculateWorkingDays, isSickLeaveType, isValidLeaveReason, recheckApprovalBalance, validateAdvanceBookingPolicy, validateLeaveBoundaryDates, validateLeaveStartDatePolicy, validateSubmissionParticipants },
+  { calculateApprovalAvailability, calculateDisplayedRemaining, calculateRequestAvailability, calculateWorkingDayAllocations, calculateWorkingDays, isSickLeaveMedicalCertificateRequired, isSickLeaveType, isValidLeaveReason, recheckApprovalBalance, removePendingApprovalNotifications, validateAdvanceBookingPolicy, validateLeaveBoundaryDates, validateLeaveStartDatePolicy, validateSubmissionParticipants },
   { isAllowedLeaveAttachment },
 ] = await Promise.all([
   import('../src/controllers/leave-controller.js'),
@@ -180,12 +180,37 @@ test('general leave must be requested at least three calendar days in advance', 
   assert.equal(validateLeaveStartDatePolicy('2026-09-11', annualLeave, '2026-09-08'), null)
 })
 
-test('sick leave can start in the past, today or at most one day ahead', () => {
+test('sick leave can start up to three days retroactively or one day ahead', () => {
   const sickLeave = { leave_type_name: 'Sick Leave' }
   assert.equal(isSickLeaveType(sickLeave), true)
   assert.equal(isSickLeaveType({ leave_type_name: 'ลาป่วย' }), true)
   assert.equal(validateLeaveStartDatePolicy('2026-09-08', sickLeave, '2026-09-08'), null)
-  assert.equal(validateLeaveStartDatePolicy('2026-09-01', sickLeave, '2026-09-08'), null)
+  assert.equal(validateLeaveStartDatePolicy('2026-09-05', sickLeave, '2026-09-08'), null)
+  assert.match(validateLeaveStartDatePolicy('2026-09-04', sickLeave, '2026-09-08'), /ย้อนหลังได้ไม่เกิน 3 วัน/)
   assert.equal(validateLeaveStartDatePolicy('2026-09-09', sickLeave, '2026-09-08'), null)
   assert.match(validateLeaveStartDatePolicy('2026-09-10', sickLeave, '2026-09-08'), /ล่วงหน้าไม่เกิน 1 วัน/)
+})
+
+test('sick leave requires a medical certificate from three working days', () => {
+  const sickLeave = { leave_type_name: 'Sick Leave' }
+  assert.equal(isSickLeaveMedicalCertificateRequired(sickLeave, 2), false)
+  assert.equal(isSickLeaveMedicalCertificateRequired(sickLeave, 3), true)
+  assert.equal(isSickLeaveMedicalCertificateRequired({ leave_type_name: 'ลากิจ' }, 3), false)
+})
+
+test('cancelling a request removes its pending approval notifications', async () => {
+  const calls = []
+  const connection = {
+    execute: async (sql, parameters) => {
+      calls.push({ sql, parameters })
+      return [{ affectedRows: 1 }]
+    },
+  }
+
+  await removePendingApprovalNotifications(connection, 42)
+
+  assert.equal(calls.length, 1)
+  assert.match(calls[0].sql, /DELETE FROM notifications/)
+  assert.match(calls[0].sql, /notification_type = 'leave-submitted'/)
+  assert.deepEqual(calls[0].parameters, [42])
 })

@@ -21,6 +21,7 @@ import RequestNumberText from '../../components/requestnumbertext.jsx';
 import { CompactSummaryCard } from '../../components/sharedvisualfoundation.jsx';
 import DashboardLeaveBalance from '../../components/dashboardleavebalance.jsx';
 import { DashboardTablePagination } from '../../components/shareduiprimitives.jsx';
+import { FixedGridFillerRows } from '../../components/fixedtablebody.jsx';
 import { roleAccentTokens } from '../../theme/tokens.js';
 
 import { getTeamReport } from '../../api/leave-service.js';
@@ -871,12 +872,14 @@ function SupervisorDashboardPage() {
             }}
           >
             <Box
+              className="system-data-grid"
               sx={{
                 minWidth:
                   '900px',
               }}
             >
               <Box
+                className="system-data-grid-header"
                 sx={{
                   display:
                     'grid',
@@ -901,8 +904,8 @@ function SupervisorDashboardPage() {
                   'เลขที่คำขอ',
                   'พนักงาน',
                   'ประเภทการลา',
-                  'ช่วงวันที่',
-                  'จำนวนวัน',
+                  'ช่วงวันลา',
+                  'จำนวนวันลา',
                 ].map(
                   (heading) => (
                     <Typography
@@ -931,6 +934,7 @@ function SupervisorDashboardPage() {
               {recentPendingRequests.map(
                 (request) => (
                   <Box
+                    className="system-data-grid-row"
                     key={
                       request.id ||
                       getRequestReference(
@@ -983,6 +987,7 @@ function SupervisorDashboardPage() {
                     }}
                   >
                     <Typography
+                      className="system-table-request-number"
                       sx={{
                         color:
                           supervisorTheme.primary,
@@ -1002,8 +1007,8 @@ function SupervisorDashboardPage() {
                       )}
                     </Typography>
 
-                    <Box
-                      sx={{
+              <Box
+                sx={{
                         minWidth:
                           0,
                       }}
@@ -1105,6 +1110,7 @@ function SupervisorDashboardPage() {
                   </Box>
                 ),
               )}
+              <FixedGridFillerRows visibleRows={recentPendingRequests.length} />
             </Box>
           </Box>
           <DashboardTablePagination
@@ -1393,8 +1399,8 @@ function SupervisorDashboardPage() {
                 notification,
                 index,
               ) => (
-                <Box
-                  key={
+                  <Box
+                    key={
                     notification.id
                   }
                   onClick={() =>
