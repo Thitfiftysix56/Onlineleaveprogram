@@ -10,3 +10,5 @@ export const updateLeaveType = async (id, data) =>
   (await api.put(`/hr/leave-types/${id}`, data)).data;
 export const updateLeaveTypeStatus = async (id, status) =>
   (await api.patch(`/hr/leave-types/${id}/status`, { status })).data;
+export const deleteLeaveType = async (id) =>
+  (await api.delete(`/hr/leave-types/${id}`)).data;

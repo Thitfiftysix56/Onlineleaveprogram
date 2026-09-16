@@ -9,9 +9,9 @@ const exact = new Map(Object.entries({
   Name: 'ชื่อ', 'Full Name': 'ชื่อ-นามสกุล', Phone: 'เบอร์โทรศัพท์', Department: 'แผนก', Position: 'ตำแหน่ง',
   'Username or Email': 'Username หรือ Email',
   'Employee Code': 'รหัสพนักงาน', 'Employee ID': 'รหัสพนักงาน',
-  'Leave Request': 'คำขอลา', 'Leave Requests': 'คำขอลา', 'Create Leave Request': 'สร้างคำขอลา', 'My Requests': 'คำขอลาของฉัน',
+  'Leave Request': 'คำขอลา', 'Leave Requests': 'คำขอลา', 'Create Leave Request': 'ยื่นคำขอลา', 'My Requests': 'คำขอของฉัน',
   'Request Detail': 'รายละเอียดคำขอลา', 'Leave Request Detail': 'รายละเอียดคำขอลา', 'Leave Balance': 'สิทธิ์วันลาคงเหลือ',
-  Approval: 'การอนุมัติ', 'Approval List': 'รายการรออนุมัติ', 'Team Reports': 'รายงานทีม', 'Team Report': 'รายงานทีม', Reports: 'รายงาน', Report: 'รายงาน',
+  Approval: 'การอนุมัติ', 'Approval List': 'รายการรออนุมัติ', 'Team Reports': 'ประวัติการลาของทีม', 'Team Report': 'ประวัติการลาของทีม', Reports: 'รายงาน', Report: 'รายงาน',
   'Employee Management': 'จัดการพนักงาน', 'User Management': 'จัดการผู้ใช้งาน', 'Leave Type Management': 'จัดการประเภทการลา',
   'Leave Types': 'ประเภทการลา', 'Leave Type': 'ประเภทการลา', 'Leave Entitlement Management': 'จัดการสิทธิ์วันลา',
   'Leave Entitlement': 'สิทธิ์วันลา', 'Holiday Management': 'จัดการวันหยุด', Holidays: 'วันหยุด', Holiday: 'วันหยุด',
@@ -35,10 +35,10 @@ const exact = new Map(Object.entries({
   'Search requests': 'ค้นหาคำขอลา', 'Search notifications': 'ค้นหาการแจ้งเตือน', 'Search employees': 'ค้นหาพนักงาน', 'Search users': 'ค้นหาผู้ใช้งาน',
   'First Name': 'ชื่อ', 'Last Name': 'นามสกุล', 'Hire Date': 'วันที่เริ่มงาน', 'Employment Date': 'วันที่เริ่มงาน',
   'Public Holiday': 'วันหยุดราชการ', 'Company Holiday': 'วันหยุดบริษัท', 'Special Holiday': 'วันหยุดพิเศษ',
-  'Annual Leave': 'ลาพักร้อน', 'Sick Leave': 'ลาป่วย', 'Personal Leave': 'ลากิจ', 'Maternity Leave': 'ลาคลอด',
-  'Request ID': 'รหัสคำขอ', 'Request Number': 'เลขที่คำขอ', 'Date Range': 'ช่วงวันที่', 'Leave Period': 'ช่วงวันลา', Submitted: 'ส่งเมื่อ', Updated: 'อัปเดตเมื่อ',
+  'Annual Leave': 'ลาพักร้อน', 'Sick Leave': 'ลาป่วย', 'Personal Leave': 'ลากิจ',
+  'Request ID': 'รหัสคำขอ', 'Request Number': 'เลขที่คำขอ', 'Date Range': 'ช่วงวันลา', 'Leave Period': 'ช่วงวันลา', Submitted: 'ส่งเมื่อ', Updated: 'อัปเดตเมื่อ',
   Total: 'รวม', 'Total Requests': 'คำขอทั้งหมด', 'Total Leave Days': 'วันลารวม', 'Total Entitlement': 'สิทธิ์ทั้งหมด', 'Available Days': 'วันลาที่ใช้ได้',
-  'Pending Approval': 'รอการอนุมัติ', 'Waiting for your review': 'รอการตรวจสอบจากคุณ', 'Approved this month': 'อนุมัติในเดือนนี้', 'Rejected this month': 'ปฏิเสธในเดือนนี้',
+  'Pending Approval': 'รออนุมัติ', 'Waiting for your review': 'รอการตรวจสอบจากคุณ', 'Approved this month': 'อนุมัติในเดือนนี้', 'Rejected this month': 'ปฏิเสธในเดือนนี้',
   'Total Notifications': 'การแจ้งเตือนทั้งหมด', 'Unread Notifications': 'การแจ้งเตือนที่ยังไม่ได้อ่าน', 'Read Notifications': 'การแจ้งเตือนที่อ่านแล้ว', 'Received Today': 'ได้รับวันนี้',
   'All Categories': 'ทุกหมวดหมู่', 'All Status': 'ทุกสถานะ', 'All Leave Types': 'ทุกประเภทการลา', 'All Departments': 'ทุกแผนก',
   'No Balance': 'ไม่มีสิทธิ์คงเหลือ', 'Low Balance': 'สิทธิ์คงเหลือน้อย', 'Not specified': 'ไม่ได้ระบุ',
@@ -65,13 +65,14 @@ const exact = new Map(Object.entries({
 }))
 
 const phrases = [
+  [/^A valid active supervisor employee is required before submission\.?$/i, 'ไม่สามารถส่งคำขอลาได้ เนื่องจากยังไม่ได้กำหนดหัวหน้างานที่สามารถอนุมัติคำขอได้ กรุณาติดต่อฝ่ายบุคคล'],
   [/^Welcome back,?\s*/i, 'ยินดีต้อนรับกลับ '], [/^Welcome,?\s*/i, 'ยินดีต้อนรับ '],
   [/Please sign in to continue\.?/gi, 'กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ'],
   [/Enter your username and password to access the system\.?/gi, 'กรอก Username และ Password เพื่อเข้าใช้งานระบบ'],
   [/The system identifies your Role from the user account\. You do not need to select a Role manually\.?/gi, 'ระบบจะตรวจสอบ Role จากบัญชีผู้ใช้งานโดยอัตโนมัติ'],
   [/Manage leave requests in one place\.?/gi, 'จัดการคำขอลาได้ในที่เดียว'], [/Secure role-based access/gi, 'เข้าใช้งานอย่างปลอดภัยตาม Role'],
   [/Verifying your session\.\.\./gi, 'กำลังตรวจสอบการเข้าสู่ระบบ...'],
-  [/Loading team report\.\.\./gi, 'กำลังโหลดรายงานทีม...'], [/Loading leave balance\.\.\./gi, 'กำลังโหลดสิทธิ์วันลา...'],
+  [/Loading team report\.\.\./gi, 'กำลังโหลดประวัติการลาของทีม...'], [/Loading leave balance\.\.\./gi, 'กำลังโหลดสิทธิ์วันลา...'],
   [/Loading notifications\.\.\./gi, 'กำลังโหลดการแจ้งเตือน...'], [/Loading requests\.\.\./gi, 'กำลังโหลดคำขอลา...'],
   [/Loading ([^.]+)\.\.\./gi, 'กำลังโหลด$1...'],
   [/Unable to load ([^.]+)\.?/gi, 'ไม่สามารถโหลด$1ได้'], [/Unable to save ([^.]+)\.?/gi, 'ไม่สามารถบันทึก$1ได้'],
@@ -126,8 +127,38 @@ export function installThaiUi() {
   }
   const start = () => {
     translateTree(document.body)
-    new MutationObserver((mutations) => { for (const mutation of mutations) { if (mutation.type === 'characterData') translateTree(mutation.target); for (const node of mutation.addedNodes) translateTree(node) } })
-      .observe(document.body, { childList: true, subtree: true, characterData: true })
+    const pendingRoots = new Set()
+    let scheduled = false
+    const flush = () => {
+      scheduled = false
+      const roots = [...pendingRoots]
+      pendingRoots.clear()
+      for (const root of roots) {
+        if (root.isConnected) translateTree(root)
+      }
+    }
+    const schedule = () => {
+      if (scheduled) return
+      scheduled = true
+      if ('requestIdleCallback' in window) window.requestIdleCallback(flush, { timeout: 100 })
+      else window.requestAnimationFrame(flush)
+    }
+    const queueRoot = (node) => {
+      const root = node.nodeType === Node.TEXT_NODE ? node.parentElement : node
+      if (!(root instanceof Element)) return
+      for (const queuedRoot of pendingRoots) {
+        if (queuedRoot.contains(root)) return
+        if (root.contains(queuedRoot)) pendingRoots.delete(queuedRoot)
+      }
+      pendingRoots.add(root)
+      schedule()
+    }
+    new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'characterData') queueRoot(mutation.target)
+        for (const node of mutation.addedNodes) queueRoot(node)
+      }
+    }).observe(document.body, { childList: true, subtree: true, characterData: true })
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true }); else start()
 }

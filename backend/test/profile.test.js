@@ -37,6 +37,7 @@ const profileRow = {
   last_name: 'User',
   email: 'profile@example.test',
   phone: '0812345678',
+  hire_date: '2024-06-01',
   profile_image_url: null,
   department_id: 2,
   department_name: 'Human Resources',
@@ -85,6 +86,7 @@ test('all authenticated roles can read their own sanitized profile', async () =>
     const body = await response.json()
     assert.equal(response.status, 200)
     assert.equal(body.profile.employeeCode, 'EMP014')
+    assert.equal(body.profile.hireDate, '2024-06-01')
     assert.equal(body.profile.roleName, roleName)
     assert.equal(JSON.stringify(body).includes('password_hash'), false)
   }
@@ -143,6 +145,56 @@ test('profile update changes only allowed employee fields', async () => {
   assert.doesNotMatch(queries[2].sql, /username|role_id|employee_code|password_hash/)
 })
 
+test('profile phone is required and must contain exactly ten digits', async () => {
+  for (const phone of ['', '081234567', '08123456789', '08A2345678']) {
+    pool.execute = async () => [[profileRow]]
+    const form = new FormData()
+    form.set('fullName', 'Profile User')
+    form.set('email', 'profile@example.test')
+    form.set('phone', phone)
+    const response = await fetch(`${baseUrl}/api/profile`, {
+      method: 'PUT',
+      headers: auth(),
+      body: form,
+    })
+    assert.equal(response.status, 400, phone)
+  }
+})
+
+test('profile first and last names accept letters only for every role', async () => {
+  for (const roleName of ['Employee', 'Supervisor', 'HR', 'Admin']) {
+    pool.execute = async () => [[profileRow]]
+    const form = new FormData()
+    form.set('fullName', 'Profile1 User')
+    form.set('email', 'profile@example.test')
+    form.set('phone', '0812345678')
+    const response = await fetch(`${baseUrl}/api/profile`, {
+      method: 'PUT',
+      headers: auth(roleName),
+      body: form,
+    })
+    assert.equal(response.status, 400, roleName)
+  }
+})
+
+test('profile email rejects invalid domain endings for every role', async () => {
+  for (const roleName of ['Employee', 'Supervisor', 'HR', 'Admin']) {
+    pool.execute = async () => [[profileRow]]
+    const form = new FormData()
+    form.set('fullName', 'Profile User')
+    form.set('email', 'profile@example.com123')
+    form.set('phone', '0812345678')
+    const response = await fetch(`${baseUrl}/api/profile`, {
+      method: 'PUT',
+      headers: auth(roleName),
+      body: form,
+    })
+    const body = await response.json()
+    assert.equal(response.status, 400, roleName)
+    assert.equal(body.message, 'รูปแบบอีเมลไม่ถูกต้อง')
+  }
+})
+
 test('profile upload validates file type and file size', async () => {
   let form = new FormData()
   form.set('fullName', 'Profile User')
@@ -184,7 +236,7 @@ test('valid profile image is persisted and returned as a URL', async () => {
   const form = new FormData()
   form.set('fullName', 'Profile User')
   form.set('email', 'profile@example.test')
-  form.set('phone', '')
+  form.set('phone', '0812345678')
   form.set('profileImage', new Blob([pngHeader], { type: 'image/png' }), 'profile.png')
 
   const response = await fetch(`${baseUrl}/api/profile`, {

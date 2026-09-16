@@ -1,9 +1,11 @@
-import RolePositionFormPage from '../../components/rolepositionformpage.jsx';
+import { useParams } from 'react-router-dom';
+import RolePositionManagementPage from '../../components/rolepositionmanagementpage.jsx';
 import AdminLayout from '../../layouts/adminlayout.jsx';
 
 function PositionFormPage({
   mode = 'add',
 }) {
+  const { positionId } = useParams();
   const adminTheme = {
     primary: '#EA580C',
     dark: '#C2410C',
@@ -13,11 +15,12 @@ function PositionFormPage({
   };
 
   return (
-    <RolePositionFormPage
+    <RolePositionManagementPage
       LayoutComponent={AdminLayout}
       activeMenu="Position Management"
       theme={adminTheme}
-      mode={mode}
+      initialFormMode={mode}
+      initialPositionId={positionId}
     />
   );
 }

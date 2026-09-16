@@ -6,3 +6,5 @@ backend/uploads/profile-images/
 npm-debug.log*
 
 /backup_*.sql
+frontend/playwright-report/
+frontend/test-results/

@@ -10,3 +10,6 @@ export const updateDepartment = async (id, data) =>
   (await api.put(`/hr/departments/${id}`, data)).data;
 export const updateDepartmentStatus = async (id, status) =>
   (await api.patch(`/hr/departments/${id}/status`, { status })).data;
+
+export const deleteDepartment = async (id) =>
+  (await api.delete(`/hr/departments/${id}`)).data;

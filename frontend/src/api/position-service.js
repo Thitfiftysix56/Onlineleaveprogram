@@ -10,3 +10,6 @@ export const updatePosition = async (id, data) =>
   (await api.put(`/hr/positions/${id}`, data)).data;
 export const updatePositionStatus = async (id, status) =>
   (await api.patch(`/hr/positions/${id}/status`, { status })).data;
+
+export const deletePosition = async (id) =>
+  (await api.delete(`/hr/positions/${id}`)).data;

@@ -3,6 +3,10 @@ import {
   Alert,
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   FormHelperText,
   InputLabel,
@@ -13,13 +17,21 @@ import {
   Typography,
 } from '@mui/material';
 import HRLayout from '../../layouts/hrlayout.jsx';
-import { useNavigate, useParams } from 'react-router-dom';
+import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
+import { roleDashboardCardSurfaceSx } from '../../theme/rolecardsurface.js';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { createLeaveType, getLeaveType, updateLeaveType } from '../../api/leave-type-service.js';
 
 function LeaveTypeFormPage({ mode = 'add' }) {
   const isEditMode = mode === 'edit';
   const navigate = useNavigate();
+  const location = useLocation();
   const { leaveTypeId } = useParams();
+  const returnTo =
+    typeof location.state?.returnTo === 'string' &&
+    location.state.returnTo.startsWith('/')
+      ? location.state.returnTo
+      : '/hr/leave-types';
   const initialFormData = {
     code: '',
     name: '',
@@ -37,6 +49,8 @@ function LeaveTypeFormPage({ mode = 'add' }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [confirmationError, setConfirmationError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -51,7 +65,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
           maximumDaysPerRequest: String(item.maximumDaysPerRequest),
           attachmentRequired: item.attachmentRequired ? 'Yes' : 'No', status: item.status,
         });
-      } catch (error) { if (active) setErrorMessage(error.response?.data?.message || 'Unable to load leave type.'); }
+      } catch (error) { if (active) setErrorMessage(error.response?.data?.message || 'ไม่สามารถโหลดข้อมูลประเภทการลาได้'); }
       finally { if (active) setLoading(false); }
     };
     load(); return () => { active = false; };
@@ -69,92 +83,75 @@ function LeaveTypeFormPage({ mode = 'add' }) {
     }));
 
     setSuccessMessage('');
+    setErrorMessage('');
+    setConfirmationError('');
   };
 
   const validateForm = () => {
     const validationErrors = {};
 
-    const code = formData.code.trim().toUpperCase();
     const name = formData.name.trim();
-    const description = formData.description.trim();
-
     const defaultDays = Number(formData.defaultDays);
     const minimumDays = Number(formData.minimumDays);
     const maximumDaysPerRequest = Number(
       formData.maximumDaysPerRequest,
     );
 
-    if (!code) {
-      validationErrors.code =
-        'Please enter a leave type code';
-    } else if (!/^[A-Z0-9]{2,10}$/.test(code)) {
-      validationErrors.code =
-        'Code must contain 2-10 uppercase letters or numbers';
-    }
-
     if (!name) {
       validationErrors.name =
-        'Please enter a leave type name';
-    }
-
-    if (!description) {
-      validationErrors.description =
-        'Please enter a description';
-    } else if (description.length < 10) {
-      validationErrors.description =
-        'Description must contain at least 10 characters';
+        'กรุณากรอกชื่อประเภทการลา';
     }
 
     if (!formData.defaultDays) {
       validationErrors.defaultDays =
-        'Please enter the default entitlement days';
+        'กรุณากรอกจำนวนวันลาเริ่มต้น';
     } else if (
       Number.isNaN(defaultDays) ||
-      defaultDays < 0 ||
+      defaultDays <= 0 ||
       defaultDays > 365
     ) {
       validationErrors.defaultDays =
-        'Default days must be between 0 and 365';
+        'จำนวนวันต้องอยู่ระหว่าง 1-365 วัน';
     }
 
     if (!formData.minimumDays) {
       validationErrors.minimumDays =
-        'Please enter the minimum leave days';
+        'กรุณากรอกจำนวนวันลาขั้นต่ำ';
     } else if (
       Number.isNaN(minimumDays) ||
       minimumDays <= 0 ||
       minimumDays > 365
     ) {
       validationErrors.minimumDays =
-        'Minimum days must be between 1 and 365';
+        'จำนวนวันขั้นต่ำต้องอยู่ระหว่าง 1-365 วัน';
     }
 
     if (!formData.maximumDaysPerRequest) {
       validationErrors.maximumDaysPerRequest =
-        'Please enter the maximum days per request';
+        'กรุณากรอกจำนวนวันลาสูงสุดต่อคำขอ';
     } else if (
       Number.isNaN(maximumDaysPerRequest) ||
       maximumDaysPerRequest <= 0 ||
       maximumDaysPerRequest > 365
     ) {
       validationErrors.maximumDaysPerRequest =
-        'Maximum days must be between 1 and 365';
+        'จำนวนวันสูงสุดต้องอยู่ระหว่าง 1-365 วัน';
     } else if (
       !validationErrors.minimumDays &&
       maximumDaysPerRequest < minimumDays
     ) {
       validationErrors.maximumDaysPerRequest =
-        'Maximum days cannot be lower than minimum days';
+        'จำนวนวันสูงสุดต้องไม่น้อยกว่าจำนวนวันขั้นต่ำ';
     }
 
     if (!formData.attachmentRequired) {
       validationErrors.attachmentRequired =
-        'Please select an attachment requirement';
+        'กรุณาเลือกเงื่อนไขเอกสารแนบ';
     }
 
     if (!formData.status) {
       validationErrors.status =
-        'Please select a leave type status';
+        'กรุณาเลือกสถานะประเภทการลา';
     }
 
     setErrors(validationErrors);
@@ -162,7 +159,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
     return Object.keys(validationErrors).length === 0;
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault();
 
     setSuccessMessage('');
@@ -176,8 +173,12 @@ function LeaveTypeFormPage({ mode = 'add' }) {
       return;
     }
 
+    setConfirmationOpen(true);
+  };
+
+  const confirmSave = async () => {
     const leaveTypeData = {
-      code: formData.code.trim().toUpperCase(),
+      ...(isEditMode ? { code: formData.code } : {}),
       name: formData.name.trim(),
       description: formData.description.trim(),
       defaultDays: Number(formData.defaultDays),
@@ -190,84 +191,24 @@ function LeaveTypeFormPage({ mode = 'add' }) {
       status: formData.status,
     };
 
-    setSaving(true); setErrorMessage('');
+    setSaving(true); setErrorMessage(''); setConfirmationError('');
     try {
       const result = isEditMode ? await updateLeaveType(leaveTypeId, leaveTypeData) : await createLeaveType(leaveTypeData);
-      setSuccessMessage(result.message);
-      window.setTimeout(() => navigate('/hr/leave-types'), 500);
-    } catch (error) { setErrorMessage(error.response?.data?.message || 'Unable to save leave type.'); }
+      setConfirmationOpen(false);
+      setConfirmationError('');
+      setSuccessMessage(result.message || 'บันทึกประเภทการลาเรียบร้อยแล้ว');
+      window.setTimeout(() => navigate(returnTo), 500);
+    } catch (error) {
+      const message = error.response?.data?.message || 'ไม่สามารถบันทึกประเภทการลาได้';
+      setErrorMessage(message);
+      setConfirmationError(message);
+    }
     finally { setSaving(false); }
-  };
-
-  const handleReset = () => {
-    setFormData(initialFormData);
-    setErrors({});
-    setSuccessMessage('');
-
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
   };
 
   return (
     <HRLayout activeMenu="Leave Type">
-      <Box
-        sx={{
-          marginBottom: '28px',
-        }}
-      >
-        <Typography
-          component="h1"
-          sx={{
-            color: '#111827',
-            fontSize: {
-              xs: '26px',
-              sm: '30px',
-            },
-            fontWeight: 800,
-          }}
-        >
-          Add Leave Type
-        </Typography>
-
-        <Typography
-          sx={{
-            color: '#6B7280',
-            fontSize: '15px',
-            marginTop: '6px',
-          }}
-        >
-          Create a new leave type and define its entitlement
-          and request conditions.
-        </Typography>
-
-<Button
-  type="button"
-  variant="outlined"
-  onClick={() => navigate('/hr/leave-types')}
-  sx={{
-    minWidth: '100px',
-    height: '42px',
-    marginTop: '16px',
-    padding: '0 18px',
-    backgroundColor: '#FFFFFF',
-    color: '#2563EB',
-    borderColor: '#2563EB',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: 700,
-    textTransform: 'none',
-
-    '&:hover': {
-      backgroundColor: '#EFF6FF',
-      borderColor: '#1D4ED8',
-    },
-  }}
->
-  ← Back
-</Button>
-      </Box>
+      <PageHeader title={isEditMode ? 'แก้ไขประเภทการลา' : 'เพิ่มประเภทการลา'} sx={{ maxWidth: '920px', marginInline: 'auto' }} />
 
       {successMessage && (
         <Alert
@@ -282,16 +223,55 @@ function LeaveTypeFormPage({ mode = 'add' }) {
         </Alert>
       )}
 
-      {(errorMessage || loading) && <Alert severity={errorMessage ? 'error' : 'info'} sx={{ marginBottom: '24px' }}>{errorMessage || 'Loading leave type...'}</Alert>}
+      {(errorMessage || loading) && <Alert severity={errorMessage ? 'error' : 'info'} sx={{ marginBottom: '24px' }}>{errorMessage || 'กำลังโหลดข้อมูลประเภทการลา...'}</Alert>}
 
       <Box
         component="form"
         onSubmit={handleSubmit}
         noValidate
         sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '24px',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr)',
+          gap: 0,
+          width: '100%',
+          maxWidth: '920px',
+          marginInline: 'auto',
+          ...roleDashboardCardSurfaceSx,
+          padding: {
+            xs: '20px',
+            sm: '28px 32px',
+          },
+          background: 'linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 82%, var(--role-soft, #ECFDF5) 100%)',
+          border: '0',
+          borderRadius: '20px',
+          boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)',
+          '& > .MuiPaper-root': {
+            background: 'transparent !important',
+            border: '0 !important',
+            borderRadius: '0 !important',
+            boxShadow: 'none !important',
+            overflow: 'visible',
+          },
+          '& > .MuiPaper-root > .MuiBox-root:first-of-type': {
+            background: 'transparent !important',
+            borderBottom: '0 !important',
+            padding: {
+              xs: '8px 0 10px',
+              sm: '10px 4px 12px',
+            },
+          },
+          '& > .MuiPaper-root > .MuiBox-root:last-of-type': {
+            padding: {
+              xs: '12px 0 24px',
+              sm: '14px 4px 28px',
+            },
+          },
+          '& > .MuiPaper-root + .MuiPaper-root': {
+            marginTop: '2px',
+          },
+          '& .MuiOutlinedInput-root': {
+            borderRadius: '10px',
+          },
         }}
       >
         <Paper
@@ -316,22 +296,12 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               sx={{
                 color: '#111827',
                 fontSize: '18px',
-                fontWeight: 800,
+                fontWeight: 600,
               }}
             >
-              Leave Type Information
+              ข้อมูลประเภทการลา
             </Typography>
 
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '4px',
-              }}
-            >
-              Enter the name, code and description of this leave
-              type.
-            </Typography>
           </Box>
 
           <Box
@@ -350,22 +320,17 @@ function LeaveTypeFormPage({ mode = 'add' }) {
           >
             <TextField
               fullWidth
-              required
-              label="Leave Type Code"
-              placeholder="Example: AL"
-              value={formData.code}
-              onChange={(event) =>
-                handleInputChange(
-                  'code',
-                  event.target.value.toUpperCase(),
-                )
-              }
-              error={Boolean(errors.code)}
+              label="รหัสประเภทการลา"
+              value={isEditMode ? formData.code : 'ระบบสร้างอัตโนมัติเมื่อบันทึก'}
               helperText={
-                errors.code ||
-                'Use 2-10 uppercase letters or numbers'
+                isEditMode
+                  ? 'รหัสประเภทการลาไม่สามารถแก้ไขได้'
+                  : 'ระบบจะกำหนดรหัสรูปแบบ LT-xxx ให้อัตโนมัติ'
               }
               slotProps={{
+                input: {
+                  readOnly: true,
+                },
                 htmlInput: {
                   maxLength: 10,
                 },
@@ -373,6 +338,15 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '8px',
+                  ...(!isEditMode && {
+                    backgroundColor: '#F8FAFC',
+                  }),
+                },
+                '& .MuiInputBase-input': {
+                  ...(!isEditMode && {
+                    color: '#64748B',
+                    WebkitTextFillColor: '#64748B',
+                  }),
                 },
               }}
             />
@@ -380,8 +354,8 @@ function LeaveTypeFormPage({ mode = 'add' }) {
             <TextField
               fullWidth
               required
-              label="Leave Type Name"
-              placeholder="Example: Annual Leave"
+              label="ชื่อประเภทการลา"
+              placeholder="เช่น ลาพักร้อน"
               value={formData.name}
               onChange={(event) =>
                 handleInputChange(
@@ -398,47 +372,6 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               }}
             />
 
-            <TextField
-              fullWidth
-              required
-              multiline
-              minRows={4}
-              label="Description"
-              placeholder="Describe when employees can use this leave type"
-              value={formData.description}
-              onChange={(event) =>
-                handleInputChange(
-                  'description',
-                  event.target.value,
-                )
-              }
-              error={Boolean(errors.description)}
-              helperText={
-                errors.description ||
-                `${formData.description.length}/500 characters`
-              }
-              slotProps={{
-                htmlInput: {
-                  maxLength: 500,
-                },
-              }}
-              sx={{
-                gridColumn: {
-                  xs: 'auto',
-                  sm: '1 / -1',
-                },
-
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-
-                '& .MuiFormHelperText-root': {
-                  textAlign: errors.description
-                    ? 'left'
-                    : 'right',
-                },
-              }}
-            />
           </Box>
         </Paper>
 
@@ -464,22 +397,12 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               sx={{
                 color: '#111827',
                 fontSize: '18px',
-                fontWeight: 800,
+                fontWeight: 600,
               }}
             >
-              Entitlement Settings
+              การกำหนดสิทธิ์ลา
             </Typography>
 
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '4px',
-              }}
-            >
-              Define the default entitlement and allowed number
-              of days per request.
-            </Typography>
           </Box>
 
           <Box
@@ -500,7 +423,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               fullWidth
               required
               type="number"
-              label="Default Entitlement Days"
+              label="จำนวนวันลาเริ่มต้น"
               value={formData.defaultDays}
               onChange={(event) =>
                 handleInputChange(
@@ -509,40 +432,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
                 )
               }
               error={Boolean(errors.defaultDays)}
-              helperText={
-                errors.defaultDays ||
-                'Default yearly entitlement'
-              }
-              slotProps={{
-                htmlInput: {
-                  min: 0,
-                  max: 365,
-                },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-              }}
-            />
-
-            <TextField
-              fullWidth
-              required
-              type="number"
-              label="Minimum Days per Request"
-              value={formData.minimumDays}
-              onChange={(event) =>
-                handleInputChange(
-                  'minimumDays',
-                  event.target.value,
-                )
-              }
-              error={Boolean(errors.minimumDays)}
-              helperText={
-                errors.minimumDays ||
-                'Smallest permitted request'
-              }
+              helperText={errors.defaultDays}
               slotProps={{
                 htmlInput: {
                   min: 1,
@@ -560,7 +450,34 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               fullWidth
               required
               type="number"
-              label="Maximum Days per Request"
+              label="จำนวนวันขอขั้นต่ำ"
+              value={formData.minimumDays}
+              onChange={(event) =>
+                handleInputChange(
+                  'minimumDays',
+                  event.target.value,
+                )
+              }
+              error={Boolean(errors.minimumDays)}
+              helperText={errors.minimumDays}
+              slotProps={{
+                htmlInput: {
+                  min: 1,
+                  max: 365,
+                },
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                },
+              }}
+            />
+
+            <TextField
+              fullWidth
+              required
+              type="number"
+              label="จำนวนวันขอสูงสุด"
               value={formData.maximumDaysPerRequest}
               onChange={(event) =>
                 handleInputChange(
@@ -571,10 +488,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               error={Boolean(
                 errors.maximumDaysPerRequest,
               )}
-              helperText={
-                errors.maximumDaysPerRequest ||
-                'Largest permitted request'
-              }
+              helperText={errors.maximumDaysPerRequest}
               slotProps={{
                 htmlInput: {
                   min: 1,
@@ -612,22 +526,12 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               sx={{
                 color: '#111827',
                 fontSize: '18px',
-                fontWeight: 800,
+                fontWeight: 600,
               }}
             >
-              Request Conditions
+              เงื่อนไขคำขอ
             </Typography>
 
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '14px',
-                marginTop: '4px',
-              }}
-            >
-              Set supporting document requirements and the
-              availability of this leave type.
-            </Typography>
           </Box>
 
           <Box
@@ -650,13 +554,13 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               error={Boolean(errors.attachmentRequired)}
             >
               <InputLabel id="attachment-required-label">
-                Attachment Required
+                เอกสารแนบ
               </InputLabel>
 
               <Select
                 labelId="attachment-required-label"
                 value={formData.attachmentRequired}
-                label="Attachment Required"
+                label="เอกสารแนบ"
                 onChange={(event) =>
                   handleInputChange(
                     'attachmentRequired',
@@ -668,11 +572,11 @@ function LeaveTypeFormPage({ mode = 'add' }) {
                 }}
               >
                 <MenuItem value="No">
-                  No, attachment is optional
+                  ไม่จำเป็น
                 </MenuItem>
 
                 <MenuItem value="Yes">
-                  Yes, attachment is required
+                  จำเป็น
                 </MenuItem>
               </Select>
 
@@ -689,13 +593,13 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               error={Boolean(errors.status)}
             >
               <InputLabel id="leave-type-status-label">
-                Status
+                สถานะ
               </InputLabel>
 
               <Select
                 labelId="leave-type-status-label"
                 value={formData.status}
-                label="Status"
+                label="สถานะ"
                 onChange={(event) =>
                   handleInputChange(
                     'status',
@@ -707,11 +611,11 @@ function LeaveTypeFormPage({ mode = 'add' }) {
                 }}
               >
                 <MenuItem value="Active">
-                  Active
+                  ใช้งานอยู่
                 </MenuItem>
 
                 <MenuItem value="Inactive">
-                  Inactive
+                  ไม่ใช้งาน
                 </MenuItem>
               </Select>
 
@@ -722,91 +626,17 @@ function LeaveTypeFormPage({ mode = 'add' }) {
               )}
             </FormControl>
 
-            <Box
-              sx={{
-                gridColumn: {
-                  xs: 'auto',
-                  sm: '1 / -1',
-                },
-                padding: '16px',
-                backgroundColor: '#ECFDF5',
-                border: '1px solid #A7F3D0',
-                borderRadius: '8px',
-              }}
-            >
-              <Typography
-                sx={{
-                  color: '#047857',
-                  fontSize: '14px',
-                  fontWeight: 800,
-                }}
-              >
-                Leave entitlement
-              </Typography>
-
-              <Typography
-                sx={{
-                  color: '#065F46',
-                  fontSize: '13px',
-                  lineHeight: 1.7,
-                  marginTop: '6px',
-                }}
-              >
-                When this leave type is created, its default
-                entitlement can be assigned to employees through
-                Leave Entitlement Management.
-              </Typography>
-            </Box>
           </Box>
         </Paper>
 
-        <Paper
-          elevation={0}
+        <Box
           sx={{
-            padding: {
-              xs: '20px',
-              sm: '24px',
-            },
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E5E7EB',
-            borderRadius: '12px',
+            gridColumn: '1 / -1',
             display: 'flex',
-            alignItems: {
-              xs: 'stretch',
-              sm: 'center',
-            },
-            justifyContent: 'space-between',
-            flexDirection: {
-              xs: 'column',
-              sm: 'row',
-            },
-            gap: '18px',
+            justifyContent: 'flex-end',
+            paddingTop: '4px',
           }}
         >
-          <Box>
-            <Typography
-              sx={{
-                color: '#111827',
-                fontSize: '16px',
-                fontWeight: 800,
-              }}
-            >
-              Create Leave Type
-            </Typography>
-
-            <Typography
-              sx={{
-                color: '#6B7280',
-                fontSize: '13px',
-                lineHeight: 1.6,
-                marginTop: '4px',
-              }}
-            >
-              Check the entitlement and request conditions before
-              saving.
-            </Typography>
-          </Box>
-
           <Box
             sx={{
               display: 'flex',
@@ -820,7 +650,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
             <Button
               type="button"
               variant="outlined"
-              onClick={handleReset}
+              onClick={() => navigate(returnTo)}
               sx={{
                 minWidth: '110px',
                 height: '44px',
@@ -838,7 +668,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
                 },
               }}
             >
-              Cancel
+              ยกเลิก
             </Button>
 
             <Button
@@ -849,7 +679,7 @@ function LeaveTypeFormPage({ mode = 'add' }) {
                 minWidth: '160px',
                 height: '44px',
                 padding: '0 20px',
-                backgroundColor: '#059669',
+                backgroundColor: '#2563EB',
                 color: '#FFFFFF',
                 borderRadius: '8px',
                 fontSize: '14px',
@@ -858,16 +688,17 @@ function LeaveTypeFormPage({ mode = 'add' }) {
                 boxShadow: 'none',
 
                 '&:hover': {
-                  backgroundColor: '#047857',
+                  backgroundColor: '#1D4ED8',
                   boxShadow: 'none',
                 },
               }}
             >
-              Save Leave Type
+              {saving ? 'กำลังบันทึก...' : 'บันทึก'}
             </Button>
           </Box>
-        </Paper>
+        </Box>
       </Box>
+      <Dialog open={confirmationOpen} onClose={() => { if (!saving) { setConfirmationOpen(false); setConfirmationError(''); } }} fullWidth maxWidth="sm"><DialogTitle sx={{ fontWeight: 800 }}>ยืนยันการบันทึกประเภทการลา</DialogTitle><DialogContent>{confirmationError ? <Alert severity="error" sx={{ marginBottom: '16px' }}>{confirmationError}</Alert> : null}<Box sx={{ display: 'grid', gap: '10px' }}><Typography><strong>รหัส:</strong> {isEditMode ? formData.code : 'ระบบสร้างอัตโนมัติ'}</Typography><Typography><strong>ชื่อ:</strong> {formData.name}</Typography><Typography><strong>สิทธิ์เริ่มต้น:</strong> {formData.defaultDays} วัน</Typography><Typography><strong>ช่วงวันที่ขอ:</strong> {formData.minimumDays}-{formData.maximumDaysPerRequest} วัน</Typography><Typography><strong>เอกสารแนบ:</strong> {formData.attachmentRequired === 'Yes' ? 'จำเป็น' : 'ไม่จำเป็น'}</Typography></Box></DialogContent><DialogActions sx={{ padding: '14px 20px' }}><Button type="button" variant="outlined" color="secondary" disabled={saving} onClick={() => { setConfirmationOpen(false); setConfirmationError(''); }}>กลับไปแก้ไข</Button><Button type="button" variant="contained" color="success" disabled={saving} onClick={confirmSave}>{saving ? 'กำลังบันทึก...' : 'ยืนยันบันทึก'}</Button></DialogActions></Dialog>
     </HRLayout>
   );
 }

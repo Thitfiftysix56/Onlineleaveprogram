@@ -744,12 +744,10 @@ const calculateLeaveAvailability = ({
       0,
     );
 
-  const availableDays =
-    Math.max(
-      remainingDays -
-        pendingDays,
-      0,
-    );
+  const availableDays = Math.max(
+    remainingDays - pendingDays,
+    0,
+  );
 
   return {
     entitlement,
@@ -1061,7 +1059,7 @@ export const submitLeaveRequest = ({
     availability.availableDays
   ) {
     setLastError(
-      `Insufficient leave balance. Available: ${availability.availableDays} day(s).`,
+      `ไม่สามารถส่งคำขอได้ เนื่องจากสิทธิ์ที่ยื่นได้คงเหลือ ${availability.availableDays} วัน${availability.pendingDays > 0 ? ` และมีคำขอรออนุมัติ ${availability.pendingDays} วัน` : ''}`,
     );
 
     return null;
@@ -1363,7 +1361,7 @@ export const approveLeaveRequest = (
     entitlement.remainingDays
   ) {
     setLastError(
-      `Insufficient leave balance. Remaining: ${entitlement.remainingDays} day(s).`,
+      `ไม่สามารถอนุมัติคำขอได้ เนื่องจากสิทธิ์วันลาคงเหลือ ${entitlement.remainingDays} วัน`,
     );
 
     return null;
