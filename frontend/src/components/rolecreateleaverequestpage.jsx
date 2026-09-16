@@ -899,6 +899,14 @@ function RoleCreateLeaveRequestPage({
     [maximumSelectableDate, selectedLeaveType],
   );
 
+  const maximumEndDate = useMemo(() => {
+    if (!formData.startDate) return maximumSelectableDate;
+    const endOfStartYear = `${formData.startDate.slice(0, 4)}-12-31`;
+    return endOfStartYear < maximumSelectableDate
+      ? endOfStartYear
+      : maximumSelectableDate;
+  }, [formData.startDate, maximumSelectableDate]);
+
   const dateSelectionDisabled = !selectedLeaveType || !selectedLeaveType.isSelectable;
 
   const activeHolidayByDate =
@@ -1192,7 +1200,10 @@ function RoleCreateLeaveRequestPage({
       ...previousData,
       startDate,
       endDate:
-        previousData.endDate && previousData.endDate < startDate
+        previousData.endDate && (
+          previousData.endDate < startDate ||
+          previousData.endDate.slice(0, 4) !== startDate.slice(0, 4)
+        )
           ? ''
           : previousData.endDate,
     }));
@@ -1520,7 +1531,16 @@ function RoleCreateLeaveRequestPage({
           'วันที่สิ้นสุดต้องตรงกับหรือหลังวันที่เริ่มลา';
       }
 
-      if (formData.endDate && formData.endDate > maximumSelectableDate) {
+      if (
+        formData.startDate &&
+        formData.endDate &&
+        formData.startDate.slice(0, 4) !== formData.endDate.slice(0, 4)
+      ) {
+        validationErrors.dateRange =
+          'วันที่เริ่มลาและวันที่สิ้นสุดต้องอยู่ภายในปีเดียวกัน';
+      }
+
+      if (formData.endDate && formData.endDate > maximumEndDate) {
         validationErrors.dateRange = getBangkokToday().slice(5, 7) === '12'
           ? 'เดือนธันวาคมสามารถยื่นล่วงหน้าสำหรับปีหน้าได้ถึงวันที่ 31 มกราคมเท่านั้น'
           : 'สิทธิ์ปีหน้าจะเปิดให้ยื่นล่วงหน้าตั้งแต่วันที่ 1 ธันวาคม';
@@ -2409,7 +2429,7 @@ function RoleCreateLeaveRequestPage({
             <ThaiDateField
               label="วันที่สิ้นสุด"
               minDate={formData.startDate || minimumStartDate}
-              maxDate={maximumSelectableDate}
+              maxDate={maximumEndDate}
               holidaysByDate={activeHolidayByDate}
               disabled={dateSelectionDisabled}
               value={

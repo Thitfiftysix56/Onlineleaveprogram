@@ -119,8 +119,9 @@ function ThaiDateField({
   onChange,
   min,
   max,
+  allowedYears,
 }) {
-  return <ThaiCalendarField label={label} value={value} onChange={onChange} min={min} max={max} />;
+  return <ThaiCalendarField label={label} value={value} onChange={onChange} min={min} max={max} allowedYears={allowedYears} />;
 }
 
 function SupervisorReportsPage() {
@@ -182,8 +183,14 @@ function SupervisorReportsPage() {
     return Array.from(map.entries());
   }, [requests]);
 
+  const reportYears = useMemo(() => [...new Set(
+    requests.flatMap((request) => [request.startDate, request.endDate])
+      .filter(Boolean)
+      .map((dateValue) => Number(String(dateValue).slice(0, 4)))
+      .filter(Number.isInteger),
+  )].sort((first, second) => second - first), [requests]);
+
   const filteredRequests = useMemo(() => {
-    if (Boolean(startDate) !== Boolean(endDate)) return [];
     return requests.filter((request) => {
       const requestStatus = String(
         request.status || '',
@@ -428,6 +435,7 @@ function SupervisorReportsPage() {
               }}
               min={endDate ? `${endDate.slice(0, 4)}-01-01` : undefined}
               max={endDate || undefined}
+              allowedYears={reportYears}
             />
 
             {/* วันที่สิ้นสุด */}
@@ -440,6 +448,7 @@ function SupervisorReportsPage() {
               }}
               min={startDate || undefined}
               max={startDate ? `${startDate.slice(0, 4)}-12-31` : undefined}
+              allowedYears={reportYears}
             />
 
           </Box>

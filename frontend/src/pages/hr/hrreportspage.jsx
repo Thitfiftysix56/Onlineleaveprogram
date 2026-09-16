@@ -280,8 +280,9 @@ function ThaiDateField({
   onChange,
   min,
   max,
+  allowedYears,
 }) {
-  return <ThaiCalendarField label={label} value={value} onChange={onChange} min={min} max={max} primaryColor={theme.primary} />;
+  return <ThaiCalendarField label={label} value={value} onChange={onChange} min={min} max={max} allowedYears={allowedYears} primaryColor={theme.primary} />;
 }
 
 /* =========================
@@ -690,13 +691,19 @@ function HRReportsPage() {
       );
     }, [leaveRequests]);
 
+  const reportYears = useMemo(() => [...new Set(
+    leaveRequests.flatMap((request) => [request.startDate, request.endDate])
+      .filter(Boolean)
+      .map((dateValue) => Number(String(dateValue).slice(0, 4)))
+      .filter(Number.isInteger),
+  )].sort((first, second) => second - first), [leaveRequests]);
+
   /* =========================
      Filter
   ========================= */
 
   const filteredRequests =
     useMemo(() => {
-      if (Boolean(startDate) !== Boolean(endDate)) return [];
       const keyword =
         searchText
           .trim()
@@ -1574,6 +1581,7 @@ function HRReportsPage() {
               }}
               min={endDate ? `${endDate.slice(0, 4)}-01-01` : undefined}
               max={endDate || undefined}
+              allowedYears={reportYears}
             />
 
             {/* End Date */}
@@ -1589,6 +1597,7 @@ function HRReportsPage() {
               }}
               min={startDate || undefined}
               max={startDate ? `${startDate.slice(0, 4)}-12-31` : undefined}
+              allowedYears={reportYears}
             />
 
           </Box>

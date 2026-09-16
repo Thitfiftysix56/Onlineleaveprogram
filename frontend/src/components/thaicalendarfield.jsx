@@ -31,10 +31,20 @@ const thaiMonths = [
   'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
 ];
 
-const calendarStartValue = (value, min, max) => {
-  const candidate = value || today();
-  if (min && candidate < min) return min;
-  if (max && candidate > max) return max;
+const calendarStartValue = (value, min, max, allowedYears) => {
+  let candidate = value || today();
+  if (min && candidate < min) candidate = min;
+  if (max && candidate > max) candidate = max;
+
+  const years = Array.isArray(allowedYears)
+    ? [...new Set(allowedYears.map(Number).filter(Number.isInteger))].sort((first, second) => second - first)
+    : [];
+  if (years.length > 0 && !years.includes(Number(candidate.slice(0, 4)))) {
+    const year = years[0];
+    candidate = `${year}-01-01`;
+    if (min && candidate < min) candidate = min;
+    if (max && candidate > max) candidate = max;
+  }
   return candidate;
 };
 
@@ -48,22 +58,30 @@ function ThaiCalendarField({
   helperText = '',
   min,
   max,
+  allowedYears,
   primaryColor,
 }) {
   const [open, setOpen] = useState(false);
   const [visibleMonth, setVisibleMonth] = useState(() =>
-    new Date(`${calendarStartValue(value, min, max)}T00:00:00Z`));
+    new Date(`${calendarStartValue(value, min, max, allowedYears)}T00:00:00Z`));
 
   const openPicker = () => {
     if (disabled) return;
-    setVisibleMonth(new Date(`${calendarStartValue(value, min, max)}T00:00:00Z`));
+    setVisibleMonth(new Date(`${calendarStartValue(value, min, max, allowedYears)}T00:00:00Z`));
     setOpen(true);
   };
   const year = visibleMonth.getUTCFullYear();
   const month = visibleMonth.getUTCMonth();
   const visibleMonthValue = `${year}-${String(month + 1).padStart(2, '0')}`;
-  const previousMonthDisabled = Boolean(min && visibleMonthValue <= min.slice(0, 7));
-  const nextMonthDisabled = Boolean(max && visibleMonthValue >= max.slice(0, 7));
+  const normalizedAllowedYears = Array.isArray(allowedYears)
+    ? [...new Set(allowedYears.map(Number).filter(Number.isInteger))]
+    : null;
+  const previousMonthYear = new Date(Date.UTC(year, month - 1, 1)).getUTCFullYear();
+  const nextMonthYear = new Date(Date.UTC(year, month + 1, 1)).getUTCFullYear();
+  const previousMonthDisabled = Boolean(min && visibleMonthValue <= min.slice(0, 7)) ||
+    Boolean(normalizedAllowedYears && !normalizedAllowedYears.includes(previousMonthYear));
+  const nextMonthDisabled = Boolean(max && visibleMonthValue >= max.slice(0, 7)) ||
+    Boolean(normalizedAllowedYears && !normalizedAllowedYears.includes(nextMonthYear));
   const currentYear = Number(today().slice(0, 4));
   const minimumYear = Math.max(
     SYSTEM_START_YEAR,
@@ -73,7 +91,8 @@ function ThaiCalendarField({
   const selectableYears = Array.from(
     { length: maximumYear - minimumYear + 1 },
     (_, index) => maximumYear - index,
-  );
+  ).filter((selectableYear) =>
+    !normalizedAllowedYears || normalizedAllowedYears.includes(selectableYear));
   const firstWeekday = new Date(Date.UTC(year, month, 1)).getUTCDay();
   const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   const days = Array.from({ length: 42 }, (_, index) => {
@@ -90,7 +109,8 @@ function ThaiCalendarField({
     setVisibleMonth(new Date(Date.UTC(numericYear, nextMonth, 1)));
   };
   const todayValue = today();
-  const todayOutsideRange = Boolean(min && todayValue < min) || Boolean(max && todayValue > max);
+  const todayOutsideRange = Boolean(min && todayValue < min) || Boolean(max && todayValue > max) ||
+    Boolean(normalizedAllowedYears && !normalizedAllowedYears.includes(Number(todayValue.slice(0, 4))));
   const showCurrentMonth = () => {
     if (todayOutsideRange) return;
     setVisibleMonth(new Date(`${todayValue}T00:00:00Z`));

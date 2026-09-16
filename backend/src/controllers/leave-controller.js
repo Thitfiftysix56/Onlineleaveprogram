@@ -286,6 +286,7 @@ async function validate(connection, employeeId, body, currentId = 0, submitting 
   if (!submitting && !leaveTypeId && !startDate && !endDate && !reason) return { value: { leaveTypeId: null, startDate: null, endDate: null, reason: '' } }
   if (!leaveTypeId || !startDate || !endDate || !reason) return { error: 'กรุณาระบุประเภทการลา วันที่เริ่มต้น วันที่สิ้นสุด และเหตุผลการลาให้ครบถ้วน' }
   if (startDate > endDate) return { error: 'วันที่สิ้นสุดต้องตรงกับหรืออยู่หลังวันที่เริ่มลา' }
+  if (startDate.slice(0, 4) !== endDate.slice(0, 4)) return { error: 'วันที่เริ่มลาและวันที่สิ้นสุดต้องอยู่ภายในปีเดียวกัน' }
   if (Number(endDate.slice(0, 4)) - Number(startDate.slice(0, 4)) > 1) return { error: 'คำขอลาคร่อมได้ไม่เกิน 2 ปีต่อเนื่อง' }
   const advanceBookingError = validateAdvanceBookingPolicy(startDate, endDate)
   if (advanceBookingError) return { error: advanceBookingError }

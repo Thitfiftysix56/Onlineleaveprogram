@@ -96,9 +96,6 @@ function LeaveEntitlementManagementPage() {
           .map(normalizeLeaveType)
           .filter((item) => item.isActive);
         setLeaveTypes(nextLeaveTypes);
-        setLeaveTypeFilter((current) => current !== 'all'
-          ? current
-          : String(nextLeaveTypes[0]?.id || 'all'));
       })
       .catch((loadError) => {
         if (active) {
