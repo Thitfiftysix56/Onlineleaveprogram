@@ -19,6 +19,8 @@ import {
 import HRLayout from '../../layouts/hrlayout.jsx';
 import { PageHeader } from '../../components/sharedvisualfoundation.jsx';
 import { roleDashboardCardSurfaceSx } from '../../theme/rolecardsurface.js';
+import { isPersonName, sanitizePersonName } from '../../utils/personname.js';
+import { getEmailInputError, isValidEmail, sanitizeEmailInput } from '../../utils/emailvalidation.js';
 import ThaiCalendarField from '../../components/thaicalendarfield.jsx';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getDepartments } from '../../api/department-service.js';
@@ -31,15 +33,27 @@ import {
   updateEmployee,
 } from '../../api/employee-service.js';
 
-function ThaiDateField({ label, value, onChange, error, helperText }) {
-  return <ThaiCalendarField label={label} value={value} onChange={onChange} required error={error} helperText={helperText} primaryColor="#059669" />;
+function ThaiDateField({ label, value, onChange, error, helperText, min, max }) {
+  return <ThaiCalendarField label={label} value={value} onChange={onChange} required error={error} helperText={helperText} min={min} max={max} primaryColor="#059669" />;
 }
+
+const bangkokToday = () => new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit',
+}).format(new Date());
+
+const oneYearBefore = (dateValue) => {
+  const date = new Date(`${dateValue}T00:00:00Z`);
+  date.setUTCFullYear(date.getUTCFullYear() - 1);
+  return date.toISOString().slice(0, 10);
+};
 
 function EmployeeFormPage({ mode = 'add' }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { employeeId } = useParams();
   const isEditMode = mode === 'edit';
+  const maximumNewEmploymentDate = bangkokToday();
+  const minimumNewEmploymentDate = oneYearBefore(maximumNewEmploymentDate);
   const returnTo =
     typeof location.state?.returnTo === 'string' &&
     location.state.returnTo.startsWith('/')
@@ -149,18 +163,24 @@ function EmployeeFormPage({ mode = 'add' }) {
         'กรุณากรอกชื่อ';
     }
 
+    if (formData.firstName.trim() && !isPersonName(formData.firstName)) {
+      validationErrors.firstName = 'ชื่อต้องเป็นตัวอักษรภาษาไทยหรือภาษาอังกฤษเท่านั้น';
+    }
+
     if (!formData.lastName.trim()) {
       validationErrors.lastName =
         'กรุณากรอกนามสกุล';
+    }
+
+    if (formData.lastName.trim() && !isPersonName(formData.lastName)) {
+      validationErrors.lastName = 'นามสกุลต้องเป็นตัวอักษรภาษาไทยหรือภาษาอังกฤษเท่านั้น';
     }
 
     if (!formData.email.trim()) {
       validationErrors.email =
         'กรุณากรอกอีเมล';
     } else {
-      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-      if (!emailPattern.test(formData.email.trim())) {
+      if (!isValidEmail(formData.email)) {
         validationErrors.email =
           'รูปแบบอีเมลไม่ถูกต้อง';
       }
@@ -206,6 +226,12 @@ function EmployeeFormPage({ mode = 'add' }) {
     if (!formData.employmentDate) {
       validationErrors.employmentDate =
         'กรุณาเลือกวันที่เริ่มงาน';
+    } else if (
+      !isEditMode
+      && (formData.employmentDate < minimumNewEmploymentDate
+        || formData.employmentDate > maximumNewEmploymentDate)
+    ) {
+      validationErrors.employmentDate = 'วันเริ่มงานต้องอยู่ภายใน 1 ปีย้อนหลังและไม่เกินวันที่ปัจจุบัน';
     }
 
     setErrors(validationErrors);
@@ -405,7 +431,7 @@ function EmployeeFormPage({ mode = 'add' }) {
               onChange={(event) =>
                 handleInputChange(
                   'firstName',
-                  event.target.value,
+                  sanitizePersonName(event.target.value),
                 )
               }
               error={Boolean(errors.firstName)}
@@ -425,7 +451,7 @@ function EmployeeFormPage({ mode = 'add' }) {
               onChange={(event) =>
                 handleInputChange(
                   'lastName',
-                  event.target.value,
+                  sanitizePersonName(event.target.value),
                 )
               }
               error={Boolean(errors.lastName)}
@@ -444,12 +470,14 @@ function EmployeeFormPage({ mode = 'add' }) {
               label="อีเมล"
               placeholder="employee@organization.co.th"
               value={formData.email}
-              onChange={(event) =>
-                handleInputChange(
-                  'email',
-                  event.target.value,
-                )
-              }
+              onChange={(event) => {
+                const input = event.target.value;
+                const sanitizedEmail = sanitizeEmailInput(input);
+                handleInputChange('email', sanitizedEmail);
+                if (input !== sanitizedEmail) {
+                  setErrors((previous) => ({ ...previous, email: getEmailInputError(input) }));
+                }
+              }}
               error={Boolean(errors.email)}
               helperText={errors.email}
               sx={{
@@ -648,6 +676,8 @@ function EmployeeFormPage({ mode = 'add' }) {
               onChange={(value) => handleInputChange('employmentDate', value)}
               error={Boolean(errors.employmentDate)}
               helperText={errors.employmentDate}
+              min={isEditMode ? undefined : minimumNewEmploymentDate}
+              max={isEditMode ? undefined : maximumNewEmploymentDate}
             />
           </Box>
         </Paper>

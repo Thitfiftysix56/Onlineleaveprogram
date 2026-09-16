@@ -127,8 +127,38 @@ export function installThaiUi() {
   }
   const start = () => {
     translateTree(document.body)
-    new MutationObserver((mutations) => { for (const mutation of mutations) { if (mutation.type === 'characterData') translateTree(mutation.target); for (const node of mutation.addedNodes) translateTree(node) } })
-      .observe(document.body, { childList: true, subtree: true, characterData: true })
+    const pendingRoots = new Set()
+    let scheduled = false
+    const flush = () => {
+      scheduled = false
+      const roots = [...pendingRoots]
+      pendingRoots.clear()
+      for (const root of roots) {
+        if (root.isConnected) translateTree(root)
+      }
+    }
+    const schedule = () => {
+      if (scheduled) return
+      scheduled = true
+      if ('requestIdleCallback' in window) window.requestIdleCallback(flush, { timeout: 100 })
+      else window.requestAnimationFrame(flush)
+    }
+    const queueRoot = (node) => {
+      const root = node.nodeType === Node.TEXT_NODE ? node.parentElement : node
+      if (!(root instanceof Element)) return
+      for (const queuedRoot of pendingRoots) {
+        if (queuedRoot.contains(root)) return
+        if (root.contains(queuedRoot)) pendingRoots.delete(queuedRoot)
+      }
+      pendingRoots.add(root)
+      schedule()
+    }
+    new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'characterData') queueRoot(mutation.target)
+        for (const node of mutation.addedNodes) queueRoot(node)
+      }
+    }).observe(document.body, { childList: true, subtree: true, characterData: true })
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true }); else start()
 }

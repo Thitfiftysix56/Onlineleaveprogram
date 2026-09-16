@@ -17,6 +17,7 @@ const approvedMigrations = [
   '20260911_add_employee_intended_role.sql',
   '20260911_add_leave_request_year_allocations.sql',
   '20260911_sync_thailand_public_holidays_2026.sql',
+  '20260916_sync_thailand_public_holidays_2025.sql',
 ]
 const allowed = new Set(approvedMigrations)
 const requested = process.argv.slice(2)

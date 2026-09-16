@@ -122,13 +122,9 @@ const normalizeEmployee = (
     '-',
 
   status:
-    String(
-      employee.status ||
-        employee.employeeStatus ||
-        'active',
-    )
-      .trim()
-      .toLowerCase(),
+    String(employee.status || employee.employeeStatus || 'active').trim().toLowerCase() === 'active'
+      ? 'active'
+      : 'inactive',
 });
 
 /* =========================
@@ -141,7 +137,6 @@ const translateStatus = (
   const labels = {
     active: 'ใช้งานอยู่',
     inactive: 'ไม่ใช้งาน',
-    resigned: 'ลาออก',
   };
 
   return labels[status] || status || '-';
@@ -668,10 +663,10 @@ function EmployeeManagementPage() {
             resultLabel=""
             activeFilters={[
               ...(departmentFilter !== 'all' ? [{ key: 'department', label: `แผนก: ${departmentFilter}`, onDelete: () => setDepartmentFilter('all') }] : []),
-              ...(statusFilter !== 'all' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'active' ? 'ใช้งานอยู่' : statusFilter === 'inactive' ? 'ไม่ใช้งาน' : 'ลาออก'}`, onDelete: () => setStatusFilter('all') }] : []),
+              ...(statusFilter !== 'all' ? [{ key: 'status', label: `สถานะ: ${statusFilter === 'active' ? 'ใช้งานอยู่' : 'ไม่ใช้งาน'}`, onDelete: () => setStatusFilter('all') }] : []),
             ]}
             onClearFilters={handleClearFilters}
-            filters={<><FormControl size="small"><Select value={departmentFilter === 'all' ? '' : departmentFilter} displayEmpty renderValue={(value) => value ? departmentLabelFor(value) : 'แผนก'} inputProps={{ 'aria-label': 'แผนก' }} onChange={(event) => setDepartmentFilter(event.target.value || 'all')}>{departments.map((department) => <MenuItem key={department} value={department}>{departmentLabelFor(department)}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={statusFilter === 'all' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'active' ? 'ใช้งานอยู่' : value === 'inactive' ? 'ไม่ใช้งาน' : value === 'resigned' ? 'ลาออก' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'all')}><MenuItem value="active">ใช้งานอยู่</MenuItem><MenuItem value="inactive">ไม่ใช้งาน</MenuItem><MenuItem value="resigned">ลาออก</MenuItem></Select></FormControl></>}
+            filters={<><FormControl size="small"><Select value={departmentFilter === 'all' ? '' : departmentFilter} displayEmpty renderValue={(value) => value ? departmentLabelFor(value) : 'แผนก'} inputProps={{ 'aria-label': 'แผนก' }} onChange={(event) => setDepartmentFilter(event.target.value || 'all')}>{departments.map((department) => <MenuItem key={department} value={department}>{departmentLabelFor(department)}</MenuItem>)}</Select></FormControl><FormControl size="small"><Select value={statusFilter === 'all' ? '' : statusFilter} displayEmpty renderValue={(value) => value === 'active' ? 'ใช้งานอยู่' : value === 'inactive' ? 'ไม่ใช้งาน' : 'สถานะ'} inputProps={{ 'aria-label': 'สถานะ' }} onChange={(event) => setStatusFilter(event.target.value || 'all')}><MenuItem value="active">ใช้งานอยู่</MenuItem><MenuItem value="inactive">ไม่ใช้งาน</MenuItem></Select></FormControl></>}
             sx={{ marginTop: '16px' }}
           />
 
@@ -833,9 +828,6 @@ function EmployeeManagementPage() {
                   ไม่ใช้งาน
                 </MenuItem>
 
-                <MenuItem value="resigned">
-                  ลาออก
-                </MenuItem>
               </Select>
             </FormControl>
 
@@ -1152,9 +1144,7 @@ function EmployeeManagementPage() {
                                 'nowrap',
                             }}
                           >
-                            {employee.status !== 'resigned' ? (
-                              <Button type="button" size="small" variant="outlined" disabled={updatingId === employee.id} onClick={(event) => { event.stopPropagation(); if (employee.status === 'active') setDisableTarget(employee); else handleToggleStatus(employee); }} sx={{ color: employee.status === 'active' ? '#DC2626' : '#15803D', borderColor: employee.status === 'active' ? '#FECACA' : '#BBF7D0', '&:hover': { backgroundColor: employee.status === 'active' ? '#FEF2F2' : '#F0FDF4' } }}>{updatingId === employee.id ? 'กำลังบันทึก...' : employee.status === 'active' ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}</Button>
-                            ) : null}
+                            <Button type="button" size="small" variant="outlined" disabled={updatingId === employee.id} onClick={(event) => { event.stopPropagation(); if (employee.status === 'active') setDisableTarget(employee); else handleToggleStatus(employee); }} sx={{ color: employee.status === 'active' ? '#DC2626' : '#15803D', borderColor: employee.status === 'active' ? '#FECACA' : '#BBF7D0', '&:hover': { backgroundColor: employee.status === 'active' ? '#FEF2F2' : '#F0FDF4' } }}>{updatingId === employee.id ? 'กำลังบันทึก...' : employee.status === 'active' ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}</Button>
                             {employee.status !== 'active' ? (
                               <Button
                                 type="button"

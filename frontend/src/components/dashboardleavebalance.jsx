@@ -10,6 +10,8 @@ import {
 } from '@mui/material';
 
 import { getLeaveOptions } from '../api/leave-service.js';
+import { getProfile } from '../api/profile-service.js';
+import { getEmploymentYears } from '../utils/employmentyears.js';
 
 const number = (value) => Number(value || 0);
 
@@ -105,6 +107,19 @@ export default function DashboardLeaveBalance() {
   const [balances, setBalances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [hireDate, setHireDate] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    getProfile()
+      .then((profile) => {
+        if (active) setHireDate(profile?.hireDate || '');
+      })
+      .catch(() => {
+        if (active) setHireDate('');
+      });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -147,9 +162,7 @@ export default function DashboardLeaveBalance() {
     };
   }, [year]);
 
-  const years = [0, 1, 2].map(
-    (offset) => new Date().getFullYear() - offset,
-  );
+  const years = getEmploymentYears(hireDate);
 
   return (
     <Box

@@ -1453,7 +1453,7 @@ function RoleDepartmentManagementPage({
       <ConfirmationDialog
         open={Boolean(disableTarget)}
         title="ยืนยันการปิดใช้งานแผนก"
-        description={`ต้องการปิดใช้งานแผนก ${departmentLabelFor(disableTarget?.departmentName)} ใช่หรือไม่`}
+        description={`ต้องการปิดใช้งานแผนก ${departmentLabelFor(disableTarget?.departmentName)} ใช่หรือไม่ ต้องย้ายหรือปิดใช้งานพนักงานและตำแหน่งในแผนกนี้ก่อน`}
         loading={Number(updatingId) === Number(disableTarget?.id)}
         onCancel={() => setDisableTarget(null)}
         onConfirm={async () => { const target = disableTarget; if (!target) return; await handleStatusChange(target); setDisableTarget(null); }}

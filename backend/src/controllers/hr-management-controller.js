@@ -1,7 +1,9 @@
 import { pool } from '../config/database.js'
 import { createNotification } from '../services/notification-service.js'
+import { isPersonName } from '../utils/person-name.js'
+import { isValidEmail } from '../utils/email-validation.js'
 
-const employeeStatuses = new Set(['active', 'inactive', 'resigned'])
+const employeeStatuses = new Set(['active', 'inactive'])
 const holidayTypes = new Set(['public holiday', 'company holiday', 'special holiday'])
 
 const trim = (value) => String(value ?? '').trim()
@@ -25,6 +27,18 @@ const validDate = (value) => {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date
     ? date
     : null
+}
+const bangkokToday = () => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date())
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  return `${values.year}-${values.month}-${values.day}`
+}
+const oneYearBefore = (dateValue) => {
+  const dateValueUtc = new Date(`${dateValue}T00:00:00Z`)
+  dateValueUtc.setUTCFullYear(dateValueUtc.getUTCFullYear() - 1)
+  return dateValueUtc.toISOString().slice(0, 10)
 }
 const decimal = (value, minimum = 0, maximum = 365) => {
   const number = Number(value)
@@ -101,6 +115,55 @@ async function referenceExists(table, idColumn, id, requireActive = false) {
   return rows.length > 0
 }
 
+async function transferPendingApprovalNotifications(employeeId, roleName, supervisorId) {
+  const [pendingRequests] = await pool.execute(
+    `SELECT leave_request_id, request_no
+     FROM leave_requests
+     WHERE employee_id = ? AND status = 'pending'`,
+    [employeeId],
+  )
+  if (!pendingRequests.length) return
+
+  const [approvers] = String(roleName || '').toLowerCase() === 'supervisor'
+    ? await pool.execute(
+        `SELECT u.user_id
+         FROM users u
+         JOIN roles r ON r.role_id = u.role_id
+         JOIN employees e ON e.employee_id = u.employee_id
+         WHERE LOWER(r.role_name) = 'hr'
+           AND LOWER(u.status) = 'active'
+           AND LOWER(e.status) = 'active'`,
+      )
+    : await pool.execute(
+        `SELECT u.user_id
+         FROM users u
+         JOIN roles r ON r.role_id = u.role_id
+         JOIN employees e ON e.employee_id = u.employee_id
+         WHERE e.employee_id = ?
+           AND LOWER(r.role_name) = 'supervisor'
+           AND LOWER(u.status) = 'active'
+           AND LOWER(e.status) = 'active'`,
+        [supervisorId],
+      )
+
+  for (const leaveRequest of pendingRequests) {
+    await pool.execute(
+      `DELETE FROM notifications
+       WHERE leave_request_id = ? AND notification_type = 'leave-submitted'`,
+      [leaveRequest.leave_request_id],
+    )
+    for (const approver of approvers) {
+      await createNotification(pool, {
+        userId: approver.user_id,
+        type: 'leave-submitted',
+        title: 'New leave request',
+        message: `Leave request ${leaveRequest.request_no || `#${leaveRequest.leave_request_id}`} is waiting for approval.`,
+        leaveRequestId: leaveRequest.leave_request_id,
+      })
+    }
+  }
+}
+
 export async function listEmployees(request, response) {
   try {
     const conditions = []
@@ -156,9 +219,18 @@ async function validateEmployee(body, currentId = null) {
   const hireDate = validDate(body.hireDate)
   const status = lower(body.status)
   if (currentId && (!employeeCode || employeeCode.length > 20)) return { error: 'Employee code is required and must not exceed 20 characters.' }
+  if ((firstName || lastName) && (!isPersonName(firstName) || !isPersonName(lastName))) return { error: 'ชื่อและนามสกุลต้องเป็นตัวอักษรภาษาไทยหรือภาษาอังกฤษเท่านั้น' }
   if (!firstName || !lastName || firstName.length > 100 || lastName.length > 100) return { error: 'First name and last name are required.' }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 100) return { error: 'A valid email is required.' }
+  if (!isValidEmail(email)) return { error: 'รูปแบบอีเมลไม่ถูกต้อง' }
   if (!/^\d{10}$/.test(phone)) return { error: 'กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 10 หลัก' }
+  if (!hireDate) return { error: 'A valid hire date is required.' }
+  if (!currentId) {
+    const maximumHireDate = bangkokToday()
+    const minimumHireDate = oneYearBefore(maximumHireDate)
+    if (hireDate < minimumHireDate || hireDate > maximumHireDate) {
+      return { error: 'วันเริ่มงานต้องอยู่ภายใน 1 ปีย้อนหลังและไม่เกินวันที่ปัจจุบัน' }
+    }
+  }
   if (!departmentId || !await referenceExists('departments', 'department_id', departmentId, true)) return { error: 'The selected department is invalid or inactive.' }
   if (!positionId || !await referenceExists('positions', 'position_id', positionId, true)) return { error: 'The selected position is invalid or inactive.' }
   const [roles] = await pool.execute(
@@ -182,8 +254,7 @@ async function validateEmployee(body, currentId = null) {
     )
     if (!supervisors.length) return { error: 'The selected supervisor is invalid or inactive.' }
   }
-  if (!hireDate) return { error: 'A valid hire date is required.' }
-  if (!employeeStatuses.has(status)) return { error: 'Status must be active, inactive or resigned.' }
+  if (!employeeStatuses.has(status)) return { error: 'Status must be active or inactive.' }
   const [duplicates] = currentId
     ? await pool.execute(
         `SELECT employee_id, employee_code, email FROM employees
@@ -276,7 +347,7 @@ export async function updateEmployee(request, response) {
       {
         ...request.body,
         employeeCode: existingEmployee.employee_code,
-        status: existingEmployee.status,
+        status: lower(existingEmployee.status) === 'active' ? 'active' : 'inactive',
       },
       id,
     )
@@ -287,6 +358,11 @@ export async function updateEmployee(request, response) {
       [v.employeeCode, v.firstName, v.lastName, v.phone, v.email, v.departmentId, v.positionId, v.roleId, v.supervisorId, v.hireDate, v.status, id],
     )
     await pool.execute('UPDATE users SET role_id = ?, updated_at = NOW() WHERE employee_id = ?', [v.roleId, id])
+    const approvalRouteChanged = Number(existingEmployee.supervisor_id || 0) !== Number(v.supervisorId || 0)
+      || lower(existingEmployee.role_name) !== lower(v.roleName)
+    if (approvalRouteChanged) {
+      await transferPendingApprovalNotifications(id, v.roleName, v.supervisorId)
+    }
     if (v.status !== 'active') {
       await pool.execute(
         `UPDATE users
@@ -316,7 +392,7 @@ export async function updateEmployeeStatus(request, response) {
     const id = positiveId(request.params.employeeId)
     const status = lower(request.body.status)
     if (!id) return sendError(response, 400, 'A valid employeeId is required.')
-    if (!employeeStatuses.has(status)) return sendError(response, 400, 'Status must be active, inactive or resigned.')
+    if (!employeeStatuses.has(status)) return sendError(response, 400, 'Status must be active or inactive.')
     const row = await employeeById(id)
     if (!row) return sendError(response, 404, 'Employee was not found.')
     connection = await pool.getConnection()
@@ -354,7 +430,7 @@ export async function deleteEmployee(request, response) {
     if (!id) return sendError(response, 400, 'รหัสพนักงานไม่ถูกต้อง')
     const employee = await employeeById(id)
     if (!employee) return sendError(response, 404, 'ไม่พบข้อมูลพนักงาน')
-    if (lower(employee.status) === 'active') return sendError(response, 409, 'ต้องปิดใช้งานหรือกำหนดสถานะลาออกก่อนจึงจะลบพนักงานได้')
+    if (lower(employee.status) === 'active') return sendError(response, 409, 'ต้องปิดใช้งานพนักงานก่อนจึงจะลบได้')
     const [references] = await pool.execute(
       `SELECT
          (SELECT COUNT(*) FROM users WHERE employee_id = ?) AS user_count,
@@ -467,6 +543,20 @@ export async function updateDepartmentStatus(request, response) {
     if (!id) return sendError(response, 400, 'A valid departmentId is required.')
     if (isActive === null) return sendError(response, 400, 'Status must be Active or Inactive.')
     if (!await departmentById(id)) return sendError(response, 404, 'Department was not found.')
+    if (!isActive) {
+      const [[usage]] = await pool.execute(
+        `SELECT
+           (SELECT COUNT(*) FROM employees WHERE department_id = ? AND status = 'active') AS active_employee_count,
+           (SELECT COUNT(*) FROM positions WHERE department_id = ? AND is_active = 1) AS active_position_count`,
+        [id, id],
+      )
+      if (Number(usage.active_employee_count) > 0) {
+        return sendError(response, 409, 'ไม่สามารถปิดใช้งานแผนกได้ เนื่องจากยังมีพนักงานใช้งานอยู่ กรุณาย้ายหรือปิดใช้งานพนักงานก่อน')
+      }
+      if (Number(usage.active_position_count) > 0) {
+        return sendError(response, 409, 'ไม่สามารถปิดใช้งานแผนกได้ เนื่องจากยังมีตำแหน่งที่เปิดใช้งานอยู่ กรุณาย้ายหรือปิดใช้งานตำแหน่งก่อน')
+      }
+    }
     await pool.execute('UPDATE departments SET is_active = ? WHERE department_id = ?', [isActive, id])
     return response.json({ status: 'ok', message: 'Department status updated successfully', data: { departmentId: id, status: isActive ? 'Active' : 'Inactive' } })
   } catch (error) { return internalError(response, 'Update department status error:', error) }

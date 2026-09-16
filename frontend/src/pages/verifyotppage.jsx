@@ -5,7 +5,6 @@ import {
 } from 'react'
 
 import {
-  Alert,
   Button,
   TextField,
   Typography,
@@ -18,6 +17,7 @@ import {
 
 import api from '../api/axios.js'
 import PasswordRecoveryLayout from '../components/passwordrecoverylayout.jsx'
+import CountdownAlert from '../components/countdownalert.jsx'
 
 import {
   normalizePasswordResetIdentifier,
@@ -332,17 +332,18 @@ function VerifyOtpPage() {
       description=""
     >
       {message && (
-        <Alert
+        <CountdownAlert
           severity={
             message.severity
           }
+          onClose={() => setMessage(null)}
 
           sx={{
             mb: 2,
           }}
         >
           {message.text}
-        </Alert>
+        </CountdownAlert>
       )}
 
 

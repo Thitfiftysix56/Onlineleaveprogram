@@ -31,6 +31,8 @@ import { DataListToolbar } from './shareduiprimitives.jsx';
 import { HeaderlessPageTopOffset, InlineListSummary } from './sharedvisualfoundation.jsx';
 import { roleDashboardCardSurfaceSx } from '../theme/rolecardsurface.js';
 import { formatLeaveType } from '../utils/presentationformatter.js';
+import { getProfile } from '../api/profile-service.js';
+import { getEmploymentStartYear } from '../utils/employmentyears.js';
 
 import {
   useLocation,
@@ -216,13 +218,17 @@ function RoleMyRequestsPage({
   ] = useState(
     [],
   );
+  const [hireDate, setHireDate] = useState('');
 
   useEffect(() => {
     let active = true;
 
-    getMyLeaveRequests()
-      .then((leaveRequests) => {
-        if (active) setRequests(leaveRequests);
+    Promise.all([getMyLeaveRequests(), getProfile().catch(() => null)])
+      .then(([leaveRequests, profile]) => {
+        if (active) {
+          setRequests(leaveRequests);
+          setHireDate(profile?.hireDate || '');
+        }
       })
       .catch((error) => {
         if (active) {
@@ -286,7 +292,7 @@ function RoleMyRequestsPage({
                   '',
               ).slice(0, 4),
           )
-          .filter(Boolean);
+          .filter((year) => year && Number(year) >= getEmploymentStartYear(hireDate));
 
       return [
         ...new Set(years),
@@ -298,7 +304,7 @@ function RoleMyRequestsPage({
           Number(secondYear) -
           Number(firstYear),
       );
-    }, [requests]);
+    }, [hireDate, requests]);
 
   const filteredRequests =
     useMemo(() => {

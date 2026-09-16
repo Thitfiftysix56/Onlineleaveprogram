@@ -183,6 +183,7 @@ function SupervisorReportsPage() {
   }, [requests]);
 
   const filteredRequests = useMemo(() => {
+    if (Boolean(startDate) !== Boolean(endDate)) return [];
     return requests.filter((request) => {
       const requestStatus = String(
         request.status || '',
@@ -421,7 +422,11 @@ function SupervisorReportsPage() {
             <ThaiDateField
               label="วันที่เริ่มต้น"
               value={startDate}
-              onChange={setStartDate}
+              onChange={(value) => {
+                setStartDate(value);
+                if (endDate && endDate.slice(0, 4) !== value.slice(0, 4)) setEndDate('');
+              }}
+              min={endDate ? `${endDate.slice(0, 4)}-01-01` : undefined}
               max={endDate || undefined}
             />
 
@@ -429,8 +434,12 @@ function SupervisorReportsPage() {
             <ThaiDateField
               label="วันที่สิ้นสุด"
               value={endDate}
-              onChange={setEndDate}
+              onChange={(value) => {
+                setEndDate(value);
+                if (startDate && startDate.slice(0, 4) !== value.slice(0, 4)) setStartDate('');
+              }}
               min={startDate || undefined}
+              max={startDate ? `${startDate.slice(0, 4)}-12-31` : undefined}
             />
 
           </Box>

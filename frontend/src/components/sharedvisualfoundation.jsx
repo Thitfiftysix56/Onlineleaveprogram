@@ -251,67 +251,41 @@ export function CompactSummaryCard({
 export function InlineListSummary({ items = [], sx, ...props }) {
   if (!items.length) return null;
 
+  const desktopColumns = items.length === 2
+    ? 'repeat(2, minmax(0, 1fr))'
+    : `repeat(${items.length}, minmax(0, 1fr))`;
+
   return (
-    <Stack
+    <Box
       {...props}
-      direction="row"
-      alignItems="center"
-      useFlexGap
-      flexWrap="wrap"
       sx={{
-        columnGap: `${spacingTokens.sm}px`,
-        rowGap: `${spacingTokens.sm}px`,
+        display: 'grid',
+        width: '100%',
+        gridTemplateColumns: {
+          xs: '1fr',
+          sm: 'repeat(2, minmax(0, 1fr))',
+          md: desktopColumns,
+        },
+        justifyContent: 'stretch',
+        alignItems: 'stretch',
+        gap: `${spacingTokens.lg}px`,
+        marginTop: 0,
         marginBottom: `${spacingTokens.lg}px`,
-        color: colorTokens.text.secondary,
         ...sx,
       }}
     >
       {items.map((item) => (
-        <Box
+        <CompactSummaryCard
           key={item.title || item.label}
-          sx={{
-            position: 'relative',
-            overflow: 'hidden',
-            display: 'inline-flex',
-            alignItems: 'baseline',
-            justifyContent: 'space-between',
-            gap: `${spacingTokens.md}px`,
-            minHeight: 48,
-            minWidth: { xs: '100%', sm: 164 },
-            flex: { xs: '1 1 100%', sm: '0 1 auto' },
-            padding: `${spacingTokens.sm}px ${spacingTokens.lg}px`,
-            border: `1px solid ${item.borderColor || `${item.valueColor || item.color || '#2563EB'}2E`}`,
-            borderRadius: `${radiusTokens.control}px`,
-            background:
-              item.background ||
-              `linear-gradient(135deg, ${item.valueColor || item.color || '#2563EB'}14 0%, #FFFFFF 78%)`,
-            boxShadow: shadowTokens.subtle,
-            boxSizing: 'border-box',
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              width: 88,
-              height: 88,
-              top: -38,
-              right: -30,
-              borderRadius: '50%',
-              backgroundColor:
-                item.glowColor ||
-                `${item.valueColor || item.color || '#2563EB'}24`,
-              filter: 'blur(3px)',
-              pointerEvents: 'none',
-            },
-          }}
-        >
-          <Typography sx={{ position: 'relative', zIndex: 1, color: colorTokens.text.primary, fontSize: 14, fontWeight: 600, lineHeight: 1.45 }}>
-            {item.title || item.label}
-          </Typography>
-          <Typography sx={{ position: 'relative', zIndex: 1, color: item.valueColor || item.color || colorTokens.text.primary, fontSize: 18, fontWeight: 700, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
-            {item.value}{item.unit ? ` ${item.unit}` : ''}
-          </Typography>
-        </Box>
+          title={item.title || item.label}
+          value={`${item.value}${item.unit ? ` ${item.unit}` : ''}`}
+          color={item.valueColor || item.color || '#2563EB'}
+          background={item.background}
+          glowColor={item.glowColor}
+          sx={item.borderColor ? { borderColor: item.borderColor } : undefined}
+        />
       ))}
-    </Stack>
+    </Box>
   );
 }
 

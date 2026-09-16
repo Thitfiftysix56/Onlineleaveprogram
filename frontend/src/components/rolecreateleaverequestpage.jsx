@@ -28,6 +28,7 @@ import {
 import CalendarMonthRounded from '@mui/icons-material/CalendarMonthRounded';
 import { BackButton, PageHeader } from './sharedvisualfoundation.jsx';
 import { roleDashboardCardSurfaceSx } from '../theme/rolecardsurface.js';
+import { SYSTEM_START_YEAR } from '../config/systemdates.js';
 
 import {
   useLocation,
@@ -103,6 +104,11 @@ const addCalendarDays = (dateValue, days) => {
 const SICK_LEAVE_RETROACTIVE_DAYS = 3;
 const SICK_LEAVE_ADVANCE_DAYS = 1;
 const SICK_LEAVE_MEDICAL_CERTIFICATE_DAYS = 3;
+
+const thaiMonths = [
+  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
+];
 
 const isSickLeaveType = (leaveType) => {
   const name = String(leaveType?.name || leaveType?.leaveTypeName || '')
@@ -327,9 +333,31 @@ function ThaiDateField({
     .filter((holiday) => holiday.date.startsWith(visibleMonthPrefix))
     .sort((first, second) => first.date.localeCompare(second.date));
   const todayValue = getBangkokToday();
+  const visibleMonthValue = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const previousMonthDisabled = Boolean(minDate && visibleMonthValue <= minDate.slice(0, 7));
+  const nextMonthDisabled = Boolean(maxDate && visibleMonthValue >= maxDate.slice(0, 7));
+  const currentYear = Number(todayValue.slice(0, 4));
+  const minimumYear = Math.max(
+    SYSTEM_START_YEAR,
+    minDate ? Number(minDate.slice(0, 4)) : SYSTEM_START_YEAR,
+  );
+  const maximumYear = maxDate ? Number(maxDate.slice(0, 4)) : currentYear + 10;
+  const selectableYears = Array.from(
+    { length: maximumYear - minimumYear + 1 },
+    (_, index) => maximumYear - index,
+  );
 
   const moveMonth = (offset) => {
     setVisibleMonth(new Date(Date.UTC(year, month + offset, 1)));
+  };
+
+  const selectMonth = (nextMonth) => setVisibleMonth(new Date(Date.UTC(year, Number(nextMonth), 1)));
+  const selectYear = (nextYear) => {
+    const numericYear = Number(nextYear);
+    let nextMonth = month;
+    if (minDate && numericYear === Number(minDate.slice(0, 4))) nextMonth = Math.max(nextMonth, Number(minDate.slice(5, 7)) - 1);
+    if (maxDate && numericYear === Number(maxDate.slice(0, 4))) nextMonth = Math.min(nextMonth, Number(maxDate.slice(5, 7)) - 1);
+    setVisibleMonth(new Date(Date.UTC(numericYear, nextMonth, 1)));
   };
 
   const selectDate = (day) => {
@@ -434,11 +462,20 @@ function ThaiDateField({
 
       <Dialog open={pickerOpen} onClose={() => setPickerOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-          <IconButton aria-label="เดือนก่อนหน้า" onClick={() => moveMonth(-1)}>‹</IconButton>
-          <Typography sx={{ fontWeight: 800 }}>
-            {visibleMonth.toLocaleDateString('th-TH', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
-          </Typography>
-          <IconButton aria-label="เดือนถัดไป" onClick={() => moveMonth(1)}>›</IconButton>
+          <IconButton aria-label="เดือนก่อนหน้า" disabled={previousMonthDisabled} onClick={() => moveMonth(-1)}>‹</IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <Select size="small" value={month} onChange={(event) => selectMonth(event.target.value)} aria-label="เลือกเดือน" sx={{ minWidth: '132px', borderRadius: '10px', fontWeight: 700, '& .MuiOutlinedInput-notchedOutline': { border: 'none' }, '&:hover .MuiOutlinedInput-notchedOutline': { border: 'none' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { border: 'none' } }}>
+              {thaiMonths.map((monthName, monthIndex) => {
+                const monthValue = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+                const outsideRange = Boolean(minDate && monthValue < minDate.slice(0, 7)) || Boolean(maxDate && monthValue > maxDate.slice(0, 7));
+                return <MenuItem key={monthName} value={monthIndex} disabled={outsideRange}>{monthName}</MenuItem>;
+              })}
+            </Select>
+            <Select size="small" value={year} onChange={(event) => selectYear(event.target.value)} aria-label="เลือกปี" sx={{ minWidth: '96px', borderRadius: '10px', fontWeight: 700, '& .MuiOutlinedInput-notchedOutline': { border: 'none' }, '&:hover .MuiOutlinedInput-notchedOutline': { border: 'none' }, '&.Mui-focused .MuiOutlinedInput-notchedOutline': { border: 'none' } }}>
+              {selectableYears.map((selectableYear) => <MenuItem key={selectableYear} value={selectableYear}>{selectableYear + 543}</MenuItem>)}
+            </Select>
+          </Box>
+          <IconButton aria-label="เดือนถัดไป" disabled={nextMonthDisabled} onClick={() => moveMonth(1)}>›</IconButton>
         </DialogTitle>
         <DialogContent sx={{ paddingBottom: '20px !important' }}>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', textAlign: 'center' }}>

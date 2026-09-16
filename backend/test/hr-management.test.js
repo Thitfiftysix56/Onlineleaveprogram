@@ -205,6 +205,58 @@ test('employee phone is required and must contain exactly ten digits', async () 
   }
 })
 
+test('employee status no longer accepts resigned', async () => {
+  const response = await fetch(`${baseUrl}/api/hr/employees/10/status`, {
+    method: 'PATCH',
+    headers: auth(),
+    body: JSON.stringify({ status: 'resigned' }),
+  })
+  assert.equal(response.status, 400)
+})
+
+test('new employee hire date must be within the past year and not in the future', async () => {
+  const payload = { firstName: 'New', lastName: 'Employee', email: 'hiredate@example.test', phone: '0812345678', departmentId: 1, positionId: 1, status: 'active' }
+  for (const hireDate of ['2020-01-01', '2999-01-01']) {
+    const response = await fetch(`${baseUrl}/api/hr/employees`, {
+      method: 'POST',
+      headers: auth(),
+      body: JSON.stringify({ ...payload, hireDate }),
+    })
+    const body = await response.json()
+    assert.equal(response.status, 400, hireDate)
+    assert.equal(body.message, 'วันเริ่มงานต้องอยู่ภายใน 1 ปีย้อนหลังและไม่เกินวันที่ปัจจุบัน')
+  }
+})
+
+test('employee first and last names accept letters only', async () => {
+  const payload = { firstName: 'New1', lastName: 'Employee', email: 'name@example.test', phone: '0812345678', departmentId: 1, positionId: 1, hireDate: '2026-01-01', status: 'active' }
+  for (const invalidNames of [
+    { firstName: 'New1', lastName: 'Employee' },
+    { firstName: 'New', lastName: 'Employee@' },
+  ]) {
+    const response = await fetch(`${baseUrl}/api/hr/employees`, {
+      method: 'POST',
+      headers: auth(),
+      body: JSON.stringify({ ...payload, ...invalidNames }),
+    })
+    assert.equal(response.status, 400)
+  }
+})
+
+test('employee email rejects invalid domain endings', async () => {
+  const payload = { firstName: 'New', lastName: 'Employee', phone: '0812345678', departmentId: 1, positionId: 1, hireDate: '2026-01-01', status: 'active' }
+  for (const email of ['employee@example.com123', 'employee@example.com@', 'employee@example.c', 'employee@example.com/abc']) {
+    const response = await fetch(`${baseUrl}/api/hr/employees`, {
+      method: 'POST',
+      headers: auth(),
+      body: JSON.stringify({ ...payload, email }),
+    })
+    const body = await response.json()
+    assert.equal(response.status, 400, email)
+    assert.equal(body.message, 'รูปแบบอีเมลไม่ถูกต้อง')
+  }
+})
+
 test('employee delete requires inactive data without business references and removes generated entitlements', async () => {
   pool.execute = async () => [[employeeRow]]
   assert.equal((await fetch(`${baseUrl}/api/hr/employees/10`, { method: 'DELETE', headers: auth() })).status, 409)
@@ -245,12 +297,28 @@ test('department list/get/create/update/status and duplicate validation', async 
   response = await fetch(`${baseUrl}/api/hr/departments/1`, { method: 'PUT', headers: auth(), body: JSON.stringify({ departmentName: 'IT', divisionName: 'Development', description: 'Tech', status: 'Active' }) })
   assert.equal(response.status, 200)
 
-  results = [[[departmentRow]], [{ affectedRows: 1 }]]
+  results = [[[departmentRow]], [[{ active_employee_count: 0, active_position_count: 0 }]], [{ affectedRows: 1 }]]
   pool.execute = async () => results.shift()
   assert.equal((await fetch(`${baseUrl}/api/hr/departments/1/status`, { method: 'PATCH', headers: auth(), body: JSON.stringify({ status: 'Inactive' }) })).status, 200)
 
   pool.execute = async () => [[{ department_id: 2 }]]
   assert.equal((await fetch(`${baseUrl}/api/hr/departments`, { method: 'POST', headers: auth(), body: JSON.stringify({ departmentName: 'IT', divisionName: 'Development', status: 'Active' }) })).status, 409)
+})
+
+test('department cannot be deactivated while active employees or positions remain', async () => {
+  for (const usage of [
+    { active_employee_count: 1, active_position_count: 0 },
+    { active_employee_count: 0, active_position_count: 1 },
+  ]) {
+    const results = [[[departmentRow]], [[usage]]]
+    pool.execute = async () => results.shift()
+    const response = await fetch(`${baseUrl}/api/hr/departments/1/status`, {
+      method: 'PATCH',
+      headers: auth(),
+      body: JSON.stringify({ status: 'Inactive' }),
+    })
+    assert.equal(response.status, 409)
+  }
 })
 
 test('department delete requires inactive department without employees', async () => {

@@ -278,8 +278,10 @@ function ThaiDateField({
   label,
   value,
   onChange,
+  min,
+  max,
 }) {
-  return <ThaiCalendarField label={label} value={value} onChange={onChange} primaryColor={theme.primary} />;
+  return <ThaiCalendarField label={label} value={value} onChange={onChange} min={min} max={max} primaryColor={theme.primary} />;
 }
 
 /* =========================
@@ -694,6 +696,7 @@ function HRReportsPage() {
 
   const filteredRequests =
     useMemo(() => {
+      if (Boolean(startDate) !== Boolean(endDate)) return [];
       const keyword =
         searchText
           .trim()
@@ -1565,9 +1568,12 @@ function HRReportsPage() {
               value={
                 startDate
               }
-              onChange={
-                setStartDate
-              }
+              onChange={(value) => {
+                setStartDate(value);
+                if (endDate && endDate.slice(0, 4) !== value.slice(0, 4)) setEndDate('');
+              }}
+              min={endDate ? `${endDate.slice(0, 4)}-01-01` : undefined}
+              max={endDate || undefined}
             />
 
             {/* End Date */}
@@ -1577,9 +1583,12 @@ function HRReportsPage() {
               value={
                 endDate
               }
-              onChange={
-                setEndDate
-              }
+              onChange={(value) => {
+                setEndDate(value);
+                if (startDate && startDate.slice(0, 4) !== value.slice(0, 4)) setStartDate('');
+              }}
+              min={startDate || undefined}
+              max={startDate ? `${startDate.slice(0, 4)}-12-31` : undefined}
             />
 
           </Box>

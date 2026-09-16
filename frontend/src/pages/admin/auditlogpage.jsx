@@ -926,10 +926,7 @@ function AuditLogPage() {
     setActionFilter,
   ] = useState('All');
 
-  const [
-    selectedLog,
-    setSelectedLog,
-  ] = useState(null);
+  const [selectedLog, setSelectedLog] = useState(null);
 
   /* =========================
      Activity Groups
@@ -1146,10 +1143,7 @@ function AuditLogPage() {
     ...(actionFilter !== 'All' ? [{ key: 'action', label: `กิจกรรม: ${actionGroups.find((group) => group.value === actionFilter)?.label || actionFilter}`, onDelete: () => setActionFilter('All') }] : []),
   ];
 
-  const handleCloseDialog =
-    () => {
-      setSelectedLog(null);
-    };
+  const handleCloseDialog = () => setSelectedLog(null);
 
   /* =========================
      UI
@@ -1410,7 +1404,7 @@ function AuditLogPage() {
                 width:
                   '100%',
 
-                minWidth: '520px',
+                minWidth: '1020px',
 
                 tableLayout:
                   'fixed',
@@ -1429,9 +1423,12 @@ function AuditLogPage() {
               }}
             >
               <colgroup>
-                <col style={{ width: '42%' }} />
-                <col style={{ width: '22%' }} />
-                <col style={{ width: '36%' }} />
+                <col style={{ width: '190px' }} />
+                <col style={{ width: '120px' }} />
+                <col style={{ width: '220px' }} />
+                <col style={{ width: '130px' }} />
+                <col style={{ width: '170px' }} />
+                <col style={{ width: '170px' }} />
               </colgroup>
 
               <TableHead>
@@ -1468,6 +1465,18 @@ function AuditLogPage() {
                     กิจกรรม
                   </TableCell>
 
+                  <TableCell align="center" sx={headerCellStyle}>
+                    รหัสรายการ
+                  </TableCell>
+
+                  <TableCell align="left" sx={headerCellStyle}>
+                    วันที่และเวลา
+                  </TableCell>
+
+                  <TableCell align="left" sx={headerCellStyle}>
+                    IP Address
+                  </TableCell>
+
                 </TableRow>
               </TableHead>
 
@@ -1489,18 +1498,7 @@ function AuditLogPage() {
                         key={
                           log.id
                         }
-                        hover
-                        tabIndex={0}
-                        onClick={() => setSelectedLog(log)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            setSelectedLog(log);
-                          }
-                        }}
                         sx={{
-                          cursor: 'pointer',
-                          '&:focus-visible': { outline: `2px solid ${adminTheme.primary}`, outlineOffset: -2 },
                           '&:last-child td':
                             {
                               borderBottom:
@@ -1616,6 +1614,24 @@ function AuditLogPage() {
                           />
                         </TableCell>
 
+                        <TableCell align="center" sx={{ borderBottom: '1px solid #E5E7EB' }}>
+                          <Typography sx={{ color: '#475569', fontSize: '12px', fontWeight: 500 }}>
+                            {log.recordId ?? '-'}
+                          </Typography>
+                        </TableCell>
+
+                        <TableCell align="left" sx={{ borderBottom: '1px solid #E5E7EB' }}>
+                          <Typography sx={{ color: '#334155', fontSize: '12px', fontWeight: 500, lineHeight: 1.45 }}>
+                            {formatDateTime(log.createdAt)}
+                          </Typography>
+                        </TableCell>
+
+                        <TableCell align="left" sx={{ borderBottom: '1px solid #E5E7EB' }}>
+                          <Typography sx={{ color: '#475569', fontSize: '12px', fontWeight: 500, wordBreak: 'break-word' }}>
+                            {log.ipAddress || '-'}
+                          </Typography>
+                        </TableCell>
+
                       </TableRow>
                     );
                   },
@@ -1726,6 +1742,7 @@ function AuditLogPage() {
 
       {/* Detail Dialog */}
 
+      {selectedLog && (
       <Dialog
         open={Boolean(
           selectedLog,
@@ -1976,6 +1993,7 @@ function AuditLogPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      )}
     </AdminLayout>
   );
 }

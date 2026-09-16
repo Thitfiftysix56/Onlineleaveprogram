@@ -17,6 +17,8 @@ import {
 } from '@mui/material';
 
 import { getLeaveBalance } from '../api/leave-service.js';
+import { getProfile } from '../api/profile-service.js';
+import { getEmploymentYears } from '../utils/employmentyears.js';
 
 const legacyLeaveBalanceSamples = [
   {
@@ -371,7 +373,8 @@ function RoleLeaveBalancePage({
 }) {
   void legacyLeaveBalanceSamples;
   const currentYear = new Date().getFullYear();
-  const availableYears = [currentYear, currentYear - 1];
+  const [hireDate, setHireDate] = useState('');
+  const availableYears = getEmploymentYears(hireDate, currentYear);
 
   const [
     selectedYear,
@@ -382,6 +385,18 @@ function RoleLeaveBalancePage({
 
   const [balances, setBalances] = useState([]);
   const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    getProfile()
+      .then((profile) => {
+        if (active) setHireDate(profile?.hireDate || '');
+      })
+      .catch(() => {
+        if (active) setHireDate('');
+      });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;

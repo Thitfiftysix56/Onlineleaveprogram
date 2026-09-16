@@ -23,6 +23,7 @@ import {
 import {
   sendPasswordResetOtp,
 } from '../services/email-service.js'
+import { isValidEmail } from '../utils/email-validation.js'
 
 
 const genericRequestMessage =
@@ -58,17 +59,6 @@ function normalizeIdentifier(
   )
     .trim()
     .toLowerCase()
-}
-
-
-function isValidEmail(
-  value,
-) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-    String(
-      value || '',
-    ),
-  )
 }
 
 

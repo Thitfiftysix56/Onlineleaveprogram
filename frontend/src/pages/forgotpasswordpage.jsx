@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import {
-  Alert,
   Box,
   Button,
   CircularProgress,
@@ -13,8 +12,10 @@ import SendRounded from '@mui/icons-material/SendRounded'
 import { useNavigate } from 'react-router-dom'
 import api from '../api/axios.js'
 import PasswordRecoveryLayout from '../components/passwordrecoverylayout.jsx'
+import CountdownAlert from '../components/countdownalert.jsx'
 import { normalizePasswordResetIdentifier } from '../auth/passwordresetcontext.js'
 import usePasswordResetFlow from '../auth/usepasswordresetflow.js'
+import { getEmailInputError, isValidEmail, sanitizeEmailInput } from '../utils/emailvalidation.js'
 
 function ForgotPasswordPage() {
   const navigate = useNavigate()
@@ -23,8 +24,6 @@ function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -39,7 +38,7 @@ function ForgotPasswordPage() {
       return
     }
 
-    if (!emailPattern.test(normalizedEmail)) {
+    if (!isValidEmail(normalizedEmail)) {
       setMessage({
         severity: 'error',
         text: 'รูปแบบ Email ไม่ถูกต้อง',
@@ -86,8 +85,9 @@ function ForgotPasswordPage() {
   return (
     <PasswordRecoveryLayout title="ลืมรหัสผ่าน">
       {message && (
-        <Alert
+        <CountdownAlert
           severity={message.severity}
+          onClose={() => setMessage(null)}
           sx={{
             marginBottom: '18px',
             borderRadius: '10px',
@@ -95,7 +95,7 @@ function ForgotPasswordPage() {
           }}
         >
           {message.text}
-        </Alert>
+        </CountdownAlert>
       )}
 
       <Box
@@ -118,9 +118,13 @@ function ForgotPasswordPage() {
           disabled={isSubmitting}
           helperText="ระบบจะส่งรหัสยืนยันเฉพาะอีเมลที่ลงทะเบียนไว้กับบัญชีเท่านั้น"
           onChange={(event) => {
-            setEmail(event.target.value)
+            const input = event.target.value
+            const sanitizedEmail = sanitizeEmailInput(input)
+            setEmail(sanitizedEmail)
 
-            if (message) {
+            if (input !== sanitizedEmail) {
+              setMessage({ severity: 'error', text: getEmailInputError(input) })
+            } else if (message) {
               setMessage(null)
             }
           }}

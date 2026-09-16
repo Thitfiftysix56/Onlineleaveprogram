@@ -4,7 +4,6 @@ import {
 } from 'react'
 
 import {
-  Alert,
   Box,
   Button,
   CircularProgress,
@@ -38,6 +37,7 @@ import {
 
 import api from '../api/axios.js'
 import AuthenticationBrand from '../components/authenticationbrand.jsx'
+import CountdownAlert from '../components/countdownalert.jsx'
 import { appPageBackground } from '../theme/tokens.js'
 
 
@@ -916,7 +916,7 @@ function LoginPage() {
           ========================== */}
 
           {errorMessage && (
-            <Alert
+            <CountdownAlert
               severity="error"
 
               onClose={() =>
@@ -935,7 +935,7 @@ function LoginPage() {
               }}
             >
               {errorMessage}
-            </Alert>
+            </CountdownAlert>
           )}
 
 
@@ -945,8 +945,9 @@ function LoginPage() {
 
           {successMessage &&
             !errorMessage && (
-              <Alert
+              <CountdownAlert
                 severity="success"
+                onClose={() => navigate(location.pathname, { replace: true, state: {} })}
 
                 sx={{
                   marginBottom:
@@ -960,7 +961,7 @@ function LoginPage() {
                 }}
               >
                 {successMessage}
-              </Alert>
+              </CountdownAlert>
             )}
 
 

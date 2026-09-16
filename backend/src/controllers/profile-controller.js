@@ -4,6 +4,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { pool } from '../config/database.js'
+import { isPersonName } from '../utils/person-name.js'
+import { isValidEmail } from '../utils/email-validation.js'
 
 export const profileImagesDirectory = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -13,7 +15,7 @@ export const profileImagesDirectory = path.resolve(
 const profileSelect = `
   SELECT u.user_id, u.employee_id, u.username, u.role_id, u.status,
          u.last_login_at, u.password_changed_at,
-         e.employee_code, e.first_name, e.last_name, e.email, e.phone,
+         e.employee_code, e.first_name, e.last_name, e.email, e.phone, e.hire_date,
          e.profile_image_url, e.department_id, d.department_name, d.division_name,
          e.position_id, p.position_name, r.role_name
   FROM users u
@@ -21,6 +23,10 @@ const profileSelect = `
   JOIN roles r ON r.role_id = u.role_id
   JOIN departments d ON d.department_id = e.department_id
   JOIN positions p ON p.position_id = e.position_id`
+
+const dateOnly = (value) => value instanceof Date
+  ? value.toISOString().slice(0, 10)
+  : String(value || '').slice(0, 10)
 
 function profileData(row) {
   return {
@@ -31,6 +37,7 @@ function profileData(row) {
     fullName: `${row.first_name || ''} ${row.last_name || ''}`.trim(),
     email: row.email,
     phone: row.phone || '',
+    hireDate: dateOnly(row.hire_date),
     profileImageUrl: row.profile_image_url || null,
     roleId: row.role_id,
     roleName: row.role_name,
@@ -118,14 +125,26 @@ export async function updateProfile(request, response) {
     const email = String(request.body.email || '').trim().toLowerCase()
     const phone = String(request.body.phone || '').trim()
 
-    if (!firstName || !lastName || firstName.length > 100 || lastName.length > 100) {
+    if (!firstName) {
       return response.status(400).json({
         status: 'error',
-        message: 'Full name must include first and last name, each not exceeding 100 characters.',
+        message: 'กรุณากรอกชื่อ',
       })
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 100) {
-      return response.status(400).json({ status: 'error', message: 'A valid email is required.' })
+
+    if (!lastName) {
+      return response.status(400).json({
+        status: 'error',
+        message: 'กรุณากรอกนามสกุล',
+      })
+    }
+
+    if (!isPersonName(firstName)) return response.status(400).json({ status: 'error', message: 'ชื่อต้องเป็นตัวอักษรภาษาไทยหรือภาษาอังกฤษเท่านั้น' })
+    if (!isPersonName(lastName)) return response.status(400).json({ status: 'error', message: 'นามสกุลต้องเป็นตัวอักษรภาษาไทยหรือภาษาอังกฤษเท่านั้น' })
+    if (firstName.length > 100) return response.status(400).json({ status: 'error', message: 'ชื่อต้องไม่เกิน 100 ตัวอักษร' })
+    if (lastName.length > 100) return response.status(400).json({ status: 'error', message: 'นามสกุลต้องไม่เกิน 100 ตัวอักษร' })
+    if (!isValidEmail(email)) {
+      return response.status(400).json({ status: 'error', message: 'รูปแบบอีเมลไม่ถูกต้อง' })
     }
     if (!/^\d{10}$/.test(phone)) {
       return response.status(400).json({ status: 'error', message: 'กรุณากรอกเบอร์โทรศัพท์เป็นตัวเลข 10 หลัก' })

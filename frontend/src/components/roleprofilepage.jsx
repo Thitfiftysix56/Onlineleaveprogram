@@ -32,7 +32,10 @@ import {
 } from '../utils/authstorage.js';
 import RoleChangePasswordPage from './rolechangepasswordpage.jsx';
 import { PageHeader } from './sharedvisualfoundation.jsx';
+import CountdownAlert from './countdownalert.jsx';
 import { roleDashboardCardSurfaceSx } from '../theme/rolecardsurface.js';
+import { isFullPersonName, isPersonName, sanitizePersonName } from '../utils/personname.js';
+import { getEmailInputError, isValidEmail, sanitizeEmailInput } from '../utils/emailvalidation.js';
 import {
   departmentLabelFor,
   divisionLabelFor,
@@ -448,25 +451,28 @@ function RoleProfilePage({
           .trim()
           .toLowerCase();
 
-      if (
-        fullName.split(
-          ' ',
-        ).length < 2
-      ) {
-        setEditError(
-          'กรุณากรอกชื่อและนามสกุล',
-        );
+      if (!fullName) {
+        setEditError('กรุณากรอกชื่อและนามสกุล');
+        return;
+      }
 
+      const nameParts = fullName.split(' ');
+      if (nameParts.length < 2) {
+        setEditError('กรุณากรอกนามสกุล');
+        return;
+      }
+
+      if (!isFullPersonName(fullName)) {
+        const invalidField = isPersonName(nameParts[0]) ? 'นามสกุล' : 'ชื่อ';
+        setEditError(`${invalidField}ต้องเป็นตัวอักษรภาษาไทยหรือภาษาอังกฤษเท่านั้น`);
         return;
       }
 
       if (
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-          email,
-        )
+        !isValidEmail(email)
       ) {
         setEditError(
-          'กรุณากรอกอีเมลให้ถูกต้อง',
+          'รูปแบบอีเมลไม่ถูกต้อง',
         );
 
         return;
@@ -1278,8 +1284,9 @@ function RoleProfilePage({
           }}
         >
           {editError && (
-            <Alert
+            <CountdownAlert
               severity="error"
+              onClose={() => setEditError('')}
               sx={{
                 marginBottom:
                   '18px',
@@ -1288,7 +1295,7 @@ function RoleProfilePage({
               }}
             >
               {editError}
-            </Alert>
+            </CountdownAlert>
           )}
 
           <Box
@@ -1504,7 +1511,7 @@ function RoleProfilePage({
                     (previous) => ({
                       ...previous,
                       fullName:
-                        event.target.value,
+                        sanitizePersonName(event.target.value),
                     }),
                   )
                 }
@@ -1534,15 +1541,12 @@ function RoleProfilePage({
                 value={
                   editForm.email
                 }
-                onChange={(event) =>
-                  setEditForm(
-                    (previous) => ({
-                      ...previous,
-                      email:
-                        event.target.value,
-                    }),
-                  )
-                }
+                onChange={(event) => {
+                  const input = event.target.value;
+                  const sanitizedEmail = sanitizeEmailInput(input);
+                  setEditForm((previous) => ({ ...previous, email: sanitizedEmail }));
+                  setEditError(input === sanitizedEmail ? '' : getEmailInputError(input));
+                }}
                 disabled={
                   saving
                 }

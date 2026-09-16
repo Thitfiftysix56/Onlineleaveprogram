@@ -36,6 +36,7 @@ import HRLayout from '../../layouts/hrlayout.jsx';
 import { DataListToolbar } from '../../components/shareduiprimitives.jsx';
 import { InlineListSummary } from '../../components/sharedvisualfoundation.jsx';
 import api from '../../api/axios.js';
+import { SYSTEM_START_YEAR } from '../../config/systemdates.js';
 
 const theme = {
   primary: '#059669',
@@ -235,8 +236,10 @@ function ThaiDateField({
   onChange,
   error = false,
   helperText = '',
+  min,
+  max,
 }) {
-  return <ThaiCalendarField label={label} value={value} onChange={onChange} error={error} helperText={helperText} primaryColor={theme.primary} />;
+  return <ThaiCalendarField label={label} value={value} onChange={onChange} error={error} helperText={helperText} min={min} max={max} primaryColor={theme.primary} />;
 }
 
 /* =========================
@@ -413,12 +416,14 @@ function HolidayManagementPage() {
             (year) =>
               Number.isInteger(
                 year,
-              ),
+              ) && year >= SYSTEM_START_YEAR,
           );
 
       return [
         ...new Set([
+          currentYear + 1,
           currentYear,
+          Math.max(SYSTEM_START_YEAR, currentYear - 1),
           ...years,
         ]),
       ].sort(
@@ -756,6 +761,9 @@ function HolidayManagementPage() {
   const validateForm =
     () => {
       const errors = {};
+      const managedHolidayYear = dialogMode === 'edit'
+        ? Number(String(selectedHoliday?.date || '').slice(0, 4))
+        : (yearFilter === 'all' ? currentYear : Number(yearFilter));
 
       const name =
         formData.name.trim();
@@ -776,6 +784,9 @@ function HolidayManagementPage() {
         errors.date =
           'กรุณาเลือกวันที่';
       } else {
+        const selectedDateIsOutsideManagedYear =
+          Number(formData.date.slice(0, 4)) !== managedHolidayYear;
+
         const duplicatedDate =
           holidays.some(
             (holiday) =>
@@ -790,7 +801,9 @@ function HolidayManagementPage() {
                 ),
           );
 
-        if (
+        if (selectedDateIsOutsideManagedYear) {
+          errors.date = `กรุณาเลือกวันที่ภายในปี ${managedHolidayYear + 543}`;
+        } else if (
           duplicatedDate
         ) {
           errors.date =
@@ -1134,6 +1147,12 @@ function HolidayManagementPage() {
       )}
 
       {/* Summary Cards */}
+
+      {!loading && yearFilter !== 'all' && summaryHolidays.length === 0 ? (
+        <Alert severity="warning" sx={{ marginBottom: '16px', borderRadius: '10px' }}>
+          ปี {Number(yearFilter) + 543} ยังไม่มีปฏิทินวันหยุด กรุณาเพิ่มวันหยุดขององค์กรก่อนเปิดใช้งานสิทธิ์ลาหรือรับคำขอลาของปีนี้
+        </Alert>
+      ) : null}
 
       <Box
         sx={{
@@ -1925,6 +1944,8 @@ function HolidayManagementPage() {
                 formErrors.date ||
                 ''
               }
+              min={`${dialogMode === 'edit' ? String(selectedHoliday?.date || '').slice(0, 4) : (yearFilter === 'all' ? currentYear : yearFilter)}-01-01`}
+              max={`${dialogMode === 'edit' ? String(selectedHoliday?.date || '').slice(0, 4) : (yearFilter === 'all' ? currentYear : yearFilter)}-12-31`}
             />
 
             {/* Status */}

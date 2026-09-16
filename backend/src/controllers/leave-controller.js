@@ -96,6 +96,14 @@ async function identity(connection, request) {
   return rows[0]?.employee_id || null
 }
 
+async function employmentStartYear(connection, employeeId) {
+  const [rows] = await connection.execute(
+    'SELECT YEAR(hire_date) AS employment_start_year FROM employees WHERE employee_id = ? LIMIT 1',
+    [employeeId],
+  )
+  return Number(rows[0]?.employment_start_year) || new Date().getFullYear()
+}
+
 export async function validateSubmissionParticipants(connection, employeeId) {
   const [rows] = await connection.execute(
     `SELECT e.employee_id, e.status AS employee_status, e.supervisor_id,
@@ -338,6 +346,8 @@ async function storeFiles(connection, requestId, files = []) {
 
 export async function options(request, response) {
   const employeeId = await identity(pool, request); const year = Number(request.query.year || new Date().getFullYear())
+  const startYear = await employmentStartYear(pool, employeeId)
+  if (year < startYear) return error(response, 400, `ไม่สามารถดูข้อมูลก่อนปีที่เริ่มงาน (${startYear}) ได้`)
   const today = todayInBangkok(); const currentYear = Number(today.slice(0, 4))
   if (Number(today.slice(5, 7)) === 12 && year === currentYear + 1) {
     await pool.execute(
@@ -477,7 +487,7 @@ export async function cancelOwn(request, response) {
   }
 }
 
-export async function balance(request,response){const employeeId=await identity(pool,request);const year=Number(request.query.year||new Date().getFullYear());const [rows]=await pool.execute(`SELECT le.entitlement_id,lt.leave_type_id,lt.leave_type_name,le.total_days,le.used_days,COALESCE((SELECT SUM(lra.leave_days) FROM leave_request_year_allocations lra JOIN leave_requests lr ON lr.leave_request_id=lra.leave_request_id WHERE lr.employee_id=le.employee_id AND lr.leave_type_id=le.leave_type_id AND lr.status='pending' AND lra.year=le.year),0) pending_days FROM leave_entitlements le JOIN leave_types lt ON lt.leave_type_id=le.leave_type_id WHERE le.employee_id=? AND le.year=? ORDER BY lt.leave_type_name`,[employeeId,year]);response.json({status:'ok',data:{year,balances:rows.map(x=>({id:x.entitlement_id,leaveTypeId:x.leave_type_id,leaveType:x.leave_type_name,total:Number(x.total_days),used:Number(x.used_days),pending:Number(x.pending_days),remaining:calculateDisplayedRemaining(x),available:calculateRequestAvailability(x)}))}})}
+export async function balance(request,response){const employeeId=await identity(pool,request);const year=Number(request.query.year||new Date().getFullYear());const startYear=await employmentStartYear(pool,employeeId);if(year<startYear)return error(response,400,`ไม่สามารถดูข้อมูลก่อนปีที่เริ่มงาน (${startYear}) ได้`);const [rows]=await pool.execute(`SELECT le.entitlement_id,lt.leave_type_id,lt.leave_type_name,le.total_days,le.used_days,COALESCE((SELECT SUM(lra.leave_days) FROM leave_request_year_allocations lra JOIN leave_requests lr ON lr.leave_request_id=lra.leave_request_id WHERE lr.employee_id=le.employee_id AND lr.leave_type_id=le.leave_type_id AND lr.status='pending' AND lra.year=le.year),0) pending_days FROM leave_entitlements le JOIN leave_types lt ON lt.leave_type_id=le.leave_type_id WHERE le.employee_id=? AND le.year=? ORDER BY lt.leave_type_name`,[employeeId,year]);response.json({status:'ok',data:{year,employmentStartYear:startYear,balances:rows.map(x=>({id:x.entitlement_id,leaveTypeId:x.leave_type_id,leaveType:x.leave_type_name,total:Number(x.total_days),used:Number(x.used_days),pending:Number(x.pending_days),remaining:calculateDisplayedRemaining(x),available:calculateRequestAvailability(x)}))}})}
 
 export async function supervisorList(request,response){const supervisorId=await identity(pool,request);const [rows]=await pool.execute(`${select} WHERE e.supervisor_id=? AND lr.status='pending' AND lr.employee_id<>? ORDER BY lr.submitted_at`,[supervisorId,supervisorId]);response.json({status:'ok',data:{leaveRequests:await Promise.all(rows.map(x=>serialize(pool,x)))}})}
 export async function supervisorDetail(request,response){const supervisorId=await identity(pool,request);const row=await byId(pool,positiveId(request.params.requestId));if(!row||row.status==='draft'){return error(response,404,'ไม่พบคำขอลาที่ต้องการ')}const [ok]=await pool.execute('SELECT employee_id FROM employees WHERE employee_id=? AND supervisor_id=?',[row.employee_id,supervisorId]);if(!ok.length||row.employee_id===supervisorId)return error(response,403,'คุณไม่มีสิทธิ์เข้าถึงคำขอลานี้');response.json({status:'ok',data:{leaveRequest:await serialize(pool,row)}})}

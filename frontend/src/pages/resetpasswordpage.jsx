@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
 import {
-  Alert,
   Button,
   IconButton,
   InputAdornment,
@@ -20,6 +19,7 @@ import {
 
 import api from '../api/axios.js';
 import PasswordRecoveryLayout from '../components/passwordrecoverylayout.jsx';
+import CountdownAlert from '../components/countdownalert.jsx';
 import PasswordPolicyList from '../components/passwordpolicylist.jsx';
 import { passwordMeetsPolicy } from '../utils/passwordpolicy.js';
 import usePasswordResetFlow from '../auth/usepasswordresetflow.js';
@@ -169,14 +169,15 @@ function ResetPasswordPage() {
       description="สร้างรหัสผ่านใหม่สำหรับบัญชีของคุณ"
     >
       {message && (
-        <Alert
+        <CountdownAlert
           severity={message.severity}
+          onClose={() => setMessage(null)}
           sx={{
             mb: 2,
           }}
         >
           {message.text}
-        </Alert>
+        </CountdownAlert>
       )}
 
       <form onSubmit={handleSubmit}>
