@@ -319,6 +319,26 @@ const normalizeValue = (
     .trim()
     .toLowerCase();
 
+const activityCategories = [
+  { value: 'account', label: 'บัญชีและการเข้าสู่ระบบ' },
+  { value: 'user', label: 'จัดการผู้ใช้งาน' },
+  { value: 'employee', label: 'จัดการพนักงาน' },
+  { value: 'leave', label: 'คำขอลาและการอนุมัติ' },
+  { value: 'organization', label: 'โครงสร้างองค์กร' },
+  { value: 'entitlement', label: 'สิทธิ์ลาและวันหยุด' },
+];
+
+const getActivityCategory = (action) => {
+  const value = String(action || '').toLowerCase();
+
+  if (value.includes('department') || value.includes('position')) return 'organization';
+  if (value.includes('entitlement') || value.includes('holiday') || value.includes('leave_type')) return 'entitlement';
+  if (value.includes('employee')) return 'employee';
+  if (value.includes('leave') || value.includes('attachment') || value.includes('report')) return 'leave';
+  if (value.includes('user') || value.includes('profile') || value.includes('admin_password')) return 'user';
+  return 'account';
+};
+
 const translateRole = (
   role,
 ) => {
@@ -928,125 +948,12 @@ function AuditLogPage() {
 
   const [selectedLog, setSelectedLog] = useState(null);
 
-  /* =========================
-     Activity Groups
-  ========================= */
-
-  const actionGroups = useMemo(() => ([
-    {
-      value:
-        'Authentication',
-
-      label:
-        'บัญชีและการเข้าสู่ระบบ',
-
-      actions: [
-        'LOGIN',
-        'LOGOUT',
-        'LOGIN_FAILED',
-        'PASSWORD_RESET_OTP_REQUESTED',
-        'PASSWORD_RESET_OTP_VERIFIED',
-        'PASSWORD_RESET_RATE_LIMITED',
-        'PASSWORD_RESET_COMPLETED',
-        'CHANGE_PASSWORD',
-      ],
-    },
-
-    {
-      value:
-        'User Management',
-
-      label:
-        'จัดการผู้ใช้งาน',
-
-        actions: [
-          'CREATE_USER',
-          'UPDATE_USER',
-          'UPDATE_USER_STATUS',
-          'RESET_PASSWORD',
-          'ADMIN_PASSWORD_RESET',
-          'UPDATE_PROFILE',
-      ],
-    },
-
-    {
-      value:
-        'Leave Request',
-
-      label:
-        'คำขอลาและการอนุมัติ',
-
-      actions: [
-          'CREATE_LEAVE',
-          'SAVE_LEAVE_DRAFT',
-          'DELETE_LEAVE_DRAFT',
-          'SUBMIT_LEAVE',
-        'APPROVE_LEAVE',
-        'REJECT_LEAVE',
-        'CANCEL_LEAVE',
-        'LEAVE_APPROVED',
-        'LEAVE_REJECTED',
-        'LEAVE_CANCELLED',
-      ],
-    },
-
-    {
-      value:
-        'Employee Management',
-
-      label:
-        'จัดการพนักงาน',
-
-      actions: [
-          'CREATE_EMPLOYEE',
-          'UPDATE_EMPLOYEE',
-          'UPDATE_EMPLOYEE_STATUS',
-          'DELETE_EMPLOYEE',
-          'UPDATE_ENTITLEMENT',
-          'CREATE_LEAVE_ENTITLEMENT',
-          'UPDATE_LEAVE_ENTITLEMENT',
-          'CREATE_LEAVE_TYPE',
-          'UPDATE_LEAVE_TYPE',
-          'UPDATE_LEAVE_TYPE_STATUS',
-      ],
-    },
-
-    {
-      value:
-        'Organization',
-
-      label:
-        'โครงสร้างองค์กร',
-
-      actions: [
-          'CREATE_DEPARTMENT',
-          'UPDATE_DEPARTMENT',
-          'UPDATE_DEPARTMENT_STATUS',
-          'DELETE_DEPARTMENT',
-          'CREATE_POSITION',
-          'UPDATE_POSITION',
-          'UPDATE_POSITION_STATUS',
-          'DELETE_POSITION',
-          'CREATE_HOLIDAY',
-          'UPDATE_HOLIDAY',
-          'DELETE_HOLIDAY',
-      ],
-    },
-
-    {
-      value:
-        'File and Report',
-
-      label:
-        'เอกสารและรายงาน',
-
-      actions: [
-        'UPLOAD_ATTACHMENT',
-        'DELETE_ATTACHMENT',
-        'EXPORT_REPORT',
-      ],
-    },
-  ]), []);
+  const availableActivityCategories = useMemo(() => {
+    const availableValues = new Set(
+      loadedAuditLogs.map((log) => getActivityCategory(log.action)),
+    );
+    return activityCategories.filter((category) => availableValues.has(category.value));
+  }, [loadedAuditLogs]);
 
   /* =========================
      Filter
@@ -1057,13 +964,6 @@ function AuditLogPage() {
       const keyword =
         normalizeValue(
           searchText,
-        );
-
-      const selectedGroup =
-        actionGroups.find(
-          (group) =>
-            group.value ===
-            actionFilter,
         );
 
       return loadedAuditLogs.filter(
@@ -1101,14 +1001,7 @@ function AuditLogPage() {
           const matchesAction =
             actionFilter ===
               'All' ||
-            selectedGroup
-              ?.actions
-              .includes(
-                String(
-                  log.action ||
-                    '',
-                ).toUpperCase(),
-              );
+            getActivityCategory(log.action) === actionFilter;
 
           return (
             matchesSearch &&
@@ -1121,7 +1014,6 @@ function AuditLogPage() {
       searchText,
       roleFilter,
       actionFilter,
-      actionGroups,
       loadedAuditLogs,
     ]);
 
@@ -1140,7 +1032,7 @@ function AuditLogPage() {
 
   const activeFilterChips = [
     ...(roleFilter !== 'All' ? [{ key: 'role', label: `บทบาท: ${translateRole(roleFilter)}`, onDelete: () => setRoleFilter('All') }] : []),
-    ...(actionFilter !== 'All' ? [{ key: 'action', label: `กิจกรรม: ${actionGroups.find((group) => group.value === actionFilter)?.label || actionFilter}`, onDelete: () => setActionFilter('All') }] : []),
+    ...(actionFilter !== 'All' ? [{ key: 'action', label: `ประเภทกิจกรรม: ${activityCategories.find((category) => category.value === actionFilter)?.label || actionFilter}`, onDelete: () => setActionFilter('All') }] : []),
   ];
 
   const handleCloseDialog = () => setSelectedLog(null);
@@ -1337,7 +1229,7 @@ function AuditLogPage() {
               <Select
                 value={actionFilter === 'All' ? '' : actionFilter}
                 displayEmpty
-                renderValue={(value) => value ? actionGroups.find((group) => group.value === value)?.label || value : 'ประเภทกิจกรรม'}
+                renderValue={(value) => value ? activityCategories.find((category) => category.value === value)?.label || value : 'ประเภทกิจกรรม'}
                 inputProps={{ 'aria-label': 'ประเภทกิจกรรม' }}
                 onChange={(
                   event,
@@ -1354,17 +1246,17 @@ function AuditLogPage() {
                     '9px',
                 }}
               >
-                {actionGroups.map(
-                  (group) => (
+                {availableActivityCategories.map(
+                  (category) => (
                     <MenuItem
                       key={
-                        group.value
+                        category.value
                       }
                       value={
-                        group.value
+                        category.value
                       }
                     >
-                      {group.label}
+                      {category.label}
                     </MenuItem>
                   ),
                 )}
@@ -1423,12 +1315,11 @@ function AuditLogPage() {
               }}
             >
               <colgroup>
-                <col style={{ width: '190px' }} />
-                <col style={{ width: '120px' }} />
-                <col style={{ width: '220px' }} />
-                <col style={{ width: '130px' }} />
-                <col style={{ width: '170px' }} />
-                <col style={{ width: '170px' }} />
+                <col style={{ width: '24%' }} />
+                <col style={{ width: '15%' }} />
+                <col style={{ width: '25%' }} />
+                <col style={{ width: '21%' }} />
+                <col style={{ width: '15%' }} />
               </colgroup>
 
               <TableHead>
@@ -1463,10 +1354,6 @@ function AuditLogPage() {
                     }
                   >
                     กิจกรรม
-                  </TableCell>
-
-                  <TableCell align="center" sx={headerCellStyle}>
-                    รหัสรายการ
                   </TableCell>
 
                   <TableCell align="left" sx={headerCellStyle}>
@@ -1612,12 +1499,6 @@ function AuditLogPage() {
                               marginInline: 0,
                             }}
                           />
-                        </TableCell>
-
-                        <TableCell align="center" sx={{ borderBottom: '1px solid #E5E7EB' }}>
-                          <Typography sx={{ color: '#475569', fontSize: '12px', fontWeight: 500 }}>
-                            {log.recordId ?? '-'}
-                          </Typography>
                         </TableCell>
 
                         <TableCell align="left" sx={{ borderBottom: '1px solid #E5E7EB' }}>
@@ -1858,15 +1739,6 @@ function AuditLogPage() {
                     translateTable(
                       selectedLog.tableName,
                     ),
-                },
-
-                {
-                  label:
-                    'รหัสรายการ',
-
-                  value:
-                    selectedLog.recordId ??
-                    'ไม่มี',
                 },
 
                 {
